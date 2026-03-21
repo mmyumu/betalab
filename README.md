@@ -85,7 +85,15 @@ Quand les dependances seront installees:
 
 ```bash
 cd backend
+uv sync
 uv run uvicorn app.main:app --reload
+```
+
+Tests backend:
+
+```bash
+cd backend
+uv run pytest
 ```
 
 ### Frontend
