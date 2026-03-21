@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LabShell } from "@/components/lab-shell";
@@ -11,15 +11,25 @@ vi.mock("@/components/results-panel", () => ({
 }));
 
 describe("LabShell", () => {
-  it("shows only prepared flasks in the bench setup", () => {
+  it("shows only prepared flasks in the bench setup and exposes the toolbar catalog", () => {
     render(<LabShell experiment={mockExperiment} />);
 
-    expect(screen.getByText("Std 1")).toBeInTheDocument();
-    expect(screen.getByText("Std 2")).toBeInTheDocument();
-    expect(screen.getByText("Sample")).toBeInTheDocument();
-    expect(screen.queryByText("Stock analyte")).not.toBeInTheDocument();
-    expect(screen.queryByText("Solvent A")).not.toBeInTheDocument();
-    expect(screen.queryByText("Matrix blank")).not.toBeInTheDocument();
+    expect(screen.getByText("Lab toolbar")).toBeInTheDocument();
+    expect(screen.getByText("Glassware")).toBeInTheDocument();
+    expect(screen.getByText("Liquids")).toBeInTheDocument();
+    expect(screen.getByText("Volumetric flask")).toBeInTheDocument();
+    expect(screen.getByText("Acetonitrile")).toBeInTheDocument();
+
+    const workbench = screen.getByText("Preparation bench").closest("section");
+    expect(workbench).not.toBeNull();
+
+    const workbenchScope = within(workbench as HTMLElement);
+    expect(workbenchScope.getByText("Std 1")).toBeInTheDocument();
+    expect(workbenchScope.getByText("Std 2")).toBeInTheDocument();
+    expect(workbenchScope.getByText("Sample")).toBeInTheDocument();
+    expect(workbenchScope.queryByText("Stock analyte")).not.toBeInTheDocument();
+    expect(workbenchScope.queryByText("Solvent A")).not.toBeInTheDocument();
+    expect(workbenchScope.queryByText("Matrix blank")).not.toBeInTheDocument();
   });
 
   it("passes the first run into the results panel", () => {

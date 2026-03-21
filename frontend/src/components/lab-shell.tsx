@@ -1,6 +1,8 @@
-import { FlaskCard } from "@/components/flask-card";
 import { RackPanel } from "@/components/rack-panel";
 import { ResultsPanel } from "@/components/results-panel";
+import { ToolbarPanel } from "@/components/toolbar-panel";
+import { WorkbenchPanel } from "@/components/workbench-panel";
+import { toolbarCategories } from "@/lib/toolbar-catalog";
 import type { Experiment } from "@/types/experiment";
 
 type LabShellProps = {
@@ -31,24 +33,17 @@ export function LabShell({ experiment }: LabShellProps) {
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <section className="space-y-6">
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Bench setup
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">Prepared flasks</h2>
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                {flasks.map((container) => (
-                  <FlaskCard key={container.id} container={container} />
-                ))}
-              </div>
-            </section>
+        <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)_minmax(360px,0.9fr)]">
+          <ToolbarPanel categories={toolbarCategories} />
 
+          <section className="space-y-6">
+            <WorkbenchPanel flasks={flasks} />
             <RackPanel rack={experiment.rack} />
           </section>
 
-          <ResultsPanel run={experiment.runs[0]} />
+          <div className="xl:col-span-2 2xl:col-span-1">
+            <ResultsPanel run={experiment.runs[0]} />
+          </div>
         </div>
       </div>
     </main>
