@@ -20,7 +20,7 @@ type WorkbenchState =
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load pesticide workbench";
-const widgetIds = ["toolbar", "workbench", "scope"] as const;
+const widgetIds = ["toolbar", "workbench"] as const;
 
 type WidgetId = (typeof widgetIds)[number];
 
@@ -34,7 +34,6 @@ type WidgetLayout = {
 const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
-  scope: { x: 234, y: 910, width: 520, fallbackHeight: 220 },
 };
 
 function getLatestStatusMessage(experiment: Experiment) {
@@ -56,7 +55,6 @@ export function PesticideWorkbench() {
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
     toolbar: initialWidgetLayout.toolbar.fallbackHeight,
     workbench: initialWidgetLayout.workbench.fallbackHeight,
-    scope: initialWidgetLayout.scope.fallbackHeight,
   });
   const hasLoadedInitialExperiment = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -366,30 +364,6 @@ export function PesticideWorkbench() {
                 statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
               />
-            </FloatingWidget>
-
-            <FloatingWidget
-              id="scope"
-              isActive={activeWidgetId === "scope"}
-              label="Scope Widget"
-              onDragStart={handleWidgetDragStart}
-              onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.scope}
-              zIndex={10 + widgetOrder.indexOf("scope")}
-            >
-              <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm xl:p-6">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Workflow anchor
-                </p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                  First simulation scope
-                </h2>
-                <p className="mt-3 max-w-5xl text-sm text-slate-600 xl:text-base">
-                  This first slice covers only the bench setup phase: place a tube, add
-                  acetonitrile and sample matrix, then prepare the path toward cleanup and final
-                  injection.
-                </p>
-              </section>
             </FloatingWidget>
           </div>
         </section>
