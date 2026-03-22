@@ -10,7 +10,7 @@ import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel"
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
-import { readToolbarDragPayload } from "@/lib/workbench-dnd";
+import { hasWorkspaceWidgetDragPayload, readToolbarDragPayload } from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
@@ -295,8 +295,7 @@ export function PesticideWorkbench() {
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    const payload = readToolbarDragPayload(event.dataTransfer);
-    if (payload?.itemType === "workspace_widget") {
+    if (hasWorkspaceWidgetDragPayload(event.dataTransfer)) {
       event.preventDefault();
     }
   };
@@ -314,6 +313,7 @@ export function PesticideWorkbench() {
 
     event.preventDefault();
     moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
+    event.stopPropagation();
   };
 
   if (state.status === "loading") {
@@ -420,8 +420,8 @@ export function PesticideWorkbench() {
           <div
             className="relative mt-4 overflow-hidden rounded-[2rem] border border-dashed border-slate-300/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)]"
             data-testid="widget-workspace"
-            onDragOver={handleWorkspaceDragOver}
-            onDrop={handleWorkspaceDrop}
+            onDragOverCapture={handleWorkspaceDragOver}
+            onDropCapture={handleWorkspaceDrop}
             ref={workspaceRef}
             style={{ minHeight: workspaceHeight }}
           >

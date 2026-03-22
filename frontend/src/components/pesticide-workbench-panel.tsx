@@ -3,7 +3,7 @@
 import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
-import { readToolbarDragPayload } from "@/lib/workbench-dnd";
+import { hasWorkbenchTargetDragPayload, readToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { BenchSlot, ToolbarDragPayload } from "@/types/workbench";
 
 type PesticideWorkbenchPanelProps = {
@@ -19,7 +19,15 @@ export function PesticideWorkbenchPanel({
   statusMessage,
   onToolbarItemDrop,
 }: PesticideWorkbenchPanelProps) {
+  const acceptsWorkbenchDrop = (event: DragEvent<HTMLElement>) => {
+    return hasWorkbenchTargetDragPayload(event.dataTransfer);
+  };
+
   const handleDrop = (event: DragEvent<HTMLElement>, slotId: string) => {
+    if (!acceptsWorkbenchDrop(event)) {
+      return;
+    }
+
     event.preventDefault();
 
     const payload = readToolbarDragPayload(event.dataTransfer);
@@ -74,6 +82,9 @@ export function PesticideWorkbenchPanel({
                 className="rounded-[1.6rem] border border-dashed border-slate-300 bg-white/90 p-3"
                 data-testid={`bench-slot-${slot.id}`}
                 onDragOver={(event) => {
+                  if (!acceptsWorkbenchDrop(event)) {
+                    return;
+                  }
                   event.preventDefault();
                 }}
                 onDrop={(event) => handleDrop(event, slot.id)}

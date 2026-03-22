@@ -16,22 +16,43 @@ type MockDataTransfer = {
   data: Map<string, string>;
   dropEffect: string;
   effectAllowed: string;
+  types: string[];
   getData: (type: string) => string;
   setData: (type: string, value: string) => void;
 };
 
+type Deferred<T> = {
+  promise: Promise<T>;
+  reject: (reason?: unknown) => void;
+  resolve: (value: T) => void;
+};
+
 function createDataTransfer(): MockDataTransfer {
   const data = new Map<string, string>();
-
-  return {
+  const dataTransfer = {
     data,
     dropEffect: "copy",
     effectAllowed: "copy",
+    types: [] as string[],
     getData: (type: string) => data.get(type) ?? "",
     setData: (type: string, value: string) => {
       data.set(type, value);
+      dataTransfer.types = Array.from(data.keys());
     },
   };
+
+  return dataTransfer;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, reject, resolve };
 }
 
 function makeSlots(overrides: Partial<BenchSlot>[] = []): BenchSlot[] {
@@ -131,6 +152,28 @@ describe("PesticideWorkbench", () => {
     });
   });
 
+  it("shows the backend error state and retries experiment creation", async () => {
+    vi.mocked(createExperiment)
+      .mockRejectedValueOnce(new Error("Backend unavailable"))
+      .mockResolvedValueOnce(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Backend connection error")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Backend unavailable")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+    });
+
+    expect(createExperiment).toHaveBeenCalledTimes(2);
+  });
+
   it("adds workspace equipment widgets when dropped from the palette into the canvas", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
@@ -175,6 +218,88 @@ describe("PesticideWorkbench", () => {
       "data-status",
       "idle",
     );
+  });
+
+  it("does not create duplicate equipment widgets when the same palette item is dropped twice", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.dragOver(workspace, { dataTransfer: rackTransfer });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.dragOver(workspace, { dataTransfer: rackTransfer });
+    fireEvent.drop(workspace, { clientX: 740, clientY: 520, dataTransfer: rackTransfer });
+
+    expect(screen.getAllByTestId("widget-rack")).toHaveLength(1);
+    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
+  });
+
+  it("ignores non-equipment drops on the workspace canvas", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const toolTransfer = createDataTransfer();
+
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.dragOver(workspace, { dataTransfer: toolTransfer });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: toolTransfer });
+
+    expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("widget-instrument")).not.toBeInTheDocument();
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("treats equipment dropped over a station as a workspace drop, not a station command", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    });
+
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("bench-slot-station_1"), { dataTransfer: rackTransfer });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), {
+      clientX: 520,
+      clientY: 440,
+      dataTransfer: rackTransfer,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
   it("places a tool and then adds a liquid through backend commands", async () => {
@@ -265,6 +390,47 @@ describe("PesticideWorkbench", () => {
       { slot_id: "station_1", liquid_id: "acetonitrile_extraction" },
     );
     expect(screen.getByDisplayValue("2")).toBeInTheDocument();
+  });
+
+  it("shows a syncing status and ignores additional commands while one is pending", async () => {
+    const deferredCommand = createDeferred<Experiment>();
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockReturnValue(deferredCommand.promise);
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+    });
+
+    const firstTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: firstTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: firstTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Syncing\.\.\./)).toBeInTheDocument();
+    });
+
+    const secondTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-beaker_rinse"), {
+      dataTransfer: secondTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_2"), { dataTransfer: secondTransfer });
+
+    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
+
+    deferredCommand.resolve(
+      makeWorkbenchExperiment({
+        auditLog: ["Autosampler vial placed on Station 1."],
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Autosampler vial placed on Station 1.")).toBeInTheDocument();
+    });
   });
 
   it("merges repeated drops of the same liquid via backend state", async () => {
@@ -383,6 +549,30 @@ describe("PesticideWorkbench", () => {
       },
     );
     expect(screen.getByText("Acetonitrile adjusted to 1.5 mL in Autosampler vial.")).toBeInTheDocument();
+  });
+
+  it("surfaces backend command failures in the status panel without mutating the bench", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockRejectedValue(new Error("Station 1 is unavailable"));
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+    });
+
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: toolTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByText("Station 1 is unavailable")).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText("Empty station")).toHaveLength(4);
+    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
   });
 
   it("changes the volume with the mouse wheel only while the input is focused", async () => {
