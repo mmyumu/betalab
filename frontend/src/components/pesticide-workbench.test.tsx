@@ -63,9 +63,37 @@ describe("PesticideWorkbench", () => {
     });
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: liquidTransfer });
 
-    expect(screen.getByText("Acetonitrile 10 mL")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("10")).toBeInTheDocument();
     expect(screen.getByText("Acetonitrile added to 50 mL centrifuge tube.")).toBeInTheDocument();
     expect(screen.getByText("10 / 50 mL")).toBeInTheDocument();
+  });
+
+  it("uses remaining capacity for small tools and lets the user edit the liquid volume", () => {
+    render(<PesticideWorkbench />);
+
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_3"), { dataTransfer: toolTransfer });
+
+    const liquidTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-acetonitrile_extraction"), {
+      dataTransfer: liquidTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_3"), { dataTransfer: liquidTransfer });
+
+    expect(
+      screen.getByText("Acetonitrile added to LC-MS/MS vial at 2 mL (remaining capacity)."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("2 / 2 mL")).toBeInTheDocument();
+
+    const volumeInput = screen.getByLabelText("Acetonitrile volume");
+    fireEvent.change(volumeInput, { target: { value: "1.5" } });
+
+    expect(screen.getByDisplayValue("1.5")).toBeInTheDocument();
+    expect(screen.getByText("Acetonitrile adjusted to 1.5 mL in LC-MS/MS vial.")).toBeInTheDocument();
+    expect(screen.getByText("1.5 / 2 mL")).toBeInTheDocument();
   });
 
   it("refuses liquid drops on an empty station", () => {

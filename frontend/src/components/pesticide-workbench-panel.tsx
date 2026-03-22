@@ -7,12 +7,14 @@ import { readToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { BenchSlot, ToolbarDragPayload } from "@/types/workbench";
 
 type PesticideWorkbenchPanelProps = {
+  onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
   onToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
 };
 
 export function PesticideWorkbenchPanel({
+  onLiquidVolumeChange,
   slots,
   statusMessage,
   onToolbarItemDrop,
@@ -77,7 +79,12 @@ export function PesticideWorkbenchPanel({
                 onDrop={(event) => handleDrop(event, slot.id)}
               >
                 {slot.tool ? (
-                  <BenchToolCard tool={slot.tool} />
+                  <BenchToolCard
+                    onLiquidVolumeChange={(liquidId, volumeMl) => {
+                      onLiquidVolumeChange(slot.id, liquidId, volumeMl);
+                    }}
+                    tool={slot.tool}
+                  />
                 ) : (
                   <div className="flex min-h-72 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[26rem]">
                     <p className="text-sm font-semibold text-slate-900">Empty station</p>

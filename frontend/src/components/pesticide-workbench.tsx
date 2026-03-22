@@ -12,6 +12,14 @@ import {
 } from "@/lib/pesticide-workflow-catalog";
 import type { BenchLiquidPortion, BenchSlot, BenchToolInstance, ToolbarDragPayload } from "@/types/workbench";
 
+function getToolCurrentVolume(tool: BenchToolInstance) {
+  return tool.liquids.reduce((total, portion) => total + portion.volume_ml, 0);
+}
+
+function formatVolume(volumeMl: number) {
+  return Number.isInteger(volumeMl) ? volumeMl.toString() : volumeMl.toFixed(1);
+}
+
 function createToolInstance(toolId: string): BenchToolInstance {
   const tool = pesticideToolCatalog[toolId];
 
@@ -28,14 +36,14 @@ function createToolInstance(toolId: string): BenchToolInstance {
   };
 }
 
-function createLiquidPortion(liquidId: string): BenchLiquidPortion {
+function createLiquidPortion(liquidId: string, volumeMl: number): BenchLiquidPortion {
   const liquid = pesticideLiquidCatalog[liquidId];
 
   return {
     id: `${liquid.id}_${crypto.randomUUID()}`,
     liquidId: liquid.id,
     name: liquid.name,
-    volume_ml: liquid.transfer_volume_ml,
+    volume_ml: volumeMl,
     accent: liquid.accent,
   };
 }
@@ -75,19 +83,63 @@ export function PesticideWorkbench() {
         }
 
         const liquid = pesticideLiquidCatalog[payload.itemId];
-        const currentVolume = slot.tool.liquids.reduce((total, portion) => total + portion.volume_ml, 0);
+        const currentVolume = getToolCurrentVolume(slot.tool);
+        const remainingCapacity = Math.max(slot.tool.capacity_ml - currentVolume, 0);
 
-        if (currentVolume + liquid.transfer_volume_ml > slot.tool.capacity_ml) {
-          setStatusMessage(`${liquid.name} would exceed the capacity of ${slot.tool.label}.`);
+        if (remainingCapacity <= 0) {
+          setStatusMessage(`${slot.tool.label} is already full.`);
           return slot;
         }
 
-        setStatusMessage(`${liquid.name} added to ${slot.tool.label}.`);
+        const initialVolume = Math.min(liquid.transfer_volume_ml, remainingCapacity);
+        const usedRemainingCapacity = initialVolume < liquid.transfer_volume_ml;
+
+        setStatusMessage(
+          usedRemainingCapacity
+            ? `${liquid.name} added to ${slot.tool.label} at ${formatVolume(initialVolume)} mL (remaining capacity).`
+            : `${liquid.name} added to ${slot.tool.label}.`,
+        );
         return {
           ...slot,
           tool: {
             ...slot.tool,
-            liquids: [...slot.tool.liquids, createLiquidPortion(payload.itemId)],
+            liquids: [...slot.tool.liquids, createLiquidPortion(payload.itemId, initialVolume)],
+          },
+        };
+      }),
+    );
+  };
+
+  const handleLiquidVolumeChange = (slotId: string, liquidId: string, volumeMl: number) => {
+    setSlots((currentSlots) =>
+      currentSlots.map((slot) => {
+        if (slot.id !== slotId || !slot.tool) {
+          return slot;
+        }
+
+        const targetLiquid = slot.tool.liquids.find((liquid) => liquid.id === liquidId);
+        if (!targetLiquid) {
+          return slot;
+        }
+
+        const occupiedByOtherLiquids = slot.tool.liquids.reduce(
+          (total, liquid) => total + (liquid.id === liquidId ? 0 : liquid.volume_ml),
+          0,
+        );
+        const maxAllowedVolume = Math.max(slot.tool.capacity_ml - occupiedByOtherLiquids, 0);
+        const nextVolume = Math.min(Math.max(volumeMl, 0), maxAllowedVolume);
+
+        setStatusMessage(
+          `${targetLiquid.name} adjusted to ${formatVolume(nextVolume)} mL in ${slot.tool.label}.`,
+        );
+
+        return {
+          ...slot,
+          tool: {
+            ...slot.tool,
+            liquids: slot.tool.liquids.map((liquid) =>
+              liquid.id === liquidId ? { ...liquid, volume_ml: nextVolume } : liquid,
+            ),
           },
         };
       }),
@@ -134,6 +186,7 @@ export function PesticideWorkbench() {
 
           <section className="space-y-6">
             <PesticideWorkbenchPanel
+              onLiquidVolumeChange={handleLiquidVolumeChange}
               slots={slots}
               statusMessage={statusMessage}
               onToolbarItemDrop={handleToolbarItemDrop}

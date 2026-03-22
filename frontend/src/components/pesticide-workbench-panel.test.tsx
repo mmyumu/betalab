@@ -13,6 +13,7 @@ describe("PesticideWorkbenchPanel", () => {
   it("renders empty stations and a drop status message", () => {
     render(
       <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
         slots={slots}
         statusMessage="Start by dragging an extraction tool onto the bench."
         onToolbarItemDrop={vi.fn()}
