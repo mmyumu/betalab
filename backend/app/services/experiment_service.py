@@ -70,8 +70,10 @@ class ExperimentService:
         handlers = {
             "place_tool_on_workbench": self._place_tool_on_workbench,
             "move_tool_between_workbench_slots": self._move_tool_between_workbench_slots,
+            "discard_workbench_tool": self._discard_workbench_tool,
             "place_workbench_tool_in_rack_slot": self._place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": self._remove_rack_tool_to_workbench_slot,
+            "discard_rack_tool": self._discard_rack_tool,
             "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
             "remove_liquid_from_workbench_tool": self._remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
@@ -94,6 +96,7 @@ class ExperimentService:
             tool_type=tool_definition.tool_type,
             capacity_ml=tool_definition.capacity_ml,
             accepts_liquids=tool_definition.accepts_liquids,
+            trashable=True,
         )
         experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
 
@@ -114,6 +117,17 @@ class ExperimentService:
         experiment.audit_log.append(
             f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}."
         )
+
+    def _discard_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
+        slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])
+        if slot.tool is None:
+            raise ValueError(f"Place a tool on {slot.label} before discarding it.")
+        if not slot.tool.trashable:
+            raise ValueError(f"{slot.tool.label} cannot be discarded.")
+
+        discarded_tool = slot.tool
+        slot.tool = None
+        experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
 
     def _place_workbench_tool_in_rack_slot(self, experiment: Experiment, payload: dict) -> None:
         source_slot = _find_workbench_slot(experiment.workbench, payload["source_slot_id"])
@@ -146,6 +160,17 @@ class ExperimentService:
         experiment.audit_log.append(
             f"{target_slot.tool.label} moved from {rack_slot.label} to {target_slot.label}."
         )
+
+    def _discard_rack_tool(self, experiment: Experiment, payload: dict) -> None:
+        rack_slot = _find_rack_slot(experiment.rack, payload["rack_slot_id"])
+        if rack_slot.tool is None:
+            raise ValueError(f"Place a vial in {rack_slot.label} before discarding it.")
+        if not rack_slot.tool.trashable:
+            raise ValueError(f"{rack_slot.tool.label} cannot be discarded.")
+
+        discarded_tool = rack_slot.tool
+        rack_slot.tool = None
+        experiment.audit_log.append(f"{discarded_tool.label} discarded from {rack_slot.label}.")
 
     def _add_liquid_to_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
         slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])

@@ -75,6 +75,7 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
     accepts_liquids: Boolean(tool.accepts_liquids),
+    trashable: typeof tool.trashable === "boolean" ? tool.trashable : true,
     liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
       (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
     ) ?? [],

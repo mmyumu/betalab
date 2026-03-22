@@ -70,7 +70,8 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         (targetType): targetType is DropTargetType =>
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
-          targetType === "rack_slot",
+          targetType === "rack_slot" ||
+          targetType === "trash_bin",
       ) ?? [];
 
     if (
@@ -110,13 +111,15 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
         (targetType): targetType is DropTargetType =>
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
-          targetType === "rack_slot",
+          targetType === "rack_slot" ||
+          targetType === "trash_bin",
       ) ?? [];
 
     if (
       typeof parsed.sourceSlotId === "string" &&
       typeof parsed.toolId === "string" &&
       typeof parsed.toolType === "string" &&
+      typeof parsed.trashable === "boolean" &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -124,6 +127,7 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
         sourceSlotId: parsed.sourceSlotId,
         toolId: parsed.toolId,
         toolType: parsed.toolType,
+        trashable: parsed.trashable,
       };
     }
   } catch {
@@ -147,13 +151,15 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
         (targetType): targetType is DropTargetType =>
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
-          targetType === "rack_slot",
+          targetType === "rack_slot" ||
+          targetType === "trash_bin",
       ) ?? [];
 
     if (
       typeof parsed.rackSlotId === "string" &&
       typeof parsed.toolId === "string" &&
       typeof parsed.toolType === "string" &&
+      typeof parsed.trashable === "boolean" &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -161,6 +167,7 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
         rackSlotId: parsed.rackSlotId,
         toolId: parsed.toolId,
         toolType: parsed.toolType,
+        trashable: parsed.trashable,
       };
     }
   } catch {

@@ -95,6 +95,7 @@ describe("api client", () => {
                 tool_type: "sample_vial",
                 capacity_ml: 2,
                 accepts_liquids: true,
+                trashable: true,
                 liquids: [
                   {
                     id: "bench_liquid_1",
@@ -122,6 +123,7 @@ describe("api client", () => {
                 tool_type: "sample_vial",
                 capacity_ml: 2,
                 accepts_liquids: true,
+                trashable: true,
                 liquids: [],
               },
             },
@@ -136,6 +138,7 @@ describe("api client", () => {
 
     expect(experiment.workbench.slots[0].tool?.toolId).toBe("sample_vial_lcms");
     expect(experiment.workbench.slots[0].tool?.toolType).toBe("sample_vial");
+    expect(experiment.workbench.slots[0].tool?.trashable).toBe(true);
     expect(experiment.workbench.slots[0].tool?.liquids[0].liquidId).toBe(
       "acetonitrile_extraction",
     );

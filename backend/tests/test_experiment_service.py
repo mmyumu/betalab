@@ -155,6 +155,31 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
     assert updated.audit_log[-1] == "Autosampler vial moved from Station 1 to Station 2."
 
 
+def test_discard_workbench_tool_removes_it_from_station() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is None
+    assert updated.audit_log[-1] == "Autosampler vial discarded from Station 1."
+
+
 def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -217,6 +242,39 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
     assert updated.workbench.slots[1].tool is not None
     assert updated.workbench.slots[1].tool.label == "Autosampler vial"
     assert updated.audit_log[-1] == "Autosampler vial moved from Position 1 to Station 2."
+
+
+def test_discard_rack_tool_removes_it_from_rack() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_rack_tool",
+        {
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    assert updated.rack.slots[0].tool is None
+    assert updated.audit_log[-1] == "Autosampler vial discarded from Position 1."
 
 
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:

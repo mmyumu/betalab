@@ -54,7 +54,7 @@ function syncTypes(dataTransfer: MockDataTransfer) {
 function writePayload(
   dataTransfer: MockDataTransfer,
   payload: {
-    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas" | "rack_slot">;
+    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas" | "rack_slot" | "trash_bin">;
     itemId: string;
     itemType: "tool" | "liquid" | "workspace_widget";
   },
@@ -103,6 +103,7 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "centrifuge_tube",
               capacity_ml: 50,
               accepts_liquids: true,
+              trashable: true,
               liquids: [
                 {
                   id: "bench_liquid_1",
@@ -201,6 +202,7 @@ describe("PesticideWorkbenchPanel", () => {
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
+      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -226,6 +228,7 @@ describe("PesticideWorkbenchPanel", () => {
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
+      trashable: true,
     });
   });
 
@@ -237,6 +240,7 @@ describe("PesticideWorkbenchPanel", () => {
       rackSlotId: "rack_slot_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -262,6 +266,7 @@ describe("PesticideWorkbenchPanel", () => {
       rackSlotId: "rack_slot_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
   });
 
@@ -286,6 +291,7 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "sample_vial",
               capacity_ml: 2,
               accepts_liquids: true,
+              trashable: true,
               liquids: [],
             },
           },
@@ -301,6 +307,7 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "centrifuge_tube",
               capacity_ml: 50,
               accepts_liquids: true,
+              trashable: true,
               liquids: [
                 {
                   id: "bench_liquid_2",

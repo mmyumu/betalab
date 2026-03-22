@@ -93,20 +93,23 @@ describe("workbench dnd helpers", () => {
     const dataTransfer = createDataTransfer();
 
     writeBenchToolDragPayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot", "rack_slot"],
+      allowedDropTargets: ["workbench_slot", "rack_slot", "trash_bin"],
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
     syncTypes(dataTransfer);
 
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readBenchToolDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot", "rack_slot"],
+      allowedDropTargets: ["workbench_slot", "rack_slot", "trash_bin"],
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
   });
 
@@ -114,20 +117,23 @@ describe("workbench dnd helpers", () => {
     const dataTransfer = createDataTransfer();
 
     writeBenchToolDragPayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
+      trashable: true,
     });
     syncTypes(dataTransfer);
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readBenchToolDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
+      trashable: true,
     });
   });
 
@@ -135,20 +141,23 @@ describe("workbench dnd helpers", () => {
     const dataTransfer = createDataTransfer();
 
     writeRackToolDragPayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       rackSlotId: "rack_slot_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
     syncTypes(dataTransfer);
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readRackToolDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       rackSlotId: "rack_slot_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
+      trashable: true,
     });
   });
 });

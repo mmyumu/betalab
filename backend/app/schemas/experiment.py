@@ -21,6 +21,7 @@ class WorkbenchToolSchema(BaseModel):
     tool_type: str
     capacity_ml: float
     accepts_liquids: bool
+    trashable: bool
     liquids: list[WorkbenchLiquidSchema]
 
 
@@ -56,8 +57,10 @@ class ExperimentCommandEnvelope(BaseModel):
     type: Literal[
         "place_tool_on_workbench",
         "move_tool_between_workbench_slots",
+        "discard_workbench_tool",
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
+        "discard_rack_tool",
         "add_liquid_to_workbench_tool",
         "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",

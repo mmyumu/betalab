@@ -8,7 +8,7 @@ type WorkspaceEquipmentWidgetProps = {
   description?: string;
   eyebrow: string;
   footer?: string;
-  title: string;
+  title?: string;
 };
 
 export function WorkspaceEquipmentWidget({
@@ -27,7 +27,9 @@ export function WorkspaceEquipmentWidget({
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
               {eyebrow}
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
+            {title ? (
+              <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
+            ) : null}
             {description ? (
               <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
             ) : null}

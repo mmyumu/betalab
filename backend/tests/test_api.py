@@ -215,6 +215,69 @@ def test_rack_commands_round_trip_over_http() -> None:
     assert removed.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
 
 
+def test_discard_commands_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+        discarded_bench_tool = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                },
+            },
+        )
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_workbench_tool_in_rack_slot",
+                "payload": {
+                    "source_slot_id": "station_1",
+                    "rack_slot_id": "rack_slot_1",
+                },
+            },
+        )
+        discarded_rack_tool = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_rack_tool",
+                "payload": {
+                    "rack_slot_id": "rack_slot_1",
+                },
+            },
+        )
+
+    assert discarded_bench_tool.status_code == 200
+    assert discarded_bench_tool.json()["workbench"]["slots"][0]["tool"] is None
+    assert discarded_rack_tool.status_code == 200
+    assert discarded_rack_tool.json()["rack"]["slots"][0]["tool"] is None
+
+
 def test_remove_liquid_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

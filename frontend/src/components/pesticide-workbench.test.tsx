@@ -79,6 +79,7 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     toolType: "sample_vial",
     capacity_ml: 2,
     accepts_liquids: true,
+    trashable: true,
     liquids: [],
     ...overrides,
   };
@@ -138,7 +139,7 @@ describe("PesticideWorkbench", () => {
     expect(liquidDropsCard).not.toBeNull();
     expect(within(placedToolsCard as HTMLElement).getByText("0")).toBeInTheDocument();
     expect(within(liquidDropsCard as HTMLElement).getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("2 widgets live")).toBeInTheDocument();
+    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
@@ -212,7 +213,7 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
+    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
       "data-occupied-count",
       "0",
@@ -229,7 +230,7 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
+    expect(screen.getByText("5 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("lc-msms-instrument-illustration")).toHaveAttribute(
       "data-status",
       "idle",
@@ -265,7 +266,7 @@ describe("PesticideWorkbench", () => {
     fireEvent.drop(workspace, { clientX: 740, clientY: 520, dataTransfer: rackTransfer });
 
     expect(screen.getAllByTestId("widget-rack")).toHaveLength(1);
-    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
+    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
   });
 
   it("ignores non-equipment drops on the workspace canvas", async () => {
@@ -289,6 +290,134 @@ describe("PesticideWorkbench", () => {
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
     expect(screen.queryByTestId("widget-instrument")).not.toBeInTheDocument();
     expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("discards a bench tool when dropped into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeTool({ toolType: "beaker", toolId: "beaker_rinse", label: "Bench beaker" }) }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Bench beaker discarded from Station 1."],
+        slots: makeSlots(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-tool-card-bench_tool_1")).toBeInTheDocument();
+    });
+
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("trash-dropzone"), { dataTransfer: toolTransfer });
+    fireEvent.drop(screen.getByTestId("trash-dropzone"), { dataTransfer: toolTransfer });
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("bench-slot-station_1")).getByText("Empty station")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "discard_workbench_tool",
+      { slot_id: "station_1" },
+    );
+  });
+
+  it("discards a rack vial when dropped into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        rackSlots: makeRackSlots([{ tool: makeTool() }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Autosampler vial discarded from Position 1."],
+        rackSlots: makeRackSlots(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const workspace = await screen.findByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("rack-slot-tool-1")).toBeInTheDocument();
+    });
+
+    const vialTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("rack-slot-tool-1"), {
+      dataTransfer: vialTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("trash-dropzone"), { dataTransfer: vialTransfer });
+    fireEvent.drop(screen.getByTestId("trash-dropzone"), { dataTransfer: vialTransfer });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("rack-slot-tool-1")).not.toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "discard_rack_tool",
+      { rack_slot_id: "rack_slot_1" },
+    );
+  });
+
+  it("removes a workspace equipment widget when dropped on the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    const workspace = await screen.findByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    fireEvent.mouseDown(screen.getByTestId("widget-handle-rack"), {
+      button: 0,
+      clientX: 500,
+      clientY: 430,
+    });
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1520, clientY: 140 }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
+    });
+  });
+
+  it("does not remove the workbench when dragged onto the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
+    });
+
+    fireEvent.mouseDown(screen.getByTestId("widget-handle-workbench"), {
+      button: 0,
+      clientX: 260,
+      clientY: 24,
+    });
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1520, clientY: 140 }));
+
+    expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
   });
 
   it("moves any bench tool from one station to another through the generic drop system", async () => {

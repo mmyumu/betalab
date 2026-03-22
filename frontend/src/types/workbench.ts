@@ -1,5 +1,5 @@
 export type ToolbarAccent = "amber" | "emerald" | "rose" | "sky";
-export type DropTargetType = "workbench_slot" | "workspace_canvas" | "rack_slot";
+export type DropTargetType = "workbench_slot" | "workspace_canvas" | "rack_slot" | "trash_bin";
 
 type ToolbarBaseItem = {
   allowedDropTargets: DropTargetType[];
@@ -8,6 +8,7 @@ type ToolbarBaseItem = {
   subtitle: string;
   description: string;
   accent: ToolbarAccent;
+  trashable: boolean;
 };
 
 export type ToolType = "volumetric_flask" | "amber_bottle" | "sample_vial" | "beaker" | "centrifuge_tube" | "cleanup_tube";
@@ -54,6 +55,7 @@ export type BenchToolDragPayload = {
   sourceSlotId: string;
   toolId: string;
   toolType: ToolType;
+  trashable: boolean;
 };
 
 export type RackToolDragPayload = {
@@ -61,6 +63,7 @@ export type RackToolDragPayload = {
   rackSlotId: string;
   toolId: string;
   toolType: ToolType;
+  trashable: boolean;
 };
 
 export type BenchLiquidPortion = {
@@ -80,6 +83,7 @@ export type BenchToolInstance = {
   toolType: ToolType;
   capacity_ml: number;
   accepts_liquids: boolean;
+  trashable: boolean;
   liquids: BenchLiquidPortion[];
 };
 
