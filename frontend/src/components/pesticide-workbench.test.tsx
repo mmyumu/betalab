@@ -132,14 +132,6 @@ describe("PesticideWorkbench", () => {
       expect(screen.getAllByText("Empty station")).toHaveLength(4);
     });
 
-    const placedToolsCard = screen.getByText("Placed tools").closest("div");
-    const liquidDropsCard = screen.getByText("Liquid drops").closest("div");
-
-    expect(placedToolsCard).not.toBeNull();
-    expect(liquidDropsCard).not.toBeNull();
-    expect(within(placedToolsCard as HTMLElement).getByText("0")).toBeInTheDocument();
-    expect(within(liquidDropsCard as HTMLElement).getByText("0")).toBeInTheDocument();
-    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
@@ -213,7 +205,6 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
       "data-occupied-count",
       "0",
@@ -230,7 +221,6 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("5 widgets live")).toBeInTheDocument();
     expect(screen.getByTestId("lc-msms-instrument-illustration")).toHaveAttribute(
       "data-status",
       "idle",
@@ -266,7 +256,6 @@ describe("PesticideWorkbench", () => {
     fireEvent.drop(workspace, { clientX: 740, clientY: 520, dataTransfer: rackTransfer });
 
     expect(screen.getAllByTestId("widget-rack")).toHaveLength(1);
-    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
   });
 
   it("ignores non-equipment drops on the workspace canvas", async () => {
@@ -394,7 +383,7 @@ describe("PesticideWorkbench", () => {
       clientX: 500,
       clientY: 430,
     });
-    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1520, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
 
     await waitFor(() => {
       expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
@@ -415,7 +404,7 @@ describe("PesticideWorkbench", () => {
       clientX: 260,
       clientY: 24,
     });
-    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1520, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
 
     expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
   });

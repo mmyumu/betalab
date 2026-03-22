@@ -75,7 +75,6 @@ describe("PesticideWorkbenchPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Empty prep bench")).toBeInTheDocument();
     expect(screen.getByText("Station 1")).toBeInTheDocument();
     expect(screen.getByText("Station 2")).toBeInTheDocument();
     expect(screen.getAllByText("Empty station")).toHaveLength(2);

@@ -83,8 +83,7 @@ export function PesticideWorkbenchPanel({
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
               Workbench
             </p>
-            <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">Empty prep bench</h2>
-            <p className="mt-2 max-w-4xl text-sm text-slate-600 xl:text-base">
+            <p className="mt-1 max-w-4xl text-sm text-slate-600 xl:text-base">
               Drag a tool from the palette onto a station, then drop compatible liquids into the
               placed tool.
             </p>

@@ -522,9 +522,9 @@ export function PesticideWorkbench() {
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <div className="mx-auto max-w-[1800px] rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Betalab prototype
+            Betalab
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Laboratory workspace</h1>
           <p className="mt-4 text-sm text-slate-600">Creating pesticide workbench from backend...</p>
         </div>
       </main>
@@ -538,7 +538,7 @@ export function PesticideWorkbench() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
             Backend connection error
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Laboratory workspace</h1>
           <p className="mt-4 text-sm text-slate-600">{state.message}</p>
           <button
             className="mt-6 rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white"
@@ -557,11 +557,6 @@ export function PesticideWorkbench() {
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
   const rackSlots = state.experiment.rack.slots;
-  const placedTools = slots.filter((slot) => slot.tool).length;
-  const liquidTransfers = slots.reduce(
-    (total, slot) => total + (slot.tool?.liquids.length ?? 0),
-    0,
-  );
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -626,44 +621,21 @@ export function PesticideWorkbench() {
       <div className="mx-auto max-w-[1800px]">
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur xl:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Betalab prototype
+            Betalab
           </p>
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-4xl font-semibold tracking-tight xl:text-[3.25rem]">
-                Pesticide prep workbench
-              </h1>
-              <p className="mt-2 max-w-5xl text-sm text-slate-600 xl:text-base">
-                Start from an empty bench, place QuEChERS prep tools, and add the first liquids of
-                the pesticide extraction workflow before moving toward cleanup and LC-MS/MS.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm text-slate-700 xl:min-w-[18rem]">
-              <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white xl:px-5 xl:py-4">
-                <p className="text-xs uppercase tracking-wide text-slate-300">Placed tools</p>
-                <p className="mt-1 text-lg font-semibold xl:text-2xl">{placedTools}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 xl:px-5 xl:py-4">
-                <p className="text-xs uppercase tracking-wide text-slate-500">Liquid drops</p>
-                <p className="mt-1 text-lg font-semibold xl:text-2xl">{liquidTransfers}</p>
-              </div>
-            </div>
-          </div>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight xl:text-[3.25rem]">
+            Laboratory workspace
+          </h1>
         </header>
 
         <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
-          <div className="flex items-center justify-between gap-4 rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Custom layout
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                Drag the widget handles to compose your own workspace.
-              </p>
-            </div>
-            <div className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-              {liveWidgetIds.length} widgets live
-            </div>
+          <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Custom layout
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              Drag the widget handles to compose your own workspace.
+            </p>
           </div>
 
           <div

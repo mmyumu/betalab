@@ -28,9 +28,8 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
   return (
     <section className="rounded-[1.55rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Palette</p>
-      <h2 className="mt-1 text-base font-semibold text-slate-950">Inventory rail</h2>
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-2 space-y-3">
         {categories.map((category) => (
           <article
             key={category.id}

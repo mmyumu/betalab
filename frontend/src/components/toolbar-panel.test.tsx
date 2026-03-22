@@ -70,7 +70,6 @@ describe("ToolbarPanel", () => {
     render(<ToolbarPanel categories={categories} />);
 
     expect(screen.getByText("Palette")).toBeInTheDocument();
-    expect(screen.getByText("Inventory rail")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Workspace equipment")).toBeInTheDocument();
