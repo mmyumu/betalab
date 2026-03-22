@@ -95,6 +95,40 @@ class Run:
 
 
 @dataclass
+class WorkbenchLiquid:
+    id: str
+    liquid_id: str
+    name: str
+    volume_ml: float
+    accent: str
+
+
+@dataclass
+class WorkbenchTool:
+    id: str
+    tool_id: str
+    label: str
+    subtitle: str
+    accent: str
+    tool_type: str
+    capacity_ml: float
+    accepts_liquids: bool
+    liquids: list[WorkbenchLiquid] = field(default_factory=list)
+
+
+@dataclass
+class WorkbenchSlot:
+    id: str
+    label: str
+    tool: WorkbenchTool | None = None
+
+
+@dataclass
+class Workbench:
+    slots: list[WorkbenchSlot] = field(default_factory=list)
+
+
+@dataclass
 class Experiment:
     id: str
     scenario_id: str
@@ -103,6 +137,7 @@ class Experiment:
     containers: dict[str, Container]
     rack: Rack
     runs: list[Run] = field(default_factory=list)
+    workbench: Workbench | None = None
     audit_log: list[str] = field(default_factory=list)
 
 

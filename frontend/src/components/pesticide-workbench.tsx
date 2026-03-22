@@ -1,151 +1,152 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
+import { createExperiment, sendExperimentCommand } from "@/lib/api";
 import {
-  initialWorkbenchSlots,
-  pesticideLiquidCatalog,
-  pesticideToolCatalog,
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
-import type { BenchLiquidPortion, BenchSlot, BenchToolInstance, ToolbarDragPayload } from "@/types/workbench";
+import type { Experiment } from "@/types/experiment";
+import type { ToolbarDragPayload } from "@/types/workbench";
 
-function getToolCurrentVolume(tool: BenchToolInstance) {
-  return tool.liquids.reduce((total, portion) => total + portion.volume_ml, 0);
-}
+type WorkbenchState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { experiment: Experiment; status: "ready" };
 
-function formatVolume(volumeMl: number) {
-  return Number.isInteger(volumeMl) ? volumeMl.toString() : volumeMl.toFixed(1);
-}
+const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
+const defaultErrorMessage = "Unable to load pesticide workbench";
 
-function createToolInstance(toolId: string): BenchToolInstance {
-  const tool = pesticideToolCatalog[toolId];
-
-  return {
-    id: `${tool.id}_${crypto.randomUUID()}`,
-    toolId: tool.id,
-    label: tool.name,
-    subtitle: tool.subtitle,
-    accent: tool.accent,
-    toolType: tool.toolType,
-    capacity_ml: tool.capacity_ml,
-    accepts_liquids: tool.accepts_liquids,
-    liquids: [],
-  };
-}
-
-function createLiquidPortion(liquidId: string, volumeMl: number): BenchLiquidPortion {
-  const liquid = pesticideLiquidCatalog[liquidId];
-
-  return {
-    id: `${liquid.id}_${crypto.randomUUID()}`,
-    liquidId: liquid.id,
-    name: liquid.name,
-    volume_ml: volumeMl,
-    accent: liquid.accent,
-  };
+function getLatestStatusMessage(experiment: Experiment) {
+  return experiment.audit_log.at(-1) ?? defaultStatusMessage;
 }
 
 export function PesticideWorkbench() {
-  const [slots, setSlots] = useState<BenchSlot[]>(initialWorkbenchSlots);
-  const [statusMessage, setStatusMessage] = useState(
-    "Start by dragging an extraction tool onto the bench.",
-  );
+  const [state, setState] = useState<WorkbenchState>({ status: "loading" });
+  const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
+  const [isCommandPending, setIsCommandPending] = useState(false);
+  const hasLoadedInitialExperiment = useRef(false);
+
+  const loadExperiment = async () => {
+    setState({ status: "loading" });
+
+    try {
+      const experiment = await createExperiment("pesticides_workbench");
+      setState({ status: "ready", experiment });
+      setStatusMessage(getLatestStatusMessage(experiment));
+    } catch (error) {
+      setState({
+        status: "error",
+        message: error instanceof Error ? error.message : defaultErrorMessage,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (hasLoadedInitialExperiment.current) {
+      return;
+    }
+
+    hasLoadedInitialExperiment.current = true;
+    void loadExperiment();
+  }, []);
+
+  const sendWorkbenchCommand = async (type: string, payload: Record<string, unknown>) => {
+    if (state.status !== "ready" || isCommandPending) {
+      return;
+    }
+
+    setIsCommandPending(true);
+
+    try {
+      const updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
+      setState({ status: "ready", experiment: updatedExperiment });
+      setStatusMessage(getLatestStatusMessage(updatedExperiment));
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Workbench command failed");
+    } finally {
+      setIsCommandPending(false);
+    }
+  };
 
   const handleToolbarItemDrop = (slotId: string, payload: ToolbarDragPayload) => {
-    setSlots((currentSlots) =>
-      currentSlots.map((slot) => {
-        if (slot.id !== slotId) {
-          return slot;
-        }
+    if (payload.itemType === "tool") {
+      void sendWorkbenchCommand("place_tool_on_workbench", {
+        slot_id: slotId,
+        tool_id: payload.itemId,
+      });
+      return;
+    }
 
-        if (payload.itemType === "tool") {
-          if (slot.tool) {
-            setStatusMessage(`${slot.label} already contains a tool.`);
-            return slot;
-          }
-
-          const nextTool = createToolInstance(payload.itemId);
-          setStatusMessage(`${nextTool.label} placed on ${slot.label}.`);
-          return { ...slot, tool: nextTool };
-        }
-
-        if (!slot.tool) {
-          setStatusMessage(`Place a tool on ${slot.label} before adding liquids.`);
-          return slot;
-        }
-
-        if (!slot.tool.accepts_liquids) {
-          setStatusMessage(`${slot.tool.label} does not accept liquids.`);
-          return slot;
-        }
-
-        const liquid = pesticideLiquidCatalog[payload.itemId];
-        const currentVolume = getToolCurrentVolume(slot.tool);
-        const remainingCapacity = Math.max(slot.tool.capacity_ml - currentVolume, 0);
-
-        if (remainingCapacity <= 0) {
-          setStatusMessage(`${slot.tool.label} is already full.`);
-          return slot;
-        }
-
-        const initialVolume = Math.min(liquid.transfer_volume_ml, remainingCapacity);
-        const usedRemainingCapacity = initialVolume < liquid.transfer_volume_ml;
-
-        setStatusMessage(
-          usedRemainingCapacity
-            ? `${liquid.name} added to ${slot.tool.label} at ${formatVolume(initialVolume)} mL (remaining capacity).`
-            : `${liquid.name} added to ${slot.tool.label}.`,
-        );
-        return {
-          ...slot,
-          tool: {
-            ...slot.tool,
-            liquids: [...slot.tool.liquids, createLiquidPortion(payload.itemId, initialVolume)],
-          },
-        };
-      }),
-    );
+    void sendWorkbenchCommand("add_liquid_to_workbench_tool", {
+      slot_id: slotId,
+      liquid_id: payload.itemId,
+    });
   };
 
   const handleLiquidVolumeChange = (slotId: string, liquidId: string, volumeMl: number) => {
-    setSlots((currentSlots) =>
-      currentSlots.map((slot) => {
-        if (slot.id !== slotId || !slot.tool) {
-          return slot;
-        }
-
-        const targetLiquid = slot.tool.liquids.find((liquid) => liquid.id === liquidId);
-        if (!targetLiquid) {
-          return slot;
-        }
-
-        const occupiedByOtherLiquids = slot.tool.liquids.reduce(
-          (total, liquid) => total + (liquid.id === liquidId ? 0 : liquid.volume_ml),
-          0,
-        );
-        const maxAllowedVolume = Math.max(slot.tool.capacity_ml - occupiedByOtherLiquids, 0);
-        const nextVolume = Math.min(Math.max(volumeMl, 0), maxAllowedVolume);
-
-        setStatusMessage(
-          `${targetLiquid.name} adjusted to ${formatVolume(nextVolume)} mL in ${slot.tool.label}.`,
-        );
-
-        return {
-          ...slot,
-          tool: {
-            ...slot.tool,
-            liquids: slot.tool.liquids.map((liquid) =>
-              liquid.id === liquidId ? { ...liquid, volume_ml: nextVolume } : liquid,
-            ),
-          },
-        };
-      }),
-    );
+    void sendWorkbenchCommand("update_workbench_liquid_volume", {
+      slot_id: slotId,
+      liquid_entry_id: liquidId,
+      volume_ml: volumeMl,
+    });
   };
 
+  if (state.status === "loading") {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto max-w-[1800px] rounded-[2rem] border border-slate-200 bg-white/90 p-8 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Betalab prototype
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
+          <p className="mt-4 text-sm text-slate-600">Creating pesticide workbench from backend...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto max-w-[1800px] rounded-[2rem] border border-rose-200 bg-white/90 p-8 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
+            Backend connection error
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
+          <p className="mt-4 text-sm text-slate-600">{state.message}</p>
+          <button
+            className="mt-6 rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+            onClick={() => {
+              void loadExperiment();
+            }}
+            type="button"
+          >
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  const workbench = state.experiment.workbench;
+  if (workbench === null) {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto max-w-[1800px] rounded-[2rem] border border-rose-200 bg-white/90 p-8 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
+            Backend contract error
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
+          <p className="mt-4 text-sm text-slate-600">Experiment is missing workbench state.</p>
+        </div>
+      </main>
+    );
+  }
+
+  const slots = workbench.slots;
   const placedTools = slots.filter((slot) => slot.tool).length;
   const liquidTransfers = slots.reduce((total, slot) => total + (slot.tool?.liquids.length ?? 0), 0);
 
@@ -188,7 +189,7 @@ export function PesticideWorkbench() {
             <PesticideWorkbenchPanel
               onLiquidVolumeChange={handleLiquidVolumeChange}
               slots={slots}
-              statusMessage={statusMessage}
+              statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
               onToolbarItemDrop={handleToolbarItemDrop}
             />
 

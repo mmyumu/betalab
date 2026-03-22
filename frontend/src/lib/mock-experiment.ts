@@ -125,6 +125,7 @@ export const mockExperiment: Experiment = {
       },
     },
   ],
+  workbench: null,
   audit_log: [
     "Experiment created",
     "Std 1 configured",

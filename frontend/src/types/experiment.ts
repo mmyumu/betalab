@@ -1,3 +1,5 @@
+import type { BenchSlot } from "@/types/workbench";
+
 export type Transition = {
   id: string;
   q1_mz: number;
@@ -65,6 +67,10 @@ export type Run = {
   result: RunResult | null;
 };
 
+export type ExperimentWorkbench = {
+  slots: BenchSlot[];
+};
+
 export type Experiment = {
   id: string;
   scenario_id: string;
@@ -73,5 +79,6 @@ export type Experiment = {
   containers: Record<string, Container>;
   rack: Rack;
   runs: Run[];
+  workbench: ExperimentWorkbench | null;
   audit_log: string[];
 };

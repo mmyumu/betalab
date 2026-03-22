@@ -18,6 +18,7 @@ const makeExperiment = (): Experiment => ({
   containers: {},
   rack: { positions: {} },
   runs: [],
+  workbench: null,
   audit_log: [],
 });
 
@@ -81,6 +82,53 @@ describe("api client", () => {
 
     await expect(getExperiment("experiment_123")).resolves.toEqual(experiment);
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/experiments/experiment_123");
+  });
+
+  it("normalizes snake_case workbench payloads from the backend", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...makeExperiment(),
+        workbench: {
+          slots: [
+            {
+              id: "station_1",
+              label: "Station 1",
+              tool: {
+                id: "bench_tool_1",
+                tool_id: "sample_vial_lcms",
+                label: "Autosampler vial",
+                subtitle: "Injection ready",
+                accent: "sky",
+                tool_type: "sample_vial",
+                capacity_ml: 2,
+                accepts_liquids: true,
+                liquids: [
+                  {
+                    id: "bench_liquid_1",
+                    liquid_id: "acetonitrile_extraction",
+                    name: "Acetonitrile",
+                    volume_ml: 2,
+                    accent: "amber",
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const experiment = await getExperiment("experiment_123");
+
+    expect(experiment.workbench).not.toBeNull();
+    expect(experiment.workbench?.slots[0].tool?.toolId).toBe("sample_vial_lcms");
+    expect(experiment.workbench?.slots[0].tool?.toolType).toBe("sample_vial");
+    expect(experiment.workbench?.slots[0].tool?.liquids[0].liquidId).toBe(
+      "acetonitrile_extraction",
+    );
   });
 
   it("throws when experiment creation fails", async () => {

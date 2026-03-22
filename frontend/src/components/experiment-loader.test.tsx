@@ -42,6 +42,7 @@ const makeExperiment = (): Experiment => ({
   },
   rack: { positions: { A1: null, A2: null, A3: null } },
   runs: [],
+  workbench: null,
   audit_log: ["Experiment created"],
 });
 

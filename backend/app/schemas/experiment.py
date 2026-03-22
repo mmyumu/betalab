@@ -72,6 +72,36 @@ class RunSchema(BaseModel):
     result: RunResultSchema | None = None
 
 
+class WorkbenchLiquidSchema(BaseModel):
+    id: str
+    liquid_id: str
+    name: str
+    volume_ml: float
+    accent: str
+
+
+class WorkbenchToolSchema(BaseModel):
+    id: str
+    tool_id: str
+    label: str
+    subtitle: str
+    accent: str
+    tool_type: str
+    capacity_ml: float
+    accepts_liquids: bool
+    liquids: list[WorkbenchLiquidSchema]
+
+
+class WorkbenchSlotSchema(BaseModel):
+    id: str
+    label: str
+    tool: WorkbenchToolSchema | None = None
+
+
+class WorkbenchSchema(BaseModel):
+    slots: list[WorkbenchSlotSchema]
+
+
 class ExperimentSchema(BaseModel):
     id: str
     scenario_id: str
@@ -80,6 +110,7 @@ class ExperimentSchema(BaseModel):
     containers: dict[str, ContainerSchema]
     rack: RackSchema
     runs: list[RunSchema]
+    workbench: WorkbenchSchema | None = None
     audit_log: list[str]
 
 
@@ -94,5 +125,8 @@ class ExperimentCommandEnvelope(BaseModel):
         "transfer_to_vial",
         "place_vial_in_rack",
         "run_sequence",
+        "place_tool_on_workbench",
+        "add_liquid_to_workbench_tool",
+        "update_workbench_liquid_volume",
     ]
     payload: dict = Field(default_factory=dict)

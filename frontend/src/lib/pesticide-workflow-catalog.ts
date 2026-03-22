@@ -31,9 +31,9 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       {
         id: "sample_vial_lcms",
         itemType: "tool",
-        name: "LC-MS/MS vial",
+        name: "Autosampler vial",
         subtitle: "Injection ready",
-        description: "Final vial intended for the autosampler once the extract is clear.",
+        description: "Standard autosampler vial used to load the final extract into the chromatograph.",
         accent: "sky",
         toolType: "sample_vial",
         capacity_ml: 2,

@@ -13,6 +13,10 @@ from app.domain.models import (
     Run,
     RunResult,
     Transition,
+    Workbench,
+    WorkbenchLiquid,
+    WorkbenchSlot,
+    WorkbenchTool,
     new_id,
 )
 from app.schemas.experiment import ExperimentSchema
@@ -28,17 +32,28 @@ class ExperimentService:
         self._experiments: dict[str, Experiment] = {}
 
     def create_experiment(self, scenario_id: str) -> ExperimentSchema:
-        molecule = Molecule(
-            id="mol_caffeine_like",
-            name="Molecule A",
-            retention_time_min=1.35,
-            response_factor=180.0,
-            expected_ion_ratio=0.62,
-            transitions=[
-                Transition(id="tr_1", q1_mz=301.2, q3_mz=123.1, relative_response=1.0),
-                Transition(id="tr_2", q1_mz=301.2, q3_mz=145.1, relative_response=0.62),
-            ],
-        )
+        if scenario_id == "pesticides_workbench":
+            experiment = Experiment(
+                id=new_id("experiment"),
+                scenario_id=scenario_id,
+                status=ExperimentStatus.PREPARING,
+                molecule=_default_molecule(),
+                containers={},
+                rack=Rack(positions={}),
+                workbench=Workbench(
+                    slots=[
+                        WorkbenchSlot(id="station_1", label="Station 1"),
+                        WorkbenchSlot(id="station_2", label="Station 2"),
+                        WorkbenchSlot(id="station_3", label="Station 3"),
+                        WorkbenchSlot(id="station_4", label="Station 4"),
+                    ]
+                ),
+                audit_log=["Experiment created", "Start by dragging an extraction tool onto the bench."],
+            )
+            self._experiments[experiment.id] = experiment
+            return self._to_schema(experiment)
+
+        molecule = _default_molecule()
         containers = {
             "stock_analyte": Container(
                 id="stock_analyte",
@@ -111,6 +126,9 @@ class ExperimentService:
             "transfer_to_vial": self._transfer_to_vial,
             "place_vial_in_rack": self._place_vial_in_rack,
             "run_sequence": self._run_sequence,
+            "place_tool_on_workbench": self._place_tool_on_workbench,
+            "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
+            "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
         }
         handler = handlers[command_type]
         handler(experiment, payload)
@@ -224,6 +242,100 @@ class ExperimentService:
             experiment.audit_log.append(f"Completed run for rack position {position}")
         experiment.status = ExperimentStatus.COMPLETED
 
+    def _place_tool_on_workbench(self, experiment: Experiment, payload: dict) -> None:
+        workbench = _require_workbench(experiment)
+        slot = _find_workbench_slot(workbench, payload["slot_id"])
+        if slot.tool is not None:
+            raise ValueError(f"{slot.label} already contains a tool")
+
+        tool_catalog_entry = _get_workbench_tool_definition(payload["tool_id"])
+        slot.tool = WorkbenchTool(
+            id=new_id("bench_tool"),
+            tool_id=tool_catalog_entry["id"],
+            label=tool_catalog_entry["name"],
+            subtitle=tool_catalog_entry["subtitle"],
+            accent=tool_catalog_entry["accent"],
+            tool_type=tool_catalog_entry["tool_type"],
+            capacity_ml=tool_catalog_entry["capacity_ml"],
+            accepts_liquids=True,
+        )
+        experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
+
+    def _add_liquid_to_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
+        workbench = _require_workbench(experiment)
+        slot = _find_workbench_slot(workbench, payload["slot_id"])
+        if slot.tool is None:
+            raise ValueError(f"Place a tool on {slot.label} before adding liquids.")
+
+        liquid_catalog_entry = _get_workbench_liquid_definition(payload["liquid_id"])
+        current_volume = sum(liquid.volume_ml for liquid in slot.tool.liquids)
+        remaining_capacity = max(slot.tool.capacity_ml - current_volume, 0)
+
+        if remaining_capacity <= 0:
+            raise ValueError(f"{slot.tool.label} is already full.")
+
+        volume_to_add = min(liquid_catalog_entry["transfer_volume_ml"], remaining_capacity)
+        existing_liquid = next(
+            (liquid for liquid in slot.tool.liquids if liquid.liquid_id == liquid_catalog_entry["id"]),
+            None,
+        )
+        had_existing_liquid = existing_liquid is not None
+
+        if existing_liquid is None:
+            slot.tool.liquids.append(
+                WorkbenchLiquid(
+                    id=new_id("bench_liquid"),
+                    liquid_id=liquid_catalog_entry["id"],
+                    name=liquid_catalog_entry["name"],
+                    volume_ml=volume_to_add,
+                    accent=liquid_catalog_entry["accent"],
+                )
+            )
+            updated_volume = volume_to_add
+        else:
+            existing_liquid.volume_ml += volume_to_add
+            updated_volume = existing_liquid.volume_ml
+
+        if volume_to_add < liquid_catalog_entry["transfer_volume_ml"]:
+            if had_existing_liquid:
+                experiment.audit_log.append(
+                    f"{liquid_catalog_entry['name']} increased to {updated_volume:g} mL in {slot.tool.label} (remaining capacity)."
+                )
+            else:
+                experiment.audit_log.append(
+                    f"{liquid_catalog_entry['name']} added to {slot.tool.label} at {updated_volume:g} mL (remaining capacity)."
+                )
+        elif not had_existing_liquid:
+            experiment.audit_log.append(f"{liquid_catalog_entry['name']} added to {slot.tool.label}.")
+        else:
+            experiment.audit_log.append(
+                f"{liquid_catalog_entry['name']} increased to {updated_volume:g} mL in {slot.tool.label}."
+            )
+
+    def _update_workbench_liquid_volume(self, experiment: Experiment, payload: dict) -> None:
+        workbench = _require_workbench(experiment)
+        slot = _find_workbench_slot(workbench, payload["slot_id"])
+        if slot.tool is None:
+            raise ValueError(f"Place a tool on {slot.label} before editing liquids.")
+
+        liquid_entry = next(
+            (liquid for liquid in slot.tool.liquids if liquid.id == payload["liquid_entry_id"]),
+            None,
+        )
+        if liquid_entry is None:
+            raise ValueError("Unknown workbench liquid")
+
+        requested_volume = max(float(payload["volume_ml"]), 0.0)
+        occupied_by_others = sum(
+            liquid.volume_ml for liquid in slot.tool.liquids if liquid.id != liquid_entry.id
+        )
+        max_allowed_volume = max(slot.tool.capacity_ml - occupied_by_others, 0.0)
+        next_volume = min(requested_volume, max_allowed_volume)
+        liquid_entry.volume_ml = round(next_volume, 3)
+        experiment.audit_log.append(
+            f"{liquid_entry.name} adjusted to {liquid_entry.volume_ml:g} mL in {slot.tool.label}."
+        )
+
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema:
         containers = {}
         for container_id, container in experiment.containers.items():
@@ -241,9 +353,106 @@ class ExperimentService:
             "containers": containers,
             "rack": {"positions": experiment.rack.positions},
             "runs": [asdict(run) for run in experiment.runs],
+            "workbench": asdict(experiment.workbench) if experiment.workbench is not None else None,
             "audit_log": experiment.audit_log,
         }
         return ExperimentSchema.model_validate(experiment_data)
+
+
+def _default_molecule() -> Molecule:
+    molecule = Molecule(
+        id="mol_caffeine_like",
+        name="Molecule A",
+        retention_time_min=1.35,
+        response_factor=180.0,
+        expected_ion_ratio=0.62,
+        transitions=[
+            Transition(id="tr_1", q1_mz=301.2, q3_mz=123.1, relative_response=1.0),
+            Transition(id="tr_2", q1_mz=301.2, q3_mz=145.1, relative_response=0.62),
+        ],
+    )
+    return molecule
+
+
+def _require_workbench(experiment: Experiment) -> Workbench:
+    if experiment.workbench is None:
+        raise ValueError("Experiment has no workbench")
+    return experiment.workbench
+
+
+def _find_workbench_slot(workbench: Workbench, slot_id: str) -> WorkbenchSlot:
+    slot = next((entry for entry in workbench.slots if entry.id == slot_id), None)
+    if slot is None:
+        raise ValueError("Unknown workbench slot")
+    return slot
+
+
+def _get_workbench_tool_definition(tool_id: str) -> dict[str, object]:
+    tool_catalog = {
+        "centrifuge_tube_50ml": {
+            "id": "centrifuge_tube_50ml",
+            "name": "50 mL centrifuge tube",
+            "subtitle": "QuEChERS extraction",
+            "accent": "amber",
+            "tool_type": "centrifuge_tube",
+            "capacity_ml": 50.0,
+        },
+        "cleanup_tube_dspe": {
+            "id": "cleanup_tube_dspe",
+            "name": "d-SPE cleanup tube",
+            "subtitle": "Matrix cleanup",
+            "accent": "emerald",
+            "tool_type": "cleanup_tube",
+            "capacity_ml": 15.0,
+        },
+        "sample_vial_lcms": {
+            "id": "sample_vial_lcms",
+            "name": "Autosampler vial",
+            "subtitle": "Injection ready",
+            "accent": "sky",
+            "tool_type": "sample_vial",
+            "capacity_ml": 2.0,
+        },
+        "beaker_rinse": {
+            "id": "beaker_rinse",
+            "name": "Bench beaker",
+            "subtitle": "Temporary holding",
+            "accent": "rose",
+            "tool_type": "beaker",
+            "capacity_ml": 100.0,
+        },
+    }
+    try:
+        return tool_catalog[tool_id]
+    except KeyError as exc:
+        raise ValueError("Unknown workbench tool") from exc
+
+
+def _get_workbench_liquid_definition(liquid_id: str) -> dict[str, object]:
+    liquid_catalog = {
+        "acetonitrile_extraction": {
+            "id": "acetonitrile_extraction",
+            "name": "Acetonitrile",
+            "accent": "amber",
+            "transfer_volume_ml": 10.0,
+        },
+        "apple_extract": {
+            "id": "apple_extract",
+            "name": "Apple extract",
+            "accent": "rose",
+            "transfer_volume_ml": 10.0,
+        },
+        "ultrapure_water_rinse": {
+            "id": "ultrapure_water_rinse",
+            "name": "Ultrapure water",
+            "accent": "sky",
+            "transfer_volume_ml": 5.0,
+        },
+    }
+    try:
+        return liquid_catalog[liquid_id]
+    except KeyError as exc:
+        raise ValueError("Unknown workbench liquid") from exc
 
 
 def _compute_container_concentration(container: Container) -> float:

@@ -131,6 +131,77 @@ def test_create_flask_adds_new_container() -> None:
     assert updated.audit_log[-1] == "Created flask QC"
 
 
+def test_create_pesticide_workbench_experiment_exposes_empty_slots() -> None:
+    service = ExperimentService()
+
+    experiment = service.create_experiment("pesticides_workbench")
+
+    assert experiment.scenario_id == "pesticides_workbench"
+    assert experiment.workbench is not None
+    assert [slot.id for slot in experiment.workbench.slots] == [
+        "station_1",
+        "station_2",
+        "station_3",
+        "station_4",
+    ]
+    assert all(slot.tool is None for slot in experiment.workbench.slots)
+
+
+def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment("pesticides_workbench")
+
+    updated = service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.label == "50 mL centrifuge tube"
+    assert len(slot.tool.liquids) == 1
+    assert slot.tool.liquids[0].volume_ml == 10.0
+
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert len(slot.tool.liquids) == 1
+    assert slot.tool.liquids[0].volume_ml == 20.0
+
+    updated = service.apply_command(
+        experiment.id,
+        "update_workbench_liquid_volume",
+        {
+            "slot_id": "station_1",
+            "liquid_entry_id": slot.tool.liquids[0].id,
+            "volume_ml": 1.5,
+        },
+    )
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.liquids[0].volume_ml == 1.5
+    assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
+
+
 def test_add_liquid_raises_when_container_capacity_is_exceeded() -> None:
     service = ExperimentService()
     experiment = service.create_experiment("lcmsms_single_analyte")

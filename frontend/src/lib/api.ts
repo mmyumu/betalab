@@ -1,4 +1,5 @@
 import type { Experiment } from "@/types/experiment";
+import type { BenchLiquidPortion, BenchSlot, BenchToolInstance } from "@/types/workbench";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -15,7 +16,7 @@ export async function createExperiment(scenarioId = "lcmsms_single_analyte"): Pr
     throw new Error("Failed to create experiment");
   }
 
-  return (await response.json()) as Experiment;
+  return normalizeExperiment((await response.json()) as Experiment);
 }
 
 export async function getExperiment(experimentId: string): Promise<Experiment> {
@@ -25,7 +26,7 @@ export async function getExperiment(experimentId: string): Promise<Experiment> {
     throw new Error("Failed to fetch experiment");
   }
 
-  return (await response.json()) as Experiment;
+  return normalizeExperiment((await response.json()) as Experiment);
 }
 
 export async function sendExperimentCommand(
@@ -45,5 +46,54 @@ export async function sendExperimentCommand(
     throw new Error("Failed to send experiment command");
   }
 
-  return (await response.json()) as Experiment;
+  return normalizeExperiment((await response.json()) as Experiment);
+}
+
+function normalizeExperiment(experiment: Experiment): Experiment {
+  if (experiment.workbench === null) {
+    return experiment;
+  }
+
+  return {
+    ...experiment,
+    workbench: {
+      slots: experiment.workbench.slots.map(normalizeBenchSlot),
+    },
+  };
+}
+
+function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
+  return {
+    id: slot.id,
+    label: slot.label,
+    tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
+  };
+}
+
+function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): BenchToolInstance {
+  return {
+    id: tool.id,
+    toolId: String(tool.toolId ?? tool.tool_id),
+    label: tool.label,
+    subtitle: tool.subtitle,
+    accent: tool.accent,
+    toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
+    capacity_ml: Number(tool.capacity_ml),
+    accepts_liquids: Boolean(tool.accepts_liquids),
+    liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
+      (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
+    ) ?? [],
+  };
+}
+
+function normalizeBenchLiquid(
+  liquid: BenchLiquidPortion & Record<string, unknown>,
+): BenchLiquidPortion {
+  return {
+    id: liquid.id,
+    liquidId: String(liquid.liquidId ?? liquid.liquid_id),
+    name: liquid.name,
+    volume_ml: Number(liquid.volume_ml),
+    accent: liquid.accent,
+  };
 }

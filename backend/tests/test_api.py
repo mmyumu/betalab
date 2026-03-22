@@ -98,3 +98,39 @@ def test_apply_command_returns_422_for_unknown_command_type() -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_pesticide_workbench_commands_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments", json={"scenario_id": "pesticides_workbench"})
+        experiment_id = created.json()["id"]
+
+        placed = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "liquid_id": "acetonitrile_extraction",
+                },
+            },
+        )
+
+    assert created.status_code == 200
+    assert created.json()["workbench"]["slots"][0]["tool"] is None
+    assert placed.status_code == 200
+    assert placed.json()["workbench"]["slots"][0]["tool"]["label"] == "Autosampler vial"
+    assert added.status_code == 200
+    assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 2.0
