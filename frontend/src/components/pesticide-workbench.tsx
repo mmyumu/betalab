@@ -60,7 +60,7 @@ const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
 };
-const rackSlotCount = 6;
+const rackSlotCount = 12;
 const rackIllustrationViewBox = { height: 320, width: 560 };
 const rackIllustrationBase = { x: 98, y: 106 };
 const rackIllustrationGap = { x: 70, y: 84 };
@@ -642,7 +642,6 @@ export function PesticideWorkbench() {
                 >
                   {widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
-                      badge={rackLoadedCount > 0 ? `${rackLoadedCount} loaded` : "Empty"}
                       description="Sequence staging widget for autosampler vials transferred off the workbench and into injection positions."
                       eyebrow="Workspace Equipment"
                       footer={

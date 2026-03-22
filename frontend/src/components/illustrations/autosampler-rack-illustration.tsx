@@ -221,7 +221,7 @@ export function AutosamplerRackIllustration({
           );
         })}
 
-        <rect fill={palette.accent} height="10" rx="5" width="102" x="116" y="248" />
+        <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="102" x="116" y="248" />
         <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="68" x="234" y="248" />
         <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="86" x="314" y="248" />
       </svg>

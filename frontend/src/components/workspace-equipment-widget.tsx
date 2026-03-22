@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 type WorkspaceEquipmentWidgetProps = {
-  badge: string;
+  badge?: string;
   children: ReactNode;
   description: string;
   eyebrow: string;
@@ -30,9 +30,11 @@ export function WorkspaceEquipmentWidget({
             <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
             <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
           </div>
-          <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
-            {badge}
-          </span>
+          {badge ? (
+            <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
+              {badge}
+            </span>
+          ) : null}
         </div>
       </div>
 
