@@ -22,24 +22,21 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur xl:p-6">
+    <section className="rounded-[1.55rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Palette</p>
-      <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">Workflow inventory</h2>
-      <p className="mt-3 text-sm text-slate-600 xl:text-base">
-        Drag tools onto the bench, then drag liquids into placed containers that can accept them.
-      </p>
+      <h2 className="mt-1 text-base font-semibold text-slate-950">Inventory rail</h2>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-3 space-y-3">
         {categories.map((category) => (
           <article
             key={category.id}
-            className="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-4 xl:p-5"
+            className="rounded-[1.1rem] border border-slate-200 bg-slate-50/80 p-2.5"
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-2">
               <div>
                 <button
                   aria-expanded={!collapsedCategories[category.id]}
-                  className="flex items-center gap-2 text-left"
+                  className="flex items-center gap-1.5 text-left"
                   onClick={() => {
                     setCollapsedCategories((current) => ({
                       ...current,
@@ -48,21 +45,22 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                   }}
                   type="button"
                 >
-                  <span className="w-3 text-base font-semibold leading-none text-slate-400">
+                  <span className="w-2.5 text-xs font-semibold leading-none text-slate-400">
                     {collapsedCategories[category.id] ? "+" : "-"}
                   </span>
-                  <h3 className="text-base font-semibold text-slate-900">{category.label}</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-900">
+                    {category.label}
+                  </h3>
                 </button>
-                <p className="mt-1 text-sm text-slate-600">{category.description}</p>
               </div>
             </div>
 
             {!collapsedCategories[category.id] ? (
-              <div className="mt-4 space-y-3">
+              <div className="mt-2.5 space-y-2">
                 {category.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[1.4rem] bg-gradient-to-br p-4 ring-1 transition-transform hover:-translate-y-0.5 xl:p-4 ${accentClasses[item.accent]}`}
+                    className={`rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${accentClasses[item.accent]}`}
                     data-testid={`toolbar-item-${item.id}`}
                     draggable
                     onDragStart={(event) => {
@@ -73,15 +71,15 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                     }}
                     title={item.description}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-center gap-2">
                       <LabAssetIcon
                         accent={item.accent}
-                        className="h-14 w-12 shrink-0"
+                        className="h-8 w-7 shrink-0"
                         kind={item.itemType === "tool" ? item.toolType : item.liquidType}
                       />
-                      <div>
-                        <p className="text-sm font-semibold">{item.name}</p>
-                        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold leading-4">{item.name}</p>
+                        <p className="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
                           {item.subtitle}
                         </p>
                       </div>

@@ -32,9 +32,9 @@ type WidgetLayout = {
 };
 
 const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
-  toolbar: { x: 0, y: 0, width: 310, fallbackHeight: 780 },
-  workbench: { x: 350, y: 0, width: 1120, fallbackHeight: 860 },
-  scope: { x: 350, y: 910, width: 520, fallbackHeight: 220 },
+  toolbar: { x: 0, y: 0, width: 184, fallbackHeight: 720 },
+  workbench: { x: 216, y: 0, width: 1246, fallbackHeight: 860 },
+  scope: { x: 216, y: 910, width: 520, fallbackHeight: 220 },
 };
 
 function getLatestStatusMessage(experiment: Experiment) {

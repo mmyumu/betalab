@@ -48,12 +48,13 @@ describe("ToolbarPanel", () => {
     render(<ToolbarPanel categories={categories} />);
 
     expect(screen.getByText("Palette")).toBeInTheDocument();
+    expect(screen.getByText("Inventory rail")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Volumetric flask")).toBeInTheDocument();
     expect(screen.getByText("Acetonitrile")).toBeInTheDocument();
-    expect(screen.getByText("Core containers for standards and samples.")).toBeInTheDocument();
-    expect(screen.getByText("Solvents and matrices available on the bench.")).toBeInTheDocument();
+    expect(screen.queryByText("Core containers for standards and samples.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Solvents and matrices available on the bench.")).not.toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute(
