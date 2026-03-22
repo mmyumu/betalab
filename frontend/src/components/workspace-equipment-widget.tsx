@@ -1,0 +1,47 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+type WorkspaceEquipmentWidgetProps = {
+  badge: string;
+  children: ReactNode;
+  description: string;
+  eyebrow: string;
+  footer: string;
+  title: string;
+};
+
+export function WorkspaceEquipmentWidget({
+  badge,
+  children,
+  description,
+  eyebrow,
+  footer,
+  title,
+}: WorkspaceEquipmentWidgetProps) {
+  return (
+    <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
+      <div className="border-b border-slate-200/80 bg-white/85 px-5 py-5 backdrop-blur xl:px-6 xl:py-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+              {eyebrow}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
+            <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
+          </div>
+          <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
+            {badge}
+          </span>
+        </div>
+      </div>
+
+      <div className="px-5 py-5 xl:px-6 xl:py-6">
+        <div className="rounded-[1.8rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),rgba(241,245,249,0.95))] p-4 shadow-inner">
+          {children}
+        </div>
+        <p className="mt-4 text-sm text-slate-600">{footer}</p>
+      </div>
+    </section>
+  );
+}

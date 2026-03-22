@@ -89,6 +89,31 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
     ],
   },
+  {
+    id: "workspace_equipment",
+    label: "Workspace equipment",
+    description: "Large lab systems that can be dropped onto the open workspace canvas.",
+    items: [
+      {
+        id: "autosampler_rack_widget",
+        itemType: "workspace_widget",
+        name: "Autosampler rack",
+        subtitle: "Sequence staging",
+        description: "Rack widget used to organize injection-ready vials before an LC-MS/MS run.",
+        accent: "sky",
+        widgetType: "autosampler_rack",
+      },
+      {
+        id: "lc_msms_instrument_widget",
+        itemType: "workspace_widget",
+        name: "LC-MS/MS",
+        subtitle: "Instrument system",
+        description: "Pedagogical LC-MS/MS system widget with separate LC and MS/MS visual modules.",
+        accent: "emerald",
+        widgetType: "lc_msms_instrument",
+      },
+    ],
+  },
 ];
 
 export const pesticideToolCatalog = Object.fromEntries(

@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
+import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
 import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { ToolbarAccent, ToolbarCategory } from "@/types/workbench";
 
@@ -64,7 +65,7 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                   <div
                     key={item.id}
                     className={`rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${
-                      item.itemType === "tool" ? neutralToolClasses : accentClasses[item.accent]
+                      item.itemType === "liquid" ? accentClasses[item.accent] : neutralToolClasses
                     }`}
                     data-testid={`toolbar-item-${item.id}`}
                     draggable
@@ -75,15 +76,22 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                       });
                     }}
                     title={item.subtitle}
-                  >
-                    <div className="flex items-center gap-2">
-                      <LabAssetIcon
-                        accent={item.accent}
-                        className="h-8 w-7 shrink-0"
-                        fillRatio={item.itemType === "tool" ? 0 : undefined}
-                        kind={item.itemType === "tool" ? item.toolType : item.liquidType}
-                        tone={item.itemType === "tool" ? "neutral" : "accent"}
-                      />
+                    >
+                      <div className="flex items-center gap-2">
+                      {item.itemType === "workspace_widget" ? (
+                        <WorkspaceEquipmentIcon
+                          className="h-8 w-10 shrink-0 overflow-hidden rounded-md"
+                          widgetType={item.widgetType}
+                        />
+                      ) : (
+                        <LabAssetIcon
+                          accent={item.accent}
+                          className="h-8 w-7 shrink-0"
+                          fillRatio={item.itemType === "tool" ? 0 : undefined}
+                          kind={item.itemType === "tool" ? item.toolType : item.liquidType}
+                          tone={item.itemType === "tool" ? "neutral" : "accent"}
+                        />
+                      )}
                       <p className="min-w-0 text-[13px] font-semibold leading-4">{item.name}</p>
                     </div>
                   </div>

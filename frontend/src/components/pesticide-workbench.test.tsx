@@ -101,6 +101,11 @@ describe("PesticideWorkbench", () => {
     expect(liquidDropsCard).not.toBeNull();
     expect(within(placedToolsCard as HTMLElement).getByText("0")).toBeInTheDocument();
     expect(within(liquidDropsCard as HTMLElement).getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("2 widgets live")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
+    expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("widget-instrument")).not.toBeInTheDocument();
   });
 
   it("lets the user drag widgets around the workspace", async () => {
@@ -124,6 +129,52 @@ describe("PesticideWorkbench", () => {
     await waitFor(() => {
       expect(toolbarWidget).toHaveStyle({ left: "140px", top: "140px" });
     });
+  });
+
+  it("adds workspace equipment widgets when dropped from the palette into the canvas", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.dragOver(workspace, { dataTransfer: rackTransfer });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("3 widgets live")).toBeInTheDocument();
+    expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
+      "data-occupied-count",
+      "0",
+    );
+
+    const instrumentTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-lc_msms_instrument_widget"), {
+      dataTransfer: instrumentTransfer,
+    });
+    fireEvent.dragOver(workspace, { dataTransfer: instrumentTransfer });
+    fireEvent.drop(workspace, { clientX: 980, clientY: 420, dataTransfer: instrumentTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("4 widgets live")).toBeInTheDocument();
+    expect(screen.getByTestId("lc-msms-instrument-illustration")).toHaveAttribute(
+      "data-status",
+      "idle",
+    );
   });
 
   it("places a tool and then adds a liquid through backend commands", async () => {
@@ -392,5 +443,63 @@ describe("PesticideWorkbench", () => {
     fireEvent.blur(volumeInput);
     fireEvent.wheel(volumeInput, { deltaY: -100 });
     expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the rack and instrument as ready when a filled vial exists on the bench", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 1.2,
+                  accent: "amber",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("1.2")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    const instrumentTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-lc_msms_instrument_widget"), {
+      dataTransfer: instrumentTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 980, clientY: 420, dataTransfer: instrumentTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
+      "data-occupied-count",
+      "1",
+    );
+    expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
+      "data-tone",
+      "active",
+    );
+    expect(screen.getByTestId("lc-msms-instrument-illustration")).toHaveAttribute(
+      "data-status",
+      "ready",
+    );
   });
 });

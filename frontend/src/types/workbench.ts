@@ -12,6 +12,8 @@ export type ToolType = "volumetric_flask" | "amber_bottle" | "sample_vial" | "be
 
 export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
 
+export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument";
+
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
   toolType: ToolType;
@@ -25,7 +27,12 @@ export type LiquidCatalogItem = ToolbarBaseItem & {
   transfer_volume_ml: number;
 };
 
-export type ToolbarItem = ToolCatalogItem | LiquidCatalogItem;
+export type WorkspaceWidgetCatalogItem = ToolbarBaseItem & {
+  itemType: "workspace_widget";
+  widgetType: WorkspaceWidgetType;
+};
+
+export type ToolbarItem = ToolCatalogItem | LiquidCatalogItem | WorkspaceWidgetCatalogItem;
 
 export type ToolbarCategory = {
   id: string;

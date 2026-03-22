@@ -22,7 +22,11 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
     const parsed = JSON.parse(rawPayload) as Partial<ToolbarDragPayload>;
 
     if (
-      (parsed.itemType === "tool" || parsed.itemType === "liquid") &&
+      (
+        parsed.itemType === "tool" ||
+        parsed.itemType === "liquid" ||
+        parsed.itemType === "workspace_widget"
+      ) &&
       typeof parsed.itemId === "string"
     ) {
       return {

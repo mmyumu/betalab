@@ -41,6 +41,22 @@ const categories: ToolbarCategory[] = [
       },
     ],
   },
+  {
+    id: "workspace_equipment",
+    label: "Workspace equipment",
+    description: "Larger systems dropped directly into the workspace.",
+    items: [
+      {
+        id: "autosampler_rack_widget",
+        itemType: "workspace_widget",
+        name: "Autosampler rack",
+        subtitle: "Sequence staging",
+        description: "Stages vials before the instrument.",
+        accent: "sky",
+        widgetType: "autosampler_rack",
+      },
+    ],
+  },
 ];
 
 describe("ToolbarPanel", () => {
@@ -51,12 +67,18 @@ describe("ToolbarPanel", () => {
     expect(screen.getByText("Inventory rail")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
+    expect(screen.getByText("Workspace equipment")).toBeInTheDocument();
     expect(screen.getByText("Volumetric flask")).toBeInTheDocument();
     expect(screen.getByText("Acetonitrile")).toBeInTheDocument();
+    expect(screen.getByText("Autosampler rack")).toBeInTheDocument();
     expect(screen.queryByText("Core containers for standards and samples.")).not.toBeInTheDocument();
     expect(screen.queryByText("Solvents and matrices available on the bench.")).not.toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toHaveAttribute(
+      "draggable",
+      "true",
+    );
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute(
       "title",
       "100 mL calibration prep",
@@ -69,8 +91,14 @@ describe("ToolbarPanel", () => {
     expect(
       screen.getByTestId("toolbar-item-acetonitrile").querySelector("[data-kind='acetonitrile']"),
     ).toHaveAttribute("data-tone", "accent");
+    expect(
+      screen
+        .getByTestId("toolbar-item-autosampler_rack_widget")
+        .querySelector("[data-widget-type='autosampler_rack']"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("100 mL calibration prep")).not.toBeInTheDocument();
     expect(screen.queryByText("Organic modifier")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sequence staging")).not.toBeInTheDocument();
     expect(screen.queryByText("tool")).not.toBeInTheDocument();
     expect(screen.queryByText("liquid")).not.toBeInTheDocument();
 

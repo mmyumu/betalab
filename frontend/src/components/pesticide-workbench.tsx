@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
+import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
+import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
+import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
+import { readToolbarDragPayload } from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
@@ -20,9 +24,14 @@ type WorkbenchState =
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load pesticide workbench";
-const widgetIds = ["toolbar", "workbench"] as const;
+const widgetIds = ["toolbar", "workbench", "rack", "instrument"] as const;
+const workspaceEquipmentItemToWidgetId = {
+  autosampler_rack_widget: "rack",
+  lc_msms_instrument_widget: "instrument",
+} as const;
 
 type WidgetId = (typeof widgetIds)[number];
+type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 type WidgetLayout = {
   fallbackHeight: number;
@@ -34,6 +43,8 @@ type WidgetLayout = {
 const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
+  rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
+  instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
 };
 
 function getLatestStatusMessage(experiment: Experiment) {
@@ -44,6 +55,14 @@ function isWidgetId(value: string): value is WidgetId {
   return widgetIds.includes(value as WidgetId);
 }
 
+function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
+  return value === "rack" || value === "instrument";
+}
+
+function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
+  return workspaceEquipmentItemToWidgetId[itemId as keyof typeof workspaceEquipmentItemToWidgetId] ?? null;
+}
+
 export function PesticideWorkbench() {
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
@@ -52,9 +71,12 @@ export function PesticideWorkbench() {
   const [widgetLayout, setWidgetLayout] =
     useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
+  const [visibleEquipmentWidgets, setVisibleEquipmentWidgets] = useState<WorkspaceEquipmentWidgetId[]>([]);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
     toolbar: initialWidgetLayout.toolbar.fallbackHeight,
     workbench: initialWidgetLayout.workbench.fallbackHeight,
+    rack: initialWidgetLayout.rack.fallbackHeight,
+    instrument: initialWidgetLayout.instrument.fallbackHeight,
   });
   const hasLoadedInitialExperiment = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -233,6 +255,67 @@ export function PesticideWorkbench() {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
+  const liveWidgetIds: WidgetId[] = ["toolbar", "workbench", ...visibleEquipmentWidgets];
+
+  const moveEquipmentWidgetIntoWorkspace = (
+    widgetId: WorkspaceEquipmentWidgetId,
+    clientX: number,
+    clientY: number,
+  ) => {
+    const workspaceRect = workspaceRef.current?.getBoundingClientRect();
+    const nextLayout = widgetLayoutRef.current[widgetId];
+    const widgetHeight = widgetHeightsRef.current[widgetId] ?? nextLayout.fallbackHeight;
+    const workspaceWidth = workspaceRect?.width ?? 0;
+    const workspaceHeightValue = workspaceRect?.height ?? 0;
+    const maxX =
+      workspaceWidth > 0 ? Math.max(workspaceWidth - nextLayout.width, 0) : Number.POSITIVE_INFINITY;
+    const maxY =
+      workspaceHeightValue > 0 ? Math.max(workspaceHeightValue - widgetHeight, 0) : Number.POSITIVE_INFINITY;
+    const safeClientX = Number.isFinite(clientX)
+      ? clientX
+      : (workspaceRect?.left ?? 0) + nextLayout.x + nextLayout.width / 2;
+    const safeClientY = Number.isFinite(clientY)
+      ? clientY
+      : (workspaceRect?.top ?? 0) + nextLayout.y + 32;
+    const unclampedX = safeClientX - (workspaceRect?.left ?? 0) - nextLayout.width / 2;
+    const unclampedY = safeClientY - (workspaceRect?.top ?? 0) - 32;
+
+    setWidgetLayout((current) => ({
+      ...current,
+      [widgetId]: {
+        ...current[widgetId],
+        x: Math.min(Math.max(unclampedX, 0), maxX),
+        y: Math.min(Math.max(unclampedY, 0), maxY),
+      },
+    }));
+    setVisibleEquipmentWidgets((current) =>
+      current.includes(widgetId) ? current : [...current, widgetId],
+    );
+    setWidgetOrder((current) => [...current.filter((id) => id !== widgetId), widgetId]);
+  };
+
+  const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    const payload = readToolbarDragPayload(event.dataTransfer);
+    if (payload?.itemType === "workspace_widget") {
+      event.preventDefault();
+    }
+  };
+
+  const handleWorkspaceDrop = (event: DragEvent<HTMLDivElement>) => {
+    const payload = readToolbarDragPayload(event.dataTransfer);
+    if (!payload || payload.itemType !== "workspace_widget") {
+      return;
+    }
+
+    const widgetId = getWorkspaceEquipmentWidgetId(payload.itemId);
+    if (!widgetId) {
+      return;
+    }
+
+    event.preventDefault();
+    moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
+  };
+
   if (state.status === "loading") {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -274,8 +357,14 @@ export function PesticideWorkbench() {
   const slots = workbench.slots;
   const placedTools = slots.filter((slot) => slot.tool).length;
   const liquidTransfers = slots.reduce((total, slot) => total + (slot.tool?.liquids.length ?? 0), 0);
+  const preparedVials = slots.filter(
+    (slot) => slot.tool?.toolType === "sample_vial" && (slot.tool.liquids.length ?? 0) > 0,
+  ).length;
+  const rackOccupiedSlots = Array.from({ length: preparedVials }, (_, index) => index + 1);
+  const instrumentStatus =
+    preparedVials > 0 ? ("ready" as const) : ("idle" as const);
   const workspaceHeight = Math.max(
-    ...widgetIds.map((widgetId) => {
+    ...liveWidgetIds.map((widgetId) => {
       const layout = widgetLayout[widgetId];
       const measuredHeight = widgetHeights[widgetId] ?? layout.fallbackHeight;
       return layout.y + measuredHeight + 48;
@@ -324,13 +413,15 @@ export function PesticideWorkbench() {
               </p>
             </div>
             <div className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-              3 widgets live
+              {liveWidgetIds.length} widgets live
             </div>
           </div>
 
           <div
             className="relative mt-4 overflow-hidden rounded-[2rem] border border-dashed border-slate-300/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)]"
             data-testid="widget-workspace"
+            onDragOver={handleWorkspaceDragOver}
+            onDrop={handleWorkspaceDrop}
             ref={workspaceRef}
             style={{ minHeight: workspaceHeight }}
           >
@@ -348,6 +439,60 @@ export function PesticideWorkbench() {
             >
               <ToolbarPanel categories={pesticideWorkflowCategories} />
             </FloatingWidget>
+
+            {liveWidgetIds
+              .filter(isWorkspaceEquipmentWidgetId)
+              .map((widgetId) => (
+                <FloatingWidget
+                  id={widgetId}
+                  isActive={activeWidgetId === widgetId}
+                  key={widgetId}
+                  label={widgetId === "rack" ? "Rack Widget" : "Instrument Widget"}
+                  onDragStart={handleWidgetDragStart}
+                  onHeightChange={handleWidgetHeightChange}
+                  position={widgetLayout[widgetId]}
+                  zIndex={10 + widgetOrder.indexOf(widgetId)}
+                >
+                  {widgetId === "rack" ? (
+                    <WorkspaceEquipmentWidget
+                      badge={preparedVials > 0 ? `${preparedVials} loaded` : "Empty"}
+                      description="Sequence staging widget for autosampler-ready vials before the instrument model gets its own backend state."
+                      eyebrow="Workspace Equipment"
+                      footer={
+                        preparedVials > 0
+                          ? `${preparedVials} prepared vial${preparedVials === 1 ? "" : "s"} currently mirrored from the bench into the first rack positions.`
+                          : "Drop filled autosampler vials onto the bench today; the rack widget is ready for future direct vial placement."
+                      }
+                      title="Autosampler rack"
+                    >
+                      <AutosamplerRackIllustration
+                        className="mx-auto max-w-[30rem]"
+                        occupiedSlots={rackOccupiedSlots}
+                        testId="autosampler-rack-illustration"
+                        tone={preparedVials > 0 ? "active" : "neutral"}
+                      />
+                    </WorkspaceEquipmentWidget>
+                  ) : (
+                    <WorkspaceEquipmentWidget
+                      badge={instrumentStatus === "ready" ? "Ready" : "Idle"}
+                      description="Single LC-MS/MS system widget with LC and MS/MS modules kept visually distinct for pedagogy."
+                      eyebrow="Workspace Equipment"
+                      footer={
+                        instrumentStatus === "ready"
+                          ? "The instrument now reads as sequence-ready because at least one filled vial is available on the bench."
+                          : "Place and fill an autosampler vial on the bench to switch the instrument preview into a ready state."
+                      }
+                      title="LC-MS/MS"
+                    >
+                      <LcMsMsInstrumentIllustration
+                        className="mx-auto max-w-[36rem]"
+                        status={instrumentStatus}
+                        testId="lc-msms-instrument-illustration"
+                      />
+                    </WorkspaceEquipmentWidget>
+                  )}
+                </FloatingWidget>
+              ))}
 
             <FloatingWidget
               id="workbench"
