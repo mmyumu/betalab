@@ -17,6 +17,12 @@ export type LiquidVisualSegment = {
   ratio: number;
 };
 
+export type ContainerLiquidVisualState = {
+  hasVisibleLiquid: boolean;
+  palette: LiquidVisualPalette;
+  segments: LiquidVisualSegment[];
+};
+
 export const liquidAccentPalette: Record<ToolbarAccent, LiquidVisualPalette> = {
   amber: {
     liquid: "#f59e0b",
@@ -80,6 +86,27 @@ export function getDominantLiquidAccent(
   }, null);
 
   return dominantLiquid?.accent ?? fallbackAccent;
+}
+
+export function getContainerLiquidVisualState(
+  liquids: LiquidVisualSource[],
+  fallbackAccent: ToolbarAccent,
+): ContainerLiquidVisualState {
+  const segments = getLiquidVisualSegments(liquids);
+
+  if (segments.length === 0) {
+    return {
+      hasVisibleLiquid: false,
+      palette: neutralLiquidPalette,
+      segments,
+    };
+  }
+
+  return {
+    hasVisibleLiquid: true,
+    palette: getLiquidAccentPalette(getDominantLiquidAccent(liquids, fallbackAccent)),
+    segments,
+  };
 }
 
 export function buildCssLinearGradient(

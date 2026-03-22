@@ -3,8 +3,8 @@ import type { DragEvent } from "react";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import {
   buildCssLinearGradient,
+  getContainerLiquidVisualState,
   getLiquidAccentPalette,
-  getLiquidVisualSegments,
 } from "@/lib/liquid-visuals";
 import type { BenchToolInstance } from "@/types/workbench";
 
@@ -77,9 +77,10 @@ export function BenchToolCard({
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
-  const isFilled = currentVolume > 0;
+  const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
+  const isFilled = liquidVisualState.hasVisibleLiquid;
   const fillPercentage = (fillRatio * 100).toFixed(2);
-  const liquidSegments = getLiquidVisualSegments(tool.liquids);
+  const liquidSegments = liquidVisualState.segments;
   const fillBorderStyle = isFilled
     ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;

@@ -1,10 +1,8 @@
 import {
-  getDominantLiquidAccent,
-  getLiquidAccentPalette,
-  getLiquidVisualSegments,
+  getContainerLiquidVisualState,
   neutralLiquidPalette,
 } from "@/lib/liquid-visuals";
-import type { BenchLiquidPortion, ToolbarAccent } from "@/types/workbench";
+import type { BenchLiquidPortion } from "@/types/workbench";
 
 type AutosamplerRackIllustrationProps = {
   className?: string;
@@ -113,13 +111,9 @@ export function AutosamplerRackIllustration({
           const cy = baseY + row * slotGapY;
           const occupied = occupiedSet.has(slotNumber);
           const slotLiquids = occupiedSlotLiquids?.[slotNumber] ?? [];
-          const dominantAccent = getDominantLiquidAccent(slotLiquids, "sky");
-          const vialPalette = occupied
-            ? slotLiquids.length > 0
-              ? getLiquidAccentPalette(dominantAccent)
-              : getLiquidAccentPalette("sky")
-            : neutralLiquidPalette;
-          const liquidSegments = getLiquidVisualSegments(slotLiquids);
+          const liquidVisualState = getContainerLiquidVisualState(slotLiquids, "sky");
+          const vialPalette = occupied ? liquidVisualState.palette : neutralLiquidPalette;
+          const liquidSegments = liquidVisualState.segments;
           const gradientId = `${testId ?? "autosampler-rack"}-slot-gradient-${slotNumber}`;
           const slotGlow = occupied ? vialPalette.glow : palette.tray;
           const slotLiquid =

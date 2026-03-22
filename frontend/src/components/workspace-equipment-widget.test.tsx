@@ -27,6 +27,7 @@ describe("workspace equipment illustrations", () => {
               volume_ml: 1,
             },
           ],
+          5: [],
           4: [
             {
               accent: "amber",
@@ -44,7 +45,7 @@ describe("workspace equipment illustrations", () => {
             },
           ],
         }}
-        occupiedSlots={[1, 3, 4]}
+        occupiedSlots={[1, 3, 4, 5]}
         testId="autosampler-rack-illustration"
         tone="active"
       />,
@@ -52,7 +53,7 @@ describe("workspace equipment illustrations", () => {
 
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
       "data-occupied-count",
-      "3",
+      "4",
     );
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
       "data-tone",
@@ -71,6 +72,10 @@ describe("workspace equipment illustrations", () => {
       "url(#autosampler-rack-illustration-slot-gradient-4)",
     );
     expect(screen.getByTestId("autosampler-rack-illustration-slot-gradient-4").querySelectorAll("stop")).toHaveLength(4);
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-liquid-5")).toHaveAttribute(
+      "fill",
+      "#cbd5e1",
+    );
   });
 
   it("renders instrument state as data attributes", () => {
