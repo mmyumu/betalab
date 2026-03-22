@@ -7,6 +7,7 @@ type LabAssetIconProps = {
   className?: string;
   fillRatio?: number;
   kind: ToolType | LiquidType;
+  tone?: "accent" | "neutral";
 };
 
 const accentPalette: Record<ToolbarAccent, { liquid: string; glow: string; stroke: string }> = {
@@ -30,6 +31,12 @@ const accentPalette: Record<ToolbarAccent, { liquid: string; glow: string; strok
     glow: "#e0f2fe",
     stroke: "#0c4a6e",
   },
+};
+
+const neutralPalette = {
+  liquid: "#cbd5e1",
+  glow: "#f8fafc",
+  stroke: "#64748b",
 };
 
 const clampRatio = (value: number | undefined) => {
@@ -245,8 +252,14 @@ function ReagentBottleIcon({
   );
 }
 
-export function LabAssetIcon({ accent, className, fillRatio, kind }: LabAssetIconProps) {
-  const palette = accentPalette[accent];
+export function LabAssetIcon({
+  accent,
+  className,
+  fillRatio,
+  kind,
+  tone = "accent",
+}: LabAssetIconProps) {
+  const palette = tone === "neutral" ? neutralPalette : accentPalette[accent];
   const normalizedFill = clampRatio(fillRatio);
   const label = kind.replace(/_/g, " ");
 
@@ -291,5 +304,9 @@ export function LabAssetIcon({ accent, className, fillRatio, kind }: LabAssetIco
       icon = <ReagentBottleIcon {...sharedProps} />;
   }
 
-  return <div className={className}>{icon}</div>;
+  return (
+    <div className={className} data-kind={kind} data-tone={tone}>
+      {icon}
+    </div>
+  );
 }

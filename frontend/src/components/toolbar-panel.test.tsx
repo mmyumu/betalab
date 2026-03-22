@@ -61,6 +61,14 @@ describe("ToolbarPanel", () => {
       "title",
       "100 mL calibration prep",
     );
+    expect(
+      screen
+        .getByTestId("toolbar-item-volumetric_flask")
+        .querySelector("[data-kind='volumetric_flask']"),
+    ).toHaveAttribute("data-tone", "neutral");
+    expect(
+      screen.getByTestId("toolbar-item-acetonitrile").querySelector("[data-kind='acetonitrile']"),
+    ).toHaveAttribute("data-tone", "accent");
     expect(screen.queryByText("100 mL calibration prep")).not.toBeInTheDocument();
     expect(screen.queryByText("Organic modifier")).not.toBeInTheDocument();
     expect(screen.queryByText("tool")).not.toBeInTheDocument();

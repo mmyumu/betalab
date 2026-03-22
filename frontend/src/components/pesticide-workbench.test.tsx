@@ -172,6 +172,12 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByText("Autosampler vial placed on Station 1.")).toBeInTheDocument();
     });
 
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_vial']"),
+    ).toHaveAttribute("data-tone", "neutral");
+
     const liquidTransfer = createDataTransfer();
     fireEvent.dragStart(screen.getByTestId("toolbar-item-acetonitrile_extraction"), {
       dataTransfer: liquidTransfer,
@@ -183,6 +189,12 @@ describe("PesticideWorkbench", () => {
         screen.getByText("Acetonitrile added to Autosampler vial at 2 mL (remaining capacity)."),
       ).toBeInTheDocument();
     });
+
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_vial']"),
+    ).toHaveAttribute("data-tone", "accent");
 
     expect(sendExperimentCommand).toHaveBeenNthCalledWith(
       1,

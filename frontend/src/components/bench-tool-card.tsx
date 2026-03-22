@@ -13,6 +13,8 @@ const liquidToneClasses: Record<ToolbarAccent, string> = {
   sky: "from-sky-500 to-sky-200",
 };
 
+const neutralToneClass = "from-slate-300 to-slate-100";
+
 const wheelListenerRegistry = new WeakMap<HTMLInputElement, EventListener>();
 
 function attachWheelListener(
@@ -68,6 +70,7 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
+  const isFilled = currentVolume > 0;
   const fillAccent = tool.liquids.at(-1)?.accent ?? tool.accent;
   const fillPercentage = (fillRatio * 100).toFixed(2);
 
@@ -82,6 +85,7 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
               className="h-22 w-16 shrink-0"
               fillRatio={fillRatio}
               kind={tool.toolType}
+              tone={isFilled ? "accent" : "neutral"}
             />
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
@@ -92,7 +96,11 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
           </div>
         </div>
 
-        <div className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${liquidToneClasses[fillAccent]}`}>
+        <div
+          className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${
+            isFilled ? liquidToneClasses[fillAccent] : neutralToneClass
+          }`}
+        >
           <div className="flex min-h-16 items-center rounded-[0.95rem] bg-white/90 px-3 py-2">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">

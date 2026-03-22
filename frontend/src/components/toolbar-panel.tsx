@@ -18,6 +18,9 @@ const accentClasses: Record<ToolbarAccent, string> = {
   sky: "from-sky-500/20 via-sky-100 to-white text-sky-900 ring-sky-200",
 };
 
+const neutralToolClasses =
+  "from-slate-200/70 via-slate-50 to-white text-slate-800 ring-slate-200";
+
 export function ToolbarPanel({ categories }: ToolbarPanelProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -60,7 +63,9 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                 {category.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${accentClasses[item.accent]}`}
+                    className={`rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${
+                      item.itemType === "tool" ? neutralToolClasses : accentClasses[item.accent]
+                    }`}
                     data-testid={`toolbar-item-${item.id}`}
                     draggable
                     onDragStart={(event) => {
@@ -75,7 +80,9 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                       <LabAssetIcon
                         accent={item.accent}
                         className="h-8 w-7 shrink-0"
+                        fillRatio={item.itemType === "tool" ? 0 : undefined}
                         kind={item.itemType === "tool" ? item.toolType : item.liquidType}
+                        tone={item.itemType === "tool" ? "neutral" : "accent"}
                       />
                       <p className="min-w-0 text-[13px] font-semibold leading-4">{item.name}</p>
                     </div>
