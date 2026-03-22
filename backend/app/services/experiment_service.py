@@ -73,6 +73,7 @@ class ExperimentService:
             "place_workbench_tool_in_rack_slot": self._place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": self._remove_rack_tool_to_workbench_slot,
             "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
+            "remove_liquid_from_workbench_tool": self._remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
         }
         handlers[command_type](experiment, payload)
@@ -200,6 +201,23 @@ class ExperimentService:
             return
 
         experiment.audit_log.append(f"{liquid_definition.name} added to {slot.tool.label}.")
+
+    def _remove_liquid_from_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
+        slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])
+        if slot.tool is None:
+            raise ValueError(f"Place a tool on {slot.label} before editing liquids.")
+
+        liquid_entry = next(
+            (liquid for liquid in slot.tool.liquids if liquid.id == payload["liquid_entry_id"]),
+            None,
+        )
+        if liquid_entry is None:
+            raise ValueError("Unknown workbench liquid")
+
+        slot.tool.liquids = [
+            liquid for liquid in slot.tool.liquids if liquid.id != payload["liquid_entry_id"]
+        ]
+        experiment.audit_log.append(f"{liquid_entry.name} removed from {slot.tool.label}.")
 
     def _update_workbench_liquid_volume(self, experiment: Experiment, payload: dict) -> None:
         slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])

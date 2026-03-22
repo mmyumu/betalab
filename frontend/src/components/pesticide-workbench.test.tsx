@@ -799,6 +799,56 @@ describe("PesticideWorkbench", () => {
     expect(screen.getByText("Acetonitrile adjusted to 1.5 mL in Autosampler vial.")).toBeInTheDocument();
   });
 
+  it("lets the user remove a liquid from a tool through a backend command", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 2,
+                  accent: "amber",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Acetonitrile removed from Autosampler vial."],
+        slots: makeSlots([{ tool: makeTool({ liquids: [] }) }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Remove Acetonitrile" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Acetonitrile" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Acetonitrile removed from Autosampler vial.")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "remove_liquid_from_workbench_tool",
+      {
+        slot_id: "station_1",
+        liquid_entry_id: "bench_liquid_1",
+      },
+    );
+    expect(screen.queryByLabelText("Acetonitrile volume")).not.toBeInTheDocument();
+  });
+
   it("surfaces backend command failures in the status panel without mutating the bench", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand).mockRejectedValue(new Error("Station 1 is unavailable"));

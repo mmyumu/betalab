@@ -11,6 +11,7 @@ import type { BenchToolInstance } from "@/types/workbench";
 type BenchToolCardProps = {
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
+  onRemoveLiquid: (liquidId: string) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
   tool: BenchToolInstance;
 };
@@ -70,6 +71,7 @@ function formatVolume(volumeMl: number) {
 export function BenchToolCard({
   draggable = false,
   onDragStart,
+  onRemoveLiquid,
   onLiquidVolumeChange,
   tool,
 }: BenchToolCardProps) {
@@ -137,7 +139,7 @@ export function BenchToolCard({
             tool.liquids.map((liquid) => (
               <div
                 key={liquid.id}
-                className="flex items-center justify-between gap-2 rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
+                className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span
@@ -147,28 +149,78 @@ export function BenchToolCard({
                   <span className="truncate">{liquid.name}</span>
                 </div>
 
-                <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-slate-500">
-                  <span className="sr-only">{liquid.name} volume</span>
-                  <input
-                    aria-label={`${liquid.name} volume`}
-                    className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
-                    min={0}
-                    onChange={(event) => {
-                      const parsed = Number.parseFloat(event.target.value);
-                      onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span className="sr-only">{liquid.name} volume</span>
+                    <input
+                      aria-label={`${liquid.name} volume`}
+                      className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
+                      min={0}
+                      onChange={(event) => {
+                        const parsed = Number.parseFloat(event.target.value);
+                        onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
+                      }}
+                      onBlur={(event) => {
+                        detachWheelListener(event.currentTarget);
+                      }}
+                      onFocus={(event) => {
+                        attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
+                      }}
+                      step={0.1}
+                      type="number"
+                      value={liquid.volume_ml}
+                    />
+                    <span>mL</span>
+                  </label>
+                  <button
+                    aria-label={`Remove ${liquid.name}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                    onClick={() => {
+                      onRemoveLiquid(liquid.id);
                     }}
-                    onBlur={(event) => {
-                      detachWheelListener(event.currentTarget);
-                    }}
-                    onFocus={(event) => {
-                      attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
-                    }}
-                    step={0.1}
-                    type="number"
-                    value={liquid.volume_ml}
-                  />
-                  <span>mL</span>
-                </label>
+                    type="button"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3.5 4.5H12.5"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M6 2.75H10"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M5 4.5V11C5 12 5.5 12.5 6.5 12.5H9.5C10.5 12.5 11 12 11 11V4.5"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M6.75 6.5V10"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.4"
+                      />
+                      <path
+                        d="M9.25 6.5V10"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.4"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))
           ) : (

@@ -68,6 +68,7 @@ describe("PesticideWorkbenchPanel", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         slots={slots}
         statusMessage="Start by dragging an extraction tool onto the bench."
         onToolbarItemDrop={vi.fn()}
@@ -87,6 +88,7 @@ describe("PesticideWorkbenchPanel", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={vi.fn()}
         slots={[
           {
@@ -143,6 +145,7 @@ describe("PesticideWorkbenchPanel", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={onToolbarItemDrop}
         slots={slots}
         statusMessage="Ready."
@@ -174,6 +177,7 @@ describe("PesticideWorkbenchPanel", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={onToolbarItemDrop}
         slots={slots}
         statusMessage="Ready."
@@ -204,6 +208,7 @@ describe("PesticideWorkbenchPanel", () => {
       <PesticideWorkbenchPanel
         onBenchToolDrop={onBenchToolDrop}
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={vi.fn()}
         slots={slots}
         statusMessage="Ready."
@@ -239,6 +244,7 @@ describe("PesticideWorkbenchPanel", () => {
       <PesticideWorkbenchPanel
         onBenchToolDrop={onBenchToolDrop}
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={vi.fn()}
         slots={slots}
         statusMessage="Ready."
@@ -265,6 +271,7 @@ describe("PesticideWorkbenchPanel", () => {
         canDragBenchTool={() => true}
         onBenchToolDragStart={vi.fn()}
         onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
         onToolbarItemDrop={vi.fn()}
         slots={[
           {

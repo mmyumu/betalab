@@ -89,6 +89,42 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
 
 
+def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+
+    liquid_id = updated.workbench.slots[0].tool.liquids[0].id
+    updated = service.apply_command(
+        experiment.id,
+        "remove_liquid_from_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_entry_id": liquid_id,
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is not None
+    assert updated.workbench.slots[0].tool.liquids == []
+    assert updated.audit_log[-1] == "Acetonitrile removed from 50 mL centrifuge tube."
+
+
 def test_move_tool_between_workbench_slots_updates_positions() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -238,6 +274,40 @@ def test_add_liquid_requires_a_placed_tool() -> None:
             {
                 "slot_id": "station_1",
                 "liquid_id": "acetonitrile_extraction",
+            },
+        )
+
+
+def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Place a tool on Station 1 before editing liquids."):
+        service.apply_command(
+            experiment.id,
+            "remove_liquid_from_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "liquid_entry_id": "bench_liquid_missing",
+            },
+        )
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Unknown workbench liquid"):
+        service.apply_command(
+            experiment.id,
+            "remove_liquid_from_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "liquid_entry_id": "bench_liquid_missing",
             },
         )
 

@@ -208,6 +208,13 @@ export function PesticideWorkbench() {
     });
   };
 
+  const handleRemoveLiquid = (slotId: string, liquidId: string) => {
+    void sendWorkbenchCommand("remove_liquid_from_workbench_tool", {
+      slot_id: slotId,
+      liquid_entry_id: liquidId,
+    });
+  };
+
   const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => {
     return tool.toolType === "sample_vial"
       ? (["workbench_slot", "rack_slot"] as const)
@@ -721,6 +728,7 @@ export function PesticideWorkbench() {
                 canDragBenchTool={canDragBenchTool}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
+                onRemoveLiquid={handleRemoveLiquid}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
                 slots={slots}
                 statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}

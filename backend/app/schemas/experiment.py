@@ -59,6 +59,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
         "add_liquid_to_workbench_tool",
+        "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",
     ]
     payload: dict = Field(default_factory=dict)

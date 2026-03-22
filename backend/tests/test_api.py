@@ -213,3 +213,46 @@ def test_rack_commands_round_trip_over_http() -> None:
     assert removed.status_code == 200
     assert removed.json()["rack"]["slots"][0]["tool"] is None
     assert removed.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
+
+
+def test_remove_liquid_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "centrifuge_tube_50ml",
+                },
+            },
+        )
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "liquid_id": "acetonitrile_extraction",
+                },
+            },
+        )
+        liquid_id = added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["id"]
+        removed = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "remove_liquid_from_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "liquid_entry_id": liquid_id,
+                },
+            },
+        )
+
+    assert removed.status_code == 200
+    assert removed.json()["workbench"]["slots"][0]["tool"]["liquids"] == []

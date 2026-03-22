@@ -27,6 +27,7 @@ type PesticideWorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
+  onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
@@ -37,6 +38,7 @@ export function PesticideWorkbenchPanel({
   canDragBenchTool,
   onBenchToolDragStart,
   onBenchToolDrop,
+  onRemoveLiquid,
   onLiquidVolumeChange,
   slots,
   statusMessage,
@@ -137,6 +139,9 @@ export function PesticideWorkbenchPanel({
                           return;
                         }
                         onBenchToolDragStart(slot.id, tool, event.dataTransfer);
+                      }}
+                      onRemoveLiquid={(liquidId) => {
+                        onRemoveLiquid(slot.id, liquidId);
                       }}
                       onLiquidVolumeChange={(liquidId, volumeMl) => {
                         onLiquidVolumeChange(slot.id, liquidId, volumeMl);
