@@ -103,6 +103,29 @@ describe("PesticideWorkbench", () => {
     expect(within(liquidDropsCard as HTMLElement).getByText("0")).toBeInTheDocument();
   });
 
+  it("lets the user drag widgets around the workspace", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-toolbar")).toBeInTheDocument();
+    });
+
+    const toolbarWidget = screen.getByTestId("widget-toolbar");
+    const toolbarHandle = screen.getByTestId("widget-handle-toolbar");
+
+    expect(toolbarWidget).toHaveStyle({ left: "0px", top: "0px" });
+
+    fireEvent.mouseDown(toolbarHandle, { button: 0, clientX: 24, clientY: 16 });
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 164, clientY: 156 }));
+    window.dispatchEvent(new MouseEvent("mouseup"));
+
+    await waitFor(() => {
+      expect(toolbarWidget).toHaveStyle({ left: "140px", top: "140px" });
+    });
+  });
+
   it("places a tool and then adds a liquid through backend commands", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand)
