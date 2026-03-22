@@ -96,6 +96,32 @@ describe("PesticideWorkbench", () => {
     expect(screen.getByText("1.5 / 2 mL")).toBeInTheDocument();
   });
 
+  it("changes the volume with the mouse wheel only while the input is focused", () => {
+    render(<PesticideWorkbench />);
+
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_4"), { dataTransfer: toolTransfer });
+
+    const liquidTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-acetonitrile_extraction"), {
+      dataTransfer: liquidTransfer,
+    });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_4"), { dataTransfer: liquidTransfer });
+
+    const volumeInput = screen.getByLabelText("Acetonitrile volume");
+
+    fireEvent.focus(volumeInput);
+    fireEvent.wheel(volumeInput, { deltaY: 100 });
+    expect(screen.getByDisplayValue("1.9")).toBeInTheDocument();
+
+    fireEvent.blur(volumeInput);
+    fireEvent.wheel(volumeInput, { deltaY: -100 });
+    expect(screen.getByDisplayValue("1.9")).toBeInTheDocument();
+  });
+
   it("refuses liquid drops on an empty station", () => {
     render(<PesticideWorkbench />);
 

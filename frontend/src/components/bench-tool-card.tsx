@@ -13,6 +13,52 @@ const liquidToneClasses: Record<ToolbarAccent, string> = {
   sky: "from-sky-500 to-sky-200",
 };
 
+const wheelListenerRegistry = new WeakMap<HTMLInputElement, EventListener>();
+
+function attachWheelListener(
+  input: HTMLInputElement,
+  liquidId: string,
+  onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void,
+) {
+  const existingListener = wheelListenerRegistry.get(input);
+  if (existingListener) {
+    input.removeEventListener("wheel", existingListener);
+  }
+
+  const listener: EventListener = (event) => {
+    if (!(event instanceof WheelEvent)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const direction = Math.sign(event.deltaY);
+    if (direction === 0) {
+      return;
+    }
+
+    const currentValue = Number.parseFloat(input.value);
+    const safeCurrentValue = Number.isFinite(currentValue) ? currentValue : 0;
+    const delta = direction < 0 ? 0.1 : -0.1;
+    const nextVolume = Number((safeCurrentValue + delta).toFixed(1));
+
+    onLiquidVolumeChange(liquidId, nextVolume);
+  };
+
+  input.addEventListener("wheel", listener, { passive: false });
+  wheelListenerRegistry.set(input, listener);
+}
+
+function detachWheelListener(input: HTMLInputElement) {
+  const listener = wheelListenerRegistry.get(input);
+  if (!listener) {
+    return;
+  }
+
+  input.removeEventListener("wheel", listener);
+  wheelListenerRegistry.delete(input);
+}
+
 export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps) {
   const currentVolume = tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0);
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
@@ -88,6 +134,12 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
                   onChange={(event) => {
                     const parsed = Number.parseFloat(event.target.value);
                     onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
+                  }}
+                  onBlur={(event) => {
+                    detachWheelListener(event.currentTarget);
+                  }}
+                  onFocus={(event) => {
+                    attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
                   }}
                   step={0.1}
                   type="number"
