@@ -74,6 +74,34 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
 
 
+def test_move_tool_between_workbench_slots_updates_positions() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "move_tool_between_workbench_slots",
+        {
+            "source_slot_id": "station_1",
+            "target_slot_id": "station_2",
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is None
+    assert updated.workbench.slots[1].tool is not None
+    assert updated.workbench.slots[1].tool.label == "Autosampler vial"
+    assert updated.audit_log[-1] == "Autosampler vial moved from Station 1 to Station 2."
+
+
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -129,6 +157,48 @@ def test_add_liquid_requires_a_placed_tool() -> None:
             {
                 "slot_id": "station_1",
                 "liquid_id": "acetonitrile_extraction",
+            },
+        )
+
+
+def test_move_tool_requires_a_source_tool_and_empty_target() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it."):
+        service.apply_command(
+            experiment.id,
+            "move_tool_between_workbench_slots",
+            {
+                "source_slot_id": "station_1",
+                "target_slot_id": "station_2",
+            },
+        )
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_2",
+            "tool_id": "beaker_rinse",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Station 2 already contains a tool"):
+        service.apply_command(
+            experiment.id,
+            "move_tool_between_workbench_slots",
+            {
+                "source_slot_id": "station_1",
+                "target_slot_id": "station_2",
             },
         )
 

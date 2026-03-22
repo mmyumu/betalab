@@ -275,31 +275,233 @@ describe("PesticideWorkbench", () => {
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
-  it("treats equipment dropped over a station as a workspace drop, not a station command", async () => {
-    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+  it("moves any bench tool from one station to another through the generic drop system", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "beaker_rinse",
+              label: "Bench beaker",
+              subtitle: "Temporary holding",
+              toolType: "beaker",
+              capacity_ml: 100,
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Bench beaker moved from Station 1 to Station 2."],
+        slots: makeSlots([
+          { tool: null },
+          {
+            tool: makeTool({
+              toolId: "beaker_rinse",
+              label: "Bench beaker",
+              subtitle: "Temporary holding",
+              toolType: "beaker",
+              capacity_ml: 100,
+            }),
+          },
+        ]),
+      }),
+    );
 
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Bench beaker"),
+      ).toBeInTheDocument();
     });
 
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: toolTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("bench-slot-station_2"), { dataTransfer: toolTransfer });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_2"), { dataTransfer: toolTransfer });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_2")).getByText("Bench beaker"),
+      ).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "move_tool_between_workbench_slots",
+      {
+        source_slot_id: "station_1",
+        target_slot_id: "station_2",
+      },
+    );
+  });
+
+  it("moves an autosampler vial from a station into the rack", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          { tool: makeTool() },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-tool-card-bench_tool_1")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
     const rackTransfer = createDataTransfer();
     fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
       dataTransfer: rackTransfer,
     });
-    fireEvent.dragOver(screen.getByTestId("bench-slot-station_1"), { dataTransfer: rackTransfer });
-    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), {
-      clientX: 520,
-      clientY: 440,
-      dataTransfer: rackTransfer,
-    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
 
     await waitFor(() => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
+    const vialTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: vialTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
+      "data-occupied-count",
+      "1",
+    );
+    expect(within(screen.getByTestId("bench-slot-station_1")).getByText("Empty station")).toBeInTheDocument();
+  });
+
+  it("returns a vial from the rack to its original station without a backend move", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-tool-card-bench_tool_1")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    const vialToRackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: vialToRackTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+    });
+
+    const rackToBenchTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("rack-slot-tool-1"), {
+      dataTransfer: rackToBenchTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("bench-slot-station_1"), { dataTransfer: rackToBenchTransfer });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: rackToBenchTransfer });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Autosampler vial"),
+      ).toBeInTheDocument();
+    });
+
+    expect(within(screen.getByTestId("rack-slot-1")).getByText("Drop vial")).toBeInTheDocument();
     expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("moves a vial from the rack to another station through the generic drop system", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Autosampler vial moved from Station 1 to Station 2."],
+        slots: makeSlots([
+          { tool: null },
+          { tool: makeTool() },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-tool-card-bench_tool_1")).toBeInTheDocument();
+    });
+
+    const workspace = screen.getByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    const vialToRackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: vialToRackTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+    });
+
+    const rackToBenchTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("rack-slot-tool-1"), {
+      dataTransfer: rackToBenchTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("bench-slot-station_2"), { dataTransfer: rackToBenchTransfer });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_2"), { dataTransfer: rackToBenchTransfer });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_2")).getByText("Autosampler vial"),
+      ).toBeInTheDocument();
+    });
+
+    expect(within(screen.getByTestId("rack-slot-1")).getByText("Drop vial")).toBeInTheDocument();
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "move_tool_between_workbench_slots",
+      {
+        source_slot_id: "station_1",
+        target_slot_id: "station_2",
+      },
+    );
   });
 
   it("places a tool and then adds a liquid through backend commands", async () => {
@@ -635,31 +837,17 @@ describe("PesticideWorkbench", () => {
     expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the rack and instrument as ready when a filled vial exists on the bench", async () => {
+  it("marks the rack and instrument as ready when a vial is staged in the rack", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([
-          {
-            tool: makeTool({
-              liquids: [
-                {
-                  id: "bench_liquid_1",
-                  liquidId: "acetonitrile_extraction",
-                  name: "Acetonitrile",
-                  volume_ml: 1.2,
-                  accent: "amber",
-                },
-              ],
-            }),
-          },
-        ]),
+        slots: makeSlots([{ tool: makeTool() }]),
       }),
     );
 
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("1.2")).toBeInTheDocument();
+      expect(screen.getByTestId("bench-tool-card-bench_tool_1")).toBeInTheDocument();
     });
 
     const workspace = screen.getByTestId("widget-workspace");
@@ -674,6 +862,13 @@ describe("PesticideWorkbench", () => {
       dataTransfer: instrumentTransfer,
     });
     fireEvent.drop(workspace, { clientX: 980, clientY: 420, dataTransfer: instrumentTransfer });
+
+    const vialTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: vialTransfer,
+    });
+    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
 
     await waitFor(() => {
       expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();

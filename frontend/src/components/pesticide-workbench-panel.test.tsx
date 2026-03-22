@@ -2,7 +2,7 @@ import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
-import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
+import { writeBenchToolDragPayload, writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { BenchSlot } from "@/types/workbench";
 
 const slots: BenchSlot[] = [
@@ -50,7 +50,7 @@ function syncTypes(dataTransfer: MockDataTransfer) {
 function writePayload(
   dataTransfer: MockDataTransfer,
   payload: {
-    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas">;
+    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas" | "rack_slot">;
     itemId: string;
     itemType: "tool" | "liquid" | "workspace_widget";
   },
@@ -183,5 +183,101 @@ describe("PesticideWorkbenchPanel", () => {
 
     expect(dragOverEvent.defaultPrevented).toBe(false);
     expect(onToolbarItemDrop).not.toHaveBeenCalled();
+  });
+
+  it("forwards bench-tool drops between stations", () => {
+    const onBenchToolDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeBenchToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      sourceSlotId: "station_1",
+      toolId: "beaker_rinse",
+      toolType: "beaker",
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onBenchToolDrop={onBenchToolDrop}
+        onLiquidVolumeChange={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={slots}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_2");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onBenchToolDrop).toHaveBeenCalledWith("station_2", {
+      allowedDropTargets: ["workbench_slot"],
+      sourceSlotId: "station_1",
+      toolId: "beaker_rinse",
+      toolType: "beaker",
+    });
+  });
+
+  it("exposes any configured bench tool as draggable", () => {
+    render(
+      <PesticideWorkbenchPanel
+        canDragBenchTool={() => true}
+        onBenchToolDragStart={vi.fn()}
+        onLiquidVolumeChange={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_vial",
+              toolId: "sample_vial_lcms",
+              label: "Autosampler vial",
+              subtitle: "Injection ready",
+              accent: "sky",
+              toolType: "sample_vial",
+              capacity_ml: 2,
+              accepts_liquids: true,
+              liquids: [],
+            },
+          },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_tube",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Extraction ready",
+              accent: "amber",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+              accepts_liquids: true,
+              liquids: [
+                {
+                  id: "bench_liquid_2",
+                  liquidId: "apple_extract",
+                  name: "Apple extract",
+                  volume_ml: 10,
+                  accent: "rose",
+                },
+              ],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(screen.getByTestId("bench-tool-card-bench_tool_vial")).toHaveAttribute(
+      "draggable",
+      "true",
+    );
+    expect(screen.getByTestId("bench-tool-card-bench_tool_tube")).toHaveAttribute(
+      "draggable",
+      "true",
+    );
   });
 });

@@ -133,3 +133,36 @@ def test_pesticide_workbench_commands_round_trip_over_http() -> None:
     assert placed.json()["workbench"]["slots"][0]["tool"]["label"] == "Autosampler vial"
     assert added.status_code == 200
     assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 2.0
+
+
+def test_move_tool_between_workbench_slots_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+        moved = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "move_tool_between_workbench_slots",
+                "payload": {
+                    "source_slot_id": "station_1",
+                    "target_slot_id": "station_2",
+                },
+            },
+        )
+
+    assert moved.status_code == 200
+    assert moved.json()["workbench"]["slots"][0]["tool"] is None
+    assert moved.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"

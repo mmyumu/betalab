@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   hasCompatibleDropTarget,
+  readBenchToolDragPayload,
   readToolbarDragPayload,
+  writeBenchToolDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type { ToolbarDragPayload } from "@/types/workbench";
@@ -82,6 +84,48 @@ describe("workbench dnd helpers", () => {
       allowedDropTargets: ["workspace_canvas"],
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
+    });
+  });
+
+  it("marks autosampler vial drags as compatible with both stations and rack slots", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeBenchToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "rack_slot"],
+      sourceSlotId: "station_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(readBenchToolDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot", "rack_slot"],
+      sourceSlotId: "station_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
+    });
+  });
+
+  it("marks non-vial bench tools as station-only moves", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeBenchToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      sourceSlotId: "station_2",
+      toolId: "beaker_rinse",
+      toolType: "beaker",
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(readBenchToolDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot"],
+      sourceSlotId: "station_2",
+      toolId: "beaker_rinse",
+      toolType: "beaker",
     });
   });
 });

@@ -1,7 +1,11 @@
+import type { DragEvent } from "react";
+
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import type { BenchToolInstance, ToolbarAccent } from "@/types/workbench";
 
 type BenchToolCardProps = {
+  draggable?: boolean;
+  onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
   tool: BenchToolInstance;
 };
@@ -89,7 +93,12 @@ function buildLiquidGradient(volumes: Array<{ accent: ToolbarAccent; ratio: numb
   return `linear-gradient(90deg, ${stops.join(", ")})`;
 }
 
-export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps) {
+export function BenchToolCard({
+  draggable = false,
+  onDragStart,
+  onLiquidVolumeChange,
+  tool,
+}: BenchToolCardProps) {
   const currentVolume = Number.parseFloat(
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
@@ -110,7 +119,14 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
     : undefined;
 
   return (
-    <article className="rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm">
+    <article
+      className={`rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm ${
+        draggable ? "cursor-grab active:cursor-grabbing" : ""
+      }`}
+      data-testid={`bench-tool-card-${tool.id}`}
+      draggable={draggable}
+      onDragStart={onDragStart}
+    >
       <div className="flex flex-col gap-3">
         <div className="space-y-2">
           <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>

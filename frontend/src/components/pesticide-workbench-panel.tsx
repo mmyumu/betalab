@@ -3,10 +3,26 @@
 import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
-import { hasCompatibleDropTarget, readToolbarDragPayload } from "@/lib/workbench-dnd";
-import type { BenchSlot, ToolbarDragPayload } from "@/types/workbench";
+import {
+  hasCompatibleDropTarget,
+  readBenchToolDragPayload,
+  readToolbarDragPayload,
+} from "@/lib/workbench-dnd";
+import type {
+  BenchSlot,
+  BenchToolDragPayload,
+  BenchToolInstance,
+  ToolbarDragPayload,
+} from "@/types/workbench";
 
 type PesticideWorkbenchPanelProps = {
+  canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
+  onBenchToolDragStart?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    dataTransfer: DataTransfer,
+  ) => void;
+  onBenchToolDrop?: (targetSlotId: string, payload: BenchToolDragPayload) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
@@ -14,6 +30,9 @@ type PesticideWorkbenchPanelProps = {
 };
 
 export function PesticideWorkbenchPanel({
+  canDragBenchTool,
+  onBenchToolDragStart,
+  onBenchToolDrop,
   onLiquidVolumeChange,
   slots,
   statusMessage,
@@ -29,6 +48,12 @@ export function PesticideWorkbenchPanel({
     }
 
     event.preventDefault();
+
+    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
+    if (benchToolPayload) {
+      onBenchToolDrop?.(slotId, benchToolPayload);
+      return;
+    }
 
     const payload = readToolbarDragPayload(event.dataTransfer);
     if (!payload) {
@@ -64,49 +89,62 @@ export function PesticideWorkbenchPanel({
         <div className="absolute inset-x-8 bottom-7 h-4 rounded-full bg-amber-900/10 blur-md" />
 
         <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-          {slots.map((slot) => (
-            <article
-              key={slot.id}
-              className="rounded-[1.8rem] border border-white/70 bg-white/70 p-4 shadow-[0_18px_40px_rgba(148,95,33,0.08)] xl:p-5"
-            >
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{slot.label}</p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {slot.tool ? "Ready for liquid additions." : "Waiting for a first tool."}
-                  </p>
-                </div>
-              </div>
+          {slots.map((slot) => {
+            const tool = slot.tool;
 
-              <div
-                className="rounded-[1.6rem] border border-dashed border-slate-300 bg-white/90 p-3"
-                data-testid={`bench-slot-${slot.id}`}
-                onDragOver={(event) => {
-                  if (!acceptsWorkbenchDrop(event)) {
-                    return;
-                  }
-                  event.preventDefault();
-                }}
-                onDrop={(event) => handleDrop(event, slot.id)}
+            return (
+              <article
+                key={slot.id}
+                className="rounded-[1.8rem] border border-white/70 bg-white/70 p-4 shadow-[0_18px_40px_rgba(148,95,33,0.08)] xl:p-5"
               >
-                {slot.tool ? (
-                  <BenchToolCard
-                    onLiquidVolumeChange={(liquidId, volumeMl) => {
-                      onLiquidVolumeChange(slot.id, liquidId, volumeMl);
-                    }}
-                    tool={slot.tool}
-                  />
-                ) : (
-                  <div className="flex min-h-72 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[26rem]">
-                    <p className="text-sm font-semibold text-slate-900">Empty station</p>
-                    <p className="mt-2 max-w-xs text-sm text-slate-600">
-                      Drop a workflow tool here to start building the bench.
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{slot.label}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {tool ? "Ready for liquid additions." : "Waiting for a first tool."}
                     </p>
                   </div>
-                )}
-              </div>
-            </article>
-          ))}
+                </div>
+
+                <div
+                  className="rounded-[1.6rem] border border-dashed border-slate-300 bg-white/90 p-3"
+                  data-testid={`bench-slot-${slot.id}`}
+                  onDragOver={(event) => {
+                    if (!acceptsWorkbenchDrop(event)) {
+                      return;
+                    }
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => handleDrop(event, slot.id)}
+                >
+                  {tool ? (
+                    <BenchToolCard
+                      draggable={
+                        canDragBenchTool ? canDragBenchTool(slot.id, tool) : false
+                      }
+                      onDragStart={(event) => {
+                        if (!onBenchToolDragStart) {
+                          return;
+                        }
+                        onBenchToolDragStart(slot.id, tool, event.dataTransfer);
+                      }}
+                      onLiquidVolumeChange={(liquidId, volumeMl) => {
+                        onLiquidVolumeChange(slot.id, liquidId, volumeMl);
+                      }}
+                      tool={tool}
+                    />
+                  ) : (
+                    <div className="flex min-h-72 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[26rem]">
+                      <p className="text-sm font-semibold text-slate-900">Empty station</p>
+                      <p className="mt-2 max-w-xs text-sm text-slate-600">
+                        Drop a workflow tool here to start building the bench.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>

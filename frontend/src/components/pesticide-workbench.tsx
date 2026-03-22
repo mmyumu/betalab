@@ -10,12 +10,22 @@ import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel"
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
-import { hasCompatibleDropTarget, readToolbarDragPayload } from "@/lib/workbench-dnd";
+import {
+  hasCompatibleDropTarget,
+  readBenchToolDragPayload,
+  readToolbarDragPayload,
+  writeBenchToolDragPayload,
+} from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
 import type { Experiment } from "@/types/experiment";
-import type { ToolbarDragPayload } from "@/types/workbench";
+import type {
+  BenchSlot,
+  BenchToolDragPayload,
+  BenchToolInstance,
+  ToolbarDragPayload,
+} from "@/types/workbench";
 
 type WorkbenchState =
   | { status: "loading" }
@@ -32,6 +42,10 @@ const workspaceEquipmentItemToWidgetId = {
 
 type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
+type RackAssignment = {
+  sourceSlotId: string;
+  tool: BenchToolInstance;
+};
 
 type WidgetLayout = {
   fallbackHeight: number;
@@ -46,6 +60,11 @@ const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
 };
+const rackSlotCount = 6;
+
+function createEmptyRackAssignments() {
+  return Array.from({ length: rackSlotCount }, () => null) as Array<RackAssignment | null>;
+}
 
 function getLatestStatusMessage(experiment: Experiment) {
   return experiment.audit_log.at(-1) ?? defaultStatusMessage;
@@ -72,6 +91,8 @@ export function PesticideWorkbench() {
     useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
   const [visibleEquipmentWidgets, setVisibleEquipmentWidgets] = useState<WorkspaceEquipmentWidgetId[]>([]);
+  const [rackAssignments, setRackAssignments] =
+    useState<Array<RackAssignment | null>>(createEmptyRackAssignments);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
     toolbar: initialWidgetLayout.toolbar.fallbackHeight,
     workbench: initialWidgetLayout.workbench.fallbackHeight,
@@ -95,6 +116,17 @@ export function PesticideWorkbench() {
   useEffect(() => {
     widgetHeightsRef.current = widgetHeights;
   }, [widgetHeights]);
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    setRackAssignments(createEmptyRackAssignments());
+    setVisibleEquipmentWidgets([]);
+    setWidgetLayout(initialWidgetLayout);
+    setWidgetOrder([...widgetIds]);
+  }, [state.status === "ready" ? state.experiment.id : null]);
 
   const loadExperiment = async () => {
     setState({ status: "loading" });
@@ -120,7 +152,11 @@ export function PesticideWorkbench() {
     void loadExperiment();
   }, []);
 
-  const sendWorkbenchCommand = async (type: string, payload: Record<string, unknown>) => {
+  const sendWorkbenchCommand = async (
+    type: string,
+    payload: Record<string, unknown>,
+    options?: { onSuccess?: (updatedExperiment: Experiment) => void },
+  ) => {
     if (state.status !== "ready" || isCommandPending) {
       return;
     }
@@ -131,6 +167,7 @@ export function PesticideWorkbench() {
       const updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
       setState({ status: "ready", experiment: updatedExperiment });
       setStatusMessage(getLatestStatusMessage(updatedExperiment));
+      options?.onSuccess?.(updatedExperiment);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Workbench command failed");
     } finally {
@@ -162,6 +199,77 @@ export function PesticideWorkbench() {
       slot_id: slotId,
       liquid_entry_id: liquidId,
       volume_ml: volumeMl,
+    });
+  };
+
+  const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => {
+    return tool.toolType === "sample_vial"
+      ? (["workbench_slot", "rack_slot"] as const)
+      : (["workbench_slot"] as const);
+  };
+
+  const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
+    return getBenchToolAllowedDropTargets(tool).length > 0;
+  };
+
+  const handleBenchToolDragStart = (
+    slotId: string,
+    tool: BenchToolInstance,
+    dataTransfer: DataTransfer,
+  ) => {
+    if (!canDragBenchTool(slotId, tool)) {
+      return;
+    }
+
+    writeBenchToolDragPayload(dataTransfer, {
+      allowedDropTargets: [...getBenchToolAllowedDropTargets(tool)],
+      sourceSlotId: slotId,
+      toolId: tool.toolId,
+      toolType: tool.toolType,
+    });
+  };
+
+  const handleBenchToolDrop = (targetSlotId: string, payload: BenchToolDragPayload) => {
+    const assignmentForTool = rackAssignments.find(
+      (assignment) => assignment?.sourceSlotId === payload.sourceSlotId,
+    );
+
+    if (payload.sourceSlotId === targetSlotId) {
+      if (!assignmentForTool) {
+        return;
+      }
+
+      setRackAssignments((current) =>
+        current.map((assignment) =>
+          assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
+        ),
+      );
+      return;
+    }
+
+    if (assignmentForTool) {
+      void sendWorkbenchCommand(
+        "move_tool_between_workbench_slots",
+        {
+          source_slot_id: payload.sourceSlotId,
+          target_slot_id: targetSlotId,
+        },
+        {
+          onSuccess: () => {
+            setRackAssignments((current) =>
+              current.map((assignment) =>
+                assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
+              ),
+            );
+          },
+        },
+      );
+      return;
+    }
+
+    void sendWorkbenchCommand("move_tool_between_workbench_slots", {
+      source_slot_id: payload.sourceSlotId,
+      target_slot_id: targetSlotId,
     });
   };
 
@@ -359,14 +467,22 @@ export function PesticideWorkbench() {
 
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
-  const placedTools = slots.filter((slot) => slot.tool).length;
-  const liquidTransfers = slots.reduce((total, slot) => total + (slot.tool?.liquids.length ?? 0), 0);
-  const preparedVials = slots.filter(
-    (slot) => slot.tool?.toolType === "sample_vial" && (slot.tool.liquids.length ?? 0) > 0,
-  ).length;
-  const rackOccupiedSlots = Array.from({ length: preparedVials }, (_, index) => index + 1);
-  const instrumentStatus =
-    preparedVials > 0 ? ("ready" as const) : ("idle" as const);
+  const rackSourceSlotIds = new Set(
+    rackAssignments.flatMap((assignment) => (assignment ? [assignment.sourceSlotId] : [])),
+  );
+  const displaySlots: BenchSlot[] = slots.map((slot) =>
+    rackSourceSlotIds.has(slot.id) ? { ...slot, tool: null } : slot,
+  );
+  const placedTools = displaySlots.filter((slot) => slot.tool).length;
+  const liquidTransfers = displaySlots.reduce(
+    (total, slot) => total + (slot.tool?.liquids.length ?? 0),
+    0,
+  );
+  const rackLoadedCount = rackAssignments.filter(Boolean).length;
+  const rackOccupiedSlots = rackAssignments.flatMap((assignment, index) =>
+    assignment ? [index + 1] : [],
+  );
+  const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
   const workspaceHeight = Math.max(
     ...liveWidgetIds.map((widgetId) => {
       const layout = widgetLayout[widgetId];
@@ -375,6 +491,54 @@ export function PesticideWorkbench() {
     }),
     1100,
   );
+
+  const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {
+      event.preventDefault();
+    }
+  };
+
+  const handleRackSlotDrop = (event: DragEvent<HTMLDivElement>, slotIndex: number) => {
+    const payload = readBenchToolDragPayload(event.dataTransfer);
+    if (!payload || payload.toolType !== "sample_vial") {
+      return;
+    }
+
+    const sourceSlot = slots.find((slot) => slot.id === payload.sourceSlotId);
+    if (
+      !sourceSlot?.tool ||
+      sourceSlot.tool.toolType !== "sample_vial"
+    ) {
+      return;
+    }
+    const sourceTool = sourceSlot.tool;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setRackAssignments((current) => {
+      const next = current.map((assignment) =>
+        assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
+      );
+      next[slotIndex] = {
+        sourceSlotId: payload.sourceSlotId,
+        tool: sourceTool,
+      };
+      return next;
+    });
+  };
+
+  const handleRackToolDragStart = (
+    assignment: RackAssignment,
+    dataTransfer: DataTransfer,
+  ) => {
+    writeBenchToolDragPayload(dataTransfer, {
+      allowedDropTargets: [...getBenchToolAllowedDropTargets(assignment.tool)],
+      sourceSlotId: assignment.sourceSlotId,
+      toolId: assignment.tool.toolId,
+      toolType: assignment.tool.toolType,
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -459,22 +623,65 @@ export function PesticideWorkbench() {
                 >
                   {widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
-                      badge={preparedVials > 0 ? `${preparedVials} loaded` : "Empty"}
-                      description="Sequence staging widget for autosampler-ready vials before the instrument model gets its own backend state."
+                      badge={rackLoadedCount > 0 ? `${rackLoadedCount} loaded` : "Empty"}
+                      description="Sequence staging widget for autosampler vials transferred off the workbench and into injection positions."
                       eyebrow="Workspace Equipment"
                       footer={
-                        preparedVials > 0
-                          ? `${preparedVials} prepared vial${preparedVials === 1 ? "" : "s"} currently mirrored from the bench into the first rack positions.`
-                          : "Drop filled autosampler vials onto the bench today; the rack widget is ready for future direct vial placement."
+                        rackLoadedCount > 0
+                          ? `${rackLoadedCount} vial${rackLoadedCount === 1 ? "" : "s"} currently staged in rack positions and ready for the instrument widget.`
+                          : "Drag a filled autosampler vial from a workbench station into one of the rack positions."
                       }
                       title="Autosampler rack"
                     >
-                      <AutosamplerRackIllustration
-                        className="mx-auto max-w-[30rem]"
-                        occupiedSlots={rackOccupiedSlots}
-                        testId="autosampler-rack-illustration"
-                        tone={preparedVials > 0 ? "active" : "neutral"}
-                      />
+                      <div className="space-y-4">
+                        <AutosamplerRackIllustration
+                          className="mx-auto max-w-[30rem]"
+                          occupiedSlots={rackOccupiedSlots}
+                          testId="autosampler-rack-illustration"
+                          tone={rackLoadedCount > 0 ? "active" : "neutral"}
+                        />
+                        <div className="grid grid-cols-3 gap-2" data-testid="rack-slot-grid">
+                          {Array.from({ length: rackSlotCount }, (_, slotIndex) => {
+                            const assignment = rackAssignments[slotIndex];
+
+                            return (
+                              <div
+                                className="rounded-[1rem] border border-dashed border-slate-300 bg-white/85 p-2 text-center"
+                                data-testid={`rack-slot-${slotIndex + 1}`}
+                                key={slotIndex}
+                                onDragOver={handleRackSlotDragOver}
+                                onDrop={(event) => handleRackSlotDrop(event, slotIndex)}
+                              >
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                  Position {slotIndex + 1}
+                                </p>
+                                {assignment ? (
+                                  <div
+                                    className="mt-2 cursor-grab rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2 py-2 active:cursor-grabbing"
+                                    data-testid={`rack-slot-tool-${slotIndex + 1}`}
+                                    draggable
+                                    onDragStart={(event) =>
+                                      handleRackToolDragStart(assignment, event.dataTransfer)
+                                    }
+                                  >
+                                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                                      {assignment.tool.label}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-slate-500">
+                                      {assignment.tool.liquids.reduce(
+                                        (total, liquid) => total + liquid.volume_ml,
+                                        0,
+                                      )} mL staged
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-[11px] text-slate-500">Drop vial</p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </WorkspaceEquipmentWidget>
                   ) : (
                     <WorkspaceEquipmentWidget
@@ -483,8 +690,8 @@ export function PesticideWorkbench() {
                       eyebrow="Workspace Equipment"
                       footer={
                         instrumentStatus === "ready"
-                          ? "The instrument now reads as sequence-ready because at least one filled vial is available on the bench."
-                          : "Place and fill an autosampler vial on the bench to switch the instrument preview into a ready state."
+                          ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
+                          : "Populate the rack with at least one autosampler vial to switch the instrument preview into a ready state."
                       }
                       title="LC-MS/MS"
                     >
@@ -508,8 +715,11 @@ export function PesticideWorkbench() {
               zIndex={10 + widgetOrder.indexOf("workbench")}
             >
               <PesticideWorkbenchPanel
+                canDragBenchTool={canDragBenchTool}
+                onBenchToolDragStart={handleBenchToolDragStart}
+                onBenchToolDrop={handleBenchToolDrop}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
-                slots={slots}
+                slots={displaySlots}
                 statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
               />

@@ -44,6 +44,7 @@ class ExperimentSchema(BaseModel):
 class ExperimentCommandEnvelope(BaseModel):
     type: Literal[
         "place_tool_on_workbench",
+        "move_tool_between_workbench_slots",
         "add_liquid_to_workbench_tool",
         "update_workbench_liquid_volume",
     ]

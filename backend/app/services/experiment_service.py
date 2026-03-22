@@ -61,6 +61,7 @@ class ExperimentService:
 
         handlers = {
             "place_tool_on_workbench": self._place_tool_on_workbench,
+            "move_tool_between_workbench_slots": self._move_tool_between_workbench_slots,
             "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
             "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
         }
@@ -84,6 +85,24 @@ class ExperimentService:
             accepts_liquids=tool_definition.accepts_liquids,
         )
         experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
+
+    def _move_tool_between_workbench_slots(self, experiment: Experiment, payload: dict) -> None:
+        source_slot = _find_workbench_slot(experiment.workbench, payload["source_slot_id"])
+        target_slot = _find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+
+        if source_slot.id == target_slot.id:
+            return
+        if source_slot.tool is None:
+            raise ValueError(f"Place a tool on {source_slot.label} before moving it.")
+        if target_slot.tool is not None:
+            raise ValueError(f"{target_slot.label} already contains a tool")
+
+        moved_tool = source_slot.tool
+        source_slot.tool = None
+        target_slot.tool = moved_tool
+        experiment.audit_log.append(
+            f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}."
+        )
 
     def _add_liquid_to_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
         slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])
