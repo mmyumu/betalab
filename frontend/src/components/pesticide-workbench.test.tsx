@@ -382,11 +382,11 @@ describe("PesticideWorkbench", () => {
     fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
       dataTransfer: vialTransfer,
     });
-    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
-    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.dragOver(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.drop(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialTransfer });
 
     await waitFor(() => {
-      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+      expect(within(screen.getByTestId("rack-slot-summary-1")).getByText("Autosampler vial")).toBeInTheDocument();
     });
 
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
@@ -428,15 +428,15 @@ describe("PesticideWorkbench", () => {
     fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
       dataTransfer: vialToRackTransfer,
     });
-    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
-    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.dragOver(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.drop(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialToRackTransfer });
 
     await waitFor(() => {
-      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+      expect(within(screen.getByTestId("rack-slot-summary-1")).getByText("Autosampler vial")).toBeInTheDocument();
     });
 
     const rackToBenchTransfer = createDataTransfer();
-    fireEvent.dragStart(screen.getByTestId("rack-slot-tool-1"), {
+    fireEvent.dragStart(screen.getByTestId("rack-illustration-slot-1"), {
       dataTransfer: rackToBenchTransfer,
     });
     fireEvent.dragOver(screen.getByTestId("bench-slot-station_1"), { dataTransfer: rackToBenchTransfer });
@@ -448,7 +448,8 @@ describe("PesticideWorkbench", () => {
       ).toBeInTheDocument();
     });
 
-    expect(within(screen.getByTestId("rack-slot-1")).getByText("Drop vial")).toBeInTheDocument();
+    expect(screen.queryByTestId("rack-slot-summary-1")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("rack-summary")).getByText("No vial staged yet.")).toBeInTheDocument();
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
@@ -489,11 +490,11 @@ describe("PesticideWorkbench", () => {
     fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
       dataTransfer: vialToRackTransfer,
     });
-    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
-    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.dragOver(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialToRackTransfer });
+    fireEvent.drop(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialToRackTransfer });
 
     await waitFor(() => {
-      expect(within(screen.getByTestId("rack-slot-1")).getByText("Autosampler vial")).toBeInTheDocument();
+      expect(within(screen.getByTestId("rack-slot-summary-1")).getByText("Autosampler vial")).toBeInTheDocument();
     });
 
     const rackToBenchTransfer = createDataTransfer();
@@ -509,7 +510,8 @@ describe("PesticideWorkbench", () => {
       ).toBeInTheDocument();
     });
 
-    expect(within(screen.getByTestId("rack-slot-1")).getByText("Drop vial")).toBeInTheDocument();
+    expect(screen.queryByTestId("rack-slot-summary-1")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("rack-summary")).getByText("No vial staged yet.")).toBeInTheDocument();
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "move_tool_between_workbench_slots",
@@ -883,8 +885,8 @@ describe("PesticideWorkbench", () => {
     fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
       dataTransfer: vialTransfer,
     });
-    fireEvent.dragOver(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
-    fireEvent.drop(screen.getByTestId("rack-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.dragOver(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialTransfer });
+    fireEvent.drop(screen.getByTestId("rack-illustration-slot-1"), { dataTransfer: vialTransfer });
 
     await waitFor(() => {
       expect(screen.getByTestId("widget-instrument")).toBeInTheDocument();

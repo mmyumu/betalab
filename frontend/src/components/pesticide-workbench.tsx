@@ -61,6 +61,10 @@ const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
 };
 const rackSlotCount = 6;
+const rackIllustrationViewBox = { height: 320, width: 560 };
+const rackIllustrationBase = { x: 98, y: 106 };
+const rackIllustrationGap = { x: 70, y: 84 };
+const rackIllustrationColumns = Math.min(6, Math.max(rackSlotCount, 1));
 
 function createEmptyRackAssignments() {
   return Array.from({ length: rackSlotCount }, () => null) as Array<RackAssignment | null>;
@@ -80,6 +84,16 @@ function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipm
 
 function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
   return workspaceEquipmentItemToWidgetId[itemId as keyof typeof workspaceEquipmentItemToWidgetId] ?? null;
+}
+
+function getRackIllustrationSlotPosition(slotIndex: number) {
+  const column = slotIndex % rackIllustrationColumns;
+  const row = Math.floor(slotIndex / rackIllustrationColumns);
+
+  return {
+    left: `${(rackIllustrationBase.x + column * rackIllustrationGap.x) / rackIllustrationViewBox.width * 100}%`,
+    top: `${(rackIllustrationBase.y + row * rackIllustrationGap.y) / rackIllustrationViewBox.height * 100}%`,
+  };
 }
 
 export function PesticideWorkbench() {
@@ -639,53 +653,88 @@ export function PesticideWorkbench() {
                       title="Autosampler rack"
                     >
                       <div className="space-y-4">
-                        <AutosamplerRackIllustration
-                          className="mx-auto max-w-[30rem]"
-                          occupiedSlotLiquids={rackOccupiedSlotLiquids}
-                          occupiedSlots={rackOccupiedSlots}
-                          testId="autosampler-rack-illustration"
-                          tone={rackLoadedCount > 0 ? "active" : "neutral"}
-                        />
-                        <div className="grid grid-cols-3 gap-2" data-testid="rack-slot-grid">
+                        <div className="relative mx-auto max-w-[30rem]">
+                          <AutosamplerRackIllustration
+                            className="w-full"
+                            occupiedSlotLiquids={rackOccupiedSlotLiquids}
+                            occupiedSlots={rackOccupiedSlots}
+                            slotCount={rackSlotCount}
+                            testId="autosampler-rack-illustration"
+                            tone={rackLoadedCount > 0 ? "active" : "neutral"}
+                          />
                           {Array.from({ length: rackSlotCount }, (_, slotIndex) => {
+                            const position = getRackIllustrationSlotPosition(slotIndex);
                             const assignment = rackAssignments[slotIndex];
 
                             return (
                               <div
-                                className="rounded-[1rem] border border-dashed border-slate-300 bg-white/85 p-2 text-center"
-                                data-testid={`rack-slot-${slotIndex + 1}`}
+                                className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full ${
+                                  assignment ? "cursor-grab active:cursor-grabbing" : ""
+                                }`}
+                                data-testid={`rack-illustration-slot-${slotIndex + 1}`}
                                 key={slotIndex}
+                                draggable={Boolean(assignment)}
                                 onDragOver={handleRackSlotDragOver}
+                                onDragStart={(event) => {
+                                  if (!assignment) {
+                                    return;
+                                  }
+                                  handleRackToolDragStart(assignment, event.dataTransfer);
+                                }}
                                 onDrop={(event) => handleRackSlotDrop(event, slotIndex)}
-                              >
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                  Position {slotIndex + 1}
-                                </p>
-                                {assignment ? (
+                                style={position}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div
+                          className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3"
+                          data-testid="rack-summary"
+                        >
+                          {rackLoadedCount > 0 ? (
+                            <div className="space-y-1.5">
+                              {rackAssignments.map((assignment, slotIndex) => {
+                                if (!assignment) {
+                                  return null;
+                                }
+
+                                return (
                                   <div
-                                    className="mt-2 cursor-grab rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2 py-2 active:cursor-grabbing"
-                                    data-testid={`rack-slot-tool-${slotIndex + 1}`}
-                                    draggable
-                                    onDragStart={(event) =>
-                                      handleRackToolDragStart(assignment, event.dataTransfer)
-                                    }
+                                    className="flex items-center justify-between gap-3 rounded-[0.85rem] border border-slate-200 bg-slate-50 px-3 py-1.5"
+                                    data-testid={`rack-slot-summary-${slotIndex + 1}`}
+                                    key={slotIndex}
                                   >
-                                    <p className="mt-2 text-sm font-semibold text-slate-900">
-                                      {assignment.tool.label}
-                                    </p>
-                                    <p className="mt-1 text-[11px] text-slate-500">
+                                    <div className="min-w-0 flex-1 text-sm text-slate-700">
+                                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        P{slotIndex + 1}
+                                      </span>
+                                      <span className="mx-2 text-slate-300">•</span>
+                                      <span className="truncate font-semibold text-slate-900">
+                                        {assignment.tool.label}
+                                      </span>
+                                    </div>
+                                    <div
+                                      className="shrink-0 cursor-grab rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 active:cursor-grabbing"
+                                      data-testid={`rack-slot-tool-${slotIndex + 1}`}
+                                      draggable
+                                      onDragStart={(event) =>
+                                        handleRackToolDragStart(assignment, event.dataTransfer)
+                                      }
+                                    >
                                       {assignment.tool.liquids.reduce(
                                         (total, liquid) => total + liquid.volume_ml,
                                         0,
-                                      )} mL staged
-                                    </p>
+                                      )} mL
+                                    </div>
                                   </div>
-                                ) : (
-                                  <p className="mt-2 text-[11px] text-slate-500">Drop vial</p>
-                                )}
-                              </div>
-                            );
-                          })}
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500">
+                              No vial staged yet.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </WorkspaceEquipmentWidget>
