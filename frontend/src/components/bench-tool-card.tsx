@@ -59,8 +59,14 @@ function detachWheelListener(input: HTMLInputElement) {
   wheelListenerRegistry.delete(input);
 }
 
+function formatVolume(volumeMl: number) {
+  return Number.parseFloat(volumeMl.toFixed(3)).toString();
+}
+
 export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps) {
-  const currentVolume = tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0);
+  const currentVolume = Number.parseFloat(
+    tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
+  );
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
   const fillAccent = tool.liquids.at(-1)?.accent ?? tool.accent;
   const fillPercentage = (fillRatio * 100).toFixed(2);
@@ -84,7 +90,7 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
           </div>
         </div>
         <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-medium text-white">
-          {currentVolume} / {tool.capacity_ml} mL
+          {formatVolume(currentVolume)} / {formatVolume(tool.capacity_ml)} mL
         </span>
       </div>
 

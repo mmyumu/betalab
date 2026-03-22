@@ -3,13 +3,9 @@ import type { BenchLiquidPortion, BenchSlot, BenchToolInstance } from "@/types/w
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-export async function createExperiment(scenarioId = "lcmsms_single_analyte"): Promise<Experiment> {
+export async function createExperiment(): Promise<Experiment> {
   const response = await fetch(`${API_BASE_URL}/experiments`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ scenario_id: scenarioId }),
   });
 
   if (!response.ok) {
@@ -50,10 +46,6 @@ export async function sendExperimentCommand(
 }
 
 function normalizeExperiment(experiment: Experiment): Experiment {
-  if (experiment.workbench === null) {
-    return experiment;
-  }
-
   return {
     ...experiment,
     workbench: {

@@ -72,19 +72,7 @@ function makeWorkbenchExperiment({
 } = {}): Experiment {
   return {
     id: "experiment_pesticides",
-    scenario_id: "pesticides_workbench",
     status: "preparing",
-    molecule: {
-      id: "molecule_a",
-      name: "Molecule A",
-      retention_time_min: 1.35,
-      response_factor: 180,
-      expected_ion_ratio: 0.62,
-      transitions: [],
-    },
-    containers: {},
-    rack: { positions: {} },
-    runs: [],
     workbench: { slots },
     audit_log: auditLog,
   };

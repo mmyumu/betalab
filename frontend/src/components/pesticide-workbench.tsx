@@ -33,7 +33,7 @@ export function PesticideWorkbench() {
     setState({ status: "loading" });
 
     try {
-      const experiment = await createExperiment("pesticides_workbench");
+      const experiment = await createExperiment();
       setState({ status: "ready", experiment });
       setStatusMessage(getLatestStatusMessage(experiment));
     } catch (error) {
@@ -132,20 +132,6 @@ export function PesticideWorkbench() {
   }
 
   const workbench = state.experiment.workbench;
-  if (workbench === null) {
-    return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <div className="mx-auto max-w-[1800px] rounded-[2rem] border border-rose-200 bg-white/90 p-8 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-700">
-            Backend contract error
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Pesticide prep workbench</h1>
-          <p className="mt-4 text-sm text-slate-600">Experiment is missing workbench state.</p>
-        </div>
-      </main>
-    );
-  }
-
   const slots = workbench.slots;
   const placedTools = slots.filter((slot) => slot.tool).length;
   const liquidTransfers = slots.reduce((total, slot) => total + (slot.tool?.liquids.length ?? 0), 0);

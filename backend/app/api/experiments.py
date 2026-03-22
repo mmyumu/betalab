@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.experiment import ExperimentCommandEnvelope, CreateExperimentRequest, ExperimentSchema
+from app.schemas.experiment import ExperimentCommandEnvelope, ExperimentSchema
 from app.services.experiment_service import ExperimentNotFoundError, ExperimentService
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
@@ -8,8 +8,8 @@ experiment_service = ExperimentService()
 
 
 @router.post("", response_model=ExperimentSchema)
-def create_experiment(request: CreateExperimentRequest) -> ExperimentSchema:
-    return experiment_service.create_experiment(scenario_id=request.scenario_id)
+def create_experiment() -> ExperimentSchema:
+    return experiment_service.create_experiment()
 
 
 @router.get("/{experiment_id}", response_model=ExperimentSchema)

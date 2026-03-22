@@ -24,12 +24,12 @@ def test_create_and_fetch_experiment_over_http() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        created = client.post("/experiments", json={"scenario_id": "lcmsms_single_analyte"})
+        created = client.post("/experiments")
         experiment_id = created.json()["id"]
         fetched = client.get(f"/experiments/{experiment_id}")
 
     assert created.status_code == 200
-    assert created.json()["scenario_id"] == "lcmsms_single_analyte"
+    assert created.json()["workbench"]["slots"][0]["tool"] is None
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
 
@@ -48,22 +48,22 @@ def test_apply_command_returns_400_for_invalid_payload() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        created = client.post("/experiments", json={"scenario_id": "lcmsms_single_analyte"})
+        created = client.post("/experiments")
         experiment_id = created.json()["id"]
 
         response = client.post(
             f"/experiments/{experiment_id}/commands",
             json={
-                "type": "place_vial_in_rack",
+                "type": "add_liquid_to_workbench_tool",
                 "payload": {
-                    "position": "B9",
-                    "vial_id": "vial_missing",
+                    "slot_id": "station_1",
+                    "liquid_id": "acetonitrile_extraction",
                 },
             },
         )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Unknown rack position"}
+    assert response.json() == {"detail": "Place a tool on Station 1 before adding liquids."}
 
 
 def test_apply_command_returns_404_for_unknown_experiment() -> None:
@@ -73,7 +73,7 @@ def test_apply_command_returns_404_for_unknown_experiment() -> None:
         response = client.post(
             "/experiments/missing/commands",
             json={
-                "type": "run_sequence",
+                "type": "place_tool_on_workbench",
                 "payload": {},
             },
         )
@@ -86,7 +86,7 @@ def test_apply_command_returns_422_for_unknown_command_type() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        created = client.post("/experiments", json={"scenario_id": "lcmsms_single_analyte"})
+        created = client.post("/experiments")
         experiment_id = created.json()["id"]
 
         response = client.post(
@@ -104,7 +104,7 @@ def test_pesticide_workbench_commands_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
-        created = client.post("/experiments", json={"scenario_id": "pesticides_workbench"})
+        created = client.post("/experiments")
         experiment_id = created.json()["id"]
 
         placed = client.post(
@@ -129,7 +129,6 @@ def test_pesticide_workbench_commands_round_trip_over_http() -> None:
         )
 
     assert created.status_code == 200
-    assert created.json()["workbench"]["slots"][0]["tool"] is None
     assert placed.status_code == 200
     assert placed.json()["workbench"]["slots"][0]["tool"]["label"] == "Autosampler vial"
     assert added.status_code == 200
