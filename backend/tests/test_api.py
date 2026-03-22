@@ -30,6 +30,7 @@ def test_create_and_fetch_experiment_over_http() -> None:
 
     assert created.status_code == 200
     assert created.json()["workbench"]["slots"][0]["tool"] is None
+    assert created.json()["rack"]["slots"][0]["tool"] is None
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
 
@@ -166,3 +167,49 @@ def test_move_tool_between_workbench_slots_round_trip_over_http() -> None:
     assert moved.status_code == 200
     assert moved.json()["workbench"]["slots"][0]["tool"] is None
     assert moved.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
+
+
+def test_rack_commands_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+        loaded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_workbench_tool_in_rack_slot",
+                "payload": {
+                    "source_slot_id": "station_1",
+                    "rack_slot_id": "rack_slot_1",
+                },
+            },
+        )
+        removed = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "remove_rack_tool_to_workbench_slot",
+                "payload": {
+                    "rack_slot_id": "rack_slot_1",
+                    "target_slot_id": "station_2",
+                },
+            },
+        )
+
+    assert loaded.status_code == 200
+    assert loaded.json()["workbench"]["slots"][0]["tool"] is None
+    assert loaded.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
+    assert removed.status_code == 200
+    assert removed.json()["rack"]["slots"][0]["tool"] is None
+    assert removed.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"

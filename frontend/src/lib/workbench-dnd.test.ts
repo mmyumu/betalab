@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
+  readRackToolDragPayload,
   readToolbarDragPayload,
   writeBenchToolDragPayload,
+  writeRackToolDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type { ToolbarDragPayload } from "@/types/workbench";
@@ -126,6 +128,27 @@ describe("workbench dnd helpers", () => {
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
+    });
+  });
+
+  it("marks rack vial drags as station-compatible moves", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeRackToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      rackSlotId: "rack_slot_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(readRackToolDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot"],
+      rackSlotId: "rack_slot_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
     });
   });
 });

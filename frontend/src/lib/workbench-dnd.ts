@@ -1,7 +1,13 @@
-import type { BenchToolDragPayload, DropTargetType, ToolbarDragPayload } from "@/types/workbench";
+import type {
+  BenchToolDragPayload,
+  DropTargetType,
+  RackToolDragPayload,
+  ToolbarDragPayload,
+} from "@/types/workbench";
 
 export const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
 export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
+export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
 const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
 
 function getDropTargetMime(targetType: DropTargetType) {
@@ -26,6 +32,17 @@ export function writeBenchToolDragPayload(dataTransfer: DataTransfer, payload: B
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
     dataTransfer.setData(getDropTargetMime(targetType), payload.sourceSlotId);
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeRackToolDragPayload(dataTransfer: DataTransfer, payload: RackToolDragPayload) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(RACK_TOOL_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.rackSlotId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -105,6 +122,43 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
       return {
         allowedDropTargets,
         sourceSlotId: parsed.sourceSlotId,
+        toolId: parsed.toolId,
+        toolType: parsed.toolType,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDragPayload | null {
+  const rawPayload = dataTransfer.getData(RACK_TOOL_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<RackToolDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" ||
+          targetType === "workspace_canvas" ||
+          targetType === "rack_slot",
+      ) ?? [];
+
+    if (
+      typeof parsed.rackSlotId === "string" &&
+      typeof parsed.toolId === "string" &&
+      typeof parsed.toolType === "string" &&
+      allowedDropTargets.length > 0
+    ) {
+      return {
+        allowedDropTargets,
+        rackSlotId: parsed.rackSlotId,
         toolId: parsed.toolId,
         toolType: parsed.toolType,
       };

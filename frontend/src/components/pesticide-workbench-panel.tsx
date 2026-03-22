@@ -6,14 +6,18 @@ import { BenchToolCard } from "@/components/bench-tool-card";
 import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
+  readRackToolDragPayload,
   readToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  RackToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
+
+type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload;
 
 type PesticideWorkbenchPanelProps = {
   canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
@@ -22,7 +26,7 @@ type PesticideWorkbenchPanelProps = {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => void;
-  onBenchToolDrop?: (targetSlotId: string, payload: BenchToolDragPayload) => void;
+  onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
@@ -52,6 +56,12 @@ export function PesticideWorkbenchPanel({
     const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
     if (benchToolPayload) {
       onBenchToolDrop?.(slotId, benchToolPayload);
+      return;
+    }
+
+    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
+    if (rackToolPayload) {
+      onBenchToolDrop?.(slotId, rackToolPayload);
       return;
     }
 

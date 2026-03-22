@@ -44,10 +44,23 @@ class Workbench:
 
 
 @dataclass
+class RackSlot:
+    id: str
+    label: str
+    tool: WorkbenchTool | None = None
+
+
+@dataclass
+class Rack:
+    slots: list[RackSlot] = field(default_factory=list)
+
+
+@dataclass
 class Experiment:
     id: str
     status: ExperimentStatus
     workbench: Workbench
+    rack: Rack
     audit_log: list[str] = field(default_factory=list)
 
 

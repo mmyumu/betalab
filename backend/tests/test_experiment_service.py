@@ -15,7 +15,22 @@ def test_create_experiment_returns_empty_workbench() -> None:
         "station_3",
         "station_4",
     ]
+    assert [slot.id for slot in experiment.rack.slots] == [
+        "rack_slot_1",
+        "rack_slot_2",
+        "rack_slot_3",
+        "rack_slot_4",
+        "rack_slot_5",
+        "rack_slot_6",
+        "rack_slot_7",
+        "rack_slot_8",
+        "rack_slot_9",
+        "rack_slot_10",
+        "rack_slot_11",
+        "rack_slot_12",
+    ]
     assert all(slot.tool is None for slot in experiment.workbench.slots)
+    assert all(slot.tool is None for slot in experiment.rack.slots)
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
 
@@ -78,6 +93,8 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
+    service = ExperimentService()
+    experiment = service.create_experiment()
     service.apply_command(
         experiment.id,
         "place_tool_on_workbench",
@@ -100,6 +117,70 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
     assert updated.workbench.slots[1].tool is not None
     assert updated.workbench.slots[1].tool.label == "Autosampler vial"
     assert updated.audit_log[-1] == "Autosampler vial moved from Station 1 to Station 2."
+
+
+def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is None
+    assert updated.rack.slots[0].tool is not None
+    assert updated.rack.slots[0].tool.label == "Autosampler vial"
+    assert updated.audit_log[-1] == "Autosampler vial moved from Station 1 to Position 1."
+
+
+def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "remove_rack_tool_to_workbench_slot",
+        {
+            "rack_slot_id": "rack_slot_1",
+            "target_slot_id": "station_2",
+        },
+    )
+
+    assert updated.rack.slots[0].tool is None
+    assert updated.workbench.slots[1].tool is not None
+    assert updated.workbench.slots[1].tool.label == "Autosampler vial"
+    assert updated.audit_log[-1] == "Autosampler vial moved from Position 1 to Station 2."
 
 
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
@@ -175,6 +256,90 @@ def test_move_tool_requires_a_source_tool_and_empty_target() -> None:
             },
         )
 
+
+def test_rack_commands_require_vials_present_and_compatible() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it into the rack."):
+        service.apply_command(
+            experiment.id,
+            "place_workbench_tool_in_rack_slot",
+            {
+                "source_slot_id": "station_1",
+                "rack_slot_id": "rack_slot_1",
+            },
+        )
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "beaker_rinse",
+        },
+    )
+    with pytest.raises(ValueError, match="Only autosampler vials can be placed in the rack."):
+        service.apply_command(
+            experiment.id,
+            "place_workbench_tool_in_rack_slot",
+            {
+                "source_slot_id": "station_1",
+                "rack_slot_id": "rack_slot_1",
+            },
+        )
+
+    service = ExperimentService()
+    experiment = service.create_experiment()
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_2",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Position 1 already contains a vial"):
+        service.apply_command(
+            experiment.id,
+            "place_workbench_tool_in_rack_slot",
+            {
+                "source_slot_id": "station_2",
+                "rack_slot_id": "rack_slot_1",
+            },
+        )
+
+    with pytest.raises(
+        ValueError, match="Place a vial in Position 2 before moving it back to the bench."
+    ):
+        service.apply_command(
+            experiment.id,
+            "remove_rack_tool_to_workbench_slot",
+            {
+                "rack_slot_id": "rack_slot_2",
+                "target_slot_id": "station_3",
+            },
+        )
+
+    service = ExperimentService()
+    experiment = service.create_experiment()
     service.apply_command(
         experiment.id,
         "place_tool_on_workbench",

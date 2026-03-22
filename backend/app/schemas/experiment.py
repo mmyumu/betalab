@@ -34,10 +34,21 @@ class WorkbenchSchema(BaseModel):
     slots: list[WorkbenchSlotSchema]
 
 
+class RackSlotSchema(BaseModel):
+    id: str
+    label: str
+    tool: WorkbenchToolSchema | None = None
+
+
+class RackSchema(BaseModel):
+    slots: list[RackSlotSchema]
+
+
 class ExperimentSchema(BaseModel):
     id: str
     status: str
     workbench: WorkbenchSchema
+    rack: RackSchema
     audit_log: list[str]
 
 
@@ -45,6 +56,8 @@ class ExperimentCommandEnvelope(BaseModel):
     type: Literal[
         "place_tool_on_workbench",
         "move_tool_between_workbench_slots",
+        "place_workbench_tool_in_rack_slot",
+        "remove_rack_tool_to_workbench_slot",
         "add_liquid_to_workbench_tool",
         "update_workbench_liquid_volume",
     ]

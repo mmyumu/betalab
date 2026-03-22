@@ -5,6 +5,8 @@ from dataclasses import asdict
 from app.domain.models import (
     Experiment,
     ExperimentStatus,
+    Rack,
+    RackSlot,
     Workbench,
     WorkbenchLiquid,
     WorkbenchSlot,
@@ -38,6 +40,12 @@ class ExperimentService:
                     WorkbenchSlot(id="station_4", label="Station 4"),
                 ]
             ),
+            rack=Rack(
+                slots=[
+                    RackSlot(id=f"rack_slot_{index}", label=f"Position {index}")
+                    for index in range(1, 13)
+                ]
+            ),
             audit_log=[
                 "Experiment created",
                 "Start by dragging an extraction tool onto the bench.",
@@ -62,6 +70,8 @@ class ExperimentService:
         handlers = {
             "place_tool_on_workbench": self._place_tool_on_workbench,
             "move_tool_between_workbench_slots": self._move_tool_between_workbench_slots,
+            "place_workbench_tool_in_rack_slot": self._place_workbench_tool_in_rack_slot,
+            "remove_rack_tool_to_workbench_slot": self._remove_rack_tool_to_workbench_slot,
             "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
             "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
         }
@@ -102,6 +112,38 @@ class ExperimentService:
         target_slot.tool = moved_tool
         experiment.audit_log.append(
             f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}."
+        )
+
+    def _place_workbench_tool_in_rack_slot(self, experiment: Experiment, payload: dict) -> None:
+        source_slot = _find_workbench_slot(experiment.workbench, payload["source_slot_id"])
+        rack_slot = _find_rack_slot(experiment.rack, payload["rack_slot_id"])
+
+        if source_slot.tool is None:
+            raise ValueError(f"Place a tool on {source_slot.label} before moving it into the rack.")
+        if source_slot.tool.tool_type != "sample_vial":
+            raise ValueError("Only autosampler vials can be placed in the rack.")
+        if rack_slot.tool is not None:
+            raise ValueError(f"{rack_slot.label} already contains a vial")
+
+        rack_slot.tool = source_slot.tool
+        source_slot.tool = None
+        experiment.audit_log.append(
+            f"{rack_slot.tool.label} moved from {source_slot.label} to {rack_slot.label}."
+        )
+
+    def _remove_rack_tool_to_workbench_slot(self, experiment: Experiment, payload: dict) -> None:
+        rack_slot = _find_rack_slot(experiment.rack, payload["rack_slot_id"])
+        target_slot = _find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+
+        if rack_slot.tool is None:
+            raise ValueError(f"Place a vial in {rack_slot.label} before moving it back to the bench.")
+        if target_slot.tool is not None:
+            raise ValueError(f"{target_slot.label} already contains a tool")
+
+        target_slot.tool = rack_slot.tool
+        rack_slot.tool = None
+        experiment.audit_log.append(
+            f"{target_slot.tool.label} moved from {rack_slot.label} to {target_slot.label}."
         )
 
     def _add_liquid_to_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
@@ -187,6 +229,7 @@ class ExperimentService:
                 "id": experiment.id,
                 "status": experiment.status.value,
                 "workbench": asdict(experiment.workbench),
+                "rack": asdict(experiment.rack),
                 "audit_log": experiment.audit_log,
             }
         )
@@ -196,6 +239,13 @@ def _find_workbench_slot(workbench: Workbench, slot_id: str) -> WorkbenchSlot:
     slot = next((entry for entry in workbench.slots if entry.id == slot_id), None)
     if slot is None:
         raise ValueError("Unknown workbench slot")
+    return slot
+
+
+def _find_rack_slot(rack: Rack, slot_id: str) -> RackSlot:
+    slot = next((entry for entry in rack.slots if entry.id == slot_id), None)
+    if slot is None:
+        raise ValueError("Unknown rack slot")
     return slot
 
 

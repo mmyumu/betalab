@@ -15,6 +15,7 @@ import {
   readBenchToolDragPayload,
   readToolbarDragPayload,
   writeBenchToolDragPayload,
+  writeRackToolDragPayload,
 } from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
@@ -24,6 +25,8 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  RackSlot,
+  RackToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
 
@@ -42,10 +45,6 @@ const workspaceEquipmentItemToWidgetId = {
 
 type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
-type RackAssignment = {
-  sourceSlotId: string;
-  tool: BenchToolInstance;
-};
 
 type WidgetLayout = {
   fallbackHeight: number;
@@ -65,10 +64,6 @@ const rackIllustrationViewBox = { height: 320, width: 560 };
 const rackIllustrationBase = { x: 98, y: 106 };
 const rackIllustrationGap = { x: 70, y: 84 };
 const rackIllustrationColumns = Math.min(6, Math.max(rackSlotCount, 1));
-
-function createEmptyRackAssignments() {
-  return Array.from({ length: rackSlotCount }, () => null) as Array<RackAssignment | null>;
-}
 
 function getLatestStatusMessage(experiment: Experiment) {
   return experiment.audit_log.at(-1) ?? defaultStatusMessage;
@@ -105,8 +100,6 @@ export function PesticideWorkbench() {
     useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
   const [visibleEquipmentWidgets, setVisibleEquipmentWidgets] = useState<WorkspaceEquipmentWidgetId[]>([]);
-  const [rackAssignments, setRackAssignments] =
-    useState<Array<RackAssignment | null>>(createEmptyRackAssignments);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
     toolbar: initialWidgetLayout.toolbar.fallbackHeight,
     workbench: initialWidgetLayout.workbench.fallbackHeight,
@@ -136,7 +129,6 @@ export function PesticideWorkbench() {
       return;
     }
 
-    setRackAssignments(createEmptyRackAssignments());
     setVisibleEquipmentWidgets([]);
     setWidgetLayout(initialWidgetLayout);
     setWidgetOrder([...widgetIds]);
@@ -243,46 +235,24 @@ export function PesticideWorkbench() {
     });
   };
 
-  const handleBenchToolDrop = (targetSlotId: string, payload: BenchToolDragPayload) => {
-    const assignmentForTool = rackAssignments.find(
-      (assignment) => assignment?.sourceSlotId === payload.sourceSlotId,
-    );
-
-    if (payload.sourceSlotId === targetSlotId) {
-      if (!assignmentForTool) {
+  const handleBenchToolDrop = (
+    targetSlotId: string,
+    payload: BenchToolDragPayload | RackToolDragPayload,
+  ) => {
+    if ("sourceSlotId" in payload) {
+      if (payload.sourceSlotId === targetSlotId) {
         return;
       }
 
-      setRackAssignments((current) =>
-        current.map((assignment) =>
-          assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
-        ),
-      );
+      void sendWorkbenchCommand("move_tool_between_workbench_slots", {
+        source_slot_id: payload.sourceSlotId,
+        target_slot_id: targetSlotId,
+      });
       return;
     }
 
-    if (assignmentForTool) {
-      void sendWorkbenchCommand(
-        "move_tool_between_workbench_slots",
-        {
-          source_slot_id: payload.sourceSlotId,
-          target_slot_id: targetSlotId,
-        },
-        {
-          onSuccess: () => {
-            setRackAssignments((current) =>
-              current.map((assignment) =>
-                assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
-              ),
-            );
-          },
-        },
-      );
-      return;
-    }
-
-    void sendWorkbenchCommand("move_tool_between_workbench_slots", {
-      source_slot_id: payload.sourceSlotId,
+    void sendWorkbenchCommand("remove_rack_tool_to_workbench_slot", {
+      rack_slot_id: payload.rackSlotId,
       target_slot_id: targetSlotId,
     });
   };
@@ -481,24 +451,19 @@ export function PesticideWorkbench() {
 
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
-  const rackSourceSlotIds = new Set(
-    rackAssignments.flatMap((assignment) => (assignment ? [assignment.sourceSlotId] : [])),
-  );
-  const displaySlots: BenchSlot[] = slots.map((slot) =>
-    rackSourceSlotIds.has(slot.id) ? { ...slot, tool: null } : slot,
-  );
-  const placedTools = displaySlots.filter((slot) => slot.tool).length;
-  const liquidTransfers = displaySlots.reduce(
+  const rackSlots = state.experiment.rack.slots;
+  const placedTools = slots.filter((slot) => slot.tool).length;
+  const liquidTransfers = slots.reduce(
     (total, slot) => total + (slot.tool?.liquids.length ?? 0),
     0,
   );
-  const rackLoadedCount = rackAssignments.filter(Boolean).length;
-  const rackOccupiedSlots = rackAssignments.flatMap((assignment, index) =>
-    assignment ? [index + 1] : [],
+  const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
+  const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
+    slot.tool ? [index + 1] : [],
   );
   const rackOccupiedSlotLiquids = Object.fromEntries(
-    rackAssignments.flatMap((assignment, index) =>
-      assignment ? [[index + 1, assignment.tool.liquids] as const] : [],
+    rackSlots.flatMap((slot, index) =>
+      slot.tool ? [[index + 1, slot.tool.liquids] as const] : [],
     ),
   );
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
@@ -523,39 +488,30 @@ export function PesticideWorkbench() {
       return;
     }
 
-    const sourceSlot = slots.find((slot) => slot.id === payload.sourceSlotId);
-    if (
-      !sourceSlot?.tool ||
-      sourceSlot.tool.toolType !== "sample_vial"
-    ) {
+    const targetRackSlot = rackSlots[slotIndex];
+    if (!targetRackSlot) {
       return;
     }
-    const sourceTool = sourceSlot.tool;
 
     event.preventDefault();
     event.stopPropagation();
 
-    setRackAssignments((current) => {
-      const next = current.map((assignment) =>
-        assignment?.sourceSlotId === payload.sourceSlotId ? null : assignment,
-      );
-      next[slotIndex] = {
-        sourceSlotId: payload.sourceSlotId,
-        tool: sourceTool,
-      };
-      return next;
+    void sendWorkbenchCommand("place_workbench_tool_in_rack_slot", {
+      source_slot_id: payload.sourceSlotId,
+      rack_slot_id: targetRackSlot.id,
     });
   };
 
   const handleRackToolDragStart = (
-    assignment: RackAssignment,
+    rackSlot: RackSlot,
+    tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
-    writeBenchToolDragPayload(dataTransfer, {
-      allowedDropTargets: [...getBenchToolAllowedDropTargets(assignment.tool)],
-      sourceSlotId: assignment.sourceSlotId,
-      toolId: assignment.tool.toolId,
-      toolType: assignment.tool.toolType,
+    writeRackToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      rackSlotId: rackSlot.id,
+      toolId: tool.toolId,
+      toolType: tool.toolType,
     });
   };
 
@@ -642,13 +598,7 @@ export function PesticideWorkbench() {
                 >
                   {widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
-                      description="Sequence staging widget for autosampler vials transferred off the workbench and into injection positions."
                       eyebrow="Workspace Equipment"
-                      footer={
-                        rackLoadedCount > 0
-                          ? `${rackLoadedCount} vial${rackLoadedCount === 1 ? "" : "s"} currently staged in rack positions and ready for the instrument widget.`
-                          : "Drag a filled autosampler vial from a workbench station into one of the rack positions."
-                      }
                       title="Autosampler rack"
                     >
                       <div className="space-y-4">
@@ -661,24 +611,24 @@ export function PesticideWorkbench() {
                             testId="autosampler-rack-illustration"
                             tone={rackLoadedCount > 0 ? "active" : "neutral"}
                           />
-                          {Array.from({ length: rackSlotCount }, (_, slotIndex) => {
+                          {rackSlots.map((rackSlot, slotIndex) => {
                             const position = getRackIllustrationSlotPosition(slotIndex);
-                            const assignment = rackAssignments[slotIndex];
+                            const tool = rackSlot.tool;
 
                             return (
                               <div
                                 className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full ${
-                                  assignment ? "cursor-grab active:cursor-grabbing" : ""
+                                  tool ? "cursor-grab active:cursor-grabbing" : ""
                                 }`}
                                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
-                                key={slotIndex}
-                                draggable={Boolean(assignment)}
+                                key={rackSlot.id}
+                                draggable={Boolean(tool)}
                                 onDragOver={handleRackSlotDragOver}
                                 onDragStart={(event) => {
-                                  if (!assignment) {
+                                  if (!tool) {
                                     return;
                                   }
-                                  handleRackToolDragStart(assignment, event.dataTransfer);
+                                  handleRackToolDragStart(rackSlot, tool, event.dataTransfer);
                                 }}
                                 onDrop={(event) => handleRackSlotDrop(event, slotIndex)}
                                 style={position}
@@ -692,8 +642,9 @@ export function PesticideWorkbench() {
                         >
                           {rackLoadedCount > 0 ? (
                             <div className="space-y-1.5">
-                              {rackAssignments.map((assignment, slotIndex) => {
-                                if (!assignment) {
+                              {rackSlots.map((rackSlot, slotIndex) => {
+                                const tool = rackSlot.tool;
+                                if (!tool) {
                                   return null;
                                 }
 
@@ -701,7 +652,7 @@ export function PesticideWorkbench() {
                                   <div
                                     className="flex items-center justify-between gap-3 rounded-[0.85rem] border border-slate-200 bg-slate-50 px-3 py-1.5"
                                     data-testid={`rack-slot-summary-${slotIndex + 1}`}
-                                    key={slotIndex}
+                                    key={rackSlot.id}
                                   >
                                     <div className="min-w-0 flex-1 text-sm text-slate-700">
                                       <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -709,18 +660,16 @@ export function PesticideWorkbench() {
                                       </span>
                                       <span className="mx-2 text-slate-300">•</span>
                                       <span className="truncate font-semibold text-slate-900">
-                                        {assignment.tool.label}
+                                        {tool.label}
                                       </span>
                                     </div>
                                     <div
                                       className="shrink-0 cursor-grab rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 active:cursor-grabbing"
                                       data-testid={`rack-slot-tool-${slotIndex + 1}`}
                                       draggable
-                                      onDragStart={(event) =>
-                                        handleRackToolDragStart(assignment, event.dataTransfer)
-                                      }
+                                      onDragStart={(event) => handleRackToolDragStart(rackSlot, tool, event.dataTransfer)}
                                     >
-                                      {assignment.tool.liquids.reduce(
+                                      {tool.liquids.reduce(
                                         (total, liquid) => total + liquid.volume_ml,
                                         0,
                                       )} mL
@@ -773,7 +722,7 @@ export function PesticideWorkbench() {
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
-                slots={displaySlots}
+                slots={slots}
                 statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
               />

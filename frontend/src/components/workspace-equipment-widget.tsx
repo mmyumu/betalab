@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 type WorkspaceEquipmentWidgetProps = {
   badge?: string;
   children: ReactNode;
-  description: string;
+  description?: string;
   eyebrow: string;
-  footer: string;
+  footer?: string;
   title: string;
 };
 
@@ -28,7 +28,9 @@ export function WorkspaceEquipmentWidget({
               {eyebrow}
             </p>
             <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
-            <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
+            {description ? (
+              <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
+            ) : null}
           </div>
           {badge ? (
             <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
@@ -42,7 +44,7 @@ export function WorkspaceEquipmentWidget({
         <div className="rounded-[1.8rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),rgba(241,245,249,0.95))] p-4 shadow-inner">
           {children}
         </div>
-        <p className="mt-4 text-sm text-slate-600">{footer}</p>
+        {footer ? <p className="mt-4 text-sm text-slate-600">{footer}</p> : null}
       </div>
     </section>
   );

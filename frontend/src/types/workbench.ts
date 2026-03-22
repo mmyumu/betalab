@@ -56,6 +56,13 @@ export type BenchToolDragPayload = {
   toolType: ToolType;
 };
 
+export type RackToolDragPayload = {
+  allowedDropTargets: DropTargetType[];
+  rackSlotId: string;
+  toolId: string;
+  toolType: ToolType;
+};
+
 export type BenchLiquidPortion = {
   id: string;
   liquidId: string;
@@ -77,6 +84,12 @@ export type BenchToolInstance = {
 };
 
 export type BenchSlot = {
+  id: string;
+  label: string;
+  tool: BenchToolInstance | null;
+};
+
+export type RackSlot = {
   id: string;
   label: string;
   tool: BenchToolInstance | null;

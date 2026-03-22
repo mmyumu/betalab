@@ -1,5 +1,5 @@
 import type { Experiment } from "@/types/experiment";
-import type { BenchLiquidPortion, BenchSlot, BenchToolInstance } from "@/types/workbench";
+import type { BenchLiquidPortion, BenchSlot, BenchToolInstance, RackSlot } from "@/types/workbench";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -51,6 +51,9 @@ function normalizeExperiment(experiment: Experiment): Experiment {
     workbench: {
       slots: experiment.workbench.slots.map(normalizeBenchSlot),
     },
+    rack: {
+      slots: experiment.rack.slots.map(normalizeRackSlot),
+    },
   };
 }
 
@@ -75,6 +78,14 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
       (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
     ) ?? [],
+  };
+}
+
+function normalizeRackSlot(slot: RackSlot): RackSlot {
+  return {
+    id: slot.id,
+    label: slot.label,
+    tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
   };
 }
 

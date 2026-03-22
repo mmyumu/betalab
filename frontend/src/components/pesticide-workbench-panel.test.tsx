@@ -2,7 +2,11 @@ import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
-import { writeBenchToolDragPayload, writeToolbarDragPayload } from "@/lib/workbench-dnd";
+import {
+  writeBenchToolDragPayload,
+  writeRackToolDragPayload,
+  writeToolbarDragPayload,
+} from "@/lib/workbench-dnd";
 import type { BenchSlot } from "@/types/workbench";
 
 const slots: BenchSlot[] = [
@@ -217,6 +221,41 @@ describe("PesticideWorkbenchPanel", () => {
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
+    });
+  });
+
+  it("forwards rack-tool drops onto stations", () => {
+    const onBenchToolDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeRackToolDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      rackSlotId: "rack_slot_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onBenchToolDrop={onBenchToolDrop}
+        onLiquidVolumeChange={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={slots}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_2");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onBenchToolDrop).toHaveBeenCalledWith("station_2", {
+      allowedDropTargets: ["workbench_slot"],
+      rackSlotId: "rack_slot_1",
+      toolId: "sample_vial_lcms",
+      toolType: "sample_vial",
     });
   });
 
