@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { ToolbarPanel } from "@/components/toolbar-panel";
@@ -43,7 +44,7 @@ const categories: ToolbarCategory[] = [
 ];
 
 describe("ToolbarPanel", () => {
-  it("renders categories, their items, and exposes draggable inventory cards", () => {
+  it("renders categories, their items, and exposes draggable inventory cards", async () => {
     render(<ToolbarPanel categories={categories} />);
 
     expect(screen.getByText("Palette")).toBeInTheDocument();
@@ -55,5 +56,18 @@ describe("ToolbarPanel", () => {
     expect(screen.getByText("Solvents and matrices available on the bench.")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute(
+      "title",
+      "Build standard dilutions with a fixed final volume.",
+    );
+    expect(screen.queryByText("Build standard dilutions with a fixed final volume.")).not.toBeInTheDocument();
+    expect(screen.queryByText("tool")).not.toBeInTheDocument();
+    expect(screen.queryByText("liquid")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
+    expect(screen.queryByTestId("toolbar-item-volumetric_flask")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
+    expect(screen.getByTestId("toolbar-item-volumetric_flask")).toBeInTheDocument();
   });
 });

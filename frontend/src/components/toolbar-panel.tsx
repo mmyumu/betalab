@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+
+import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { ToolbarAccent, ToolbarCategory } from "@/types/workbench";
 
@@ -14,11 +19,13 @@ const accentClasses: Record<ToolbarAccent, string> = {
 };
 
 export function ToolbarPanel({ categories }: ToolbarPanelProps) {
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+    <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur xl:p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Palette</p>
-      <h2 className="mt-1 text-xl font-semibold text-slate-950">Workflow inventory</h2>
-      <p className="mt-3 text-sm text-slate-600">
+      <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">Workflow inventory</h2>
+      <p className="mt-3 text-sm text-slate-600 xl:text-base">
         Drag tools onto the bench, then drag liquids into placed containers that can accept them.
       </p>
 
@@ -26,47 +33,63 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
         {categories.map((category) => (
           <article
             key={category.id}
-            className="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-4"
+            className="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-4 xl:p-5"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-slate-900">{category.label}</h3>
+                <button
+                  aria-expanded={!collapsedCategories[category.id]}
+                  className="flex items-center gap-2 text-left"
+                  onClick={() => {
+                    setCollapsedCategories((current) => ({
+                      ...current,
+                      [category.id]: !current[category.id],
+                    }));
+                  }}
+                  type="button"
+                >
+                  <span className="w-3 text-base font-semibold leading-none text-slate-400">
+                    {collapsedCategories[category.id] ? "+" : "-"}
+                  </span>
+                  <h3 className="text-base font-semibold text-slate-900">{category.label}</h3>
+                </button>
                 <p className="mt-1 text-sm text-slate-600">{category.description}</p>
               </div>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
-                {category.items.length} items
-              </span>
             </div>
 
-            <div className="mt-4 space-y-3">
-              {category.items.map((item) => (
-                <div
-                  key={item.id}
-                  className={`rounded-[1.4rem] bg-gradient-to-br p-4 ring-1 ${accentClasses[item.accent]}`}
-                  data-testid={`toolbar-item-${item.id}`}
-                  draggable
-                  onDragStart={(event) => {
-                    writeToolbarDragPayload(event.dataTransfer, {
-                      itemId: item.id,
-                      itemType: item.itemType,
-                    });
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{item.name}</p>
-                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                        {item.subtitle}
-                      </p>
+            {!collapsedCategories[category.id] ? (
+              <div className="mt-4 space-y-3">
+                {category.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`rounded-[1.4rem] bg-gradient-to-br p-4 ring-1 transition-transform hover:-translate-y-0.5 xl:p-4 ${accentClasses[item.accent]}`}
+                    data-testid={`toolbar-item-${item.id}`}
+                    draggable
+                    onDragStart={(event) => {
+                      writeToolbarDragPayload(event.dataTransfer, {
+                        itemId: item.id,
+                        itemType: item.itemType,
+                      });
+                    }}
+                    title={item.description}
+                  >
+                    <div className="flex items-start gap-3">
+                      <LabAssetIcon
+                        accent={item.accent}
+                        className="h-14 w-12 shrink-0"
+                        kind={item.itemType === "tool" ? item.toolType : item.liquidType}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold">{item.name}</p>
+                        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                          {item.subtitle}
+                        </p>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                      {item.itemType}
-                    </span>
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">{item.description}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
