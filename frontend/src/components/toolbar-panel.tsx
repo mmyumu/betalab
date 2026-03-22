@@ -5,10 +5,12 @@ import { useState } from "react";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
 import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
-import type { ToolbarAccent, ToolbarCategory } from "@/types/workbench";
+import type { DropTargetType, ToolbarAccent, ToolbarCategory } from "@/types/workbench";
 
 type ToolbarPanelProps = {
   categories: ToolbarCategory[];
+  onItemDragEnd?: () => void;
+  onItemDragStart?: (allowedDropTargets: DropTargetType[]) => void;
 };
 
 const accentClasses: Record<ToolbarAccent, string> = {
@@ -22,7 +24,7 @@ const accentClasses: Record<ToolbarAccent, string> = {
 const neutralToolClasses =
   "from-slate-200/70 via-slate-50 to-white text-slate-800 ring-slate-200";
 
-export function ToolbarPanel({ categories }: ToolbarPanelProps) {
+export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: ToolbarPanelProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   return (
@@ -68,7 +70,11 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                     }`}
                     data-testid={`toolbar-item-${item.id}`}
                     draggable
+                    onDragEnd={() => {
+                      onItemDragEnd?.();
+                    }}
                     onDragStart={(event) => {
+                      onItemDragStart?.(item.allowedDropTargets);
                       writeToolbarDragPayload(event.dataTransfer, {
                         allowedDropTargets: item.allowedDropTargets,
                         itemId: item.id,

@@ -26,6 +26,7 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  DropTargetType,
   RackSlot,
   RackToolDragPayload,
   ToolbarDragPayload,
@@ -130,6 +131,7 @@ export function PesticideWorkbench() {
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
+  const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
   const [widgetLayout, setWidgetLayout] =
     useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
@@ -217,8 +219,21 @@ export function PesticideWorkbench() {
     }
   };
 
+  const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
+    setActiveDropTargets([...dropTargets]);
+  };
+
+  const clearDropTargets = () => {
+    setActiveDropTargets([]);
+  };
+
+  const isDropTargetHighlighted = (targetType: DropTargetType) => {
+    return activeDropTargets.includes(targetType);
+  };
+
   const handleToolbarItemDrop = (slotId: string, payload: ToolbarDragPayload) => {
     if (payload.itemType === "tool") {
+      clearDropTargets();
       void sendWorkbenchCommand("place_tool_on_workbench", {
         slot_id: slotId,
         tool_id: payload.itemId,
@@ -230,6 +245,7 @@ export function PesticideWorkbench() {
       return;
     }
 
+    clearDropTargets();
     void sendWorkbenchCommand("add_liquid_to_workbench_tool", {
       slot_id: slotId,
       liquid_id: payload.itemId,
@@ -284,6 +300,7 @@ export function PesticideWorkbench() {
       toolType: tool.toolType,
       trashable: tool.trashable,
     });
+    showDropTargets(getBenchToolAllowedDropTargets(tool));
   };
 
   const handleBenchToolDrop = (
@@ -299,6 +316,7 @@ export function PesticideWorkbench() {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
       });
+      clearDropTargets();
       return;
     }
 
@@ -306,6 +324,7 @@ export function PesticideWorkbench() {
       rack_slot_id: payload.rackSlotId,
       target_slot_id: targetSlotId,
     });
+    clearDropTargets();
   };
 
   const handleWidgetHeightChange = (widgetId: string, height: number) => {
@@ -351,6 +370,7 @@ export function PesticideWorkbench() {
       pointerOffsetX: event.clientX - workspaceLeft - currentPosition.x,
       pointerOffsetY: event.clientY - workspaceTop - currentPosition.y,
     };
+    setActiveDropTargets(widgetTrashability[widgetId] ? ["trash_bin"] : []);
     setActiveWidgetId(widgetId);
     setWidgetOrder((current) => [...current.filter((id) => id !== widgetId), widgetId]);
 
@@ -407,6 +427,7 @@ export function PesticideWorkbench() {
         );
 
       dragStateRef.current = null;
+      clearDropTargets();
       setActiveWidgetId(null);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -483,6 +504,7 @@ export function PesticideWorkbench() {
 
     event.preventDefault();
     moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
+    clearDropTargets();
     event.stopPropagation();
   };
 
@@ -501,6 +523,7 @@ export function PesticideWorkbench() {
     if (benchToolPayload?.trashable) {
       event.preventDefault();
       event.stopPropagation();
+      clearDropTargets();
       void sendWorkbenchCommand("discard_workbench_tool", {
         slot_id: benchToolPayload.sourceSlotId,
       });
@@ -511,6 +534,7 @@ export function PesticideWorkbench() {
     if (rackToolPayload?.trashable) {
       event.preventDefault();
       event.stopPropagation();
+      clearDropTargets();
       void sendWorkbenchCommand("discard_rack_tool", {
         rack_slot_id: rackToolPayload.rackSlotId,
       });
@@ -600,6 +624,7 @@ export function PesticideWorkbench() {
       source_slot_id: payload.sourceSlotId,
       rack_slot_id: targetRackSlot.id,
     });
+    clearDropTargets();
   };
 
   const handleRackToolDragStart = (
@@ -614,6 +639,7 @@ export function PesticideWorkbench() {
       toolType: tool.toolType,
       trashable: tool.trashable,
     });
+    showDropTargets(tool.trashable ? ["workbench_slot", "trash_bin"] : ["workbench_slot"]);
   };
 
   return (
@@ -639,7 +665,12 @@ export function PesticideWorkbench() {
           </div>
 
           <div
-            className="relative mt-4 overflow-hidden rounded-[2rem] border border-dashed border-slate-300/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)]"
+            className={`relative mt-4 overflow-hidden rounded-[2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)] transition-colors ${
+              isDropTargetHighlighted("workspace_canvas")
+                ? "border-sky-300/90 ring-2 ring-sky-200/80"
+                : "border-slate-300/80"
+            }`}
+            data-drop-highlighted={isDropTargetHighlighted("workspace_canvas") ? "true" : "false"}
             data-testid="widget-workspace"
             onDragOverCapture={handleWorkspaceDragOver}
             onDropCapture={handleWorkspaceDrop}
@@ -658,7 +689,11 @@ export function PesticideWorkbench() {
               position={widgetLayout.toolbar}
               zIndex={10 + widgetOrder.indexOf("toolbar")}
             >
-              <ToolbarPanel categories={pesticideWorkflowCategories} />
+              <ToolbarPanel
+                categories={pesticideWorkflowCategories}
+                onItemDragEnd={clearDropTargets}
+                onItemDragStart={showDropTargets}
+              />
             </FloatingWidget>
 
             <FloatingWidget
@@ -678,7 +713,12 @@ export function PesticideWorkbench() {
                 </div>
                 <div className="px-4 py-4">
                 <div
-                  className="flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center"
+                  className={`flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center transition-colors ${
+                    isDropTargetHighlighted("trash_bin")
+                      ? "border-rose-300 bg-rose-50/70 ring-2 ring-rose-200/80"
+                      : "border-slate-300"
+                  }`}
+                  data-drop-highlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
                   data-testid="trash-dropzone"
                   onDragOver={handleTrashDragOver}
                   onDrop={handleTrashDrop}
@@ -767,12 +807,16 @@ export function PesticideWorkbench() {
 
                             return (
                               <div
-                                className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full ${
-                                  tool ? "cursor-grab active:cursor-grabbing" : ""
-                                }`}
+                                className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full transition-colors ${
+                                  isDropTargetHighlighted("rack_slot")
+                                    ? "bg-sky-200/45 ring-2 ring-sky-300/90"
+                                    : ""
+                                } ${tool ? "cursor-grab active:cursor-grabbing" : ""}`}
+                                data-drop-highlighted={isDropTargetHighlighted("rack_slot") ? "true" : "false"}
                                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
                                 key={rackSlot.id}
                                 draggable={Boolean(tool)}
+                                onDragEnd={clearDropTargets}
                                 onDragOver={handleRackSlotDragOver}
                                 onDragStart={(event) => {
                                   if (!tool) {
@@ -817,6 +861,7 @@ export function PesticideWorkbench() {
                                       className="shrink-0 cursor-grab rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 active:cursor-grabbing"
                                       data-testid={`rack-slot-tool-${slotIndex + 1}`}
                                       draggable
+                                      onDragEnd={clearDropTargets}
                                       onDragStart={(event) => handleRackToolDragStart(rackSlot, tool, event.dataTransfer)}
                                     >
                                       {tool.liquids.reduce(
@@ -869,6 +914,8 @@ export function PesticideWorkbench() {
             >
               <PesticideWorkbenchPanel
                 canDragBenchTool={canDragBenchTool}
+                highlightedDropTargets={activeDropTargets}
+                onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
                 onRemoveLiquid={handleRemoveLiquid}

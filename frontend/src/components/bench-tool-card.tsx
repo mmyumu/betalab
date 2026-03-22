@@ -10,6 +10,7 @@ import type { BenchToolInstance } from "@/types/workbench";
 
 type BenchToolCardProps = {
   draggable?: boolean;
+  onDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
@@ -70,6 +71,7 @@ function formatVolume(volumeMl: number) {
 
 export function BenchToolCard({
   draggable = false,
+  onDragEnd,
   onDragStart,
   onRemoveLiquid,
   onLiquidVolumeChange,
@@ -96,6 +98,7 @@ export function BenchToolCard({
           className={draggable ? "cursor-grab active:cursor-grabbing" : ""}
           data-testid={`bench-tool-card-${tool.id}`}
           draggable={draggable}
+          onDragEnd={onDragEnd}
           onDragStart={onDragStart}
         >
           <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>

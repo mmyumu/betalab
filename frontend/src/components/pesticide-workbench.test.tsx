@@ -281,6 +281,66 @@ describe("PesticideWorkbench", () => {
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
+  it("highlights only the workspace canvas when dragging a workspace widget from the palette", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
+    });
+
+    const widgetTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: widgetTransfer,
+    });
+
+    expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("bench-slot-station_1")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "false");
+
+    fireEvent.dragEnd(screen.getByTestId("toolbar-item-autosampler_rack_widget"));
+
+    expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "false");
+  });
+
+  it("highlights stations, rack slots, and trash when dragging an autosampler vial", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const workspace = await screen.findByTestId("widget-workspace");
+    const rackTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-autosampler_rack_widget"), {
+      dataTransfer: rackTransfer,
+    });
+    fireEvent.drop(workspace, { clientX: 480, clientY: 420, dataTransfer: rackTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+    });
+
+    const vialTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("bench-tool-card-bench_tool_1"), {
+      dataTransfer: vialTransfer,
+    });
+
+    expect(screen.getByTestId("bench-slot-station_2")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("rack-illustration-slot-1")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "false");
+
+    fireEvent.dragEnd(screen.getByTestId("bench-tool-card-bench_tool_1"));
+
+    expect(screen.getByTestId("bench-slot-station_2")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("rack-illustration-slot-1")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "false");
+  });
+
   it("discards a bench tool when dropped into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

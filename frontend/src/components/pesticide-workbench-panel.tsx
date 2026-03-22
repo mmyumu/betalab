@@ -13,6 +13,7 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  DropTargetType,
   RackToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -26,7 +27,9 @@ type PesticideWorkbenchPanelProps = {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => void;
+  onBenchToolDragEnd?: () => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
+  highlightedDropTargets?: DropTargetType[];
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
@@ -36,6 +39,8 @@ type PesticideWorkbenchPanelProps = {
 
 export function PesticideWorkbenchPanel({
   canDragBenchTool,
+  highlightedDropTargets = [],
+  onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
   onRemoveLiquid,
@@ -47,6 +52,7 @@ export function PesticideWorkbenchPanel({
   const acceptsWorkbenchDrop = (event: DragEvent<HTMLElement>) => {
     return hasCompatibleDropTarget(event.dataTransfer, "workbench_slot");
   };
+  const highlightsWorkbenchDrop = highlightedDropTargets.includes("workbench_slot");
 
   const handleDrop = (event: DragEvent<HTMLElement>, slotId: string) => {
     if (!acceptsWorkbenchDrop(event)) {
@@ -118,7 +124,12 @@ export function PesticideWorkbenchPanel({
                 </div>
 
                 <div
-                  className="rounded-[1.6rem] border border-dashed border-slate-300 bg-white/90 p-3"
+                  className={`rounded-[1.6rem] border border-dashed bg-white/90 p-3 transition-colors ${
+                    highlightsWorkbenchDrop
+                      ? "border-sky-300 bg-sky-50/70 ring-2 ring-sky-200/80"
+                      : "border-slate-300"
+                  }`}
+                  data-drop-highlighted={highlightsWorkbenchDrop ? "true" : "false"}
                   data-testid={`bench-slot-${slot.id}`}
                   onDragOver={(event) => {
                     if (!acceptsWorkbenchDrop(event)) {
@@ -138,6 +149,9 @@ export function PesticideWorkbenchPanel({
                           return;
                         }
                         onBenchToolDragStart(slot.id, tool, event.dataTransfer);
+                      }}
+                      onDragEnd={() => {
+                        onBenchToolDragEnd?.();
                       }}
                       onRemoveLiquid={(liquidId) => {
                         onRemoveLiquid(slot.id, liquidId);
