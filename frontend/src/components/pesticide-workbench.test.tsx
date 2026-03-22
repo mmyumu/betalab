@@ -194,7 +194,12 @@ describe("PesticideWorkbench", () => {
       screen
         .getByTestId("bench-slot-station_1")
         .querySelector("[data-kind='sample_vial']"),
-    ).toHaveAttribute("data-tone", "accent");
+    ).toHaveAttribute("data-tone", "neutral");
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_vial']"),
+    ).toHaveAttribute("data-fill-segments", "1");
 
     expect(sendExperimentCommand).toHaveBeenNthCalledWith(
       1,

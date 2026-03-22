@@ -14,6 +14,12 @@ const liquidToneClasses: Record<ToolbarAccent, string> = {
 };
 
 const neutralToneClass = "from-slate-300 to-slate-100";
+const liquidToneHex: Record<ToolbarAccent, string> = {
+  amber: "#f59e0b",
+  emerald: "#10b981",
+  rose: "#fb7185",
+  sky: "#38bdf8",
+};
 
 const wheelListenerRegistry = new WeakMap<HTMLInputElement, EventListener>();
 
@@ -65,14 +71,43 @@ function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
 }
 
+function buildLiquidGradient(volumes: Array<{ accent: ToolbarAccent; ratio: number }>) {
+  if (volumes.length === 0) {
+    return undefined;
+  }
+
+  let offset = 0;
+  const stops = volumes.flatMap((volume, index) => {
+    const start = offset;
+    offset += volume.ratio * 100;
+    const end = index === volumes.length - 1 ? 100 : offset;
+    const color = liquidToneHex[volume.accent];
+
+    return [`${color} ${start}%`, `${color} ${end}%`];
+  });
+
+  return `linear-gradient(90deg, ${stops.join(", ")})`;
+}
+
 export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps) {
   const currentVolume = Number.parseFloat(
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
   const isFilled = currentVolume > 0;
-  const fillAccent = tool.liquids.at(-1)?.accent ?? tool.accent;
   const fillPercentage = (fillRatio * 100).toFixed(2);
+  const liquidSegments =
+    currentVolume > 0
+      ? tool.liquids
+          .filter((liquid) => liquid.volume_ml > 0)
+          .map((liquid) => ({
+            accent: liquid.accent,
+            ratio: liquid.volume_ml / currentVolume,
+          }))
+      : [];
+  const fillBorderStyle = isFilled
+    ? { backgroundImage: buildLiquidGradient(liquidSegments) }
+    : undefined;
 
   return (
     <article className="rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm">
@@ -81,11 +116,12 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
           <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
           <div className="flex min-w-0 items-start gap-3">
             <LabAssetIcon
-              accent={fillAccent}
+              accent={tool.accent}
               className="h-22 w-16 shrink-0"
               fillRatio={fillRatio}
+              fillSegments={liquidSegments}
               kind={tool.toolType}
-              tone={isFilled ? "accent" : "neutral"}
+              tone="neutral"
             />
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
@@ -97,9 +133,8 @@ export function BenchToolCard({ onLiquidVolumeChange, tool }: BenchToolCardProps
         </div>
 
         <div
-          className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${
-            isFilled ? liquidToneClasses[fillAccent] : neutralToneClass
-          }`}
+          className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
+          style={fillBorderStyle}
         >
           <div className="flex min-h-16 items-center rounded-[0.95rem] bg-white/90 px-3 py-2">
             <div className="min-w-0">
