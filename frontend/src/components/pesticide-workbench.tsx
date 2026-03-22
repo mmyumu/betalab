@@ -64,7 +64,7 @@ type WidgetLayout = {
 const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
   toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
-  trash: { x: 1488, y: 0, width: 210, fallbackHeight: 260 },
+  trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
 };
@@ -698,22 +698,22 @@ export function PesticideWorkbench() {
               position={widgetLayout.trash}
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
-              <section className="overflow-hidden rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                <div className="border-b border-slate-200/80 bg-white/85 px-5 py-5 backdrop-blur xl:px-6 xl:py-6">
+              <section className="overflow-hidden rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
+                <div className="border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
                     Trash
                   </p>
                 </div>
-                <div className="px-5 py-5 xl:px-6 xl:py-6">
+                <div className="px-4 py-4">
                 <div
-                  className="flex min-h-44 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-4 py-6 text-center"
+                  className="flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center"
                   data-testid="trash-dropzone"
                   onDragOver={handleTrashDragOver}
                   onDrop={handleTrashDrop}
                 >
                   <svg
                     aria-hidden="true"
-                    className="h-24 w-24 text-slate-500"
+                    className="h-[4.5rem] w-[4.5rem] text-slate-500"
                     fill="none"
                     viewBox="0 0 96 96"
                     xmlns="http://www.w3.org/2000/svg"
