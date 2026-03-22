@@ -2,9 +2,13 @@ import type { Rack } from "@/types/experiment";
 
 type RackPanelProps = {
   rack: Rack;
+  onRunSequence?: () => void;
+  isRunSequenceDisabled?: boolean;
 };
 
-export function RackPanel({ rack }: RackPanelProps) {
+export function RackPanel({ rack, onRunSequence, isRunSequenceDisabled }: RackPanelProps) {
+  const runSequenceDisabled = isRunSequenceDisabled ?? !onRunSequence;
+
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -14,7 +18,12 @@ export function RackPanel({ rack }: RackPanelProps) {
           </p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">Rack sequence</h2>
         </div>
-        <button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white">
+        <button
+          className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+          disabled={runSequenceDisabled}
+          onClick={onRunSequence}
+          type="button"
+        >
           Run sequence
         </button>
       </div>

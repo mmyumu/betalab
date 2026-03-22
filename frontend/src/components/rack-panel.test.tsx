@@ -24,4 +24,20 @@ describe("RackPanel", () => {
     expect(screen.getByText("vial_sample")).toBeInTheDocument();
     expect(screen.getByText("Empty")).toBeInTheDocument();
   });
+
+  it("disables the run button when no run handler is wired", () => {
+    render(
+      <RackPanel
+        rack={{
+          positions: {
+            A1: null,
+            A2: null,
+            A3: null,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Run sequence" })).toBeDisabled();
+  });
 });

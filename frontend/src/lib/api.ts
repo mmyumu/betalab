@@ -18,6 +18,16 @@ export async function createExperiment(scenarioId = "lcmsms_single_analyte"): Pr
   return (await response.json()) as Experiment;
 }
 
+export async function getExperiment(experimentId: string): Promise<Experiment> {
+  const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch experiment");
+  }
+
+  return (await response.json()) as Experiment;
+}
+
 export async function sendExperimentCommand(
   experimentId: string,
   type: string,

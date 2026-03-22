@@ -1,6 +1,5 @@
-import { LabShell } from "@/components/lab-shell";
-import { mockExperiment } from "@/lib/mock-experiment";
+import { ExperimentLoader } from "@/components/experiment-loader";
 
 export default function HomePage() {
-  return <LabShell experiment={mockExperiment} />;
+  return <ExperimentLoader />;
 }
