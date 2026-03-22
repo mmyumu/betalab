@@ -89,17 +89,17 @@ export function BenchToolCard({
 
   return (
     <article
-      className={`rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm ${
-        draggable ? "cursor-grab active:cursor-grabbing" : ""
-      }`}
-      data-testid={`bench-tool-card-${tool.id}`}
-      draggable={draggable}
-      onDragStart={onDragStart}
+      className="rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm"
     >
       <div className="flex flex-col gap-3">
-        <div className="space-y-2">
+        <div
+          className={draggable ? "cursor-grab active:cursor-grabbing" : ""}
+          data-testid={`bench-tool-card-${tool.id}`}
+          draggable={draggable}
+          onDragStart={onDragStart}
+        >
           <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
-          <div className="flex min-w-0 items-start gap-3">
+          <div className="mt-2 flex min-w-0 items-start gap-3">
             <LabAssetIcon
               accent={tool.accent}
               className="h-22 w-16 shrink-0"
@@ -155,6 +155,7 @@ export function BenchToolCard({
                     <input
                       aria-label={`${liquid.name} volume`}
                       className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
+                      draggable={false}
                       min={0}
                       onChange={(event) => {
                         const parsed = Number.parseFloat(event.target.value);
@@ -175,6 +176,7 @@ export function BenchToolCard({
                   <button
                     aria-label={`Remove ${liquid.name}`}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                    draggable={false}
                     onClick={() => {
                       onRemoveLiquid(liquid.id);
                     }}
