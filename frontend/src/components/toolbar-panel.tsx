@@ -1,3 +1,4 @@
+import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { ToolbarAccent, ToolbarCategory } from "@/types/workbench";
 
 type ToolbarPanelProps = {
@@ -15,12 +16,10 @@ const accentClasses: Record<ToolbarAccent, string> = {
 export function ToolbarPanel({ categories }: ToolbarPanelProps) {
   return (
     <section className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-        Lab toolbar
-      </p>
-      <h2 className="mt-1 text-xl font-semibold text-slate-950">Bench inventory</h2>
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Palette</p>
+      <h2 className="mt-1 text-xl font-semibold text-slate-950">Workflow inventory</h2>
       <p className="mt-3 text-sm text-slate-600">
-        A first catalog of common labware and prep liquids you can surface in the GUI.
+        Drag tools onto the bench, then drag liquids into placed containers that can accept them.
       </p>
 
       <div className="mt-6 space-y-5">
@@ -44,6 +43,14 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                 <div
                   key={item.id}
                   className={`rounded-[1.4rem] bg-gradient-to-br p-4 ring-1 ${accentClasses[item.accent]}`}
+                  data-testid={`toolbar-item-${item.id}`}
+                  draggable
+                  onDragStart={(event) => {
+                    writeToolbarDragPayload(event.dataTransfer, {
+                      itemId: item.id,
+                      itemType: item.itemType,
+                    });
+                  }}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -52,7 +59,9 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                         {item.subtitle}
                       </p>
                     </div>
-                    <span className="h-3 w-3 rounded-full bg-current opacity-70" />
+                    <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      {item.itemType}
+                    </span>
                   </div>
                   <p className="mt-3 text-sm text-slate-600">{item.description}</p>
                 </div>

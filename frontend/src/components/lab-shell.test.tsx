@@ -14,7 +14,7 @@ describe("LabShell", () => {
   it("shows only prepared flasks in the bench setup and exposes the toolbar catalog", () => {
     render(<LabShell experiment={mockExperiment} />);
 
-    expect(screen.getByText("Lab toolbar")).toBeInTheDocument();
+    expect(screen.getByText("Palette")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Volumetric flask")).toBeInTheDocument();

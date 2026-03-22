@@ -12,10 +12,14 @@ const categories: ToolbarCategory[] = [
     items: [
       {
         id: "volumetric_flask",
+        itemType: "tool",
         name: "Volumetric flask",
         subtitle: "100 mL calibration prep",
         description: "Build standard dilutions with a fixed final volume.",
         accent: "sky",
+        toolType: "volumetric_flask",
+        capacity_ml: 100,
+        accepts_liquids: true,
       },
     ],
   },
@@ -26,25 +30,30 @@ const categories: ToolbarCategory[] = [
     items: [
       {
         id: "acetonitrile",
+        itemType: "liquid",
         name: "Acetonitrile",
         subtitle: "Organic modifier",
         description: "Common LC solvent for sample prep and rinsing.",
         accent: "amber",
+        liquidType: "acetonitrile",
+        transfer_volume_ml: 10,
       },
     ],
   },
 ];
 
 describe("ToolbarPanel", () => {
-  it("renders categories and their items", () => {
+  it("renders categories, their items, and exposes draggable inventory cards", () => {
     render(<ToolbarPanel categories={categories} />);
 
-    expect(screen.getByText("Lab toolbar")).toBeInTheDocument();
+    expect(screen.getByText("Palette")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Volumetric flask")).toBeInTheDocument();
     expect(screen.getByText("Acetonitrile")).toBeInTheDocument();
     expect(screen.getByText("Core containers for standards and samples.")).toBeInTheDocument();
     expect(screen.getByText("Solvents and matrices available on the bench.")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
   });
 });

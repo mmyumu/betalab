@@ -1,5 +1,5 @@
-import { ExperimentLoader } from "@/components/experiment-loader";
+import { PesticideWorkbench } from "@/components/pesticide-workbench";
 
 export default function HomePage() {
-  return <ExperimentLoader />;
+  return <PesticideWorkbench />;
 }
