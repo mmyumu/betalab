@@ -482,6 +482,11 @@ export function PesticideWorkbench() {
   const rackOccupiedSlots = rackAssignments.flatMap((assignment, index) =>
     assignment ? [index + 1] : [],
   );
+  const rackOccupiedSlotLiquids = Object.fromEntries(
+    rackAssignments.flatMap((assignment, index) =>
+      assignment ? [[index + 1, assignment.tool.liquids] as const] : [],
+    ),
+  );
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
   const workspaceHeight = Math.max(
     ...liveWidgetIds.map((widgetId) => {
@@ -636,6 +641,7 @@ export function PesticideWorkbench() {
                       <div className="space-y-4">
                         <AutosamplerRackIllustration
                           className="mx-auto max-w-[30rem]"
+                          occupiedSlotLiquids={rackOccupiedSlotLiquids}
                           occupiedSlots={rackOccupiedSlots}
                           testId="autosampler-rack-illustration"
                           tone={rackLoadedCount > 0 ? "active" : "neutral"}

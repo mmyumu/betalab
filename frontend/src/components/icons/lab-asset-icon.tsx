@@ -1,6 +1,11 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
 
+import {
+  getLiquidAccentPalette,
+  getLiquidVisualSegments,
+  neutralLiquidPalette,
+} from "@/lib/liquid-visuals";
 import type { LiquidType, ToolType, ToolbarAccent } from "@/types/workbench";
 
 type LabAssetIconProps = {
@@ -10,35 +15,6 @@ type LabAssetIconProps = {
   fillSegments?: Array<{ accent: ToolbarAccent; ratio: number }>;
   kind: ToolType | LiquidType;
   tone?: "accent" | "neutral";
-};
-
-const accentPalette: Record<ToolbarAccent, { liquid: string; glow: string; stroke: string }> = {
-  amber: {
-    liquid: "#f59e0b",
-    glow: "#fef3c7",
-    stroke: "#92400e",
-  },
-  emerald: {
-    liquid: "#10b981",
-    glow: "#d1fae5",
-    stroke: "#065f46",
-  },
-  rose: {
-    liquid: "#fb7185",
-    glow: "#ffe4e6",
-    stroke: "#9f1239",
-  },
-  sky: {
-    liquid: "#38bdf8",
-    glow: "#e0f2fe",
-    stroke: "#0c4a6e",
-  },
-};
-
-const neutralPalette = {
-  liquid: "#cbd5e1",
-  glow: "#f8fafc",
-  stroke: "#64748b",
 };
 
 const clampRatio = (value: number | undefined) => {
@@ -304,28 +280,26 @@ export function LabAssetIcon({
   kind,
   tone = "accent",
 }: LabAssetIconProps) {
-  const palette = tone === "neutral" ? neutralPalette : accentPalette[accent];
+  const palette = tone === "neutral" ? neutralLiquidPalette : getLiquidAccentPalette(accent);
   const normalizedFill = clampRatio(fillRatio);
   const label = kind.replace(/_/g, " ");
   const gradientId = useId().replace(/:/g, "");
-  const validSegments =
-    fillSegments?.filter((segment) => Number.isFinite(segment.ratio) && segment.ratio > 0) ?? [];
-  const totalSegmentRatio = validSegments.reduce((sum, segment) => sum + segment.ratio, 0);
-  const normalizedSegments =
-    totalSegmentRatio > 0
-      ? validSegments.map((segment) => ({
-          color: accentPalette[segment.accent].liquid,
-          ratio: segment.ratio / totalSegmentRatio,
-        }))
-      : [{ color: palette.liquid, ratio: 1 }];
+  const normalizedSegments = getLiquidVisualSegments(
+    fillSegments?.map((segment) => ({
+      accent: segment.accent,
+      volume_ml: segment.ratio,
+    })) ?? [],
+  );
+  const displaySegments =
+    normalizedSegments.length > 0 ? normalizedSegments : [{ color: palette.liquid, ratio: 1 }];
   const liquidFill =
-    normalizedSegments.length === 1 ? normalizedSegments[0].color : `url(#${gradientId})`;
+    displaySegments.length === 1 ? displaySegments[0].color : `url(#${gradientId})`;
   const liquidDefs =
-    normalizedSegments.length > 1 ? (
+    displaySegments.length > 1 ? (
       <linearGradient id={gradientId} x1="0%" x2="0%" y1="100%" y2="0%">
-        {normalizedSegments.flatMap((segment, index) => {
+        {displaySegments.flatMap((segment, index) => {
           const start =
-            normalizedSegments
+            displaySegments
               .slice(0, index)
               .reduce((sum, previousSegment) => sum + previousSegment.ratio, 0) * 100;
           const end = start + segment.ratio * 100;
@@ -391,7 +365,7 @@ export function LabAssetIcon({
   return (
     <div
       className={className}
-      data-fill-segments={normalizedSegments.length}
+      data-fill-segments={displaySegments.length}
       data-kind={kind}
       data-tone={tone}
     >

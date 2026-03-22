@@ -1,5 +1,14 @@
+import {
+  getDominantLiquidAccent,
+  getLiquidAccentPalette,
+  getLiquidVisualSegments,
+  neutralLiquidPalette,
+} from "@/lib/liquid-visuals";
+import type { BenchLiquidPortion, ToolbarAccent } from "@/types/workbench";
+
 type AutosamplerRackIllustrationProps = {
   className?: string;
+  occupiedSlotLiquids?: Partial<Record<number, BenchLiquidPortion[]>>;
   occupiedSlots?: number[];
   slotCount?: number;
   testId?: string;
@@ -31,6 +40,7 @@ const rackPalette = {
 
 export function AutosamplerRackIllustration({
   className,
+  occupiedSlotLiquids,
   occupiedSlots = [],
   slotCount = 12,
   testId,
@@ -102,13 +112,65 @@ export function AutosamplerRackIllustration({
           const cx = baseX + column * slotGapX;
           const cy = baseY + row * slotGapY;
           const occupied = occupiedSet.has(slotNumber);
+          const slotLiquids = occupiedSlotLiquids?.[slotNumber] ?? [];
+          const dominantAccent = getDominantLiquidAccent(slotLiquids, "sky");
+          const vialPalette = occupied
+            ? slotLiquids.length > 0
+              ? getLiquidAccentPalette(dominantAccent)
+              : getLiquidAccentPalette("sky")
+            : neutralLiquidPalette;
+          const liquidSegments = getLiquidVisualSegments(slotLiquids);
+          const gradientId = `${testId ?? "autosampler-rack"}-slot-gradient-${slotNumber}`;
+          const slotGlow = occupied ? vialPalette.glow : palette.tray;
+          const slotLiquid =
+            occupied && liquidSegments.length > 1
+              ? `url(#${gradientId})`
+              : occupied && liquidSegments.length === 1
+                ? liquidSegments[0].color
+                : occupied
+                  ? vialPalette.liquid
+                  : palette.slot;
+          const vialStroke = occupied ? vialPalette.stroke : palette.frame;
 
           return (
             <g key={slotNumber}>
+              {occupied && liquidSegments.length > 1 ? (
+                <defs>
+                  <linearGradient
+                    data-testid={testId ? `${testId}-slot-gradient-${slotNumber}` : undefined}
+                    id={gradientId}
+                    x1="0%"
+                    x2="0%"
+                    y1="100%"
+                    y2="0%"
+                  >
+                    {liquidSegments.flatMap((segment, segmentIndex) => {
+                      const start =
+                        liquidSegments
+                          .slice(0, segmentIndex)
+                          .reduce((sum, previousSegment) => sum + previousSegment.ratio, 0) * 100;
+                      const end = start + segment.ratio * 100;
+
+                      return [
+                        <stop
+                          key={`${segment.color}-${segmentIndex}-start`}
+                          offset={`${start}%`}
+                          stopColor={segment.color}
+                        />,
+                        <stop
+                          key={`${segment.color}-${segmentIndex}-end`}
+                          offset={`${end}%`}
+                          stopColor={segment.color}
+                        />,
+                      ];
+                    })}
+                  </linearGradient>
+                </defs>
+              ) : null}
               <circle
                 cx={cx}
                 cy={cy}
-                fill={occupied ? "#e0f2fe" : palette.tray}
+                fill={slotGlow}
                 r="18"
                 stroke={palette.slot}
                 strokeWidth="4"
@@ -116,7 +178,7 @@ export function AutosamplerRackIllustration({
               <circle
                 cx={cx}
                 cy={cy}
-                fill={occupied ? palette.liquid : palette.slot}
+                fill={slotLiquid}
                 opacity={occupied ? 0.95 : 0.35}
                 r={occupied ? "10" : "6"}
               />
@@ -134,12 +196,13 @@ export function AutosamplerRackIllustration({
                     d={`M${cx - 7} ${cy - 18}H${cx + 7}V${cy + 4}C${cx + 7} ${cy + 10} ${cx + 3} ${cy + 15} ${cx} ${cy + 15}C${cx - 3} ${cy + 15} ${cx - 7} ${cy + 10} ${cx - 7} ${cy + 4}V${cy - 18}Z`}
                     fill="#f8fafc"
                     opacity="0.96"
-                    stroke={palette.frame}
+                    stroke={vialStroke}
                     strokeWidth="3"
                   />
                   <path
+                    data-testid={testId ? `${testId}-slot-liquid-${slotNumber}` : undefined}
                     d={`M${cx - 4} ${cy - 2}H${cx + 4}V${cy + 4}C${cx + 4} ${cy + 7} ${cx + 2} ${cy + 10} ${cx} ${cy + 10}C${cx - 2} ${cy + 10} ${cx - 4} ${cy + 7} ${cx - 4} ${cy + 4}V${cy - 2}Z`}
-                    fill={palette.liquid}
+                    fill={slotLiquid}
                   />
                 </>
               ) : null}

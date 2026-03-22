@@ -344,7 +344,19 @@ describe("PesticideWorkbench", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         slots: makeSlots([
-          { tool: makeTool() },
+          {
+            tool: makeTool({
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 1.2,
+                  accent: "amber",
+                },
+              ],
+            }),
+          },
         ]),
       }),
     );
@@ -380,6 +392,10 @@ describe("PesticideWorkbench", () => {
     expect(screen.getByTestId("autosampler-rack-illustration")).toHaveAttribute(
       "data-occupied-count",
       "1",
+    );
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-liquid-1")).toHaveAttribute(
+      "fill",
+      "#f59e0b",
     );
     expect(within(screen.getByTestId("bench-slot-station_1")).getByText("Empty station")).toBeInTheDocument();
   });

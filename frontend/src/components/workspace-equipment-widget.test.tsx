@@ -8,6 +8,42 @@ describe("workspace equipment illustrations", () => {
   it("renders rack occupancy as data attributes", () => {
     render(
       <AutosamplerRackIllustration
+        occupiedSlotLiquids={{
+          1: [
+            {
+              accent: "rose",
+              id: "bench_liquid_1",
+              liquidId: "apple_extract",
+              name: "Apple extract",
+              volume_ml: 1,
+            },
+          ],
+          3: [
+            {
+              accent: "emerald",
+              id: "bench_liquid_2",
+              liquidId: "matrix_blank",
+              name: "Matrix blank",
+              volume_ml: 1,
+            },
+          ],
+          4: [
+            {
+              accent: "amber",
+              id: "bench_liquid_3",
+              liquidId: "acetonitrile_extraction",
+              name: "Acetonitrile",
+              volume_ml: 1,
+            },
+            {
+              accent: "sky",
+              id: "bench_liquid_4",
+              liquidId: "ultrapure_water_rinse",
+              name: "Ultrapure water",
+              volume_ml: 1,
+            },
+          ],
+        }}
         occupiedSlots={[1, 3, 4]}
         testId="autosampler-rack-illustration"
         tone="active"
@@ -22,6 +58,19 @@ describe("workspace equipment illustrations", () => {
       "data-tone",
       "active",
     );
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-liquid-1")).toHaveAttribute(
+      "fill",
+      "#fb7185",
+    );
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-liquid-3")).toHaveAttribute(
+      "fill",
+      "#10b981",
+    );
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-liquid-4")).toHaveAttribute(
+      "fill",
+      "url(#autosampler-rack-illustration-slot-gradient-4)",
+    );
+    expect(screen.getByTestId("autosampler-rack-illustration-slot-gradient-4").querySelectorAll("stop")).toHaveLength(4);
   });
 
   it("renders instrument state as data attributes", () => {

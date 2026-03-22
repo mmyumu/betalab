@@ -1,7 +1,12 @@
 import type { DragEvent } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
-import type { BenchToolInstance, ToolbarAccent } from "@/types/workbench";
+import {
+  buildCssLinearGradient,
+  getLiquidAccentPalette,
+  getLiquidVisualSegments,
+} from "@/lib/liquid-visuals";
+import type { BenchToolInstance } from "@/types/workbench";
 
 type BenchToolCardProps = {
   draggable?: boolean;
@@ -10,20 +15,7 @@ type BenchToolCardProps = {
   tool: BenchToolInstance;
 };
 
-const liquidToneClasses: Record<ToolbarAccent, string> = {
-  amber: "from-amber-500 to-amber-200",
-  emerald: "from-emerald-500 to-emerald-200",
-  rose: "from-rose-500 to-rose-200",
-  sky: "from-sky-500 to-sky-200",
-};
-
 const neutralToneClass = "from-slate-300 to-slate-100";
-const liquidToneHex: Record<ToolbarAccent, string> = {
-  amber: "#f59e0b",
-  emerald: "#10b981",
-  rose: "#fb7185",
-  sky: "#38bdf8",
-};
 
 const wheelListenerRegistry = new WeakMap<HTMLInputElement, EventListener>();
 
@@ -75,24 +67,6 @@ function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
 }
 
-function buildLiquidGradient(volumes: Array<{ accent: ToolbarAccent; ratio: number }>) {
-  if (volumes.length === 0) {
-    return undefined;
-  }
-
-  let offset = 0;
-  const stops = volumes.flatMap((volume, index) => {
-    const start = offset;
-    offset += volume.ratio * 100;
-    const end = index === volumes.length - 1 ? 100 : offset;
-    const color = liquidToneHex[volume.accent];
-
-    return [`${color} ${start}%`, `${color} ${end}%`];
-  });
-
-  return `linear-gradient(90deg, ${stops.join(", ")})`;
-}
-
 export function BenchToolCard({
   draggable = false,
   onDragStart,
@@ -105,17 +79,9 @@ export function BenchToolCard({
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
   const isFilled = currentVolume > 0;
   const fillPercentage = (fillRatio * 100).toFixed(2);
-  const liquidSegments =
-    currentVolume > 0
-      ? tool.liquids
-          .filter((liquid) => liquid.volume_ml > 0)
-          .map((liquid) => ({
-            accent: liquid.accent,
-            ratio: liquid.volume_ml / currentVolume,
-          }))
-      : [];
+  const liquidSegments = getLiquidVisualSegments(tool.liquids);
   const fillBorderStyle = isFilled
-    ? { backgroundImage: buildLiquidGradient(liquidSegments) }
+    ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;
 
   return (
@@ -174,7 +140,8 @@ export function BenchToolCard({
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-r ${liquidToneClasses[liquid.accent]}`}
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: getLiquidAccentPalette(liquid.accent).liquid }}
                   />
                   <span className="truncate">{liquid.name}</span>
                 </div>
