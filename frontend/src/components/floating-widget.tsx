@@ -22,7 +22,7 @@ export function FloatingWidget({
   children,
   id,
   isActive = false,
-  label,
+  label: _label,
   onDragStart,
   onHeightChange,
   position,
@@ -69,29 +69,19 @@ export function FloatingWidget({
       }}
     >
       <div
-        className={`mb-3 flex items-center justify-between rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] shadow-sm backdrop-blur transition ${
-          isActive
-            ? "border-slate-900/20 bg-slate-950 text-white"
-            : "border-white/80 bg-white/75 text-slate-600"
-        } select-none touch-none cursor-grab active:cursor-grabbing`}
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 z-20 h-20 cursor-grab select-none touch-none active:cursor-grabbing"
         data-testid={`widget-handle-${id}`}
         onMouseDown={(event) => {
           onDragStart(id, event);
         }}
-      >
-        <span className="flex items-center gap-2">
-          <span className="grid grid-cols-2 gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-current/70" />
-            <span className="h-1.5 w-1.5 rounded-full bg-current/70" />
-            <span className="h-1.5 w-1.5 rounded-full bg-current/70" />
-            <span className="h-1.5 w-1.5 rounded-full bg-current/70" />
-          </span>
-          {label}
-        </span>
-        <span className={isActive ? "text-white/70" : "text-slate-400"}>Move</span>
-      </div>
+      />
 
-      <div className={isActive ? "drop-shadow-[0_26px_44px_rgba(15,23,42,0.18)]" : ""}>{children}</div>
+      <div
+        className={`relative ${isActive ? "drop-shadow-[0_26px_44px_rgba(15,23,42,0.18)]" : ""}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }
