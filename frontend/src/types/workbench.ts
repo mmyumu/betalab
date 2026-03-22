@@ -1,6 +1,8 @@
 export type ToolbarAccent = "amber" | "emerald" | "rose" | "sky";
+export type DropTargetType = "workbench_slot" | "workspace_canvas";
 
 type ToolbarBaseItem = {
+  allowedDropTargets: DropTargetType[];
   id: string;
   name: string;
   subtitle: string;
@@ -42,6 +44,7 @@ export type ToolbarCategory = {
 };
 
 export type ToolbarDragPayload = {
+  allowedDropTargets: DropTargetType[];
   itemId: string;
   itemType: ToolbarItem["itemType"];
 };

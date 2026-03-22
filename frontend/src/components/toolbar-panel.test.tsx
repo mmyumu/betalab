@@ -13,6 +13,7 @@ const categories: ToolbarCategory[] = [
     items: [
       {
         id: "volumetric_flask",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "tool",
         name: "Volumetric flask",
         subtitle: "100 mL calibration prep",
@@ -31,6 +32,7 @@ const categories: ToolbarCategory[] = [
     items: [
       {
         id: "acetonitrile",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "liquid",
         name: "Acetonitrile",
         subtitle: "Organic modifier",
@@ -48,6 +50,7 @@ const categories: ToolbarCategory[] = [
     items: [
       {
         id: "autosampler_rack_widget",
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Autosampler rack",
         subtitle: "Sequence staging",

@@ -49,7 +49,11 @@ function syncTypes(dataTransfer: MockDataTransfer) {
 
 function writePayload(
   dataTransfer: MockDataTransfer,
-  payload: { itemId: string; itemType: "tool" | "liquid" | "workspace_widget" },
+  payload: {
+    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas">;
+    itemId: string;
+    itemType: "tool" | "liquid" | "workspace_widget";
+  },
 ) {
   writeToolbarDragPayload(dataTransfer, payload);
   syncTypes(dataTransfer);
@@ -127,6 +131,7 @@ describe("PesticideWorkbenchPanel", () => {
     const onToolbarItemDrop = vi.fn();
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
       itemId: "sample_vial_lcms",
       itemType: "tool",
     });
@@ -147,6 +152,7 @@ describe("PesticideWorkbenchPanel", () => {
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onToolbarItemDrop).toHaveBeenCalledWith("station_1", {
+      allowedDropTargets: ["workbench_slot"],
       itemId: "sample_vial_lcms",
       itemType: "tool",
     });
@@ -156,6 +162,7 @@ describe("PesticideWorkbenchPanel", () => {
     const onToolbarItemDrop = vi.fn();
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
+      allowedDropTargets: ["workspace_canvas"],
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
     });

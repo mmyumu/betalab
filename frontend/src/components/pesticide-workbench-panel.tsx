@@ -3,7 +3,7 @@
 import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
-import { hasWorkbenchTargetDragPayload, readToolbarDragPayload } from "@/lib/workbench-dnd";
+import { hasCompatibleDropTarget, readToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { BenchSlot, ToolbarDragPayload } from "@/types/workbench";
 
 type PesticideWorkbenchPanelProps = {
@@ -20,7 +20,7 @@ export function PesticideWorkbenchPanel({
   onToolbarItemDrop,
 }: PesticideWorkbenchPanelProps) {
   const acceptsWorkbenchDrop = (event: DragEvent<HTMLElement>) => {
-    return hasWorkbenchTargetDragPayload(event.dataTransfer);
+    return hasCompatibleDropTarget(event.dataTransfer, "workbench_slot");
   };
 
   const handleDrop = (event: DragEvent<HTMLElement>, slotId: string) => {

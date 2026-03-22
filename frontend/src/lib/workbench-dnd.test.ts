@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  hasWorkbenchTargetDragPayload,
-  hasWorkspaceWidgetDragPayload,
+  hasCompatibleDropTarget,
   readToolbarDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
@@ -53,11 +52,16 @@ describe("workbench dnd helpers", () => {
   it("marks tool and liquid drags as workbench-target drops", () => {
     const dataTransfer = createDataTransfer();
 
-    writePayload(dataTransfer, { itemId: "sample_vial_lcms", itemType: "tool" });
+    writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      itemId: "sample_vial_lcms",
+      itemType: "tool",
+    });
 
-    expect(hasWorkbenchTargetDragPayload(dataTransfer)).toBe(true);
-    expect(hasWorkspaceWidgetDragPayload(dataTransfer)).toBe(false);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workspace_canvas")).toBe(false);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot"],
       itemId: "sample_vial_lcms",
       itemType: "tool",
     });
@@ -67,13 +71,15 @@ describe("workbench dnd helpers", () => {
     const dataTransfer = createDataTransfer();
 
     writePayload(dataTransfer, {
+      allowedDropTargets: ["workspace_canvas"],
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
     });
 
-    expect(hasWorkbenchTargetDragPayload(dataTransfer)).toBe(false);
-    expect(hasWorkspaceWidgetDragPayload(dataTransfer)).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(false);
+    expect(hasCompatibleDropTarget(dataTransfer, "workspace_canvas")).toBe(true);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workspace_canvas"],
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
     });

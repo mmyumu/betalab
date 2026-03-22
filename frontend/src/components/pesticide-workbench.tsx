@@ -10,7 +10,7 @@ import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel"
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
-import { hasWorkspaceWidgetDragPayload, readToolbarDragPayload } from "@/lib/workbench-dnd";
+import { hasCompatibleDropTarget, readToolbarDragPayload } from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
@@ -144,6 +144,10 @@ export function PesticideWorkbench() {
         slot_id: slotId,
         tool_id: payload.itemId,
       });
+      return;
+    }
+
+    if (payload.itemType !== "liquid") {
       return;
     }
 
@@ -295,7 +299,7 @@ export function PesticideWorkbench() {
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (hasWorkspaceWidgetDragPayload(event.dataTransfer)) {
+    if (hasCompatibleDropTarget(event.dataTransfer, "workspace_canvas")) {
       event.preventDefault();
     }
   };

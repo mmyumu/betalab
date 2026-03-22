@@ -8,6 +8,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "centrifuge_tube_50ml",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "tool",
         name: "50 mL centrifuge tube",
         subtitle: "QuEChERS extraction",
@@ -19,6 +20,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "cleanup_tube_dspe",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "tool",
         name: "d-SPE cleanup tube",
         subtitle: "Matrix cleanup",
@@ -30,6 +32,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "sample_vial_lcms",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "tool",
         name: "Autosampler vial",
         subtitle: "Injection ready",
@@ -41,6 +44,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "beaker_rinse",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "tool",
         name: "Bench beaker",
         subtitle: "Temporary holding",
@@ -59,6 +63,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "acetonitrile_extraction",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "liquid",
         name: "Acetonitrile",
         subtitle: "Extraction solvent",
@@ -69,6 +74,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "apple_extract",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "liquid",
         name: "Apple extract",
         subtitle: "Homogenized sample",
@@ -79,6 +85,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "ultrapure_water_rinse",
+        allowedDropTargets: ["workbench_slot"],
         itemType: "liquid",
         name: "Ultrapure water",
         subtitle: "Rinse / dilution",
@@ -96,6 +103,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "autosampler_rack_widget",
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Autosampler rack",
         subtitle: "Sequence staging",
@@ -105,6 +113,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "lc_msms_instrument_widget",
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "LC-MS/MS",
         subtitle: "Instrument system",

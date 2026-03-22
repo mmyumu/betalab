@@ -1,19 +1,20 @@
-import type { ToolbarDragPayload } from "@/types/workbench";
+import type { DropTargetType, ToolbarDragPayload } from "@/types/workbench";
 
 export const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
-export const WORKBENCH_TARGET_DRAG_MIME = "application/x-betalab-workbench-target-item";
-export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
+const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
+
+function getDropTargetMime(targetType: DropTargetType) {
+  return `${DROP_TARGET_MIME_PREFIX}${targetType}`;
+}
 
 export function writeToolbarDragPayload(dataTransfer: DataTransfer, payload: ToolbarDragPayload) {
   const serialized = JSON.stringify(payload);
 
   dataTransfer.setData(WORKBENCH_DRAG_MIME, serialized);
   dataTransfer.setData("text/plain", serialized);
-  if (payload.itemType === "workspace_widget") {
-    dataTransfer.setData(WORKSPACE_WIDGET_DRAG_MIME, payload.itemId);
-  } else {
-    dataTransfer.setData(WORKBENCH_TARGET_DRAG_MIME, payload.itemId);
-  }
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.itemId);
+  });
   dataTransfer.effectAllowed = "copy";
 }
 
@@ -21,12 +22,8 @@ function hasDragMime(dataTransfer: DataTransfer, mime: string) {
   return Array.from(dataTransfer.types ?? []).includes(mime);
 }
 
-export function hasWorkbenchTargetDragPayload(dataTransfer: DataTransfer) {
-  return hasDragMime(dataTransfer, WORKBENCH_TARGET_DRAG_MIME);
-}
-
-export function hasWorkspaceWidgetDragPayload(dataTransfer: DataTransfer) {
-  return hasDragMime(dataTransfer, WORKSPACE_WIDGET_DRAG_MIME);
+export function hasCompatibleDropTarget(dataTransfer: DataTransfer, targetType: DropTargetType) {
+  return hasDragMime(dataTransfer, getDropTargetMime(targetType));
 }
 
 export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragPayload | null {
@@ -39,6 +36,11 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<ToolbarDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" || targetType === "workspace_canvas",
+      ) ?? [];
 
     if (
       (
@@ -46,9 +48,11 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         parsed.itemType === "liquid" ||
         parsed.itemType === "workspace_widget"
       ) &&
-      typeof parsed.itemId === "string"
+      typeof parsed.itemId === "string" &&
+      allowedDropTargets.length > 0
     ) {
       return {
+        allowedDropTargets,
         itemId: parsed.itemId,
         itemType: parsed.itemType,
       };

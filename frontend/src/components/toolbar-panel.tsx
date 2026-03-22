@@ -71,6 +71,7 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                     draggable
                     onDragStart={(event) => {
                       writeToolbarDragPayload(event.dataTransfer, {
+                        allowedDropTargets: item.allowedDropTargets,
                         itemId: item.id,
                         itemType: item.itemType,
                       });
