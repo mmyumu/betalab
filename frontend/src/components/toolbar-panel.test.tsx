@@ -59,9 +59,10 @@ describe("ToolbarPanel", () => {
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute(
       "title",
-      "Build standard dilutions with a fixed final volume.",
+      "100 mL calibration prep",
     );
-    expect(screen.queryByText("Build standard dilutions with a fixed final volume.")).not.toBeInTheDocument();
+    expect(screen.queryByText("100 mL calibration prep")).not.toBeInTheDocument();
+    expect(screen.queryByText("Organic modifier")).not.toBeInTheDocument();
     expect(screen.queryByText("tool")).not.toBeInTheDocument();
     expect(screen.queryByText("liquid")).not.toBeInTheDocument();
 

@@ -69,7 +69,7 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                         itemType: item.itemType,
                       });
                     }}
-                    title={item.description}
+                    title={item.subtitle}
                   >
                     <div className="flex items-center gap-2">
                       <LabAssetIcon
@@ -77,12 +77,7 @@ export function ToolbarPanel({ categories }: ToolbarPanelProps) {
                         className="h-8 w-7 shrink-0"
                         kind={item.itemType === "tool" ? item.toolType : item.liquidType}
                       />
-                      <div className="min-w-0">
-                        <p className="truncate text-[13px] font-semibold leading-4">{item.name}</p>
-                        <p className="mt-0.5 truncate text-[9px] font-medium uppercase tracking-[0.12em] text-slate-500">
-                          {item.subtitle}
-                        </p>
-                      </div>
+                      <p className="min-w-0 text-[13px] font-semibold leading-4">{item.name}</p>
                     </div>
                   </div>
                 ))}
