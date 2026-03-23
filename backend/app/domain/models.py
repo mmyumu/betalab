@@ -57,11 +57,41 @@ class Rack:
 
 
 @dataclass
+class TrashToolEntry:
+    id: str
+    origin_label: str
+    tool: WorkbenchTool
+
+
+@dataclass
+class Trash:
+    tools: list[TrashToolEntry] = field(default_factory=list)
+
+
+@dataclass
+class WorkspaceWidget:
+    id: str
+    widget_type: str
+    label: str
+    x: int
+    y: int
+    is_present: bool
+    trashable: bool
+
+
+@dataclass
+class Workspace:
+    widgets: list[WorkspaceWidget] = field(default_factory=list)
+
+
+@dataclass
 class Experiment:
     id: str
     status: ExperimentStatus
     workbench: Workbench
     rack: Rack
+    trash: Trash
+    workspace: Workspace
     audit_log: list[str] = field(default_factory=list)
 
 

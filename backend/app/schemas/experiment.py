@@ -45,11 +45,37 @@ class RackSchema(BaseModel):
     slots: list[RackSlotSchema]
 
 
+class TrashToolEntrySchema(BaseModel):
+    id: str
+    origin_label: str
+    tool: WorkbenchToolSchema
+
+
+class TrashSchema(BaseModel):
+    tools: list[TrashToolEntrySchema]
+
+
+class WorkspaceWidgetSchema(BaseModel):
+    id: str
+    widget_type: str
+    label: str
+    x: int
+    y: int
+    is_present: bool
+    trashable: bool
+
+
+class WorkspaceSchema(BaseModel):
+    widgets: list[WorkspaceWidgetSchema]
+
+
 class ExperimentSchema(BaseModel):
     id: str
     status: str
     workbench: WorkbenchSchema
     rack: RackSchema
+    trash: TrashSchema
+    workspace: WorkspaceSchema
     audit_log: list[str]
 
 
@@ -58,9 +84,14 @@ class ExperimentCommandEnvelope(BaseModel):
         "place_tool_on_workbench",
         "move_tool_between_workbench_slots",
         "discard_workbench_tool",
+        "restore_trashed_tool_to_workbench_slot",
+        "add_workspace_widget",
+        "move_workspace_widget",
+        "discard_workspace_widget",
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
         "discard_rack_tool",
+        "restore_trashed_tool_to_rack_slot",
         "add_liquid_to_workbench_tool",
         "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",

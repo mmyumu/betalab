@@ -1,5 +1,12 @@
 import type { Experiment } from "@/types/experiment";
-import type { BenchLiquidPortion, BenchSlot, BenchToolInstance, RackSlot } from "@/types/workbench";
+import type {
+  BenchLiquidPortion,
+  BenchSlot,
+  BenchToolInstance,
+  ExperimentWorkspaceWidget,
+  RackSlot,
+  TrashToolEntry,
+} from "@/types/workbench";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -54,6 +61,12 @@ function normalizeExperiment(experiment: Experiment): Experiment {
     rack: {
       slots: experiment.rack.slots.map(normalizeRackSlot),
     },
+    trash: {
+      tools: experiment.trash.tools.map(normalizeTrashTool),
+    },
+    workspace: {
+      widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
+    },
   };
 }
 
@@ -99,5 +112,27 @@ function normalizeBenchLiquid(
     name: liquid.name,
     volume_ml: Number(liquid.volume_ml),
     accent: liquid.accent,
+  };
+}
+
+function normalizeTrashTool(entry: TrashToolEntry & Record<string, unknown>): TrashToolEntry {
+  return {
+    id: entry.id,
+    originLabel: String(entry.originLabel ?? entry.origin_label),
+    tool: normalizeBenchTool(entry.tool as BenchToolInstance & Record<string, unknown>),
+  };
+}
+
+function normalizeWorkspaceWidget(
+  widget: ExperimentWorkspaceWidget & Record<string, unknown>,
+): ExperimentWorkspaceWidget {
+  return {
+    id: String(widget.id) as ExperimentWorkspaceWidget["id"],
+    widgetType: String(widget.widgetType ?? widget.widget_type) as ExperimentWorkspaceWidget["widgetType"],
+    label: String(widget.label),
+    x: Number(widget.x),
+    y: Number(widget.y),
+    isPresent: Boolean(widget.isPresent ?? widget.is_present),
+    trashable: Boolean(widget.trashable),
   };
 }

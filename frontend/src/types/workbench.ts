@@ -16,6 +16,8 @@ export type ToolType = "volumetric_flask" | "amber_bottle" | "sample_vial" | "be
 export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
 
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument";
+export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument";
+export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
@@ -66,6 +68,19 @@ export type RackToolDragPayload = {
   trashable: boolean;
 };
 
+export type TrashToolDragPayload = {
+  allowedDropTargets: DropTargetType[];
+  toolId: string;
+  toolType: ToolType;
+  trashToolId: string;
+};
+
+export type WorkspaceWidgetDragPayload = {
+  allowedDropTargets: DropTargetType[];
+  widgetId: ExperimentWorkspaceWidgetId;
+  widgetType: ExperimentWorkspaceWidgetType;
+};
+
 export type BenchLiquidPortion = {
   id: string;
   liquidId: string;
@@ -97,4 +112,20 @@ export type RackSlot = {
   id: string;
   label: string;
   tool: BenchToolInstance | null;
+};
+
+export type TrashToolEntry = {
+  id: string;
+  originLabel: string;
+  tool: BenchToolInstance;
+};
+
+export type ExperimentWorkspaceWidget = {
+  id: ExperimentWorkspaceWidgetId;
+  widgetType: ExperimentWorkspaceWidgetType;
+  label: string;
+  x: number;
+  y: number;
+  isPresent: boolean;
+  trashable: boolean;
 };

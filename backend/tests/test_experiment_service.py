@@ -31,6 +31,17 @@ def test_create_experiment_returns_empty_workbench() -> None:
     ]
     assert all(slot.tool is None for slot in experiment.workbench.slots)
     assert all(slot.tool is None for slot in experiment.rack.slots)
+    assert experiment.trash.tools == []
+    assert [widget.id for widget in experiment.workspace.widgets] == [
+        "workbench",
+        "trash",
+        "rack",
+        "instrument",
+    ]
+    assert experiment.workspace.widgets[0].is_present is True
+    assert experiment.workspace.widgets[1].is_present is True
+    assert experiment.workspace.widgets[2].is_present is False
+    assert experiment.workspace.widgets[3].is_present is False
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
 
@@ -177,7 +188,99 @@ def test_discard_workbench_tool_removes_it_from_station() -> None:
     )
 
     assert updated.workbench.slots[0].tool is None
+    assert len(updated.trash.tools) == 1
+    assert updated.trash.tools[0].origin_label == "Station 1"
+    assert updated.trash.tools[0].tool.label == "Autosampler vial"
     assert updated.audit_log[-1] == "Autosampler vial discarded from Station 1."
+
+
+def test_workspace_widget_commands_manage_presence_and_position() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    added = service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "rack",
+            "x": 480,
+            "y": 420,
+        },
+    )
+    rack_widget = next(widget for widget in added.workspace.widgets if widget.id == "rack")
+    assert rack_widget.is_present is True
+    assert rack_widget.x == 480
+    assert rack_widget.y == 420
+    assert added.audit_log[-1] == "Autosampler rack added to workspace."
+
+    moved = service.apply_command(
+        experiment.id,
+        "move_workspace_widget",
+        {
+            "widget_id": "rack",
+            "x": 520,
+            "y": 460,
+        },
+    )
+    rack_widget = next(widget for widget in moved.workspace.widgets if widget.id == "rack")
+    assert rack_widget.x == 520
+    assert rack_widget.y == 460
+    assert moved.audit_log[-1] == "Autosampler rack moved in workspace."
+
+    discarded = service.apply_command(
+        experiment.id,
+        "discard_workspace_widget",
+        {
+            "widget_id": "rack",
+        },
+    )
+    rack_widget = next(widget for widget in discarded.workspace.widgets if widget.id == "rack")
+    assert rack_widget.is_present is False
+    assert discarded.audit_log[-1] == "Autosampler rack removed from workspace."
+
+
+def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+    discarded = service.apply_command(
+        experiment.id,
+        "discard_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    restored = service.apply_command(
+        experiment.id,
+        "restore_trashed_tool_to_workbench_slot",
+        {
+            "trash_tool_id": discarded.trash.tools[0].id,
+            "target_slot_id": "station_2",
+        },
+    )
+
+    assert restored.workbench.slots[1].tool is not None
+    assert restored.workbench.slots[1].tool.label == "Autosampler vial"
+    assert restored.workbench.slots[1].tool.liquids[0].volume_ml == 2.0
+    assert restored.trash.tools == []
+    assert restored.audit_log[-1] == "Autosampler vial restored from trash to Station 2."
 
 
 def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
@@ -274,7 +377,53 @@ def test_discard_rack_tool_removes_it_from_rack() -> None:
     )
 
     assert updated.rack.slots[0].tool is None
+    assert len(updated.trash.tools) == 1
+    assert updated.trash.tools[0].origin_label == "Position 1"
+    assert updated.trash.tools[0].tool.label == "Autosampler vial"
     assert updated.audit_log[-1] == "Autosampler vial discarded from Position 1."
+
+
+def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+    discarded = service.apply_command(
+        experiment.id,
+        "discard_rack_tool",
+        {
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    restored = service.apply_command(
+        experiment.id,
+        "restore_trashed_tool_to_rack_slot",
+        {
+            "trash_tool_id": discarded.trash.tools[0].id,
+            "rack_slot_id": "rack_slot_2",
+        },
+    )
+
+    assert restored.rack.slots[1].tool is not None
+    assert restored.rack.slots[1].tool.label == "Autosampler vial"
+    assert restored.trash.tools == []
+    assert restored.audit_log[-1] == "Autosampler vial restored from trash to Position 2."
 
 
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:

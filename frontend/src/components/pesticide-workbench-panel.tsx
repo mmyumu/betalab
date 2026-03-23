@@ -7,6 +7,7 @@ import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
   readRackToolDragPayload,
+  readTrashToolDragPayload,
   readToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type {
@@ -14,10 +15,11 @@ import type {
   BenchToolDragPayload,
   BenchToolInstance,
   RackToolDragPayload,
+  TrashToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
 
-type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload;
+type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
 
 type PesticideWorkbenchPanelProps = {
   canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
@@ -81,6 +83,11 @@ export function PesticideWorkbenchPanel({
       return canAcceptRackToolDrop(slot, rackToolPayload);
     }
 
+    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
+    if (trashToolPayload) {
+      return slot.tool === null;
+    }
+
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     if (toolbarPayload) {
       return canAcceptToolbarDrop(slot, toolbarPayload);
@@ -105,6 +112,12 @@ export function PesticideWorkbenchPanel({
     const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
     if (rackToolPayload) {
       onBenchToolDrop?.(slot.id, rackToolPayload);
+      return;
+    }
+
+    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
+    if (trashToolPayload) {
+      onBenchToolDrop?.(slot.id, trashToolPayload);
       return;
     }
 

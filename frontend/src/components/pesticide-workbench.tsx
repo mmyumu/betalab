@@ -14,9 +14,13 @@ import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
   readRackToolDragPayload,
+  readTrashToolDragPayload,
   readToolbarDragPayload,
+  readWorkspaceWidgetDragPayload,
   writeBenchToolDragPayload,
   writeRackToolDragPayload,
+  writeTrashToolDragPayload,
+  writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
 import {
   pesticideWorkflowCategories,
@@ -27,8 +31,11 @@ import type {
   BenchToolDragPayload,
   BenchToolInstance,
   DropTargetType,
+  ExperimentWorkspaceWidget,
   RackSlot,
   RackToolDragPayload,
+  TrashToolDragPayload,
+  TrashToolEntry,
   ToolbarItem,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -42,6 +49,8 @@ type ActiveDragItem =
   | { kind: "toolbar"; itemType: ToolbarItem["itemType"] }
   | { kind: "bench_tool"; sourceSlotId: string }
   | { kind: "rack_tool" }
+  | { kind: "trash_tool"; toolType: BenchToolInstance["toolType"] }
+  | { kind: "workspace_widget" }
   | null;
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
@@ -69,7 +78,7 @@ type WidgetLayout = {
   y: number;
 };
 
-const initialWidgetLayout: Record<WidgetId, WidgetLayout> = {
+const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
   trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
@@ -134,6 +143,26 @@ function isPointInsideWidget(
   );
 }
 
+function buildWidgetLayout(workspaceWidgets: ExperimentWorkspaceWidget[]): Record<WidgetId, WidgetLayout> {
+  const nextLayout: Record<WidgetId, WidgetLayout> = {
+    toolbar: widgetFrameSpecs.toolbar,
+    workbench: widgetFrameSpecs.workbench,
+    trash: widgetFrameSpecs.trash,
+    rack: widgetFrameSpecs.rack,
+    instrument: widgetFrameSpecs.instrument,
+  };
+
+  workspaceWidgets.forEach((widget) => {
+    nextLayout[widget.id] = {
+      ...widgetFrameSpecs[widget.id],
+      x: widget.x,
+      y: widget.y,
+    };
+  });
+
+  return nextLayout;
+}
+
 export function PesticideWorkbench() {
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
@@ -142,15 +171,15 @@ export function PesticideWorkbench() {
   const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
   const [widgetLayout, setWidgetLayout] =
-    useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
+    useState<Record<WidgetId, WidgetLayout>>(widgetFrameSpecs);
+  const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
-  const [visibleEquipmentWidgets, setVisibleEquipmentWidgets] = useState<WorkspaceEquipmentWidgetId[]>([]);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
-    toolbar: initialWidgetLayout.toolbar.fallbackHeight,
-    workbench: initialWidgetLayout.workbench.fallbackHeight,
-    trash: initialWidgetLayout.trash.fallbackHeight,
-    rack: initialWidgetLayout.rack.fallbackHeight,
-    instrument: initialWidgetLayout.instrument.fallbackHeight,
+    toolbar: widgetFrameSpecs.toolbar.fallbackHeight,
+    workbench: widgetFrameSpecs.workbench.fallbackHeight,
+    trash: widgetFrameSpecs.trash.fallbackHeight,
+    rack: widgetFrameSpecs.rack.fallbackHeight,
+    instrument: widgetFrameSpecs.instrument.fallbackHeight,
   });
   const hasLoadedInitialExperiment = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -175,10 +204,12 @@ export function PesticideWorkbench() {
       return;
     }
 
-    setVisibleEquipmentWidgets([]);
-    setWidgetLayout(initialWidgetLayout);
+    setWidgetLayout(buildWidgetLayout(state.experiment.workspace.widgets));
     setWidgetOrder([...widgetIds]);
-  }, [state.status === "ready" ? state.experiment.id : null]);
+  }, [
+    state.status === "ready" ? state.experiment.id : null,
+    state.status === "ready" ? JSON.stringify(state.experiment.workspace.widgets) : null,
+  ]);
 
   const loadExperiment = async () => {
     setState({ status: "loading" });
@@ -315,7 +346,7 @@ export function PesticideWorkbench() {
 
   const handleBenchToolDrop = (
     targetSlotId: string,
-    payload: BenchToolDragPayload | RackToolDragPayload,
+    payload: BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload,
   ) => {
     if ("sourceSlotId" in payload) {
       if (payload.sourceSlotId === targetSlotId) {
@@ -325,6 +356,15 @@ export function PesticideWorkbench() {
       void sendWorkbenchCommand("move_tool_between_workbench_slots", {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
+    if ("trashToolId" in payload) {
+      void sendWorkbenchCommand("restore_trashed_tool_to_workbench_slot", {
+        target_slot_id: targetSlotId,
+        trash_tool_id: payload.trashToolId,
       });
       clearDropTargets();
       return;
@@ -442,13 +482,21 @@ export function PesticideWorkbench() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
 
-      if (shouldTrashWidget && draggedWidgetId && isWorkspaceEquipmentWidgetId(draggedWidgetId)) {
-        setVisibleEquipmentWidgets((current) => current.filter((id) => id !== draggedWidgetId));
-        setStatusMessage(
-          draggedWidgetId === "rack"
-            ? "Autosampler rack removed from workspace."
-            : "LC-MS/MS removed from workspace.",
-        );
+      if (draggedWidgetId && draggedWidgetId !== "toolbar") {
+        const nextLayout = widgetLayoutRef.current[draggedWidgetId];
+
+        if (shouldTrashWidget && widgetTrashability[draggedWidgetId]) {
+          void sendWorkbenchCommand("discard_workspace_widget", {
+            widget_id: draggedWidgetId,
+          });
+          return;
+        }
+
+        void sendWorkbenchCommand("move_workspace_widget", {
+          widget_id: draggedWidgetId,
+          x: nextLayout.x,
+          y: nextLayout.y,
+        });
       }
     };
 
@@ -456,7 +504,15 @@ export function PesticideWorkbench() {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  const liveWidgetIds: WidgetId[] = ["toolbar", "workbench", "trash", ...visibleEquipmentWidgets];
+  const liveWidgetIds: WidgetId[] =
+    state.status === "ready"
+      ? [
+          "toolbar",
+          ...state.experiment.workspace.widgets
+            .filter((widget) => widget.isPresent)
+            .map((widget) => widget.id),
+        ]
+      : ["toolbar"];
 
   const moveEquipmentWidgetIntoWorkspace = (
     widgetId: WorkspaceEquipmentWidgetId,
@@ -481,17 +537,14 @@ export function PesticideWorkbench() {
     const unclampedX = safeClientX - (workspaceRect?.left ?? 0) - nextLayout.width / 2;
     const unclampedY = safeClientY - (workspaceRect?.top ?? 0) - 32;
 
-    setWidgetLayout((current) => ({
-      ...current,
-      [widgetId]: {
-        ...current[widgetId],
-        x: Math.min(Math.max(unclampedX, 0), maxX),
-        y: Math.min(Math.max(unclampedY, 0), maxY),
-      },
-    }));
-    setVisibleEquipmentWidgets((current) =>
-      current.includes(widgetId) ? current : [...current, widgetId],
-    );
+    const nextX = Math.min(Math.max(unclampedX, 0), maxX);
+    const nextY = Math.min(Math.max(unclampedY, 0), maxY);
+
+    void sendWorkbenchCommand("add_workspace_widget", {
+      widget_id: widgetId,
+      x: nextX,
+      y: nextY,
+    });
     setWidgetOrder((current) => [...current.filter((id) => id !== widgetId), widgetId]);
   };
 
@@ -502,18 +555,27 @@ export function PesticideWorkbench() {
   };
 
   const handleWorkspaceDrop = (event: DragEvent<HTMLDivElement>) => {
-    const payload = readToolbarDragPayload(event.dataTransfer);
-    if (!payload || payload.itemType !== "workspace_widget") {
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "workspace_widget") {
+      const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
+      if (!widgetId) {
+        return;
+      }
+
+      event.preventDefault();
+      moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
+      clearDropTargets();
+      event.stopPropagation();
       return;
     }
 
-    const widgetId = getWorkspaceEquipmentWidgetId(payload.itemId);
-    if (!widgetId) {
+    const workspaceWidgetPayload = readWorkspaceWidgetDragPayload(event.dataTransfer);
+    if (!workspaceWidgetPayload || !isWorkspaceEquipmentWidgetId(workspaceWidgetPayload.widgetId)) {
       return;
     }
 
     event.preventDefault();
-    moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
+    moveEquipmentWidgetIntoWorkspace(workspaceWidgetPayload.widgetId, event.clientX, event.clientY);
     clearDropTargets();
     event.stopPropagation();
   };
@@ -591,6 +653,10 @@ export function PesticideWorkbench() {
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
   const rackSlots = state.experiment.rack.slots;
+  const trashedTools = state.experiment.trash.tools;
+  const trashedWidgets = state.experiment.workspace.widgets.filter(
+    (widget) => widget.trashable && !widget.isPresent,
+  );
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -617,24 +683,35 @@ export function PesticideWorkbench() {
   };
 
   const handleRackSlotDrop = (event: DragEvent<HTMLDivElement>, slotIndex: number) => {
-    const payload = readBenchToolDragPayload(event.dataTransfer);
-    if (!payload || payload.toolType !== "sample_vial") {
-      return;
-    }
-
     const targetRackSlot = rackSlots[slotIndex];
     if (!targetRackSlot) {
       return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
+    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
+    if (benchToolPayload?.toolType === "sample_vial") {
+      event.preventDefault();
+      event.stopPropagation();
 
-    void sendWorkbenchCommand("place_workbench_tool_in_rack_slot", {
-      source_slot_id: payload.sourceSlotId,
-      rack_slot_id: targetRackSlot.id,
-    });
-    clearDropTargets();
+      void sendWorkbenchCommand("place_workbench_tool_in_rack_slot", {
+        source_slot_id: benchToolPayload.sourceSlotId,
+        rack_slot_id: targetRackSlot.id,
+      });
+      clearDropTargets();
+      return;
+    }
+
+    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
+    if (trashToolPayload?.toolType === "sample_vial") {
+      event.preventDefault();
+      event.stopPropagation();
+
+      void sendWorkbenchCommand("restore_trashed_tool_to_rack_slot", {
+        rack_slot_id: targetRackSlot.id,
+        trash_tool_id: trashToolPayload.trashToolId,
+      });
+      clearDropTargets();
+    }
   };
 
   const handleRackToolDragStart = (
@@ -651,6 +728,38 @@ export function PesticideWorkbench() {
     });
     showDropTargets(tool.trashable ? ["workbench_slot", "trash_bin"] : ["workbench_slot"]);
     setActiveDragItem({ kind: "rack_tool" });
+  };
+
+  const handleTrashToolDragStart = (
+    trashTool: TrashToolEntry,
+    dataTransfer: DataTransfer,
+  ) => {
+    const allowedDropTargets: DropTargetType[] =
+      trashTool.tool.toolType === "sample_vial"
+        ? ["workbench_slot", "rack_slot"]
+        : ["workbench_slot"];
+
+    writeTrashToolDragPayload(dataTransfer, {
+      allowedDropTargets,
+      toolId: trashTool.tool.toolId,
+      toolType: trashTool.tool.toolType,
+      trashToolId: trashTool.id,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({ kind: "trash_tool", toolType: trashTool.tool.toolType });
+  };
+
+  const handleTrashedWidgetDragStart = (
+    widget: ExperimentWorkspaceWidget,
+    dataTransfer: DataTransfer,
+  ) => {
+    writeWorkspaceWidgetDragPayload(dataTransfer, {
+      allowedDropTargets: ["workspace_canvas"],
+      widgetId: widget.id,
+      widgetType: widget.widgetType,
+    });
+    showDropTargets(["workspace_canvas"]);
+    setActiveDragItem({ kind: "workspace_widget" });
   };
 
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
@@ -672,12 +781,20 @@ export function PesticideWorkbench() {
       return slot.tool === null && slot.id !== activeDragItem.sourceSlotId;
     }
 
-    if (activeDragItem.kind === "rack_tool") {
+    if (activeDragItem.kind === "rack_tool" || activeDragItem.kind === "trash_tool") {
       return slot.tool === null;
     }
 
     return false;
   };
+
+  const isRackSlotHighlighted =
+    activeDropTargets.includes("rack_slot") &&
+    ((activeDragItem?.kind === "bench_tool" &&
+      slots.find((slot) => slot.id === activeDragItem.sourceSlotId)?.tool?.toolType === "sample_vial") ||
+      (activeDragItem?.kind === "trash_tool" && activeDragItem.toolType === "sample_vial"));
+
+  const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -745,7 +862,7 @@ export function PesticideWorkbench() {
               position={widgetLayout.trash}
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
-              <section className="overflow-hidden rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
+              <section className="relative overflow-visible rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
                 <div className="border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
                     Trash
@@ -758,8 +875,10 @@ export function PesticideWorkbench() {
                       ? "border-rose-300 bg-rose-50/70 ring-2 ring-rose-200/80"
                       : "border-slate-300"
                   }`}
+                  aria-haspopup="dialog"
                   data-drop-highlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
                   data-testid="trash-dropzone"
+                  onClick={() => setIsTrashOpen(true)}
                   onDragOver={handleTrashDragOver}
                   onDrop={handleTrashDrop}
                 >
@@ -810,6 +929,90 @@ export function PesticideWorkbench() {
                   </svg>
                 </div>
                 </div>
+                {isTrashOpen ? (
+                  <div
+                    className="absolute left-0 top-full z-[220] mt-3 w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
+                    data-testid="trash-dialog-overlay"
+                  >
+                    <div
+                      className="w-full rounded-[1.4rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+                      role="dialog"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                            Trash
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Drag an item back to a valid target to restore it.
+                          </p>
+                        </div>
+                        <button
+                          className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
+                          onClick={() => setIsTrashOpen(false)}
+                          type="button"
+                        >
+                          Close
+                        </button>
+                      </div>
+                      <div className="max-h-[28rem] space-y-2 overflow-y-auto p-3">
+                        {trashedTools.map((trashTool) => {
+                          const totalVolume = trashTool.tool.liquids.reduce(
+                            (sum, liquid) => sum + liquid.volume_ml,
+                            0,
+                          );
+
+                          return (
+                            <div
+                              className="flex cursor-grab items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 active:cursor-grabbing"
+                              data-testid={`trash-tool-${trashTool.id}`}
+                              draggable
+                              key={trashTool.id}
+                              onDragEnd={clearDropTargets}
+                              onDragStart={(event) => handleTrashToolDragStart(trashTool, event.dataTransfer)}
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">
+                                  {trashTool.tool.label}
+                                </p>
+                                <p className="truncate text-xs text-slate-500">
+                                  {trashTool.originLabel}
+                                  {totalVolume > 0 ? ` • ${totalVolume} mL` : ""}
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                                Tool
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {trashedWidgets.map((widget) => (
+                          <div
+                            className="flex cursor-grab items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 active:cursor-grabbing"
+                            data-testid={`trash-widget-${widget.id}`}
+                            draggable
+                            key={widget.id}
+                            onDragEnd={clearDropTargets}
+                            onDragStart={(event) => handleTrashedWidgetDragStart(widget, event.dataTransfer)}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">{widget.label}</p>
+                              <p className="truncate text-xs text-slate-500">Workspace widget</p>
+                            </div>
+                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                              Widget
+                            </span>
+                          </div>
+                        ))}
+                        {isTrashEmpty ? (
+                          <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                            Trash is empty.
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </section>
             </FloatingWidget>
 
@@ -848,11 +1051,11 @@ export function PesticideWorkbench() {
                             return (
                               <div
                                 className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full transition-colors ${
-                                  isDropTargetHighlighted("rack_slot")
+                                  isRackSlotHighlighted
                                     ? "bg-sky-200/45 ring-2 ring-sky-300/90"
                                     : ""
                                 } ${tool ? "cursor-grab active:cursor-grabbing" : ""}`}
-                                data-drop-highlighted={isDropTargetHighlighted("rack_slot") ? "true" : "false"}
+                                data-drop-highlighted={isRackSlotHighlighted ? "true" : "false"}
                                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
                                 key={rackSlot.id}
                                 draggable={Boolean(tool)}

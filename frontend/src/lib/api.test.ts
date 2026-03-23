@@ -12,6 +12,12 @@ const makeExperiment = (): Experiment => ({
   rack: {
     slots: [],
   },
+  trash: {
+    tools: [],
+  },
+  workspace: {
+    widgets: [],
+  },
   audit_log: [],
 });
 
@@ -129,6 +135,39 @@ describe("api client", () => {
             },
           ],
         },
+        trash: {
+          tools: [
+            {
+              id: "trash_tool_1",
+              origin_label: "Station 1",
+              tool: {
+                id: "bench_tool_3",
+                tool_id: "sample_vial_lcms",
+                label: "Autosampler vial",
+                subtitle: "Injection ready",
+                accent: "sky",
+                tool_type: "sample_vial",
+                capacity_ml: 2,
+                accepts_liquids: true,
+                trashable: true,
+                liquids: [],
+              },
+            },
+          ],
+        },
+        workspace: {
+          widgets: [
+            {
+              id: "rack",
+              widget_type: "autosampler_rack",
+              label: "Autosampler rack",
+              x: 234,
+              y: 886,
+              is_present: false,
+              trashable: true,
+            },
+          ],
+        },
       }),
     });
 
@@ -143,6 +182,8 @@ describe("api client", () => {
       "acetonitrile_extraction",
     );
     expect(experiment.rack.slots[0].tool?.toolId).toBe("sample_vial_lcms");
+    expect(experiment.trash.tools[0]?.originLabel).toBe("Station 1");
+    expect(experiment.workspace.widgets[0]?.widgetType).toBe("autosampler_rack");
   });
 
   it("throws when experiment creation fails", async () => {

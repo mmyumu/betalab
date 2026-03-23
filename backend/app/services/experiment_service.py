@@ -7,6 +7,10 @@ from app.domain.models import (
     ExperimentStatus,
     Rack,
     RackSlot,
+    Trash,
+    TrashToolEntry,
+    Workspace,
+    WorkspaceWidget,
     Workbench,
     WorkbenchLiquid,
     WorkbenchSlot,
@@ -46,6 +50,47 @@ class ExperimentService:
                     for index in range(1, 13)
                 ]
             ),
+            trash=Trash(),
+            workspace=Workspace(
+                widgets=[
+                    WorkspaceWidget(
+                        id="workbench",
+                        widget_type="workbench",
+                        label="Workbench",
+                        x=234,
+                        y=0,
+                        is_present=True,
+                        trashable=False,
+                    ),
+                    WorkspaceWidget(
+                        id="trash",
+                        widget_type="trash",
+                        label="Trash",
+                        x=1530,
+                        y=0,
+                        is_present=True,
+                        trashable=False,
+                    ),
+                    WorkspaceWidget(
+                        id="rack",
+                        widget_type="autosampler_rack",
+                        label="Autosampler rack",
+                        x=234,
+                        y=886,
+                        is_present=False,
+                        trashable=True,
+                    ),
+                    WorkspaceWidget(
+                        id="instrument",
+                        widget_type="lc_msms_instrument",
+                        label="LC-MS/MS",
+                        x=812,
+                        y=886,
+                        is_present=False,
+                        trashable=True,
+                    ),
+                ]
+            ),
             audit_log=[
                 "Experiment created",
                 "Start by dragging an extraction tool onto the bench.",
@@ -71,9 +116,14 @@ class ExperimentService:
             "place_tool_on_workbench": self._place_tool_on_workbench,
             "move_tool_between_workbench_slots": self._move_tool_between_workbench_slots,
             "discard_workbench_tool": self._discard_workbench_tool,
+            "restore_trashed_tool_to_workbench_slot": self._restore_trashed_tool_to_workbench_slot,
+            "add_workspace_widget": self._add_workspace_widget,
+            "move_workspace_widget": self._move_workspace_widget,
+            "discard_workspace_widget": self._discard_workspace_widget,
             "place_workbench_tool_in_rack_slot": self._place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": self._remove_rack_tool_to_workbench_slot,
             "discard_rack_tool": self._discard_rack_tool,
+            "restore_trashed_tool_to_rack_slot": self._restore_trashed_tool_to_rack_slot,
             "add_liquid_to_workbench_tool": self._add_liquid_to_workbench_tool,
             "remove_liquid_from_workbench_tool": self._remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": self._update_workbench_liquid_volume,
@@ -118,6 +168,37 @@ class ExperimentService:
             f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}."
         )
 
+    def _add_workspace_widget(self, experiment: Experiment, payload: dict) -> None:
+        widget = _find_workspace_widget(experiment.workspace, payload["widget_id"])
+        widget.x = int(payload["x"])
+        widget.y = int(payload["y"])
+
+        if not widget.is_present:
+            widget.is_present = True
+            experiment.audit_log.append(f"{widget.label} added to workspace.")
+            return
+
+        experiment.audit_log.append(f"{widget.label} repositioned in workspace.")
+
+    def _move_workspace_widget(self, experiment: Experiment, payload: dict) -> None:
+        widget = _find_workspace_widget(experiment.workspace, payload["widget_id"])
+        if not widget.is_present:
+            raise ValueError(f"{widget.label} must be added to the workspace before moving it.")
+
+        widget.x = int(payload["x"])
+        widget.y = int(payload["y"])
+        experiment.audit_log.append(f"{widget.label} moved in workspace.")
+
+    def _discard_workspace_widget(self, experiment: Experiment, payload: dict) -> None:
+        widget = _find_workspace_widget(experiment.workspace, payload["widget_id"])
+        if not widget.trashable:
+            raise ValueError(f"{widget.label} cannot be discarded.")
+        if not widget.is_present:
+            return
+
+        widget.is_present = False
+        experiment.audit_log.append(f"{widget.label} removed from workspace.")
+
     def _discard_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
         slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])
         if slot.tool is None:
@@ -127,7 +208,31 @@ class ExperimentService:
 
         discarded_tool = slot.tool
         slot.tool = None
+        experiment.trash.tools.append(
+            TrashToolEntry(
+                id=new_id("trash_tool"),
+                origin_label=slot.label,
+                tool=discarded_tool,
+            )
+        )
         experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
+
+    def _restore_trashed_tool_to_workbench_slot(
+        self, experiment: Experiment, payload: dict
+    ) -> None:
+        trashed_tool = _find_trash_tool(experiment.trash, payload["trash_tool_id"])
+        target_slot = _find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+
+        if target_slot.tool is not None:
+            raise ValueError(f"{target_slot.label} already contains a tool")
+
+        target_slot.tool = trashed_tool.tool
+        experiment.trash.tools = [
+            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
+        ]
+        experiment.audit_log.append(
+            f"{target_slot.tool.label} restored from trash to {target_slot.label}."
+        )
 
     def _place_workbench_tool_in_rack_slot(self, experiment: Experiment, payload: dict) -> None:
         source_slot = _find_workbench_slot(experiment.workbench, payload["source_slot_id"])
@@ -170,7 +275,31 @@ class ExperimentService:
 
         discarded_tool = rack_slot.tool
         rack_slot.tool = None
+        experiment.trash.tools.append(
+            TrashToolEntry(
+                id=new_id("trash_tool"),
+                origin_label=rack_slot.label,
+                tool=discarded_tool,
+            )
+        )
         experiment.audit_log.append(f"{discarded_tool.label} discarded from {rack_slot.label}.")
+
+    def _restore_trashed_tool_to_rack_slot(self, experiment: Experiment, payload: dict) -> None:
+        trashed_tool = _find_trash_tool(experiment.trash, payload["trash_tool_id"])
+        rack_slot = _find_rack_slot(experiment.rack, payload["rack_slot_id"])
+
+        if trashed_tool.tool.tool_type != "sample_vial":
+            raise ValueError("Only autosampler vials can be restored into the rack.")
+        if rack_slot.tool is not None:
+            raise ValueError(f"{rack_slot.label} already contains a vial")
+
+        rack_slot.tool = trashed_tool.tool
+        experiment.trash.tools = [
+            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
+        ]
+        experiment.audit_log.append(
+            f"{rack_slot.tool.label} restored from trash to {rack_slot.label}."
+        )
 
     def _add_liquid_to_workbench_tool(self, experiment: Experiment, payload: dict) -> None:
         slot = _find_workbench_slot(experiment.workbench, payload["slot_id"])
@@ -273,6 +402,8 @@ class ExperimentService:
                 "status": experiment.status.value,
                 "workbench": asdict(experiment.workbench),
                 "rack": asdict(experiment.rack),
+                "trash": asdict(experiment.trash),
+                "workspace": asdict(experiment.workspace),
                 "audit_log": experiment.audit_log,
             }
         )
@@ -290,6 +421,20 @@ def _find_rack_slot(rack: Rack, slot_id: str) -> RackSlot:
     if slot is None:
         raise ValueError("Unknown rack slot")
     return slot
+
+
+def _find_trash_tool(trash: Trash, trash_tool_id: str) -> TrashToolEntry:
+    tool = next((entry for entry in trash.tools if entry.id == trash_tool_id), None)
+    if tool is None:
+        raise ValueError("Unknown trash tool")
+    return tool
+
+
+def _find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidget:
+    widget = next((entry for entry in workspace.widgets if entry.id == widget_id), None)
+    if widget is None:
+        raise ValueError("Unknown workspace widget")
+    return widget
 
 
 def _round_volume(volume_ml: float) -> float:
