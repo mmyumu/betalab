@@ -91,9 +91,9 @@ export function BenchToolCard({
 
   return (
     <article
-      className="rounded-[1.45rem] border border-slate-200 bg-white p-3 shadow-sm"
+      className="rounded-[1.45rem] border border-slate-200 bg-white p-2 shadow-sm"
     >
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         <div
           className={draggable ? "cursor-grab active:cursor-grabbing" : ""}
           data-testid={`bench-tool-card-${tool.id}`}
@@ -102,7 +102,7 @@ export function BenchToolCard({
           onDragStart={onDragStart}
         >
           <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
-          <div className="mt-2 flex min-w-0 items-start gap-3">
+          <div className="mt-1.5 flex min-w-0 items-start gap-2.5">
             <LabAssetIcon
               accent={tool.accent}
               className="h-22 w-16 shrink-0"
@@ -113,7 +113,7 @@ export function BenchToolCard({
             />
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
-              <p className="mt-2 text-[11px] font-medium text-slate-500">
+              <p className="mt-1.5 text-[11px] font-medium text-slate-500">
                 {tool.liquids.length > 0 ? `${tool.liquids.length} liquid loaded` : "Ready for liquid additions"}
               </p>
             </div>
@@ -124,61 +124,38 @@ export function BenchToolCard({
           className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
           style={fillBorderStyle}
         >
-          <div className="flex min-h-16 items-center rounded-[0.95rem] bg-white/90 px-3 py-2">
+          <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Current fill
               </p>
-              <p className="mt-1 text-lg font-semibold text-slate-950">{fillPercentage}%</p>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-base font-semibold text-slate-950">{fillPercentage}%</p>
+              <p className="text-[11px] text-slate-500">
                 {formatVolume(currentVolume)} / {formatVolume(tool.capacity_ml)} mL
               </p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-0.5">
           {tool.liquids.length > 0 ? (
             tool.liquids.map((liquid) => (
               <div
                 key={liquid.id}
-                className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
+                className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
               >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: getLiquidAccentPalette(liquid.accent).liquid }}
-                  />
-                  <span className="truncate">{liquid.name}</span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                    <span className="sr-only">{liquid.name} volume</span>
-                    <input
-                      aria-label={`${liquid.name} volume`}
-                      className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
-                      draggable={false}
-                      min={0}
-                      onChange={(event) => {
-                        const parsed = Number.parseFloat(event.target.value);
-                        onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
-                      }}
-                      onBlur={(event) => {
-                        detachWheelListener(event.currentTarget);
-                      }}
-                      onFocus={(event) => {
-                        attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
-                      }}
-                      step={0.1}
-                      type="number"
-                      value={liquid.volume_ml}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: getLiquidAccentPalette(liquid.accent).liquid }}
                     />
-                    <span>mL</span>
-                  </label>
+                    <span className="truncate">{liquid.name}</span>
+                  </div>
+
                   <button
                     aria-label={`Remove ${liquid.name}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                    className="row-span-2 inline-flex h-8 w-8 items-center justify-center self-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
                     draggable={false}
                     onClick={() => {
                       onRemoveLiquid(liquid.id);
@@ -225,11 +202,35 @@ export function BenchToolCard({
                       />
                     </svg>
                   </button>
+
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                    <span className="sr-only">{liquid.name} volume</span>
+                    <input
+                      aria-label={`${liquid.name} volume`}
+                      className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-0 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
+                      draggable={false}
+                      min={0}
+                      onChange={(event) => {
+                        const parsed = Number.parseFloat(event.target.value);
+                        onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
+                      }}
+                      onBlur={(event) => {
+                        detachWheelListener(event.currentTarget);
+                      }}
+                      onFocus={(event) => {
+                        attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
+                      }}
+                      step={0.1}
+                      type="number"
+                      value={liquid.volume_ml}
+                    />
+                    <span>mL</span>
+                  </label>
                 </div>
               </div>
             ))
           ) : (
-            <span className="rounded-full border border-dashed border-slate-300 px-3 py-1 text-xs font-medium text-slate-500">
+            <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
               Drop liquid here
             </span>
           )}

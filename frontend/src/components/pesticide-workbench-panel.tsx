@@ -218,7 +218,7 @@ export function PesticideWorkbenchPanel({
                       tool={tool}
                     />
                   ) : (
-                    <div className="flex min-h-72 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[26rem]">
+                    <div className="flex min-h-56 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[20rem]">
                       <p className="text-sm font-semibold text-slate-900">Empty station</p>
                       <p className="mt-2 max-w-xs text-sm text-slate-600">
                         Drop a workflow tool here to start building the bench.

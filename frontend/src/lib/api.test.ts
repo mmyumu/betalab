@@ -164,6 +164,7 @@ describe("api client", () => {
               x: 234,
               y: 886,
               is_present: false,
+              is_trashed: true,
               trashable: true,
             },
           ],
@@ -184,6 +185,7 @@ describe("api client", () => {
     expect(experiment.rack.slots[0].tool?.toolId).toBe("sample_vial_lcms");
     expect(experiment.trash.tools[0]?.originLabel).toBe("Station 1");
     expect(experiment.workspace.widgets[0]?.widgetType).toBe("autosampler_rack");
+    expect(experiment.workspace.widgets[0]?.isTrashed).toBe(true);
   });
 
   it("throws when experiment creation fails", async () => {

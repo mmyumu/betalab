@@ -655,7 +655,7 @@ export function PesticideWorkbench() {
   const rackSlots = state.experiment.rack.slots;
   const trashedTools = state.experiment.trash.tools;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
-    (widget) => widget.trashable && !widget.isPresent,
+    (widget) => widget.trashable && widget.isTrashed,
   );
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>

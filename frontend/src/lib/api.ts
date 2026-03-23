@@ -133,6 +133,7 @@ function normalizeWorkspaceWidget(
     x: Number(widget.x),
     y: Number(widget.y),
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
+    isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
     trashable: Boolean(widget.trashable),
   };
 }

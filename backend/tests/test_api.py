@@ -33,6 +33,7 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert created.json()["rack"]["slots"][0]["tool"] is None
     assert created.json()["trash"]["tools"] == []
     assert created.json()["workspace"]["widgets"][0]["id"] == "workbench"
+    assert created.json()["workspace"]["widgets"][2]["is_trashed"] is False
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
 
@@ -393,6 +394,9 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
     assert next(widget for widget in added.json()["workspace"]["widgets"] if widget["id"] == "rack")[
         "is_present"
     ] is True
+    assert next(widget for widget in added.json()["workspace"]["widgets"] if widget["id"] == "rack")[
+        "is_trashed"
+    ] is False
     assert moved.status_code == 200
     assert next(widget for widget in moved.json()["workspace"]["widgets"] if widget["id"] == "rack")[
         "x"
@@ -401,6 +405,9 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
     assert next(
         widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"
     )["is_present"] is False
+    assert next(
+        widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"
+    )["is_trashed"] is True
 
 
 def test_remove_liquid_round_trip_over_http() -> None:

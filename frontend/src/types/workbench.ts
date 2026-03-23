@@ -127,5 +127,6 @@ export type ExperimentWorkspaceWidget = {
   x: number;
   y: number;
   isPresent: boolean;
+  isTrashed: boolean;
   trashable: boolean;
 };

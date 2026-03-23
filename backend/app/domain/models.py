@@ -76,6 +76,7 @@ class WorkspaceWidget:
     x: int
     y: int
     is_present: bool
+    is_trashed: bool
     trashable: bool
 
 

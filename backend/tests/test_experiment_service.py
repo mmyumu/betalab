@@ -42,6 +42,7 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[1].is_present is True
     assert experiment.workspace.widgets[2].is_present is False
     assert experiment.workspace.widgets[3].is_present is False
+    assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
 
@@ -209,6 +210,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     )
     rack_widget = next(widget for widget in added.workspace.widgets if widget.id == "rack")
     assert rack_widget.is_present is True
+    assert rack_widget.is_trashed is False
     assert rack_widget.x == 480
     assert rack_widget.y == 420
     assert added.audit_log[-1] == "Autosampler rack added to workspace."
@@ -236,6 +238,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     )
     rack_widget = next(widget for widget in discarded.workspace.widgets if widget.id == "rack")
     assert rack_widget.is_present is False
+    assert rack_widget.is_trashed is True
     assert discarded.audit_log[-1] == "Autosampler rack removed from workspace."
 
 

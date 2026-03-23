@@ -109,6 +109,7 @@ function makeWorkspaceWidgets(
       x: 234,
       y: 0,
       isPresent: true,
+      isTrashed: false,
       trashable: false,
     },
     {
@@ -118,6 +119,7 @@ function makeWorkspaceWidgets(
       x: 1530,
       y: 0,
       isPresent: true,
+      isTrashed: false,
       trashable: false,
     },
     {
@@ -127,6 +129,7 @@ function makeWorkspaceWidgets(
       x: 234,
       y: 886,
       isPresent: false,
+      isTrashed: false,
       trashable: true,
     },
     {
@@ -136,6 +139,7 @@ function makeWorkspaceWidgets(
       x: 812,
       y: 886,
       isPresent: false,
+      isTrashed: false,
       trashable: true,
     },
   ];
@@ -655,7 +659,7 @@ describe("PesticideWorkbench", () => {
             tool: makeTool({ liquids: [{ accent: "amber", id: "liq_1", liquidId: "acetonitrile", name: "Acetonitrile", volume_ml: 1 }] }),
           }),
         ],
-        workspaceWidgets: makeWorkspaceWidgets([{}, {}, { isPresent: false }, { isPresent: false }]),
+        workspaceWidgets: makeWorkspaceWidgets([{}, {}, { isPresent: false, isTrashed: true }, { isPresent: false, isTrashed: true }]),
       }),
     );
 
@@ -718,7 +722,7 @@ describe("PesticideWorkbench", () => {
   it("restores a deleted workspace widget from the trash view into the workspace", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWidgets(),
+        workspaceWidgets: makeWorkspaceWidgets([{}, {}, { isPresent: false, isTrashed: true }, {}]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
