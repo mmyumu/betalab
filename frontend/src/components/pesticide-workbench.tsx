@@ -29,6 +29,7 @@ import type {
   DropTargetType,
   RackSlot,
   RackToolDragPayload,
+  ToolbarItem,
   ToolbarDragPayload,
 } from "@/types/workbench";
 
@@ -36,6 +37,12 @@ type WorkbenchState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { experiment: Experiment; status: "ready" };
+
+type ActiveDragItem =
+  | { kind: "toolbar"; itemType: ToolbarItem["itemType"] }
+  | { kind: "bench_tool"; sourceSlotId: string }
+  | { kind: "rack_tool" }
+  | null;
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load pesticide workbench";
@@ -132,6 +139,7 @@ export function PesticideWorkbench() {
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
+  const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
   const [widgetLayout, setWidgetLayout] =
     useState<Record<WidgetId, WidgetLayout>>(initialWidgetLayout);
@@ -225,6 +233,7 @@ export function PesticideWorkbench() {
 
   const clearDropTargets = () => {
     setActiveDropTargets([]);
+    setActiveDragItem(null);
   };
 
   const isDropTargetHighlighted = (targetType: DropTargetType) => {
@@ -301,6 +310,7 @@ export function PesticideWorkbench() {
       trashable: tool.trashable,
     });
     showDropTargets(getBenchToolAllowedDropTargets(tool));
+    setActiveDragItem({ kind: "bench_tool", sourceSlotId: slotId });
   };
 
   const handleBenchToolDrop = (
@@ -640,6 +650,33 @@ export function PesticideWorkbench() {
       trashable: tool.trashable,
     });
     showDropTargets(tool.trashable ? ["workbench_slot", "trash_bin"] : ["workbench_slot"]);
+    setActiveDragItem({ kind: "rack_tool" });
+  };
+
+  const isBenchSlotHighlighted = (slot: BenchSlot) => {
+    if (!activeDropTargets.includes("workbench_slot") || !activeDragItem) {
+      return false;
+    }
+
+    if (activeDragItem.kind === "toolbar") {
+      if (activeDragItem.itemType === "tool") {
+        return slot.tool === null;
+      }
+      if (activeDragItem.itemType === "liquid") {
+        return slot.tool !== null && slot.tool.accepts_liquids;
+      }
+      return false;
+    }
+
+    if (activeDragItem.kind === "bench_tool") {
+      return slot.tool === null && slot.id !== activeDragItem.sourceSlotId;
+    }
+
+    if (activeDragItem.kind === "rack_tool") {
+      return slot.tool === null;
+    }
+
+    return false;
   };
 
   return (
@@ -692,7 +729,10 @@ export function PesticideWorkbench() {
               <ToolbarPanel
                 categories={pesticideWorkflowCategories}
                 onItemDragEnd={clearDropTargets}
-                onItemDragStart={showDropTargets}
+                onItemDragStart={(item, allowedDropTargets) => {
+                  showDropTargets(allowedDropTargets);
+                  setActiveDragItem({ kind: "toolbar", itemType: item.itemType });
+                }}
               />
             </FloatingWidget>
 
@@ -914,7 +954,7 @@ export function PesticideWorkbench() {
             >
               <PesticideWorkbenchPanel
                 canDragBenchTool={canDragBenchTool}
-                highlightedDropTargets={activeDropTargets}
+                isBenchSlotHighlighted={isBenchSlotHighlighted}
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}

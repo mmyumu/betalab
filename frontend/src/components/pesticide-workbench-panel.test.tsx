@@ -165,6 +165,84 @@ describe("PesticideWorkbenchPanel", () => {
     });
   });
 
+  it("rejects liquid drags on empty stations", () => {
+    const onToolbarItemDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      itemId: "acetonitrile_extraction",
+      itemType: "liquid",
+    });
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={onToolbarItemDrop}
+        slots={slots}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(false);
+    expect(onToolbarItemDrop).not.toHaveBeenCalled();
+  });
+
+  it("accepts liquid drags only on stations that already contain a compatible tool", () => {
+    const onToolbarItemDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      itemId: "acetonitrile_extraction",
+      itemType: "liquid",
+    });
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={onToolbarItemDrop}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_1",
+              toolId: "sample_vial_lcms",
+              label: "Autosampler vial",
+              subtitle: "Injection ready",
+              accent: "sky",
+              toolType: "sample_vial",
+              capacity_ml: 2,
+              accepts_liquids: true,
+              trashable: true,
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onToolbarItemDrop).toHaveBeenCalledWith("station_1", {
+      allowedDropTargets: ["workbench_slot"],
+      itemId: "acetonitrile_extraction",
+      itemType: "liquid",
+    });
+  });
+
   it("rejects workspace widget drags on stations", () => {
     const onToolbarItemDrop = vi.fn();
     const dataTransfer = createDataTransfer();

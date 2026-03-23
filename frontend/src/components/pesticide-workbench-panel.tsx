@@ -13,7 +13,6 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
-  DropTargetType,
   RackToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -29,7 +28,7 @@ type PesticideWorkbenchPanelProps = {
   ) => void;
   onBenchToolDragEnd?: () => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
-  highlightedDropTargets?: DropTargetType[];
+  isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
@@ -39,7 +38,7 @@ type PesticideWorkbenchPanelProps = {
 
 export function PesticideWorkbenchPanel({
   canDragBenchTool,
-  highlightedDropTargets = [],
+  isBenchSlotHighlighted,
   onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
@@ -49,13 +48,49 @@ export function PesticideWorkbenchPanel({
   statusMessage,
   onToolbarItemDrop,
 }: PesticideWorkbenchPanelProps) {
-  const acceptsWorkbenchDrop = (event: DragEvent<HTMLElement>) => {
-    return hasCompatibleDropTarget(event.dataTransfer, "workbench_slot");
+  const canAcceptBenchToolDrop = (slot: BenchSlot, payload: BenchToolDragPayload) => {
+    return slot.tool === null && payload.sourceSlotId !== slot.id;
   };
-  const highlightsWorkbenchDrop = highlightedDropTargets.includes("workbench_slot");
 
-  const handleDrop = (event: DragEvent<HTMLElement>, slotId: string) => {
-    if (!acceptsWorkbenchDrop(event)) {
+  const canAcceptRackToolDrop = (slot: BenchSlot, _payload: RackToolDragPayload) => {
+    return slot.tool === null;
+  };
+
+  const canAcceptToolbarDrop = (slot: BenchSlot, payload: ToolbarDragPayload) => {
+    if (payload.itemType === "tool") {
+      return slot.tool === null;
+    }
+    if (payload.itemType === "liquid") {
+      return slot.tool !== null && slot.tool.accepts_liquids;
+    }
+    return false;
+  };
+
+  const canAcceptWorkbenchDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
+    if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
+      return false;
+    }
+
+    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
+    if (benchToolPayload) {
+      return canAcceptBenchToolDrop(slot, benchToolPayload);
+    }
+
+    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
+    if (rackToolPayload) {
+      return canAcceptRackToolDrop(slot, rackToolPayload);
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload) {
+      return canAcceptToolbarDrop(slot, toolbarPayload);
+    }
+
+    return false;
+  };
+
+  const handleDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
+    if (!canAcceptWorkbenchDrop(event, slot)) {
       return;
     }
 
@@ -63,13 +98,13 @@ export function PesticideWorkbenchPanel({
 
     const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
     if (benchToolPayload) {
-      onBenchToolDrop?.(slotId, benchToolPayload);
+      onBenchToolDrop?.(slot.id, benchToolPayload);
       return;
     }
 
     const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
     if (rackToolPayload) {
-      onBenchToolDrop?.(slotId, rackToolPayload);
+      onBenchToolDrop?.(slot.id, rackToolPayload);
       return;
     }
 
@@ -78,7 +113,7 @@ export function PesticideWorkbenchPanel({
       return;
     }
 
-    onToolbarItemDrop(slotId, payload);
+    onToolbarItemDrop(slot.id, payload);
   };
 
   return (
@@ -108,6 +143,14 @@ export function PesticideWorkbenchPanel({
         <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {slots.map((slot) => {
             const tool = slot.tool;
+            const highlightsWorkbenchDrop = isBenchSlotHighlighted?.(slot) ?? false;
+            const canAcceptWorkbenchDragOver = (event: DragEvent<HTMLElement>) => {
+              if (isBenchSlotHighlighted) {
+                return highlightsWorkbenchDrop;
+              }
+
+              return canAcceptWorkbenchDrop(event, slot);
+            };
 
             return (
               <article
@@ -132,12 +175,12 @@ export function PesticideWorkbenchPanel({
                   data-drop-highlighted={highlightsWorkbenchDrop ? "true" : "false"}
                   data-testid={`bench-slot-${slot.id}`}
                   onDragOver={(event) => {
-                    if (!acceptsWorkbenchDrop(event)) {
+                    if (!canAcceptWorkbenchDragOver(event)) {
                       return;
                     }
                     event.preventDefault();
                   }}
-                  onDrop={(event) => handleDrop(event, slot.id)}
+                  onDrop={(event) => handleDrop(event, slot)}
                 >
                   {tool ? (
                     <BenchToolCard

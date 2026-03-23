@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PesticideWorkbench } from "@/components/pesticide-workbench";
@@ -281,6 +281,40 @@ describe("PesticideWorkbench", () => {
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
+  it("accepts dragover on an empty station when dragging a tool from the palette", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Autosampler vial placed on Station 1."],
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    });
+
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sample_vial_lcms"), {
+      dataTransfer: toolTransfer,
+    });
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: toolTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: toolTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Autosampler vial"),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("highlights only the workspace canvas when dragging a workspace widget from the palette", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
@@ -302,6 +336,34 @@ describe("PesticideWorkbench", () => {
     fireEvent.dragEnd(screen.getByTestId("toolbar-item-autosampler_rack_widget"));
 
     expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "false");
+  });
+
+  it("highlights only occupied compatible stations when dragging a liquid", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeTool() }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    });
+
+    const liquidTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-acetonitrile_extraction"), {
+      dataTransfer: liquidTransfer,
+    });
+
+    expect(screen.getByTestId("bench-slot-station_1")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("bench-slot-station_2")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "false");
+
+    fireEvent.dragEnd(screen.getByTestId("toolbar-item-acetonitrile_extraction"));
+
+    expect(screen.getByTestId("bench-slot-station_1")).toHaveAttribute("data-drop-highlighted", "false");
   });
 
   it("highlights stations, rack slots, and trash when dragging an autosampler vial", async () => {

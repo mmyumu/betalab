@@ -5,12 +5,12 @@ import { useState } from "react";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
 import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
-import type { DropTargetType, ToolbarAccent, ToolbarCategory } from "@/types/workbench";
+import type { DropTargetType, ToolbarAccent, ToolbarCategory, ToolbarItem } from "@/types/workbench";
 
 type ToolbarPanelProps = {
   categories: ToolbarCategory[];
   onItemDragEnd?: () => void;
-  onItemDragStart?: (allowedDropTargets: DropTargetType[]) => void;
+  onItemDragStart?: (item: ToolbarItem, allowedDropTargets: DropTargetType[]) => void;
 };
 
 const accentClasses: Record<ToolbarAccent, string> = {
@@ -74,7 +74,7 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                       onItemDragEnd?.();
                     }}
                     onDragStart={(event) => {
-                      onItemDragStart?.(item.allowedDropTargets);
+                      onItemDragStart?.(item, item.allowedDropTargets);
                       writeToolbarDragPayload(event.dataTransfer, {
                         allowedDropTargets: item.allowedDropTargets,
                         itemId: item.id,
