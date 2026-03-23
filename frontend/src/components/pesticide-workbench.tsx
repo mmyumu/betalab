@@ -862,72 +862,74 @@ export function PesticideWorkbench() {
               position={widgetLayout.trash}
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
-              <section className="relative overflow-visible rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                <div className="border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                    Trash
-                  </p>
-                </div>
-                <div className="px-4 py-4">
-                <div
-                  className={`flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center transition-colors ${
-                    isDropTargetHighlighted("trash_bin")
-                      ? "border-rose-300 bg-rose-50/70 ring-2 ring-rose-200/80"
-                      : "border-slate-300"
-                  }`}
-                  aria-haspopup="dialog"
-                  data-drop-highlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
-                  data-testid="trash-dropzone"
-                  onClick={() => setIsTrashOpen(true)}
-                  onDragOver={handleTrashDragOver}
-                  onDrop={handleTrashDrop}
-                >
-                  <svg
-                    aria-hidden="true"
-                    className="h-[4.5rem] w-[4.5rem] text-slate-500"
-                    fill="none"
-                    viewBox="0 0 96 96"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M28 30H68"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="6"
-                    />
-                    <path
-                      d="M38 20H58"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="6"
-                    />
-                    <path
-                      d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="6"
-                    />
-                    <path
-                      d="M44 40V63"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="6"
-                    />
-                    <path
-                      d="M52 40V63"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="6"
-                    />
-                    <path
-                      d="M24 30H72"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeWidth="4"
-                    />
-                  </svg>
-                </div>
+              <section className="relative overflow-visible">
+                <div className="overflow-hidden rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
+                  <div className="border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                      Trash
+                    </p>
+                  </div>
+                  <div className="px-4 py-4">
+                    <div
+                      className={`flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center transition-colors ${
+                        isDropTargetHighlighted("trash_bin")
+                          ? "border-rose-300 bg-rose-50/70 ring-2 ring-rose-200/80"
+                          : "border-slate-300"
+                      }`}
+                      aria-haspopup="dialog"
+                      data-drop-highlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
+                      data-testid="trash-dropzone"
+                      onClick={() => setIsTrashOpen(true)}
+                      onDragOver={handleTrashDragOver}
+                      onDrop={handleTrashDrop}
+                    >
+                      <svg
+                        aria-hidden="true"
+                        className="h-[4.5rem] w-[4.5rem] text-slate-500"
+                        fill="none"
+                        viewBox="0 0 96 96"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M28 30H68"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="6"
+                        />
+                        <path
+                          d="M38 20H58"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="6"
+                        />
+                        <path
+                          d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="6"
+                        />
+                        <path
+                          d="M44 40V63"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="6"
+                        />
+                        <path
+                          d="M52 40V63"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="6"
+                        />
+                        <path
+                          d="M24 30H72"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeWidth="4"
+                        />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 {isTrashOpen ? (
                   <div
@@ -939,14 +941,9 @@ export function PesticideWorkbench() {
                       role="dialog"
                     >
                       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                            Trash
-                          </p>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Drag an item back to a valid target to restore it.
-                          </p>
-                        </div>
+                        <p className="text-sm text-slate-600">
+                          Drag an item back to a valid target to restore it.
+                        </p>
                         <button
                           className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
                           onClick={() => setIsTrashOpen(false)}
