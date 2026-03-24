@@ -12,8 +12,6 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert [slot.id for slot in experiment.workbench.slots] == [
         "station_1",
         "station_2",
-        "station_3",
-        "station_4",
     ]
     assert [slot.id for slot in experiment.rack.slots] == [
         "rack_slot_1",
@@ -99,6 +97,61 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert slot.tool is not None
     assert slot.tool.liquids[0].volume_ml == 1.5
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
+
+
+def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    added = service.apply_command(
+        experiment.id,
+        "add_workbench_slot",
+        {},
+    )
+
+    assert [slot.id for slot in added.workbench.slots] == [
+        "station_1",
+        "station_2",
+        "station_3",
+    ]
+    assert added.audit_log[-1] == "Station 3 added to workbench."
+
+    removed = service.apply_command(
+        experiment.id,
+        "remove_workbench_slot",
+        {
+            "slot_id": "station_3",
+        },
+    )
+
+    assert [slot.id for slot in removed.workbench.slots] == [
+        "station_1",
+        "station_2",
+    ]
+    assert removed.audit_log[-1] == "Station 3 removed from workbench."
+
+
+def test_remove_workbench_slot_requires_an_empty_station() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Station 1 must be empty before it can be removed."):
+        service.apply_command(
+            experiment.id,
+            "remove_workbench_slot",
+            {
+                "slot_id": "station_1",
+            },
+        )
 
 
 def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
@@ -614,7 +667,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             "remove_rack_tool_to_workbench_slot",
             {
                 "rack_slot_id": "rack_slot_2",
-                "target_slot_id": "station_3",
+                "target_slot_id": "station_1",
             },
         )
 

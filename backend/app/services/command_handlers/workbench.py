@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.models import Experiment, WorkbenchLiquid, WorkbenchTool, new_id
+from app.domain.models import Experiment, WorkbenchLiquid, WorkbenchSlot, WorkbenchTool, new_id
 from app.domain.workbench_catalog import get_workbench_liquid_definition, get_workbench_tool_definition
 from app.services.command_handlers.support import find_workbench_slot, format_volume, round_volume
 
@@ -23,6 +23,28 @@ def place_tool_on_workbench(experiment: Experiment, payload: dict) -> None:
         trashable=True,
     )
     experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
+
+
+def add_workbench_slot(experiment: Experiment, payload: dict | None = None) -> None:
+    next_index = _get_next_workbench_slot_index(experiment)
+    experiment.workbench.slots.append(
+        WorkbenchSlot(
+            id=f"station_{next_index}",
+            label=f"Station {next_index}",
+        )
+    )
+    experiment.audit_log.append(f"Station {next_index} added to workbench.")
+
+
+def remove_workbench_slot(experiment: Experiment, payload: dict) -> None:
+    slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
+    if slot.tool is not None:
+        raise ValueError(f"{slot.label} must be empty before it can be removed.")
+
+    experiment.workbench.slots = [
+        existing_slot for existing_slot in experiment.workbench.slots if existing_slot.id != slot.id
+    ]
+    experiment.audit_log.append(f"{slot.label} removed from workbench.")
 
 
 def move_tool_between_workbench_slots(experiment: Experiment, payload: dict) -> None:
@@ -139,3 +161,14 @@ def update_workbench_liquid_volume(experiment: Experiment, payload: dict) -> Non
     experiment.audit_log.append(
         f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {slot.tool.label}."
     )
+
+
+def _get_next_workbench_slot_index(experiment: Experiment) -> int:
+    existing_indices = []
+    for slot in experiment.workbench.slots:
+        if slot.id.startswith("station_"):
+            suffix = slot.id.removeprefix("station_")
+            if suffix.isdigit():
+                existing_indices.append(int(suffix))
+
+    return (max(existing_indices) if existing_indices else 0) + 1

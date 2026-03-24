@@ -55,13 +55,12 @@ function createDeferred<T>(): Deferred<T> {
   return { promise, reject, resolve };
 }
 
-function makeSlots(overrides: Partial<BenchSlot>[] = []): BenchSlot[] {
-  const baseSlots: BenchSlot[] = [
-    { id: "station_1", label: "Station 1", tool: null },
-    { id: "station_2", label: "Station 2", tool: null },
-    { id: "station_3", label: "Station 3", tool: null },
-    { id: "station_4", label: "Station 4", tool: null },
-  ];
+function makeSlots(overrides: Partial<BenchSlot>[] = [], count = Math.max(2, overrides.length)): BenchSlot[] {
+  const baseSlots: BenchSlot[] = Array.from({ length: count }, (_, index) => ({
+    id: `station_${index + 1}`,
+    label: `Station ${index + 1}`,
+    tool: null,
+  }));
 
   return baseSlots.map((slot, index) => ({
     ...slot,
@@ -212,13 +211,76 @@ describe("PesticideWorkbench", () => {
     expect(screen.getByText("Creating pesticide workbench from backend...")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+      expect(screen.getAllByText("Empty station")).toHaveLength(2);
     });
 
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
     expect(screen.queryByTestId("widget-instrument")).not.toBeInTheDocument();
+  });
+
+  it("starts with two workbench stations and can add a station", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Station 3 added to workbench."],
+        slots: makeSlots([], 3),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Station 1")).toBeInTheDocument();
+      expect(screen.getByText("Station 2")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Station 3")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("add-workbench-slot-button"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Station 3")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_workbench_slot",
+      {},
+    );
+  });
+
+  it("removes an empty workbench station", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([], 3),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Station 3 removed from workbench."],
+        slots: makeSlots(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Station 3")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("remove-workbench-slot-button-station_3"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Station 3")).not.toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "remove_workbench_slot",
+      { slot_id: "station_3" },
+    );
   });
 
   it("lets the user drag widgets around the workspace", async () => {
@@ -231,11 +293,10 @@ describe("PesticideWorkbench", () => {
     });
 
     const toolbarWidget = screen.getByTestId("widget-toolbar");
-    const toolbarHandle = screen.getByTestId("widget-handle-toolbar");
 
     expect(toolbarWidget).toHaveStyle({ left: "0px", top: "0px" });
 
-    fireEvent.mouseDown(toolbarHandle, { button: 0, clientX: 24, clientY: 16 });
+    fireEvent.mouseDown(screen.getByText("Palette"), { button: 0, clientX: 24, clientY: 16 });
     window.dispatchEvent(new MouseEvent("mousemove", { clientX: 164, clientY: 156 }));
     window.dispatchEvent(new MouseEvent("mouseup"));
 
@@ -260,7 +321,7 @@ describe("PesticideWorkbench", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
     await waitFor(() => {
-      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+      expect(screen.getAllByText("Empty station")).toHaveLength(2);
     });
 
     expect(createExperiment).toHaveBeenCalledTimes(2);
@@ -620,7 +681,7 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
-    fireEvent.mouseDown(screen.getByTestId("widget-handle-rack"), {
+    fireEvent.mouseDown(screen.getByText("Workspace Equipment"), {
       button: 0,
       clientX: 500,
       clientY: 430,
@@ -641,7 +702,7 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
     });
 
-    fireEvent.mouseDown(screen.getByTestId("widget-handle-workbench"), {
+    fireEvent.mouseDown(screen.getByText("Workbench"), {
       button: 0,
       clientX: 260,
       clientY: 24,
@@ -1031,7 +1092,7 @@ describe("PesticideWorkbench", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+      expect(screen.getAllByText("Empty station")).toHaveLength(2);
     });
 
     const toolTransfer = createDataTransfer();
@@ -1096,7 +1157,7 @@ describe("PesticideWorkbench", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+      expect(screen.getAllByText("Empty station")).toHaveLength(2);
     });
 
     const firstTransfer = createDataTransfer();
@@ -1304,7 +1365,7 @@ describe("PesticideWorkbench", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Empty station")).toHaveLength(4);
+      expect(screen.getAllByText("Empty station")).toHaveLength(2);
     });
 
     const toolTransfer = createDataTransfer();
@@ -1317,9 +1378,87 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByText("Station 1 is unavailable")).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText("Empty station")).toHaveLength(4);
+    expect(screen.getAllByText("Empty station")).toHaveLength(2);
     expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
   });
+
+  it("accepts a second liquid drop on a station that already contains a filled tool", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 1,
+                  accent: "amber",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Ultrapure water added to Autosampler vial."],
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 1,
+                  accent: "amber",
+                },
+                {
+                  id: "bench_liquid_2",
+                  liquidId: "ultrapure_water",
+                  name: "Ultrapure water",
+                  volume_ml: 1,
+                  accent: "sky",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    });
+
+    const liquidTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-ultrapure_water_rinse"), {
+      dataTransfer: liquidTransfer,
+    });
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: liquidTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: liquidTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(screen.getByText("Ultrapure water added to Autosampler vial.")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_liquid_to_workbench_tool",
+      { slot_id: "station_1", liquid_id: "ultrapure_water_rinse" },
+    );
+  });
+
 
   it("changes the volume with the mouse wheel only while the input is focused", async () => {
     vi.mocked(createExperiment).mockResolvedValue(

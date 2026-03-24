@@ -151,6 +151,4 @@ export const pesticideLiquidCatalog = Object.fromEntries(
 export const initialWorkbenchSlots: BenchSlot[] = [
   { id: "station_1", label: "Station 1", tool: null },
   { id: "station_2", label: "Station 2", tool: null },
-  { id: "station_3", label: "Station 3", tool: null },
-  { id: "station_4", label: "Station 4", tool: null },
 ];

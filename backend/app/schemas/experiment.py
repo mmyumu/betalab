@@ -82,6 +82,8 @@ class ExperimentSchema(BaseModel):
 
 class ExperimentCommandEnvelope(BaseModel):
     type: Literal[
+        "add_workbench_slot",
+        "remove_workbench_slot",
         "place_tool_on_workbench",
         "move_tool_between_workbench_slots",
         "discard_workbench_tool",

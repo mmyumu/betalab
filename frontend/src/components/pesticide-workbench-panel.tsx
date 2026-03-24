@@ -3,6 +3,7 @@
 import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
@@ -22,6 +23,7 @@ import type {
 type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
 
 type PesticideWorkbenchPanelProps = {
+  onAddWorkbenchSlot?: () => void;
   canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
   onBenchToolDragStart?: (
     slotId: string,
@@ -32,6 +34,7 @@ type PesticideWorkbenchPanelProps = {
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
+  onRemoveWorkbenchSlot?: (slotId: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
@@ -39,12 +42,14 @@ type PesticideWorkbenchPanelProps = {
 };
 
 export function PesticideWorkbenchPanel({
+  onAddWorkbenchSlot,
   canDragBenchTool,
   isBenchSlotHighlighted,
   onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
   onRemoveLiquid,
+  onRemoveWorkbenchSlot,
   onLiquidVolumeChange,
   slots,
   statusMessage,
@@ -131,21 +136,28 @@ export function PesticideWorkbenchPanel({
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-amber-200/80 bg-[linear-gradient(180deg,#fffdf8_0%,#fff4dc_100%)] shadow-sm">
-      <div className="border-b border-amber-200/80 bg-white/70 px-5 py-5 backdrop-blur xl:px-6 xl:py-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div
+        className={`${dragAffordanceClassName} border-b border-amber-200/80 bg-white/70 px-5 py-5 backdrop-blur xl:px-6 xl:py-6`}
+        data-widget-drag-handle="true"
+      >
+        <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
               Workbench
             </p>
-            <p className="mt-1 max-w-4xl text-sm text-slate-600 xl:text-base">
-              Drag a tool from the palette onto a station, then drop compatible liquids into the
-              placed tool.
-            </p>
           </div>
 
-          <div className="rounded-[1.4rem] border border-white/70 bg-white/80 px-4 py-3 text-sm text-slate-700 xl:min-w-[20rem]">
-            {statusMessage}
-          </div>
+          <button
+            aria-label="Add workbench station"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-white/85 text-lg font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-white"
+            data-testid="add-workbench-slot-button"
+            onClick={() => {
+              onAddWorkbenchSlot?.();
+            }}
+            type="button"
+          >
+            +
+          </button>
         </div>
       </div>
 
@@ -177,6 +189,34 @@ export function PesticideWorkbenchPanel({
                       {tool ? "Ready for liquid additions." : "Waiting for a first tool."}
                     </p>
                   </div>
+                  <button
+                    aria-label={`Remove ${slot.label}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-slate-300 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    data-testid={`remove-workbench-slot-button-${slot.id}`}
+                    disabled={tool !== null}
+                    onClick={() => {
+                      if (tool !== null) {
+                        return;
+                      }
+                      onRemoveWorkbenchSlot?.(slot.id);
+                    }}
+                    type="button"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 8H12"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeWidth="1.6"
+                      />
+                    </svg>
+                  </button>
                 </div>
 
                 <div

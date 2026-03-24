@@ -1,6 +1,7 @@
 import type { DragEvent } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   buildCssLinearGradient,
   getContainerLiquidVisualState,
@@ -95,7 +96,7 @@ export function BenchToolCard({
     >
       <div className="flex flex-col gap-2">
         <div
-          className={draggable ? "cursor-grab active:cursor-grabbing" : ""}
+          className={draggable ? dragAffordanceClassName : ""}
           data-testid={`bench-tool-card-${tool.id}`}
           draggable={draggable}
           onDragEnd={onDragEnd}

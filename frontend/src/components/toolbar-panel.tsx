@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { DropTargetType, ToolbarAccent, ToolbarCategory, ToolbarItem } from "@/types/workbench";
 
@@ -29,7 +30,12 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
 
   return (
     <section className="rounded-[1.55rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Palette</p>
+      <p
+        className={`${dragAffordanceClassName} text-xs font-semibold uppercase tracking-[0.24em] text-slate-500`}
+        data-widget-drag-handle="true"
+      >
+        Palette
+      </p>
 
       <div className="mt-2 space-y-3">
         {categories.map((category) => (
@@ -65,7 +71,7 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                 {category.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${
+                    className={`${dragAffordanceClassName} rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${
                       item.itemType === "liquid" ? accentClasses[item.accent] : neutralToolClasses
                     }`}
                     data-testid={`toolbar-item-${item.id}`}

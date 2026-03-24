@@ -30,6 +30,22 @@ export function FloatingWidget({
 }: FloatingWidgetProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest('[data-widget-drag-handle="true"]')) {
+      return;
+    }
+    if (
+      target.closest(
+        'button, input, textarea, select, option, a, label, [role="button"], [contenteditable="true"], [data-no-widget-drag="true"]',
+      )
+    ) {
+      return;
+    }
+
+    onDragStart(id, event);
+  };
+
   useEffect(() => {
     const node = containerRef.current;
     if (!node || !onHeightChange) {
@@ -60,6 +76,7 @@ export function FloatingWidget({
     <div
       className="absolute"
       data-testid={`widget-${id}`}
+      onMouseDown={handleMouseDown}
       ref={containerRef}
       style={{
         left: position.x,
@@ -69,16 +86,9 @@ export function FloatingWidget({
       }}
     >
       <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 z-20 h-20 cursor-grab select-none touch-none active:cursor-grabbing"
-        data-testid={`widget-handle-${id}`}
-        onMouseDown={(event) => {
-          onDragStart(id, event);
-        }}
-      />
-
-      <div
-        className={`relative ${isActive ? "drop-shadow-[0_26px_44px_rgba(15,23,42,0.18)]" : ""}`}
+        className={`relative select-none ${
+          isActive ? "drop-shadow-[0_26px_44px_rgba(15,23,42,0.18)]" : ""
+        }`}
       >
         {children}
       </div>

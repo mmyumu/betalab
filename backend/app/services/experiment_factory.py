@@ -22,8 +22,6 @@ def build_experiment() -> Experiment:
             slots=[
                 WorkbenchSlot(id="station_1", label="Station 1"),
                 WorkbenchSlot(id="station_2", label="Station 2"),
-                WorkbenchSlot(id="station_3", label="Station 3"),
-                WorkbenchSlot(id="station_4", label="Station 4"),
             ]
         ),
         rack=Rack(

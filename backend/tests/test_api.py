@@ -70,6 +70,38 @@ def test_apply_command_returns_400_for_invalid_payload() -> None:
     assert response.json() == {"detail": "Place a tool on Station 1 before adding liquids."}
 
 
+def test_remove_workbench_slot_returns_400_when_station_is_not_empty() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+
+        response = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "remove_workbench_slot",
+                "payload": {
+                    "slot_id": "station_1",
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Station 1 must be empty before it can be removed."}
+
+
 def test_apply_command_returns_404_for_unknown_experiment() -> None:
     from fastapi.testclient import TestClient
 
@@ -137,6 +169,43 @@ def test_pesticide_workbench_commands_round_trip_over_http() -> None:
     assert placed.json()["workbench"]["slots"][0]["tool"]["label"] == "Autosampler vial"
     assert added.status_code == 200
     assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 2.0
+
+
+def test_workbench_slot_commands_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_workbench_slot",
+                "payload": {},
+            },
+        )
+        removed = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "remove_workbench_slot",
+                "payload": {
+                    "slot_id": "station_3",
+                },
+            },
+        )
+
+    assert added.status_code == 200
+    assert [slot["id"] for slot in added.json()["workbench"]["slots"]] == [
+        "station_1",
+        "station_2",
+        "station_3",
+    ]
+    assert removed.status_code == 200
+    assert [slot["id"] for slot in removed.json()["workbench"]["slots"]] == [
+        "station_1",
+        "station_2",
+    ]
 
 
 def test_move_tool_between_workbench_slots_round_trip_over_http() -> None:

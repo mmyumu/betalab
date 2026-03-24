@@ -64,11 +64,13 @@ function writePayload(
 }
 
 describe("PesticideWorkbenchPanel", () => {
-  it("renders empty stations and a drop status message", () => {
+  it("renders empty stations with add/remove controls", () => {
     render(
       <PesticideWorkbenchPanel
+        onAddWorkbenchSlot={vi.fn()}
         onLiquidVolumeChange={vi.fn()}
         onRemoveLiquid={vi.fn()}
+        onRemoveWorkbenchSlot={vi.fn()}
         slots={slots}
         statusMessage="Start by dragging an extraction tool onto the bench."
         onToolbarItemDrop={vi.fn()}
@@ -78,9 +80,50 @@ describe("PesticideWorkbenchPanel", () => {
     expect(screen.getByText("Station 1")).toBeInTheDocument();
     expect(screen.getByText("Station 2")).toBeInTheDocument();
     expect(screen.getAllByText("Empty station")).toHaveLength(2);
-    expect(
-      screen.getByText("Start by dragging an extraction tool onto the bench."),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("add-workbench-slot-button")).toBeInTheDocument();
+    expect(screen.getByTestId("remove-workbench-slot-button-station_1")).toBeEnabled();
+  });
+
+  it("adds a station and only allows removing empty ones", () => {
+    const onAddWorkbenchSlot = vi.fn();
+    const onRemoveWorkbenchSlot = vi.fn();
+
+    render(
+      <PesticideWorkbenchPanel
+        onAddWorkbenchSlot={onAddWorkbenchSlot}
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onRemoveWorkbenchSlot={onRemoveWorkbenchSlot}
+        slots={[
+          { id: "station_1", label: "Station 1", tool: null },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_1",
+              toolId: "sample_vial_lcms",
+              label: "Autosampler vial",
+              subtitle: "Injection ready",
+              accent: "sky",
+              toolType: "sample_vial",
+              capacity_ml: 2,
+              accepts_liquids: true,
+              trashable: true,
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+        onToolbarItemDrop={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("add-workbench-slot-button"));
+    fireEvent.click(screen.getByTestId("remove-workbench-slot-button-station_1"));
+
+    expect(onAddWorkbenchSlot).toHaveBeenCalledTimes(1);
+    expect(onRemoveWorkbenchSlot).toHaveBeenCalledWith("station_1");
+    expect(screen.getByTestId("remove-workbench-slot-button-station_2")).toBeDisabled();
   });
 
   it("shows multi-liquid tools with multiple fill segments", () => {

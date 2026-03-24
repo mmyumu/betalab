@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
+
 type WorkspaceEquipmentWidgetProps = {
   badge?: string;
   children: ReactNode;
@@ -21,7 +23,10 @@ export function WorkspaceEquipmentWidget({
 }: WorkspaceEquipmentWidgetProps) {
   return (
     <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-      <div className="border-b border-slate-200/80 bg-white/85 px-5 py-5 backdrop-blur xl:px-6 xl:py-6">
+      <div
+        className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-5 py-5 backdrop-blur xl:px-6 xl:py-6`}
+        data-widget-drag-handle="true"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">

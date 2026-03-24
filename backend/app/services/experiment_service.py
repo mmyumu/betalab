@@ -15,9 +15,11 @@ from app.services.command_handlers.trash import (
     restore_trashed_tool_to_workbench_slot,
 )
 from app.services.command_handlers.workbench import (
+    add_workbench_slot,
     add_liquid_to_workbench_tool,
     move_tool_between_workbench_slots,
     place_tool_on_workbench,
+    remove_workbench_slot,
     remove_liquid_from_workbench_tool,
     update_workbench_liquid_volume,
 )
@@ -37,6 +39,8 @@ class ExperimentService:
     def __init__(self) -> None:
         self._experiments: dict[str, Experiment] = {}
         self._handlers = {
+            "add_workbench_slot": add_workbench_slot,
+            "remove_workbench_slot": remove_workbench_slot,
             "place_tool_on_workbench": place_tool_on_workbench,
             "move_tool_between_workbench_slots": move_tool_between_workbench_slots,
             "discard_workbench_tool": discard_workbench_tool,

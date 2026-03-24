@@ -10,6 +10,7 @@ import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel"
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
@@ -304,6 +305,16 @@ export function PesticideWorkbench() {
     void sendWorkbenchCommand("remove_liquid_from_workbench_tool", {
       slot_id: slotId,
       liquid_entry_id: liquidId,
+    });
+  };
+
+  const handleAddWorkbenchSlot = () => {
+    void sendWorkbenchCommand("add_workbench_slot", {});
+  };
+
+  const handleRemoveWorkbenchSlot = (slotId: string) => {
+    void sendWorkbenchCommand("remove_workbench_slot", {
+      slot_id: slotId,
     });
   };
 
@@ -810,12 +821,14 @@ export function PesticideWorkbench() {
 
         <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
           <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-              Custom layout
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              Drag the widget handles to compose your own workspace.
-            </p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                Custom layout
+              </p>
+              <p className="min-w-0 truncate text-sm text-slate-600">
+                {isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
+              </p>
+            </div>
           </div>
 
           <div
@@ -864,7 +877,10 @@ export function PesticideWorkbench() {
             >
               <section className="relative overflow-visible">
                 <div className="overflow-hidden rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                  <div className="border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur">
+                  <div
+                    className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur`}
+                    data-widget-drag-handle="true"
+                  >
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
                       Trash
                     </p>
@@ -961,7 +977,7 @@ export function PesticideWorkbench() {
 
                           return (
                             <div
-                              className="flex cursor-grab items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 active:cursor-grabbing"
+                              className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
                               data-testid={`trash-tool-${trashTool.id}`}
                               draggable
                               key={trashTool.id}
@@ -985,7 +1001,7 @@ export function PesticideWorkbench() {
                         })}
                         {trashedWidgets.map((widget) => (
                           <div
-                            className="flex cursor-grab items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 active:cursor-grabbing"
+                            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
                             data-testid={`trash-widget-${widget.id}`}
                             draggable
                             key={widget.id}
@@ -1051,7 +1067,7 @@ export function PesticideWorkbench() {
                                   isRackSlotHighlighted
                                     ? "bg-sky-200/45 ring-2 ring-sky-300/90"
                                     : ""
-                                } ${tool ? "cursor-grab active:cursor-grabbing" : ""}`}
+                                } ${tool ? dragAffordanceClassName : ""}`}
                                 data-drop-highlighted={isRackSlotHighlighted ? "true" : "false"}
                                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
                                 key={rackSlot.id}
@@ -1098,7 +1114,7 @@ export function PesticideWorkbench() {
                                       </span>
                                     </div>
                                     <div
-                                      className="shrink-0 cursor-grab rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 active:cursor-grabbing"
+                                      className={`${dragAffordanceClassName} shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600`}
                                       data-testid={`rack-slot-tool-${slotIndex + 1}`}
                                       draggable
                                       onDragEnd={clearDropTargets}
@@ -1153,15 +1169,17 @@ export function PesticideWorkbench() {
               zIndex={10 + widgetOrder.indexOf("workbench")}
             >
               <PesticideWorkbenchPanel
+                onAddWorkbenchSlot={handleAddWorkbenchSlot}
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
                 onRemoveLiquid={handleRemoveLiquid}
+                onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
                 slots={slots}
-                statusMessage={isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
+                statusMessage={statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
               />
             </FloatingWidget>
