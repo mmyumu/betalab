@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
@@ -105,5 +106,12 @@ describe("workspace equipment illustrations", () => {
       "data-item-count",
       "8",
     );
+  });
+
+  it("renders apple illustration", () => {
+    render(<AppleIllustration testId="apple-illustration" />);
+
+    expect(screen.getByTestId("apple-illustration")).toBeInTheDocument();
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("aria-label", "Apple illustration");
   });
 });

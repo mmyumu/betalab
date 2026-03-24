@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
@@ -1190,9 +1191,14 @@ export function PesticideWorkbench() {
                                 onClick={handleCreateApple}
                                 type="button"
                               >
-                                <span className="block text-sm font-semibold text-slate-900">Create apple</span>
-                                <span className="mt-1 block text-sm text-slate-500">
-                                  Add a first produce item to the basket.
+                                <span className="flex items-center gap-3">
+                                  <AppleIllustration className="h-12 w-12 shrink-0" />
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-slate-900">Create apple</span>
+                                    <span className="mt-1 block text-sm text-slate-500">
+                                      Add a first produce item to the basket.
+                                    </span>
+                                  </span>
                                 </span>
                               </button>
                               <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
@@ -1203,11 +1209,19 @@ export function PesticideWorkbench() {
                                   {basketProduceItems.length > 0 ? (
                                     basketProduceItems.map((item) => (
                                       <div
-                                        className="flex items-center justify-between rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2"
+                                        className="flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2"
                                         data-testid={`basket-produce-${item.id}`}
                                         key={item.id}
                                       >
-                                        <span className="text-sm font-semibold text-slate-900">{item.label}</span>
+                                        <div className="flex min-w-0 items-center gap-3">
+                                          <AppleIllustration
+                                            className="h-10 w-10 shrink-0"
+                                            testId={`basket-produce-illustration-${item.id}`}
+                                          />
+                                          <span className="truncate text-sm font-semibold text-slate-900">
+                                            {item.label}
+                                          </span>
+                                        </div>
                                         <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                                           {item.produceType}
                                         </span>
