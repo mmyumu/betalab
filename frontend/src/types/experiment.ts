@@ -1,4 +1,10 @@
-import type { BenchSlot, ExperimentWorkspaceWidget, RackSlot, TrashToolEntry } from "@/types/workbench";
+import type {
+  BenchSlot,
+  ExperimentProduceItem,
+  ExperimentWorkspaceWidget,
+  RackSlot,
+  TrashToolEntry,
+} from "@/types/workbench";
 
 export type ExperimentWorkbench = {
   slots: BenchSlot[];
@@ -13,6 +19,7 @@ export type ExperimentTrash = {
 };
 
 export type ExperimentWorkspace = {
+  produceItems: ExperimentProduceItem[];
   widgets: ExperimentWorkspaceWidget[];
 };
 

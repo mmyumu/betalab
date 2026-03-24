@@ -161,12 +161,14 @@ function makeWorkspaceWidgets(
 
 function makeWorkbenchExperiment({
   auditLog = ["Experiment created", "Start by dragging an extraction tool onto the bench."],
+  basketProduceItems = [],
   rackSlots = makeRackSlots(),
   slots = makeSlots(),
   trashTools = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
   auditLog?: string[];
+  basketProduceItems?: { id: string; label: string; produceType: "apple" }[];
   rackSlots?: RackSlot[];
   slots?: BenchSlot[];
   trashTools?: TrashToolEntry[];
@@ -178,7 +180,7 @@ function makeWorkbenchExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { tools: trashTools },
-    workspace: { widgets: workspaceWidgets },
+    workspace: { produceItems: basketProduceItems, widgets: workspaceWidgets },
     audit_log: auditLog,
   };
 }
@@ -761,6 +763,43 @@ describe("PesticideWorkbench", () => {
     expect(within(dialog).getByTestId("trash-tool-trash_tool_1")).toBeInTheDocument();
     expect(within(dialog).getByTestId("trash-widget-rack")).toBeInTheDocument();
     expect(within(dialog).getByTestId("trash-widget-instrument")).toBeInTheDocument();
+  });
+
+  it("opens the produce basket view on click and creates an apple locally", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Apple 1 created in Produce basket."],
+        basketProduceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const basketOpenButton = await screen.findByTestId("basket-open-button");
+
+    expect(screen.queryByTestId("basket-dialog-overlay")).not.toBeInTheDocument();
+
+    fireEvent.click(basketOpenButton);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(screen.getByTestId("basket-dialog-overlay")).toHaveClass("absolute");
+    expect(screen.getByTestId("basket-dialog-overlay")).toHaveClass("top-full");
+    expect(within(dialog).getByText("No produce created yet.")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByTestId("basket-create-apple-button"));
+
+    await waitFor(() => {
+      expect(within(dialog).getByText("Apple 1")).toBeInTheDocument();
+    });
+
+    expect(within(dialog).getByTestId("basket-produce-produce_1")).toBeInTheDocument();
+    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("1 item");
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "create_produce_item",
+      { produce_type: "apple" },
+    );
   });
 
   it("restores a trashed tool to a workbench station from the trash view", async () => {

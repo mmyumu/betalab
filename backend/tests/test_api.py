@@ -34,6 +34,7 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert created.json()["trash"]["tools"] == []
     assert created.json()["workspace"]["widgets"][0]["id"] == "workbench"
     assert created.json()["workspace"]["widgets"][2]["is_trashed"] is False
+    assert created.json()["workspace"]["produce_items"] == []
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
 
@@ -500,6 +501,29 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
     assert next(
         widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"
     )["is_trashed"] is True
+
+
+def test_create_produce_item_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        produce_created = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "create_produce_item",
+                "payload": {
+                    "produce_type": "apple",
+                },
+            },
+        )
+
+    assert produce_created.status_code == 200
+    assert len(produce_created.json()["workspace"]["produce_items"]) == 1
+    assert produce_created.json()["workspace"]["produce_items"][0]["produce_type"] == "apple"
+    assert produce_created.json()["workspace"]["produce_items"][0]["label"] == "Apple 1"
 
 
 def test_remove_liquid_round_trip_over_http() -> None:

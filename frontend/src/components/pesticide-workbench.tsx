@@ -174,6 +174,7 @@ export function PesticideWorkbench() {
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
   const [widgetLayout, setWidgetLayout] =
     useState<Record<WidgetId, WidgetLayout>>(widgetFrameSpecs);
+  const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
@@ -872,6 +873,12 @@ export function PesticideWorkbench() {
     activeDragItem.toolType === "sample_vial";
 
   const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;
+  const basketProduceItems = state.experiment.workspace.produceItems;
+  const handleCreateApple = () => {
+    void sendWorkbenchCommand("create_produce_item", {
+      produce_type: "apple",
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -1122,21 +1129,100 @@ export function PesticideWorkbench() {
                   zIndex={10 + widgetOrder.indexOf(widgetId)}
                 >
                   {widgetId === "basket" ? (
-                    <WorkspaceEquipmentWidget
-                      eyebrow="Produce basket"
-                    >
-                      <div className="space-y-4">
-                        <ProduceBasketIllustration
-                          className="mx-auto max-w-[18rem]"
-                          itemCount={6}
-                        />
-                        <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3">
-                          <p className="text-sm text-slate-500">
-                            Supplier fruits and vegetables will land here before sample prep.
-                          </p>
+                    <section className="relative overflow-visible">
+                      <WorkspaceEquipmentWidget
+                        eyebrow="Produce basket"
+                      >
+                        <div className="space-y-4">
+                          <button
+                            aria-expanded={isBasketOpen}
+                            aria-haspopup="dialog"
+                            className="block w-full rounded-[1.4rem] border border-slate-200/80 bg-white/90 px-3 py-4 text-left transition hover:border-amber-300 hover:bg-amber-50/40"
+                            data-testid="basket-open-button"
+                            onClick={() => setIsBasketOpen(true)}
+                            type="button"
+                          >
+                            <ProduceBasketIllustration
+                              className="mx-auto max-w-[18rem]"
+                              itemCount={6}
+                            />
+                            <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200/80 bg-white/90 px-3 py-3">
+                              <p className="text-sm text-slate-500">
+                                Click the basket to create a fruit or vegetable input.
+                              </p>
+                              <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+                                {basketProduceItems.length} item{basketProduceItems.length === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                          </button>
                         </div>
-                      </div>
-                    </WorkspaceEquipmentWidget>
+                      </WorkspaceEquipmentWidget>
+                      {isBasketOpen ? (
+                        <div
+                          className="absolute left-0 top-full z-[220] mt-3 w-[24rem] max-w-[min(24rem,calc(100vw-2rem))]"
+                          data-testid="basket-dialog-overlay"
+                        >
+                          <div
+                            className="w-full rounded-[1.4rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+                            role="dialog"
+                          >
+                            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                                  Create produce
+                                </p>
+                                <p className="mt-1 text-sm text-slate-600">
+                                  Start the produce library for sample preparation.
+                                </p>
+                              </div>
+                              <button
+                                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
+                                onClick={() => setIsBasketOpen(false)}
+                                type="button"
+                              >
+                                Close
+                              </button>
+                            </div>
+                            <div className="space-y-4 p-4">
+                              <button
+                                className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
+                                data-testid="basket-create-apple-button"
+                                onClick={handleCreateApple}
+                                type="button"
+                              >
+                                <span className="block text-sm font-semibold text-slate-900">Create apple</span>
+                                <span className="mt-1 block text-sm text-slate-500">
+                                  Add a first produce item to the basket.
+                                </span>
+                              </button>
+                              <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                  Basket contents
+                                </p>
+                                <div className="mt-3 space-y-2">
+                                  {basketProduceItems.length > 0 ? (
+                                    basketProduceItems.map((item) => (
+                                      <div
+                                        className="flex items-center justify-between rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2"
+                                        data-testid={`basket-produce-${item.id}`}
+                                        key={item.id}
+                                      >
+                                        <span className="text-sm font-semibold text-slate-900">{item.label}</span>
+                                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                                          {item.produceType}
+                                        </span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-slate-500">No produce created yet.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </section>
                   ) : widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
                       eyebrow="Autosampler rack"

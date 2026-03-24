@@ -222,7 +222,7 @@ function makeExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { tools: trashTools },
-    workspace: { widgets: workspaceWidgets },
+    workspace: { produceItems: [], widgets: workspaceWidgets },
     audit_log: ["Experiment created", "Start by dragging an extraction tool onto the bench."],
   };
 }

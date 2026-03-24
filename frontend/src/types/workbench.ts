@@ -192,3 +192,11 @@ export type ExperimentWorkspaceWidget = {
   isTrashed: boolean;
   trashable: boolean;
 };
+
+export type ProduceItemType = "apple";
+
+export type ExperimentProduceItem = {
+  id: string;
+  label: string;
+  produceType: ProduceItemType;
+};

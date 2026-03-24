@@ -26,6 +26,7 @@ from app.services.command_handlers.workbench import (
 )
 from app.services.command_handlers.workspace import (
     add_workspace_widget,
+    create_produce_item,
     discard_workspace_widget,
     move_workspace_widget,
 )
@@ -49,6 +50,7 @@ class ExperimentService:
             "add_workspace_widget": add_workspace_widget,
             "move_workspace_widget": move_workspace_widget,
             "discard_workspace_widget": discard_workspace_widget,
+            "create_produce_item": create_produce_item,
             "place_tool_in_rack_slot": place_tool_in_rack_slot,
             "place_workbench_tool_in_rack_slot": place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": remove_rack_tool_to_workbench_slot,

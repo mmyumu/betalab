@@ -16,6 +16,7 @@ const makeExperiment = (): Experiment => ({
     tools: [],
   },
   workspace: {
+    produceItems: [],
     widgets: [],
   },
   audit_log: [],
@@ -156,6 +157,13 @@ describe("api client", () => {
           ],
         },
         workspace: {
+          produce_items: [
+            {
+              id: "produce_1",
+              label: "Apple 1",
+              produce_type: "apple",
+            },
+          ],
           widgets: [
             {
               id: "rack",
@@ -186,6 +194,8 @@ describe("api client", () => {
     expect(experiment.trash.tools[0]?.originLabel).toBe("Station 1");
     expect(experiment.workspace.widgets[0]?.widgetType).toBe("autosampler_rack");
     expect(experiment.workspace.widgets[0]?.isTrashed).toBe(true);
+    expect(experiment.workspace.produceItems[0]?.produceType).toBe("apple");
+    expect(experiment.workspace.produceItems[0]?.label).toBe("Apple 1");
   });
 
   it("throws when experiment creation fails", async () => {

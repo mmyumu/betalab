@@ -43,6 +43,7 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[3].is_present is False
     assert experiment.workspace.widgets[4].is_present is True
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
+    assert experiment.workspace.produce_items == []
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
 
@@ -307,6 +308,38 @@ def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
             "discard_workspace_widget",
             {
                 "widget_id": "basket",
+            },
+        )
+
+
+def test_create_produce_item_adds_apple_to_basket() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "create_produce_item",
+        {
+            "produce_type": "apple",
+        },
+    )
+
+    assert len(updated.workspace.produce_items) == 1
+    assert updated.workspace.produce_items[0].produce_type == "apple"
+    assert updated.workspace.produce_items[0].label == "Apple 1"
+    assert updated.audit_log[-1] == "Apple 1 created in Produce basket."
+
+
+def test_create_produce_item_rejects_unknown_produce_type() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Unsupported produce type"):
+        service.apply_command(
+            experiment.id,
+            "create_produce_item",
+            {
+                "produce_type": "pear",
             },
         )
 

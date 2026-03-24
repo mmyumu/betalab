@@ -2,6 +2,7 @@ import type { Experiment } from "@/types/experiment";
 import type {
   BenchLiquidPortion,
   BenchSlot,
+  ExperimentProduceItem,
   BenchToolInstance,
   ExperimentWorkspaceWidget,
   RackSlot,
@@ -65,6 +66,10 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       tools: experiment.trash.tools.map(normalizeTrashTool),
     },
     workspace: {
+      produceItems:
+        (experiment.workspace.produceItems ?? experiment.workspace.produce_items ?? []).map(
+          normalizeProduceItem,
+        ),
       widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
     },
   };
@@ -135,5 +140,15 @@ function normalizeWorkspaceWidget(
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
     trashable: Boolean(widget.trashable),
+  };
+}
+
+function normalizeProduceItem(
+  item: ExperimentProduceItem & Record<string, unknown>,
+): ExperimentProduceItem {
+  return {
+    id: String(item.id),
+    label: String(item.label),
+    produceType: String(item.produceType ?? item.produce_type) as ExperimentProduceItem["produceType"],
   };
 }

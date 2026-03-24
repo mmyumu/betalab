@@ -81,8 +81,16 @@ class WorkspaceWidget:
 
 
 @dataclass
+class ProduceItem:
+    id: str
+    label: str
+    produce_type: str
+
+
+@dataclass
 class Workspace:
     widgets: list[WorkspaceWidget] = field(default_factory=list)
+    produce_items: list[ProduceItem] = field(default_factory=list)
 
 
 @dataclass
