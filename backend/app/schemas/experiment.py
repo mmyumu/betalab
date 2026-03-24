@@ -91,6 +91,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "add_workspace_widget",
         "move_workspace_widget",
         "discard_workspace_widget",
+        "place_tool_in_rack_slot",
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
         "discard_rack_tool",

@@ -53,19 +53,19 @@ function writePayload(dataTransfer: MockDataTransfer, payload: ToolbarDragPayloa
 }
 
 describe("workbench dnd helpers", () => {
-  it("marks tool and liquid drags as workbench-target drops", () => {
+  it("marks toolbar autosampler vials as compatible with both stations and rack slots", () => {
     const dataTransfer = createDataTransfer();
 
     writePayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "rack_slot"],
       itemId: "sample_vial_lcms",
       itemType: "tool",
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
-    expect(hasCompatibleDropTarget(dataTransfer, "workspace_canvas")).toBe(false);
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(true);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "rack_slot"],
       itemId: "sample_vial_lcms",
       itemType: "tool",
     });

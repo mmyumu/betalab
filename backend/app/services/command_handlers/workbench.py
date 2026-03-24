@@ -10,18 +10,7 @@ def place_tool_on_workbench(experiment: Experiment, payload: dict) -> None:
     if slot.tool is not None:
         raise ValueError(f"{slot.label} already contains a tool")
 
-    tool_definition = get_workbench_tool_definition(payload["tool_id"])
-    slot.tool = WorkbenchTool(
-        id=new_id("bench_tool"),
-        tool_id=tool_definition.id,
-        label=tool_definition.name,
-        subtitle=tool_definition.subtitle,
-        accent=tool_definition.accent,
-        tool_type=tool_definition.tool_type,
-        capacity_ml=tool_definition.capacity_ml,
-        accepts_liquids=tool_definition.accepts_liquids,
-        trashable=True,
-    )
+    slot.tool = build_workbench_tool(payload["tool_id"])
     experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
 
 
@@ -172,3 +161,18 @@ def _get_next_workbench_slot_index(experiment: Experiment) -> int:
                 existing_indices.append(int(suffix))
 
     return (max(existing_indices) if existing_indices else 0) + 1
+
+
+def build_workbench_tool(tool_id: str) -> WorkbenchTool:
+    tool_definition = get_workbench_tool_definition(tool_id)
+    return WorkbenchTool(
+        id=new_id("bench_tool"),
+        tool_id=tool_definition.id,
+        label=tool_definition.name,
+        subtitle=tool_definition.subtitle,
+        accent=tool_definition.accent,
+        tool_type=tool_definition.tool_type,
+        capacity_ml=tool_definition.capacity_ml,
+        accepts_liquids=tool_definition.accepts_liquids,
+        trashable=True,
+    )

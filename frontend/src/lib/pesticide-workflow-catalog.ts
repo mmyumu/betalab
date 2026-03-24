@@ -1,3 +1,4 @@
+import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
 
 export const pesticideWorkflowCategories: ToolbarCategory[] = [
@@ -8,7 +9,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "centrifuge_tube_50ml",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getToolDropTargets("centrifuge_tube"),
         itemType: "tool",
         name: "50 mL centrifuge tube",
         subtitle: "QuEChERS extraction",
@@ -21,7 +22,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "cleanup_tube_dspe",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getToolDropTargets("cleanup_tube"),
         itemType: "tool",
         name: "d-SPE cleanup tube",
         subtitle: "Matrix cleanup",
@@ -34,7 +35,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "sample_vial_lcms",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getToolDropTargets("sample_vial"),
         itemType: "tool",
         name: "Autosampler vial",
         subtitle: "Injection ready",
@@ -47,7 +48,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "beaker_rinse",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getToolDropTargets("beaker"),
         itemType: "tool",
         name: "Bench beaker",
         subtitle: "Temporary holding",

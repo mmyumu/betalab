@@ -24,7 +24,9 @@ import {
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
+import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import {
+  pesticideToolCatalog,
   pesticideWorkflowCategories,
 } from "@/lib/pesticide-workflow-catalog";
 import type { Experiment } from "@/types/experiment";
@@ -325,16 +327,7 @@ export function PesticideWorkbench() {
   };
 
   const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => {
-    const allowedDropTargets: ("workbench_slot" | "rack_slot" | "trash_bin")[] = ["workbench_slot"];
-
-    if (tool.toolType === "sample_vial") {
-      allowedDropTargets.push("rack_slot");
-    }
-    if (tool.trashable) {
-      allowedDropTargets.push("trash_bin");
-    }
-
-    return allowedDropTargets;
+    return getToolDropTargets(tool.toolType, { includeTrash: tool.trashable });
   };
 
   const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
@@ -718,6 +711,21 @@ export function PesticideWorkbench() {
       return;
     }
 
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    const toolbarTool =
+      toolbarPayload?.itemType === "tool" ? pesticideToolCatalog[toolbarPayload.itemId] : null;
+    if (toolbarTool?.toolType === "sample_vial") {
+      event.preventDefault();
+      event.stopPropagation();
+
+      void sendWorkbenchCommand("place_tool_in_rack_slot", {
+        rack_slot_id: targetRackSlot.id,
+        tool_id: toolbarTool.id,
+      });
+      clearDropTargets();
+      return;
+    }
+
     const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
     if (trashToolPayload?.toolType === "sample_vial") {
       event.preventDefault();
@@ -751,10 +759,7 @@ export function PesticideWorkbench() {
     trashTool: TrashToolEntry,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets: DropTargetType[] =
-      trashTool.tool.toolType === "sample_vial"
-        ? ["workbench_slot", "rack_slot"]
-        : ["workbench_slot"];
+    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
 
     writeTrashToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -807,8 +812,10 @@ export function PesticideWorkbench() {
 
   const isRackSlotHighlighted =
     activeDropTargets.includes("rack_slot") &&
-    ((activeDragItem?.kind === "bench_tool" &&
-      slots.find((slot) => slot.id === activeDragItem.sourceSlotId)?.tool?.toolType === "sample_vial") ||
+    (((activeDragItem?.kind === "toolbar" &&
+      activeDragItem.itemType === "tool") ||
+      (activeDragItem?.kind === "bench_tool" &&
+        slots.find((slot) => slot.id === activeDragItem.sourceSlotId)?.tool?.toolType === "sample_vial")) ||
       (activeDragItem?.kind === "trash_tool" && activeDragItem.toolType === "sample_vial"));
 
   const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;

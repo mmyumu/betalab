@@ -297,6 +297,25 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert discarded.audit_log[-1] == "Autosampler rack removed from workspace."
 
 
+def test_place_tool_in_rack_slot_creates_a_vial_directly_from_the_palette() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "place_tool_in_rack_slot",
+        {
+            "rack_slot_id": "rack_slot_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+
+    assert updated.rack.slots[0].tool is not None
+    assert updated.rack.slots[0].tool.label == "Autosampler vial"
+    assert updated.workbench.slots[0].tool is None
+    assert updated.audit_log[-1] == "Autosampler vial placed in Position 1."
+
+
 def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

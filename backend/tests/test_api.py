@@ -287,6 +287,29 @@ def test_rack_commands_round_trip_over_http() -> None:
     assert removed.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
 
 
+def test_place_tool_in_rack_slot_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        loaded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_in_rack_slot",
+                "payload": {
+                    "rack_slot_id": "rack_slot_1",
+                    "tool_id": "sample_vial_lcms",
+                },
+            },
+        )
+
+    assert loaded.status_code == 200
+    assert loaded.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
+    assert loaded.json()["workbench"]["slots"][0]["tool"] is None
+
+
 def test_discard_commands_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

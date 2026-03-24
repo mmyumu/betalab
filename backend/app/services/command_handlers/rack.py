@@ -2,6 +2,20 @@ from __future__ import annotations
 
 from app.domain.models import Experiment
 from app.services.command_handlers.support import find_rack_slot, find_workbench_slot
+from app.services.command_handlers.workbench import build_workbench_tool
+
+
+def place_tool_in_rack_slot(experiment: Experiment, payload: dict) -> None:
+    rack_slot = find_rack_slot(experiment.rack, payload["rack_slot_id"])
+    if rack_slot.tool is not None:
+        raise ValueError(f"{rack_slot.label} already contains a vial")
+
+    tool = build_workbench_tool(payload["tool_id"])
+    if tool.tool_type != "sample_vial":
+        raise ValueError("Only autosampler vials can be placed in the rack.")
+
+    rack_slot.tool = tool
+    experiment.audit_log.append(f"{rack_slot.tool.label} placed in {rack_slot.label}.")
 
 
 def place_workbench_tool_in_rack_slot(experiment: Experiment, payload: dict) -> None:
