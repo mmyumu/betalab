@@ -718,7 +718,7 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
-    fireEvent.mouseDown(screen.getByText("Workspace Equipment"), {
+    fireEvent.mouseDown(within(screen.getByTestId("widget-rack")).getByText("Autosampler rack"), {
       button: 0,
       clientX: 500,
       clientY: 430,

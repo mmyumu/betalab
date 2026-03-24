@@ -1083,8 +1083,7 @@ export function PesticideWorkbench() {
                     </WorkspaceEquipmentWidget>
                   ) : widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
-                      eyebrow="Workspace Equipment"
-                      title="Autosampler rack"
+                      eyebrow="Autosampler rack"
                     >
                       <div className="space-y-4">
                         <div className="relative mx-auto max-w-[30rem]">
@@ -1180,13 +1179,12 @@ export function PesticideWorkbench() {
                     <WorkspaceEquipmentWidget
                       badge={instrumentStatus === "ready" ? "Ready" : "Idle"}
                       description="Single LC-MS/MS system widget with LC and MS/MS modules kept visually distinct for pedagogy."
-                      eyebrow="Workspace Equipment"
+                      eyebrow="LC-MS/MS"
                       footer={
                         instrumentStatus === "ready"
                           ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
                           : "Populate the rack with at least one autosampler vial to switch the instrument preview into a ready state."
                       }
-                      title="LC-MS/MS"
                     >
                       <LcMsMsInstrumentIllustration
                         className="mx-auto max-w-[36rem]"
