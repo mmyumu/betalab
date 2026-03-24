@@ -1,5 +1,6 @@
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
+import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import type { WorkspaceWidgetType } from "@/types/workbench";
 
 type WorkspaceEquipmentIconProps = {
@@ -15,6 +16,14 @@ export function WorkspaceEquipmentIcon({
     return (
       <div className={className} data-widget-type={widgetType}>
         <AutosamplerRackIllustration slotCount={4} tone="neutral" />
+      </div>
+    );
+  }
+
+  if (widgetType === "produce_basket") {
+    return (
+      <div className={className} data-widget-type={widgetType}>
+        <ProduceBasketIllustration itemCount={5} />
       </div>
     );
   }

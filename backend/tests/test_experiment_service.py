@@ -35,11 +35,13 @@ def test_create_experiment_returns_empty_workbench() -> None:
         "trash",
         "rack",
         "instrument",
+        "basket",
     ]
     assert experiment.workspace.widgets[0].is_present is True
     assert experiment.workspace.widgets[1].is_present is True
     assert experiment.workspace.widgets[2].is_present is False
     assert experiment.workspace.widgets[3].is_present is False
+    assert experiment.workspace.widgets[4].is_present is False
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 

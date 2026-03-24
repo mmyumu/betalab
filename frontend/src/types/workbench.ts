@@ -15,8 +15,8 @@ export type ToolType = "volumetric_flask" | "amber_bottle" | "sample_vial" | "be
 
 export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
 
-export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument";
-export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument";
+export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
+export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 
 export type ToolCatalogItem = ToolbarBaseItem & {

@@ -6,6 +6,7 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { FloatingWidget } from "@/components/floating-widget";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
+import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
@@ -56,10 +57,11 @@ type ActiveDragItem =
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load pesticide workbench";
-const widgetIds = ["toolbar", "workbench", "trash", "rack", "instrument"] as const;
+const widgetIds = ["toolbar", "workbench", "trash", "rack", "instrument", "basket"] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
+  produce_basket_widget: "basket",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
   toolbar: false,
@@ -67,6 +69,7 @@ const widgetTrashability: Record<WidgetId, boolean> = {
   trash: false,
   rack: true,
   instrument: true,
+  basket: true,
 };
 
 type WidgetId = (typeof widgetIds)[number];
@@ -85,6 +88,7 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
+  basket: { x: 1460, y: 248, width: 320, fallbackHeight: 320 },
 };
 const rackSlotCount = 12;
 const rackIllustrationViewBox = { height: 320, width: 560 };
@@ -101,7 +105,7 @@ function isWidgetId(value: string): value is WidgetId {
 }
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
-  return value === "rack" || value === "instrument";
+  return value === "rack" || value === "instrument" || value === "basket";
 }
 
 function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
@@ -151,6 +155,7 @@ function buildWidgetLayout(workspaceWidgets: ExperimentWorkspaceWidget[]): Recor
     trash: widgetFrameSpecs.trash,
     rack: widgetFrameSpecs.rack,
     instrument: widgetFrameSpecs.instrument,
+    basket: widgetFrameSpecs.basket,
   };
 
   workspaceWidgets.forEach((widget) => {
@@ -181,6 +186,7 @@ export function PesticideWorkbench() {
     trash: widgetFrameSpecs.trash.fallbackHeight,
     rack: widgetFrameSpecs.rack.fallbackHeight,
     instrument: widgetFrameSpecs.instrument.fallbackHeight,
+    basket: widgetFrameSpecs.basket.fallbackHeight,
   });
   const hasLoadedInitialExperiment = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -1036,13 +1042,39 @@ export function PesticideWorkbench() {
                   id={widgetId}
                   isActive={activeWidgetId === widgetId}
                   key={widgetId}
-                  label={widgetId === "rack" ? "Rack Widget" : "Instrument Widget"}
+                  label={
+                    widgetId === "rack"
+                      ? "Rack Widget"
+                      : widgetId === "instrument"
+                        ? "Instrument Widget"
+                        : "Produce Basket Widget"
+                  }
                   onDragStart={handleWidgetDragStart}
                   onHeightChange={handleWidgetHeightChange}
                   position={widgetLayout[widgetId]}
                   zIndex={10 + widgetOrder.indexOf(widgetId)}
                 >
-                  {widgetId === "rack" ? (
+                  {widgetId === "basket" ? (
+                    <WorkspaceEquipmentWidget
+                      eyebrow="Supplier input"
+                      title="Produce basket"
+                    >
+                      <div className="space-y-4">
+                        <ProduceBasketIllustration
+                          className="mx-auto max-w-[18rem]"
+                          itemCount={6}
+                        />
+                        <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3">
+                          <p className="text-sm font-semibold text-slate-900">
+                            Incoming produce container
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            Supplier fruits and vegetables will land here before sample prep.
+                          </p>
+                        </div>
+                      </div>
+                    </WorkspaceEquipmentWidget>
+                  ) : widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
                       eyebrow="Workspace Equipment"
                       title="Autosampler rack"

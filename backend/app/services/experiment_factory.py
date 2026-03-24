@@ -73,6 +73,16 @@ def build_experiment() -> Experiment:
                     is_trashed=False,
                     trashable=True,
                 ),
+                WorkspaceWidget(
+                    id="basket",
+                    widget_type="produce_basket",
+                    label="Produce basket",
+                    x=1460,
+                    y=248,
+                    is_present=False,
+                    is_trashed=False,
+                    trashable=True,
+                ),
             ]
         ),
         audit_log=[

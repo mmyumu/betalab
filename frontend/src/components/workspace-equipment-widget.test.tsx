@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
+import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 
 describe("workspace equipment illustrations", () => {
   it("renders rack occupancy as data attributes", () => {
@@ -94,6 +95,15 @@ describe("workspace equipment illustrations", () => {
     expect(screen.getByTestId("lc-msms-instrument-illustration")).toHaveAttribute(
       "data-active-stage",
       "msms",
+    );
+  });
+
+  it("renders produce basket state as data attributes", () => {
+    render(<ProduceBasketIllustration itemCount={8} testId="produce-basket-illustration" />);
+
+    expect(screen.getByTestId("produce-basket-illustration")).toHaveAttribute(
+      "data-item-count",
+      "8",
     );
   });
 });
