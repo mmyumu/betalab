@@ -147,9 +147,9 @@ function makeWorkspaceWidgets(
       label: "Produce basket",
       x: 1460,
       y: 248,
-      isPresent: false,
+      isPresent: true,
       isTrashed: false,
-      trashable: true,
+      trashable: false,
     },
   ];
 
@@ -227,10 +227,10 @@ describe("PesticideWorkbench", () => {
 
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
-    expect(screen.getByTestId("toolbar-item-produce_basket_widget")).toBeInTheDocument();
+    expect(screen.queryByTestId("toolbar-item-produce_basket_widget")).not.toBeInTheDocument();
+    expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
     expect(screen.queryByTestId("widget-instrument")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("widget-basket")).not.toBeInTheDocument();
   });
 
   it("starts with two workbench stations and can add a station", async () => {
@@ -340,14 +340,9 @@ describe("PesticideWorkbench", () => {
     expect(createExperiment).toHaveBeenCalledTimes(2);
   });
 
-  it("adds workspace equipment widgets when dropped from the palette into the canvas", async () => {
+  it("keeps the produce basket visible and adds the optional workspace equipment widgets", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand)
-      .mockResolvedValueOnce(
-        makeWorkbenchExperiment({
-          workspaceWidgets: makeWorkspaceWidgets([{}, {}, {}, {}, { isPresent: true, x: 379, y: 388 }]),
-        }),
-      )
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
           workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
@@ -368,18 +363,9 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
     });
 
+    expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
+
     const workspace = screen.getByTestId("widget-workspace");
-    const basketTransfer = createDataTransfer();
-
-    fireEvent.dragStart(screen.getByTestId("toolbar-item-produce_basket_widget"), {
-      dataTransfer: basketTransfer,
-    });
-    fireEvent.dragOver(workspace, { dataTransfer: basketTransfer });
-    fireEvent.drop(workspace, { clientX: 360, clientY: 420, dataTransfer: basketTransfer });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
-    });
 
     expect(
       within(screen.getByTestId("widget-basket")).getByTestId("produce-basket-illustration"),
@@ -849,6 +835,33 @@ describe("PesticideWorkbench", () => {
       "experiment_pesticides",
       "add_workspace_widget",
       expect.objectContaining({ widget_id: "rack" }),
+    );
+  });
+
+  it("does not remove the produce basket when dragged onto the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    const basket = await screen.findByTestId("widget-basket");
+
+    fireEvent.mouseDown(within(basket).getByText("Produce basket"), {
+      button: 0,
+      clientX: 1480,
+      clientY: 280,
+    });
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
+
+    expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "move_workspace_widget",
+      { widget_id: "basket", x: 1460, y: 248 },
+    );
+    expect(sendExperimentCommand).not.toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "discard_workspace_widget",
+      { widget_id: "basket" },
     );
   });
 

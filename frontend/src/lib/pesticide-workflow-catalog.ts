@@ -131,17 +131,6 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
         trashable: true,
         widgetType: "lc_msms_instrument",
       },
-      {
-        id: "produce_basket_widget",
-        allowedDropTargets: ["workspace_canvas"],
-        itemType: "workspace_widget",
-        name: "Produce basket",
-        subtitle: "Supplier input",
-        description: "Incoming fruit and vegetable container used as the upstream sample source before preparation.",
-        accent: "amber",
-        trashable: true,
-        widgetType: "produce_basket",
-      },
     ],
   },
 ];

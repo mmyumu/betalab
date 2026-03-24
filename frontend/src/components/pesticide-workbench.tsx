@@ -65,7 +65,7 @@ const widgetTrashability: Record<WidgetId, boolean> = {
   trash: false,
   rack: true,
   instrument: true,
-  basket: true,
+  basket: false,
 };
 
 type WidgetId = (typeof widgetIds)[number];
@@ -1123,8 +1123,7 @@ export function PesticideWorkbench() {
                 >
                   {widgetId === "basket" ? (
                     <WorkspaceEquipmentWidget
-                      eyebrow="Supplier input"
-                      title="Produce basket"
+                      eyebrow="Produce basket"
                     >
                       <div className="space-y-4">
                         <ProduceBasketIllustration
@@ -1132,10 +1131,7 @@ export function PesticideWorkbench() {
                           itemCount={6}
                         />
                         <div className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3">
-                          <p className="text-sm font-semibold text-slate-900">
-                            Incoming produce container
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="text-sm text-slate-500">
                             Supplier fruits and vegetables will land here before sample prep.
                           </p>
                         </div>

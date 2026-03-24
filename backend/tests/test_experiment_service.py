@@ -41,7 +41,7 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[1].is_present is True
     assert experiment.workspace.widgets[2].is_present is False
     assert experiment.workspace.widgets[3].is_present is False
-    assert experiment.workspace.widgets[4].is_present is False
+    assert experiment.workspace.widgets[4].is_present is True
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
@@ -295,6 +295,20 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert rack_widget.is_present is False
     assert rack_widget.is_trashed is True
     assert discarded.audit_log[-1] == "Autosampler rack removed from workspace."
+
+
+def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Produce basket cannot be discarded."):
+        service.apply_command(
+            experiment.id,
+            "discard_workspace_widget",
+            {
+                "widget_id": "basket",
+            },
+        )
 
 
 def test_place_tool_in_rack_slot_creates_a_vial_directly_from_the_palette() -> None:

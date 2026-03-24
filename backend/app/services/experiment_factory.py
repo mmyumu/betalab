@@ -79,9 +79,9 @@ def build_experiment() -> Experiment:
                     label="Produce basket",
                     x=1460,
                     y=248,
-                    is_present=False,
+                    is_present=True,
                     is_trashed=False,
-                    trashable=True,
+                    trashable=False,
                 ),
             ]
         ),

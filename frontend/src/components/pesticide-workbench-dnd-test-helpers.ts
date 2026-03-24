@@ -58,7 +58,6 @@ export type DndSourceCase = {
 const workspaceWidgetItemToId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
-  produce_basket_widget: "basket",
 } as const;
 
 const toolbarItems = pesticideWorkflowCategories.flatMap((category) => category.items);
@@ -170,9 +169,9 @@ function makeWorkspaceWidgets(
       label: "Produce basket",
       x: 1460,
       y: 248,
-      isPresent: false,
+      isPresent: true,
       isTrashed: false,
-      trashable: true,
+      trashable: false,
     },
   ];
 
@@ -565,5 +564,4 @@ export const dndSourceCases: DndSourceCase[] = [
   ...toolItems.map(createTrashToolSourceCase),
   createTrashWidgetSourceCase("rack", "autosampler_rack", "Autosampler rack"),
   createTrashWidgetSourceCase("instrument", "lc_msms_instrument", "LC-MS/MS"),
-  createTrashWidgetSourceCase("basket", "produce_basket", "Produce basket"),
 ];
