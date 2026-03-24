@@ -53,11 +53,7 @@ function syncTypes(dataTransfer: MockDataTransfer) {
 
 function writePayload(
   dataTransfer: MockDataTransfer,
-  payload: {
-    allowedDropTargets: Array<"workbench_slot" | "workspace_canvas" | "rack_slot" | "trash_bin">;
-    itemId: string;
-    itemType: "tool" | "liquid" | "workspace_widget";
-  },
+  payload: Parameters<typeof writeToolbarDragPayload>[1],
 ) {
   writeToolbarDragPayload(dataTransfer, payload);
   syncTypes(dataTransfer);
@@ -181,8 +177,13 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
       itemId: "sample_vial_lcms",
       itemType: "tool",
+      sourceId: "sample_vial_lcms",
+      sourceKind: "palette",
+      toolType: "sample_vial",
+      trashable: true,
     });
 
     render(
@@ -203,8 +204,13 @@ describe("PesticideWorkbenchPanel", () => {
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onToolbarItemDrop).toHaveBeenCalledWith("station_1", {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
       itemId: "sample_vial_lcms",
       itemType: "tool",
+      sourceId: "sample_vial_lcms",
+      sourceKind: "palette",
+      toolType: "sample_vial",
+      trashable: true,
     });
   });
 
@@ -213,8 +219,13 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "liquid",
       itemId: "acetonitrile_extraction",
       itemType: "liquid",
+      liquidType: "acetonitrile",
+      sourceId: "acetonitrile_extraction",
+      sourceKind: "palette",
+      trashable: false,
     });
 
     render(
@@ -241,8 +252,13 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "liquid",
       itemId: "acetonitrile_extraction",
       itemType: "liquid",
+      liquidType: "acetonitrile",
+      sourceId: "acetonitrile_extraction",
+      sourceKind: "palette",
+      trashable: false,
     });
 
     render(
@@ -281,8 +297,13 @@ describe("PesticideWorkbenchPanel", () => {
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onToolbarItemDrop).toHaveBeenCalledWith("station_1", {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "liquid",
       itemId: "acetonitrile_extraction",
       itemType: "liquid",
+      liquidType: "acetonitrile",
+      sourceId: "acetonitrile_extraction",
+      sourceKind: "palette",
+      trashable: false,
     });
   });
 
@@ -291,8 +312,13 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
       allowedDropTargets: ["workspace_canvas"],
+      entityKind: "workspace_widget",
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
+      sourceId: "autosampler_rack_widget",
+      sourceKind: "palette",
+      trashable: true,
+      widgetType: "autosampler_rack",
     });
 
     render(
@@ -319,6 +345,9 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writeBenchToolDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
+      sourceId: "station_1",
+      sourceKind: "workbench",
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
@@ -345,6 +374,9 @@ describe("PesticideWorkbenchPanel", () => {
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onBenchToolDrop).toHaveBeenCalledWith("station_2", {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
+      sourceId: "station_1",
+      sourceKind: "workbench",
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
@@ -357,7 +389,10 @@ describe("PesticideWorkbenchPanel", () => {
     const dataTransfer = createDataTransfer();
     writeRackToolDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
       rackSlotId: "rack_slot_1",
+      sourceId: "rack_slot_1",
+      sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
       trashable: true,
@@ -383,7 +418,10 @@ describe("PesticideWorkbenchPanel", () => {
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onBenchToolDrop).toHaveBeenCalledWith("station_2", {
       allowedDropTargets: ["workbench_slot"],
+      entityKind: "tool",
       rackSlotId: "rack_slot_1",
+      sourceId: "rack_slot_1",
+      sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
       trashable: true,

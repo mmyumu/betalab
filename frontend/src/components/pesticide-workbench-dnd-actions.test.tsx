@@ -1,0 +1,119 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { PesticideWorkbench } from "@/components/pesticide-workbench";
+import {
+  createDataTransfer,
+  dndSourceCases,
+  dndTargetCases,
+  type DndTargetId,
+} from "@/components/pesticide-workbench-dnd-test-helpers";
+
+vi.mock("@/lib/api", () => ({
+  createExperiment: vi.fn(),
+  sendExperimentCommand: vi.fn(),
+}));
+
+import { createExperiment, sendExperimentCommand } from "@/lib/api";
+
+async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[number]) {
+  const experiment = sourceCase.buildExperiment();
+  vi.mocked(createExperiment).mockResolvedValue(experiment);
+  vi.mocked(sendExperimentCommand).mockResolvedValue(experiment);
+
+  render(<PesticideWorkbench />);
+
+  await waitFor(() => {
+    expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
+    expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    expect(screen.getByTestId("bench-slot-station_2")).toBeInTheDocument();
+    expect(screen.getByTestId("trash-dropzone")).toBeInTheDocument();
+  });
+
+  if (sourceCase.expectRackWidget) {
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
+      expect(screen.getByTestId("rack-illustration-slot-1")).toBeInTheDocument();
+    });
+  } else {
+    expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("rack-illustration-slot-1")).not.toBeInTheDocument();
+  }
+
+  if (sourceCase.openTrash) {
+    fireEvent.click(screen.getByTestId("trash-dropzone"));
+    await waitFor(() => {
+      expect(screen.getByTestId(sourceCase.sourceTestId)).toBeInTheDocument();
+    });
+  }
+}
+
+function isAvailableTarget(
+  sourceCase: (typeof dndSourceCases)[number],
+  targetId: DndTargetId,
+) {
+  return sourceCase.availableTargets.includes(targetId);
+}
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("PesticideWorkbench DnD actions", () => {
+  it("routes palette workspace widget dropped on the workspace inner surface to add_workspace_widget", async () => {
+    const sourceCase = dndSourceCases.find((entry) => entry.id === "palette-autosampler_rack_widget");
+    expect(sourceCase).toBeDefined();
+    await renderWorkbenchForSource(sourceCase!);
+
+    const dataTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId(sourceCase!.sourceTestId), { dataTransfer });
+    fireEvent.drop(screen.getByTestId("workspace-drop-surface-grid"), {
+      clientX: 980,
+      clientY: 420,
+      dataTransfer,
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_workspace_widget",
+      expect.objectContaining({ widget_id: "rack" }),
+    );
+  });
+
+  dndSourceCases.forEach((sourceCase) => {
+    dndTargetCases.forEach((targetCase) => {
+      if (!isAvailableTarget(sourceCase, targetCase.id)) {
+        return;
+      }
+
+      const expectation = sourceCase.targetExpectations[targetCase.id];
+
+      it(`routes ${sourceCase.label} -> ${targetCase.label} to ${
+        expectation?.command?.type ?? "no backend command"
+      }`, async () => {
+        await renderWorkbenchForSource(sourceCase);
+
+        const dataTransfer = createDataTransfer();
+        fireEvent.dragStart(screen.getByTestId(sourceCase.sourceTestId), { dataTransfer });
+
+        const dropPayload =
+          targetCase.id === "widget-workspace"
+            ? { clientX: 980, clientY: 420, dataTransfer }
+            : { dataTransfer };
+
+        fireEvent.drop(screen.getByTestId(targetCase.id), dropPayload);
+
+        if (!expectation?.command) {
+          expect(sendExperimentCommand).not.toHaveBeenCalled();
+          return;
+        }
+
+        expect(sendExperimentCommand).toHaveBeenCalledWith(
+          "experiment_pesticides",
+          expectation.command.type,
+          expectation.command.payload,
+        );
+      });
+    });
+  });
+});

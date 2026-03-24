@@ -58,16 +58,26 @@ describe("workbench dnd helpers", () => {
 
     writePayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot", "rack_slot"],
+      entityKind: "tool",
       itemId: "sample_vial_lcms",
       itemType: "tool",
+      sourceId: "sample_vial_lcms",
+      sourceKind: "palette",
+      toolType: "sample_vial",
+      trashable: true,
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(true);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot", "rack_slot"],
+      entityKind: "tool",
       itemId: "sample_vial_lcms",
       itemType: "tool",
+      sourceId: "sample_vial_lcms",
+      sourceKind: "palette",
+      toolType: "sample_vial",
+      trashable: true,
     });
   });
 
@@ -76,16 +86,26 @@ describe("workbench dnd helpers", () => {
 
     writePayload(dataTransfer, {
       allowedDropTargets: ["workspace_canvas"],
+      entityKind: "workspace_widget",
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
+      sourceId: "autosampler_rack_widget",
+      sourceKind: "palette",
+      trashable: true,
+      widgetType: "autosampler_rack",
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(false);
     expect(hasCompatibleDropTarget(dataTransfer, "workspace_canvas")).toBe(true);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workspace_canvas"],
+      entityKind: "workspace_widget",
       itemId: "autosampler_rack_widget",
       itemType: "workspace_widget",
+      sourceId: "autosampler_rack_widget",
+      sourceKind: "palette",
+      trashable: true,
+      widgetType: "autosampler_rack",
     });
   });
 
@@ -94,6 +114,9 @@ describe("workbench dnd helpers", () => {
 
     writeBenchToolDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot", "rack_slot", "trash_bin"],
+      entityKind: "tool",
+      sourceId: "station_1",
+      sourceKind: "workbench",
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
@@ -106,6 +129,9 @@ describe("workbench dnd helpers", () => {
     expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readBenchToolDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot", "rack_slot", "trash_bin"],
+      entityKind: "tool",
+      sourceId: "station_1",
+      sourceKind: "workbench",
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
@@ -118,6 +144,9 @@ describe("workbench dnd helpers", () => {
 
     writeBenchToolDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "tool",
+      sourceId: "station_2",
+      sourceKind: "workbench",
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
@@ -130,6 +159,9 @@ describe("workbench dnd helpers", () => {
     expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readBenchToolDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "tool",
+      sourceId: "station_2",
+      sourceKind: "workbench",
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
@@ -142,7 +174,10 @@ describe("workbench dnd helpers", () => {
 
     writeRackToolDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "tool",
       rackSlotId: "rack_slot_1",
+      sourceId: "rack_slot_1",
+      sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
       trashable: true,
@@ -154,7 +189,10 @@ describe("workbench dnd helpers", () => {
     expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(readRackToolDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "tool",
       rackSlotId: "rack_slot_1",
+      sourceId: "rack_slot_1",
+      sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
       trashable: true,

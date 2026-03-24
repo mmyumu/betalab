@@ -75,6 +75,7 @@ export function FloatingWidget({
   return (
     <div
       className="absolute"
+      data-workspace-drop-exclude="true"
       data-testid={`widget-${id}`}
       onMouseDown={handleMouseDown}
       ref={containerRef}

@@ -6,6 +6,7 @@ import { BenchToolCard } from "@/components/bench-tool-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   hasCompatibleDropTarget,
+  readDragDescriptor,
   readBenchToolDragPayload,
   readRackToolDragPayload,
   readTrashToolDragPayload,
@@ -55,47 +56,32 @@ export function PesticideWorkbenchPanel({
   statusMessage,
   onToolbarItemDrop,
 }: PesticideWorkbenchPanelProps) {
-  const canAcceptBenchToolDrop = (slot: BenchSlot, payload: BenchToolDragPayload) => {
-    return slot.tool === null && payload.sourceSlotId !== slot.id;
-  };
-
-  const canAcceptRackToolDrop = (slot: BenchSlot, _payload: RackToolDragPayload) => {
-    return slot.tool === null;
-  };
-
-  const canAcceptToolbarDrop = (slot: BenchSlot, payload: ToolbarDragPayload) => {
-    if (payload.itemType === "tool") {
-      return slot.tool === null;
-    }
-    if (payload.itemType === "liquid") {
-      return slot.tool !== null && slot.tool.accepts_liquids;
-    }
-    return false;
-  };
-
   const canAcceptWorkbenchDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
     if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
       return false;
     }
 
-    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload) {
-      return canAcceptBenchToolDrop(slot, benchToolPayload);
+    const descriptor = readDragDescriptor(event.dataTransfer);
+    if (!descriptor) {
+      return false;
     }
 
-    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload) {
-      return canAcceptRackToolDrop(slot, rackToolPayload);
+    if (descriptor.entityKind === "tool") {
+      if (descriptor.sourceKind === "workbench") {
+        return slot.tool === null && descriptor.sourceId !== slot.id;
+      }
+
+      if (
+        descriptor.sourceKind === "palette" ||
+        descriptor.sourceKind === "rack" ||
+        descriptor.sourceKind === "trash"
+      ) {
+        return slot.tool === null;
+      }
     }
 
-    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
-    if (trashToolPayload) {
-      return slot.tool === null;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload) {
-      return canAcceptToolbarDrop(slot, toolbarPayload);
+    if (descriptor.entityKind === "liquid") {
+      return slot.tool !== null && slot.tool.accepts_liquids;
     }
 
     return false;

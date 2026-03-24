@@ -13,12 +13,14 @@ import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widge
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
+  createToolbarDragPayload,
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
   readRackToolDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
   readWorkspaceWidgetDragPayload,
+  toDragDescriptor,
   writeBenchToolDragPayload,
   writeRackToolDragPayload,
   writeTrashToolDragPayload,
@@ -34,13 +36,13 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  DragDescriptor,
   DropTargetType,
   ExperimentWorkspaceWidget,
   RackSlot,
   RackToolDragPayload,
   TrashToolDragPayload,
   TrashToolEntry,
-  ToolbarItem,
   ToolbarDragPayload,
 } from "@/types/workbench";
 
@@ -48,14 +50,6 @@ type WorkbenchState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { experiment: Experiment; status: "ready" };
-
-type ActiveDragItem =
-  | { kind: "toolbar"; itemType: ToolbarItem["itemType"] }
-  | { kind: "bench_tool"; sourceSlotId: string }
-  | { kind: "rack_tool" }
-  | { kind: "trash_tool"; toolType: BenchToolInstance["toolType"] }
-  | { kind: "workspace_widget" }
-  | null;
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load pesticide workbench";
@@ -176,7 +170,7 @@ export function PesticideWorkbench() {
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
-  const [activeDragItem, setActiveDragItem] = useState<ActiveDragItem>(null);
+  const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
   const [widgetLayout, setWidgetLayout] =
     useState<Record<WidgetId, WidgetLayout>>(widgetFrameSpecs);
@@ -345,13 +339,25 @@ export function PesticideWorkbench() {
 
     writeBenchToolDragPayload(dataTransfer, {
       allowedDropTargets: [...getBenchToolAllowedDropTargets(tool)],
+      entityKind: "tool",
+      sourceId: slotId,
+      sourceKind: "workbench",
       sourceSlotId: slotId,
       toolId: tool.toolId,
       toolType: tool.toolType,
       trashable: tool.trashable,
     });
-    showDropTargets(getBenchToolAllowedDropTargets(tool));
-    setActiveDragItem({ kind: "bench_tool", sourceSlotId: slotId });
+    const descriptor = {
+      allowedDropTargets: getBenchToolAllowedDropTargets(tool),
+      entityKind: "tool" as const,
+      sourceId: slotId,
+      sourceKind: "workbench" as const,
+      toolId: tool.toolId,
+      toolType: tool.toolType,
+      trashable: tool.trashable,
+    };
+    showDropTargets(descriptor.allowedDropTargets);
+    setActiveDragItem(descriptor);
   };
 
   const handleBenchToolDrop = (
@@ -559,12 +565,22 @@ export function PesticideWorkbench() {
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("[data-workspace-drop-exclude='true']")) {
+      return;
+    }
+
     if (hasCompatibleDropTarget(event.dataTransfer, "workspace_canvas")) {
       event.preventDefault();
     }
   };
 
   const handleWorkspaceDrop = (event: DragEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("[data-workspace-drop-exclude='true']")) {
+      return;
+    }
+
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     if (toolbarPayload?.itemType === "workspace_widget") {
       const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
@@ -744,15 +760,31 @@ export function PesticideWorkbench() {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
+    const allowedDropTargets: DropTargetType[] = tool.trashable
+      ? ["workbench_slot", "trash_bin"]
+      : ["workbench_slot"];
+
     writeRackToolDragPayload(dataTransfer, {
-      allowedDropTargets: tool.trashable ? ["workbench_slot", "trash_bin"] : ["workbench_slot"],
+      allowedDropTargets,
+      entityKind: "tool",
       rackSlotId: rackSlot.id,
+      sourceId: rackSlot.id,
+      sourceKind: "rack",
       toolId: tool.toolId,
       toolType: tool.toolType,
       trashable: tool.trashable,
     });
-    showDropTargets(tool.trashable ? ["workbench_slot", "trash_bin"] : ["workbench_slot"]);
-    setActiveDragItem({ kind: "rack_tool" });
+    const descriptor = {
+      allowedDropTargets,
+      entityKind: "tool" as const,
+      sourceId: rackSlot.id,
+      sourceKind: "rack" as const,
+      toolId: tool.toolId,
+      toolType: tool.toolType,
+      trashable: tool.trashable,
+    };
+    showDropTargets(descriptor.allowedDropTargets);
+    setActiveDragItem(descriptor);
   };
 
   const handleTrashToolDragStart = (
@@ -763,12 +795,24 @@ export function PesticideWorkbench() {
 
     writeTrashToolDragPayload(dataTransfer, {
       allowedDropTargets,
+      entityKind: "tool",
+      sourceId: trashTool.id,
+      sourceKind: "trash",
       toolId: trashTool.tool.toolId,
       toolType: trashTool.tool.toolType,
+      trashable: trashTool.tool.trashable,
       trashToolId: trashTool.id,
     });
     showDropTargets(allowedDropTargets);
-    setActiveDragItem({ kind: "trash_tool", toolType: trashTool.tool.toolType });
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "tool",
+      sourceId: trashTool.id,
+      sourceKind: "trash",
+      toolId: trashTool.tool.toolId,
+      toolType: trashTool.tool.toolType,
+      trashable: trashTool.tool.trashable,
+    });
   };
 
   const handleTrashedWidgetDragStart = (
@@ -777,11 +821,23 @@ export function PesticideWorkbench() {
   ) => {
     writeWorkspaceWidgetDragPayload(dataTransfer, {
       allowedDropTargets: ["workspace_canvas"],
+      entityKind: "workspace_widget",
+      sourceId: widget.id,
+      sourceKind: "trash",
+      trashable: widget.trashable,
       widgetId: widget.id,
       widgetType: widget.widgetType,
     });
     showDropTargets(["workspace_canvas"]);
-    setActiveDragItem({ kind: "workspace_widget" });
+    setActiveDragItem({
+      allowedDropTargets: ["workspace_canvas"],
+      entityKind: "workspace_widget",
+      sourceId: widget.id,
+      sourceKind: "trash",
+      trashable: widget.trashable,
+      widgetId: widget.id,
+      widgetType: widget.widgetType,
+    });
   };
 
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
@@ -789,22 +845,22 @@ export function PesticideWorkbench() {
       return false;
     }
 
-    if (activeDragItem.kind === "toolbar") {
-      if (activeDragItem.itemType === "tool") {
+    if (activeDragItem.entityKind === "tool") {
+      if (activeDragItem.sourceKind === "workbench") {
+        return slot.tool === null && slot.id !== activeDragItem.sourceId;
+      }
+
+      if (
+        activeDragItem.sourceKind === "palette" ||
+        activeDragItem.sourceKind === "rack" ||
+        activeDragItem.sourceKind === "trash"
+      ) {
         return slot.tool === null;
       }
-      if (activeDragItem.itemType === "liquid") {
-        return slot.tool !== null && slot.tool.accepts_liquids;
-      }
-      return false;
     }
 
-    if (activeDragItem.kind === "bench_tool") {
-      return slot.tool === null && slot.id !== activeDragItem.sourceSlotId;
-    }
-
-    if (activeDragItem.kind === "rack_tool" || activeDragItem.kind === "trash_tool") {
-      return slot.tool === null;
+    if (activeDragItem.entityKind === "liquid") {
+      return slot.tool !== null && slot.tool.accepts_liquids;
     }
 
     return false;
@@ -812,17 +868,14 @@ export function PesticideWorkbench() {
 
   const isRackSlotHighlighted =
     activeDropTargets.includes("rack_slot") &&
-    (((activeDragItem?.kind === "toolbar" &&
-      activeDragItem.itemType === "tool") ||
-      (activeDragItem?.kind === "bench_tool" &&
-        slots.find((slot) => slot.id === activeDragItem.sourceSlotId)?.tool?.toolType === "sample_vial")) ||
-      (activeDragItem?.kind === "trash_tool" && activeDragItem.toolType === "sample_vial"));
+    activeDragItem?.entityKind === "tool" &&
+    activeDragItem.toolType === "sample_vial";
 
   const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-      <div className="mx-auto max-w-[1800px]">
+      <div className="mx-auto w-full">
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur xl:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
             Betalab
@@ -857,8 +910,14 @@ export function PesticideWorkbench() {
             ref={workspaceRef}
             style={{ minHeight: workspaceHeight }}
           >
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_26%)]" />
+            <div
+              className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]"
+              data-testid="workspace-drop-surface-grid"
+            />
+            <div
+              className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_26%)]"
+              data-testid="workspace-drop-surface-glow"
+            />
 
             <FloatingWidget
               id="toolbar"
@@ -873,8 +932,9 @@ export function PesticideWorkbench() {
                 categories={pesticideWorkflowCategories}
                 onItemDragEnd={clearDropTargets}
                 onItemDragStart={(item, allowedDropTargets) => {
+                  const payload = createToolbarDragPayload(item);
                   showDropTargets(allowedDropTargets);
-                  setActiveDragItem({ kind: "toolbar", itemType: item.itemType });
+                  setActiveDragItem(toDragDescriptor(payload));
                 }}
               />
             </FloatingWidget>
@@ -1177,8 +1237,6 @@ export function PesticideWorkbench() {
                     </WorkspaceEquipmentWidget>
                   ) : (
                     <WorkspaceEquipmentWidget
-                      badge={instrumentStatus === "ready" ? "Ready" : "Idle"}
-                      description="Single LC-MS/MS system widget with LC and MS/MS modules kept visually distinct for pedagogy."
                       eyebrow="LC-MS/MS"
                       footer={
                         instrumentStatus === "ready"

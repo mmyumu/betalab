@@ -5,7 +5,7 @@ import { useState } from "react";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { writeToolbarDragPayload } from "@/lib/workbench-dnd";
+import { createToolbarDragPayload, writeToolbarDragPayload } from "@/lib/workbench-dnd";
 import type { DropTargetType, ToolbarAccent, ToolbarCategory, ToolbarItem } from "@/types/workbench";
 
 type ToolbarPanelProps = {
@@ -80,12 +80,9 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                       onItemDragEnd?.();
                     }}
                     onDragStart={(event) => {
-                      onItemDragStart?.(item, item.allowedDropTargets);
-                      writeToolbarDragPayload(event.dataTransfer, {
-                        allowedDropTargets: item.allowedDropTargets,
-                        itemId: item.id,
-                        itemType: item.itemType,
-                      });
+                      const payload = createToolbarDragPayload(item);
+                      onItemDragStart?.(item, payload.allowedDropTargets);
+                      writeToolbarDragPayload(event.dataTransfer, payload);
                     }}
                     title={item.subtitle}
                     >

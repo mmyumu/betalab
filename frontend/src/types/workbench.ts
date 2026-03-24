@@ -18,6 +18,8 @@ export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "form
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
+export type DragEntityKind = "tool" | "liquid" | "workspace_widget";
+export type DragSourceKind = "palette" | "workbench" | "rack" | "trash";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
@@ -46,40 +48,100 @@ export type ToolbarCategory = {
   items: ToolbarItem[];
 };
 
-export type ToolbarDragPayload = {
+type BaseDragPayload = {
   allowedDropTargets: DropTargetType[];
-  itemId: string;
-  itemType: ToolbarItem["itemType"];
+  entityKind: DragEntityKind;
+  sourceId: string;
+  sourceKind: DragSourceKind;
 };
 
-export type BenchToolDragPayload = {
-  allowedDropTargets: DropTargetType[];
+export type ToolbarDragPayload =
+  | (BaseDragPayload & {
+      entityKind: "tool";
+      itemId: string;
+      itemType: "tool";
+      sourceId: string;
+      sourceKind: "palette";
+      toolType: ToolType;
+      trashable: boolean;
+    })
+  | (BaseDragPayload & {
+      entityKind: "liquid";
+      itemId: string;
+      itemType: "liquid";
+      liquidType: LiquidType;
+      sourceId: string;
+      sourceKind: "palette";
+      trashable: boolean;
+    })
+  | (BaseDragPayload & {
+      entityKind: "workspace_widget";
+      itemId: string;
+      itemType: "workspace_widget";
+      sourceId: string;
+      sourceKind: "palette";
+      trashable: boolean;
+      widgetType: WorkspaceWidgetType;
+    });
+
+export type BenchToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
   sourceSlotId: string;
+  sourceId: string;
+  sourceKind: "workbench";
   toolId: string;
   toolType: ToolType;
   trashable: boolean;
 };
 
-export type RackToolDragPayload = {
-  allowedDropTargets: DropTargetType[];
+export type RackToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
   rackSlotId: string;
+  sourceId: string;
+  sourceKind: "rack";
   toolId: string;
   toolType: ToolType;
   trashable: boolean;
 };
 
-export type TrashToolDragPayload = {
-  allowedDropTargets: DropTargetType[];
+export type TrashToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
+  sourceId: string;
+  sourceKind: "trash";
   toolId: string;
   toolType: ToolType;
+  trashable: boolean;
   trashToolId: string;
 };
 
-export type WorkspaceWidgetDragPayload = {
-  allowedDropTargets: DropTargetType[];
+export type WorkspaceWidgetDragPayload = BaseDragPayload & {
+  entityKind: "workspace_widget";
+  sourceId: string;
+  sourceKind: "trash";
   widgetId: ExperimentWorkspaceWidgetId;
   widgetType: ExperimentWorkspaceWidgetType;
+  trashable: boolean;
 };
+
+export type DragDescriptor =
+  | (BaseDragPayload & {
+      entityKind: "tool";
+      toolId: string;
+      toolType: ToolType;
+      trashable: boolean;
+    })
+  | (BaseDragPayload & {
+      entityKind: "liquid";
+      liquidId: string;
+      liquidType: LiquidType;
+      trashable: boolean;
+    })
+  | (BaseDragPayload & {
+      entityKind: "workspace_widget";
+      trashable: boolean;
+      widgetId: string;
+      widgetType: ExperimentWorkspaceWidgetType | WorkspaceWidgetType;
+    });
 
 export type BenchLiquidPortion = {
   id: string;
