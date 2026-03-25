@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "next": "15.3.0",
@@ -18,12 +20,13 @@
     "recharts": "2.15.1"
   },
   "devDependencies": {
-    "@types/node": "22.15.2",
-    "@types/react": "19.1.2",
-    "@types/react-dom": "19.1.2",
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "6.6.3",
     "@testing-library/react": "16.3.0",
     "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.15.2",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
     "@vitest/coverage-v8": "2.1.8",
     "autoprefixer": "10.4.21",
     "jsdom": "25.0.1",
