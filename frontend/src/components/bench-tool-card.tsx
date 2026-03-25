@@ -78,6 +78,7 @@ export function BenchToolCard({
   onLiquidVolumeChange,
   tool,
 }: BenchToolCardProps) {
+  const produceItems = tool.produceItems ?? [];
   const currentVolume = Number.parseFloat(
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
@@ -89,6 +90,7 @@ export function BenchToolCard({
   const fillBorderStyle = isFilled
     ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;
+  const isSampleBag = tool.toolType === "sample_bag";
 
   return (
     <article
@@ -110,36 +112,79 @@ export function BenchToolCard({
               fillRatio={fillRatio}
               fillSegments={liquidSegments}
               kind={tool.toolType}
+              produceItems={produceItems}
               tone="neutral"
             />
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
               <p className="mt-1.5 text-[11px] font-medium text-slate-500">
-                {tool.liquids.length > 0 ? `${tool.liquids.length} liquid loaded` : "Ready for liquid additions"}
+                {isSampleBag
+                  ? produceItems.length > 0
+                    ? `${produceItems.length} produce loaded`
+                    : "Ready for produce intake"
+                  : tool.liquids.length > 0
+                    ? `${tool.liquids.length} liquid loaded`
+                    : "Ready for liquid additions"}
               </p>
             </div>
           </div>
         </div>
 
-        <div
-          className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
-          style={fillBorderStyle}
-        >
-          <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Current fill
-              </p>
-              <p className="mt-0.5 text-base font-semibold text-slate-950">{fillPercentage}%</p>
-              <p className="text-[11px] text-slate-500">
-                {formatVolume(currentVolume)} / {formatVolume(tool.capacity_ml)} mL
-              </p>
+        {isSampleBag ? (
+          <div className="rounded-[1rem] bg-gradient-to-r from-emerald-200/70 to-emerald-50 p-[1px]">
+            <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Produce load
+                </p>
+                <p className="mt-0.5 text-base font-semibold text-slate-950">{produceItems.length} item{produceItems.length === 1 ? "" : "s"}</p>
+                <p className="text-[11px] text-slate-500">
+                  Sealed sample intake
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
+            style={fillBorderStyle}
+          >
+            <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Current fill
+                </p>
+                <p className="mt-0.5 text-base font-semibold text-slate-950">{fillPercentage}%</p>
+                <p className="text-[11px] text-slate-500">
+                  {formatVolume(currentVolume)} / {formatVolume(tool.capacity_ml)} mL
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-0.5">
-          {tool.liquids.length > 0 ? (
+          {isSampleBag ? (
+            produceItems.length > 0 ? (
+              produceItems.map((produceItem) => (
+                <div
+                  key={produceItem.id}
+                  className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">{produceItem.label}</span>
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                      {produceItem.produceType}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
+                Drop produce here
+              </span>
+            )
+          ) : tool.liquids.length > 0 ? (
             tool.liquids.map((liquid) => (
               <div
                 key={liquid.id}

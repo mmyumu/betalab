@@ -18,5 +18,10 @@ describe("tool drop targets", () => {
       "workbench_slot",
       "trash_bin",
     ]);
+    expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot"]);
+    expect(getToolDropTargets("sample_bag", { includeTrash: true })).toEqual([
+      "workbench_slot",
+      "trash_bin",
+    ]);
   });
 });

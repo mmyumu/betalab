@@ -2,6 +2,7 @@ import type {
   BenchToolDragPayload,
   DragDescriptor,
   DropTargetType,
+  ProduceDragPayload,
   RackToolDragPayload,
   TrashToolDragPayload,
   ToolbarDragPayload,
@@ -14,6 +15,7 @@ export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
 export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
 export const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
 export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
+export const PRODUCE_DRAG_MIME = "application/x-betalab-produce-item";
 const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
 
 function getDropTargetMime(targetType: DropTargetType) {
@@ -113,6 +115,17 @@ export function writeWorkspaceWidgetDragPayload(
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
     dataTransfer.setData(getDropTargetMime(targetType), payload.widgetId);
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeProduceDragPayload(dataTransfer: DataTransfer, payload: ProduceDragPayload) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(PRODUCE_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.produceItemId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -403,14 +416,72 @@ export function readWorkspaceWidgetDragPayload(
   return null;
 }
 
+export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragPayload | null {
+  const rawPayload =
+    dataTransfer.getData(PRODUCE_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<ProduceDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" ||
+          targetType === "workspace_canvas" ||
+          targetType === "rack_slot" ||
+          targetType === "trash_bin",
+      ) ?? [];
+
+    if (
+      parsed.entityKind === "produce" &&
+      typeof parsed.produceItemId === "string" &&
+      typeof parsed.produceType === "string" &&
+      typeof parsed.sourceId === "string" &&
+      parsed.sourceKind === "basket" &&
+      parsed.trashable === false &&
+      allowedDropTargets.length > 0
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "produce",
+        produceItemId: parsed.produceItemId,
+        produceType: parsed.produceType,
+        sourceId: parsed.sourceId,
+        sourceKind: "basket",
+        trashable: false,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function toDragDescriptor(
   payload:
     | ToolbarDragPayload
     | BenchToolDragPayload
     | RackToolDragPayload
     | TrashToolDragPayload
-    | WorkspaceWidgetDragPayload,
+    | WorkspaceWidgetDragPayload
+    | ProduceDragPayload,
 ): DragDescriptor {
+  if ("produceItemId" in payload) {
+    return {
+      allowedDropTargets: payload.allowedDropTargets,
+      entityKind: "produce",
+      produceItemId: payload.produceItemId,
+      produceType: payload.produceType,
+      sourceId: payload.sourceId,
+      sourceKind: payload.sourceKind,
+      trashable: false,
+    };
+  }
+
   if ("itemType" in payload) {
     if (payload.itemType === "tool") {
       return {
@@ -494,6 +565,11 @@ export function readDragDescriptor(dataTransfer: DataTransfer): DragDescriptor |
   const workspaceWidgetPayload = readWorkspaceWidgetDragPayload(dataTransfer);
   if (workspaceWidgetPayload) {
     return toDragDescriptor(workspaceWidgetPayload);
+  }
+
+  const producePayload = readProduceDragPayload(dataTransfer);
+  if (producePayload) {
+    return toDragDescriptor(producePayload);
   }
 
   return null;

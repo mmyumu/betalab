@@ -133,6 +133,26 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
     ],
   },
+  {
+    id: "misc",
+    label: "MISC",
+    description: "Temporary catch-all for supporting lab items not yet grouped elsewhere.",
+    items: [
+      {
+        id: "sealed_sampling_bag",
+        allowedDropTargets: getToolDropTargets("sample_bag"),
+        itemType: "tool",
+        name: "Sealed sampling bag",
+        subtitle: "Field collection",
+        description: "Tamper-evident sample collection bag for sealed produce or field intake.",
+        accent: "emerald",
+        trashable: true,
+        toolType: "sample_bag",
+        capacity_ml: 500,
+        accepts_liquids: false,
+      },
+    ],
+  },
 ];
 
 export const pesticideToolCatalog = Object.fromEntries(

@@ -11,13 +11,29 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+async function buildApiError(
+  response: Response,
+  fallbackMessage: string,
+): Promise<Error> {
+  try {
+    const payload = (await response.json()) as { detail?: string };
+    if (typeof payload.detail === "string" && payload.detail.length > 0) {
+      return new Error(payload.detail);
+    }
+  } catch {
+    // Ignore non-JSON error payloads and fall back to the default message.
+  }
+
+  return new Error(fallbackMessage);
+}
+
 export async function createExperiment(): Promise<Experiment> {
   const response = await fetch(`${API_BASE_URL}/experiments`, {
     method: "POST",
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create experiment");
+    throw await buildApiError(response, "Failed to create experiment");
   }
 
   return normalizeExperiment((await response.json()) as Experiment);
@@ -27,7 +43,7 @@ export async function getExperiment(experimentId: string): Promise<Experiment> {
   const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`);
 
   if (!response.ok) {
-    throw new Error("Failed to fetch experiment");
+    throw await buildApiError(response, "Failed to fetch experiment");
   }
 
   return normalizeExperiment((await response.json()) as Experiment);
@@ -47,7 +63,7 @@ export async function sendExperimentCommand(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to send experiment command");
+    throw await buildApiError(response, "Failed to send experiment command");
   }
 
   return normalizeExperiment((await response.json()) as Experiment);
@@ -93,6 +109,9 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
     accepts_liquids: Boolean(tool.accepts_liquids),
+    produceItems: (tool.produceItems ?? tool.produce_items ?? []).map(
+      (item) => normalizeProduceItem(item as ExperimentProduceItem & Record<string, unknown>),
+    ),
     trashable: typeof tool.trashable === "boolean" ? tool.trashable : true,
     liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
       (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),

@@ -23,6 +23,7 @@ import {
   readWorkspaceWidgetDragPayload,
   toDragDescriptor,
   writeBenchToolDragPayload,
+  writeProduceDragPayload,
   writeRackToolDragPayload,
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
@@ -40,6 +41,7 @@ import type {
   DragDescriptor,
   DropTargetType,
   ExperimentWorkspaceWidget,
+  ProduceDragPayload,
   RackSlot,
   RackToolDragPayload,
   TrashToolDragPayload,
@@ -252,7 +254,19 @@ export function PesticideWorkbench() {
     setIsCommandPending(true);
 
     try {
-      const updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
+      let updatedExperiment: Experiment;
+
+      try {
+        updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "Experiment not found") {
+          throw error;
+        }
+
+        const recreatedExperiment = await createExperiment();
+        updatedExperiment = await sendExperimentCommand(recreatedExperiment.id, type, payload);
+      }
+
       setState({ status: "ready", experiment: updatedExperiment });
       setStatusMessage(getLatestStatusMessage(updatedExperiment));
       options?.onSuccess?.(updatedExperiment);
@@ -391,6 +405,14 @@ export function PesticideWorkbench() {
     void sendWorkbenchCommand("remove_rack_tool_to_workbench_slot", {
       rack_slot_id: payload.rackSlotId,
       target_slot_id: targetSlotId,
+    });
+    clearDropTargets();
+  };
+
+  const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
+    void sendWorkbenchCommand("add_produce_to_workbench_tool", {
+      slot_id: targetSlotId,
+      produce_item_id: payload.produceItemId,
     });
     clearDropTargets();
   };
@@ -842,6 +864,32 @@ export function PesticideWorkbench() {
     });
   };
 
+  const handleBasketProduceDragStart = (
+    produceItemId: string,
+    produceType: "apple",
+    dataTransfer: DataTransfer,
+  ) => {
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId,
+      produceType,
+      sourceId: produceItemId,
+      sourceKind: "basket",
+      trashable: false,
+    });
+    showDropTargets(["workbench_slot"]);
+    setActiveDragItem({
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId,
+      produceType,
+      sourceId: produceItemId,
+      sourceKind: "basket",
+      trashable: false,
+    });
+  };
+
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
     if (!activeDropTargets.includes("workbench_slot") || !activeDragItem) {
       return false;
@@ -863,6 +911,10 @@ export function PesticideWorkbench() {
 
     if (activeDragItem.entityKind === "liquid") {
       return slot.tool !== null && slot.tool.accepts_liquids;
+    }
+
+    if (activeDragItem.entityKind === "produce") {
+      return slot.tool?.toolType === "sample_bag";
     }
 
     return false;
@@ -1209,9 +1261,17 @@ export function PesticideWorkbench() {
                                   {basketProduceItems.length > 0 ? (
                                     basketProduceItems.map((item) => (
                                       <div
-                                        className="flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2"
+                                        className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
                                         data-testid={`basket-produce-${item.id}`}
+                                        draggable
                                         key={item.id}
+                                        onDragEnd={clearDropTargets}
+                                        onDragStart={(event) =>
+                                          handleBasketProduceDragStart(
+                                            item.id,
+                                            item.produceType,
+                                            event.dataTransfer,
+                                          )}
                                       >
                                         <div className="flex min-w-0 items-center gap-3">
                                           <AppleIllustration
@@ -1366,6 +1426,7 @@ export function PesticideWorkbench() {
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
+                onProduceDrop={handleProduceDrop}
                 onRemoveLiquid={handleRemoveLiquid}
                 onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
                 onLiquidVolumeChange={handleLiquidVolumeChange}

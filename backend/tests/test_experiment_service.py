@@ -102,6 +102,95 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
 
 
+def test_place_sealed_sampling_bag_on_workbench() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.label == "Sealed sampling bag"
+    assert slot.tool.tool_type == "sample_bag"
+    assert slot.tool.accepts_liquids is False
+    assert slot.tool.produce_items == []
+
+
+def test_add_produce_to_sampling_bag_moves_it_out_of_basket() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_item",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "add_produce_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_item_id": created.workspace.produce_items[0].id,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert len(slot.tool.produce_items) == 1
+    assert slot.tool.produce_items[0].label == "Apple 1"
+    assert updated.workspace.produce_items == []
+    assert updated.audit_log[-1] == "Apple 1 added to Sealed sampling bag."
+
+
+def test_add_produce_requires_a_sampling_bag() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_item",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    with pytest.raises(ValueError, match="50 mL centrifuge tube does not accept produce."):
+        service.apply_command(
+            experiment.id,
+            "add_produce_to_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "produce_item_id": created.workspace.produce_items[0].id,
+            },
+        )
+
+
 def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

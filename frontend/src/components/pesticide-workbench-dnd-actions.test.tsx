@@ -46,6 +46,13 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
       expect(screen.getByTestId(sourceCase.sourceTestId)).toBeInTheDocument();
     });
   }
+
+  if (sourceCase.openBasket) {
+    fireEvent.click(screen.getByTestId("basket-open-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId(sourceCase.sourceTestId)).toBeInTheDocument();
+    });
+  }
 }
 
 function isAvailableTarget(

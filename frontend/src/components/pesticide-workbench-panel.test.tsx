@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
 import {
   writeBenchToolDragPayload,
+  writeProduceDragPayload,
   writeRackToolDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
@@ -172,6 +173,43 @@ describe("PesticideWorkbenchPanel", () => {
     ).toHaveAttribute("data-fill-segments", "2");
   });
 
+  it("renders a filled sampling bag with visible produce state", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+              trashable: true,
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_bag']"),
+    ).toHaveAttribute("data-produce-count", "1");
+    expect(screen.getByText("Apple 1")).toBeInTheDocument();
+  });
+
   it("accepts tool drags on stations and forwards the drop payload", () => {
     const onToolbarItemDrop = vi.fn();
     const dataTransfer = createDataTransfer();
@@ -338,6 +376,120 @@ describe("PesticideWorkbenchPanel", () => {
 
     expect(dragOverEvent.defaultPrevented).toBe(false);
     expect(onToolbarItemDrop).not.toHaveBeenCalled();
+  });
+
+  it("accepts produce drags only on stations containing a sealed sampling bag", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceItems: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onProduceDrop).toHaveBeenCalledWith("station_1", {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+      trashable: false,
+    });
+  });
+
+  it("rejects produce drags on stations without a sealed sampling bag", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_tube",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Extraction ready",
+              accent: "amber",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+              accepts_liquids: true,
+              produceItems: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(false);
+    expect(onProduceDrop).not.toHaveBeenCalled();
   });
 
   it("forwards bench-tool drops between stations", () => {

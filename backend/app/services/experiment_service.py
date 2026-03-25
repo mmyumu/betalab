@@ -17,6 +17,7 @@ from app.services.command_handlers.trash import (
 )
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
+    add_produce_to_workbench_tool,
     add_liquid_to_workbench_tool,
     move_tool_between_workbench_slots,
     place_tool_on_workbench,
@@ -57,6 +58,7 @@ class ExperimentService:
             "discard_rack_tool": discard_rack_tool,
             "restore_trashed_tool_to_rack_slot": restore_trashed_tool_to_rack_slot,
             "add_liquid_to_workbench_tool": add_liquid_to_workbench_tool,
+            "add_produce_to_workbench_tool": add_produce_to_workbench_tool,
             "remove_liquid_from_workbench_tool": remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": update_workbench_liquid_volume,
         }

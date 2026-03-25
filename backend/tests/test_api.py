@@ -526,6 +526,48 @@ def test_create_produce_item_round_trip_over_http() -> None:
     assert produce_created.json()["workspace"]["produce_items"][0]["label"] == "Apple 1"
 
 
+def test_add_produce_to_sampling_bag_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        produce_created = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "create_produce_item",
+                "payload": {
+                    "produce_type": "apple",
+                },
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sealed_sampling_bag",
+                },
+            },
+        )
+        bag_loaded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_produce_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "produce_item_id": produce_created.json()["workspace"]["produce_items"][0]["id"],
+                },
+            },
+        )
+
+    assert bag_loaded.status_code == 200
+    assert bag_loaded.json()["workspace"]["produce_items"] == []
+    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_items"][0]["produce_type"] == "apple"
+
+
 def test_remove_liquid_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

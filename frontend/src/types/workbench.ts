@@ -11,15 +11,23 @@ type ToolbarBaseItem = {
   trashable: boolean;
 };
 
-export type ToolType = "volumetric_flask" | "amber_bottle" | "sample_vial" | "beaker" | "centrifuge_tube" | "cleanup_tube";
+export type ToolType =
+  | "volumetric_flask"
+  | "amber_bottle"
+  | "sample_vial"
+  | "beaker"
+  | "centrifuge_tube"
+  | "cleanup_tube"
+  | "sample_bag";
 
 export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
 
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
-export type DragEntityKind = "tool" | "liquid" | "workspace_widget";
-export type DragSourceKind = "palette" | "workbench" | "rack" | "trash";
+export type ProduceItemType = "apple";
+export type DragEntityKind = "tool" | "liquid" | "workspace_widget" | "produce";
+export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
@@ -84,6 +92,15 @@ export type ToolbarDragPayload =
       widgetType: WorkspaceWidgetType;
     });
 
+export type ProduceDragPayload = BaseDragPayload & {
+  entityKind: "produce";
+  produceItemId: string;
+  produceType: ProduceItemType;
+  sourceId: string;
+  sourceKind: "basket";
+  trashable: false;
+};
+
 export type BenchToolDragPayload = BaseDragPayload & {
   entityKind: "tool";
   sourceSlotId: string;
@@ -141,6 +158,12 @@ export type DragDescriptor =
       trashable: boolean;
       widgetId: string;
       widgetType: ExperimentWorkspaceWidgetType | WorkspaceWidgetType;
+    })
+  | (BaseDragPayload & {
+      entityKind: "produce";
+      produceItemId: string;
+      produceType: ProduceItemType;
+      trashable: false;
     });
 
 export type BenchLiquidPortion = {
@@ -160,6 +183,7 @@ export type BenchToolInstance = {
   toolType: ToolType;
   capacity_ml: number;
   accepts_liquids: boolean;
+  produceItems?: ExperimentProduceItem[];
   trashable: boolean;
   liquids: BenchLiquidPortion[];
 };
@@ -192,8 +216,6 @@ export type ExperimentWorkspaceWidget = {
   isTrashed: boolean;
   trashable: boolean;
 };
-
-export type ProduceItemType = "apple";
 
 export type ExperimentProduceItem = {
   id: string;

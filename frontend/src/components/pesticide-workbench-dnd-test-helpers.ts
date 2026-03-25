@@ -42,6 +42,7 @@ export type DndSourceCase = {
   expectRackWidget: boolean;
   id: string;
   label: string;
+  openBasket: boolean;
   openTrash: boolean;
   sourceTestId: string;
   targetExpectations: Partial<
@@ -191,6 +192,7 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
     toolType: item.toolType,
     capacity_ml: item.capacity_ml,
     accepts_liquids: item.accepts_liquids,
+    produceItems: [],
     trashable: item.trashable,
     liquids: [],
     ...overrides,
@@ -209,11 +211,13 @@ function makeExperiment({
   slots = makeSlots(),
   rackSlots = makeRackSlots(),
   trashTools = [],
+  produceItems = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
   slots?: BenchSlot[];
   rackSlots?: RackSlot[];
   trashTools?: TrashToolEntry[];
+  produceItems?: Experiment["workspace"]["produceItems"];
   workspaceWidgets?: ExperimentWorkspaceWidget[];
 } = {}): Experiment {
   return {
@@ -222,7 +226,7 @@ function makeExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { tools: trashTools },
-    workspace: { produceItems: [], widgets: workspaceWidgets },
+    workspace: { produceItems, widgets: workspaceWidgets },
     audit_log: ["Experiment created", "Start by dragging an extraction tool onto the bench."],
   };
 }
@@ -237,6 +241,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
     id: `palette-${item.id}`,
     label: `palette ${item.name}`,
     sourceTestId: `toolbar-item-${item.id}`,
+    openBasket: false,
     openTrash: false,
     expectRackWidget: true,
     availableTargets: [
@@ -313,6 +318,7 @@ function createWorkbenchToolSourceCase(item: ToolCatalogItem): DndSourceCase {
     id: `workbench-${item.id}`,
     label: `workbench ${item.name}`,
     sourceTestId: "bench-tool-card-bench_tool_1",
+    openBasket: false,
     openTrash: false,
     expectRackWidget: true,
     availableTargets: [
@@ -376,6 +382,7 @@ function createRackSourceCase(): DndSourceCase {
     id: "rack-sample_vial",
     label: "rack autosampler vial",
     sourceTestId: "rack-slot-tool-1",
+    openBasket: false,
     openTrash: false,
     expectRackWidget: true,
     availableTargets: [
@@ -431,6 +438,7 @@ function createTrashToolSourceCase(item: ToolCatalogItem): DndSourceCase {
     id: `trash-tool-${item.id}`,
     label: `trash ${item.name}`,
     sourceTestId: "trash-tool-trash_tool_1",
+    openBasket: false,
     openTrash: true,
     expectRackWidget: true,
     availableTargets: [
@@ -496,6 +504,7 @@ function createTrashWidgetSourceCase(
     id: `trash-widget-${widgetId}`,
     label: `trash ${label}`,
     sourceTestId: `trash-widget-${widgetId}`,
+    openBasket: false,
     openTrash: true,
     expectRackWidget: rackIsPresent,
     availableTargets: rackIsPresent
@@ -557,9 +566,66 @@ function createTrashWidgetSourceCase(
   };
 }
 
+function createBasketProduceSourceCase(): DndSourceCase {
+  const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
+
+  return {
+    id: "basket-produce-apple",
+    label: "basket apple",
+    sourceTestId: "basket-produce-produce_1",
+    openBasket: true,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag" }) },
+        ]),
+        produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+        workspaceWidgets: makeWorkspaceWidgets(),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: true,
+        command: {
+          type: "add_produce_to_workbench_tool",
+          payload: {
+            slot_id: "station_1",
+            produce_item_id: "produce_1",
+          },
+        },
+      },
+      "bench-slot-station_2": {
+        compatible: false,
+        command: null,
+      },
+      "rack-illustration-slot-1": {
+        compatible: false,
+        command: null,
+      },
+      "widget-workspace": {
+        compatible: false,
+        command: null,
+      },
+      "trash-dropzone": {
+        compatible: false,
+        command: null,
+      },
+    },
+  };
+}
+
 export const dndSourceCases: DndSourceCase[] = [
   ...toolbarItems.map(createPaletteSourceCase),
   ...toolItems.map(createWorkbenchToolSourceCase),
+  createBasketProduceSourceCase(),
   createRackSourceCase(),
   ...toolItems.map(createTrashToolSourceCase),
   createTrashWidgetSourceCase("rack", "autosampler_rack", "Autosampler rack"),

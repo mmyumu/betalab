@@ -222,6 +222,20 @@ describe("api client", () => {
     );
   });
 
+  it("surfaces backend error detail for command execution failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ detail: "Experiment not found" }),
+      }),
+    );
+
+    await expect(sendExperimentCommand("experiment_123", "place_tool_on_workbench", {})).rejects.toThrow(
+      "Experiment not found",
+    );
+  });
+
   it("throws when experiment loading fails", async () => {
     vi.stubGlobal(
       "fetch",

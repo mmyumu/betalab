@@ -55,6 +55,15 @@ WORKBENCH_TOOLS = {
         tool_type="beaker",
         capacity_ml=100.0,
     ),
+    "sealed_sampling_bag": WorkbenchToolDefinition(
+        id="sealed_sampling_bag",
+        name="Sealed sampling bag",
+        subtitle="Field collection",
+        accent="emerald",
+        tool_type="sample_bag",
+        capacity_ml=500.0,
+        accepts_liquids=False,
+    ),
 }
 
 

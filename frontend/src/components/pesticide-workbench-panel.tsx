@@ -8,6 +8,7 @@ import {
   hasCompatibleDropTarget,
   readDragDescriptor,
   readBenchToolDragPayload,
+  readProduceDragPayload,
   readRackToolDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
@@ -16,6 +17,7 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  ProduceDragPayload,
   RackToolDragPayload,
   TrashToolDragPayload,
   ToolbarDragPayload,
@@ -33,6 +35,7 @@ type PesticideWorkbenchPanelProps = {
   ) => void;
   onBenchToolDragEnd?: () => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
+  onProduceDrop?: (targetSlotId: string, payload: ProduceDragPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onRemoveWorkbenchSlot?: (slotId: string) => void;
@@ -49,6 +52,7 @@ export function PesticideWorkbenchPanel({
   onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
+  onProduceDrop,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
   onLiquidVolumeChange,
@@ -84,6 +88,10 @@ export function PesticideWorkbenchPanel({
       return slot.tool !== null && slot.tool.accepts_liquids;
     }
 
+    if (descriptor.entityKind === "produce") {
+      return slot.tool?.toolType === "sample_bag";
+    }
+
     return false;
   };
 
@@ -109,6 +117,12 @@ export function PesticideWorkbenchPanel({
     const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
     if (trashToolPayload) {
       onBenchToolDrop?.(slot.id, trashToolPayload);
+      return;
+    }
+
+    const producePayload = readProduceDragPayload(event.dataTransfer);
+    if (producePayload) {
+      onProduceDrop?.(slot.id, producePayload);
       return;
     }
 

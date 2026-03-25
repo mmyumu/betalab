@@ -78,6 +78,7 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     toolType: "sample_vial",
     capacity_ml: 2,
     accepts_liquids: true,
+    produceItems: [],
     trashable: true,
     liquids: [],
     ...overrides,
@@ -185,6 +186,20 @@ function makeWorkbenchExperiment({
   };
 }
 
+function makeSampleBagTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
+  return makeTool({
+    toolId: "sealed_sampling_bag",
+    label: "Sealed sampling bag",
+    subtitle: "Field collection",
+    accent: "emerald",
+    toolType: "sample_bag",
+    capacity_ml: 500,
+    accepts_liquids: false,
+    produceItems: [],
+    ...overrides,
+  });
+}
+
 function makeTrashToolEntry(overrides: Partial<TrashToolEntry> = {}): TrashToolEntry {
   return {
     id: "trash_tool_1",
@@ -229,6 +244,7 @@ describe("PesticideWorkbench", () => {
 
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-sealed_sampling_bag")).toBeInTheDocument();
     expect(screen.queryByTestId("toolbar-item-produce_basket_widget")).not.toBeInTheDocument();
     expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
     expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
@@ -340,6 +356,64 @@ describe("PesticideWorkbench", () => {
     });
 
     expect(createExperiment).toHaveBeenCalledTimes(2);
+  });
+
+  it("recreates the experiment and retries the command when the backend forgets the session", async () => {
+    vi.mocked(createExperiment)
+      .mockResolvedValueOnce(makeWorkbenchExperiment())
+      .mockResolvedValueOnce(makeWorkbenchExperiment({ auditLog: ["Experiment recreated"] }));
+    vi.mocked(sendExperimentCommand)
+      .mockRejectedValueOnce(new Error("Experiment not found"))
+      .mockResolvedValueOnce(
+        makeWorkbenchExperiment({
+          auditLog: ["Sealed sampling bag placed on Station 1."],
+          slots: makeSlots([
+            {
+              tool: makeTool({
+                toolId: "sealed_sampling_bag",
+                label: "Sealed sampling bag",
+                subtitle: "Field collection",
+                toolType: "sample_bag",
+                accent: "emerald",
+                capacity_ml: 500,
+                accepts_liquids: false,
+              }),
+            },
+          ]),
+        }),
+      );
+
+    render(<PesticideWorkbench />);
+
+    const station = await screen.findByTestId("bench-slot-station_1");
+    const toolTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-sealed_sampling_bag"), {
+      dataTransfer: toolTransfer,
+    });
+
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: toolTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: toolTransfer });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Sealed sampling bag"),
+      ).toBeInTheDocument();
+    });
+
+    expect(createExperiment).toHaveBeenCalledTimes(2);
+    expect(sendExperimentCommand).toHaveBeenNthCalledWith(
+      1,
+      "experiment_pesticides",
+      "place_tool_on_workbench",
+      { slot_id: "station_1", tool_id: "sealed_sampling_bag" },
+    );
+    expect(sendExperimentCommand).toHaveBeenNthCalledWith(
+      2,
+      "experiment_pesticides",
+      "place_tool_on_workbench",
+      { slot_id: "station_1", tool_id: "sealed_sampling_bag" },
+    );
   });
 
   it("keeps the produce basket visible and adds the optional workspace equipment widgets", async () => {
@@ -765,7 +839,7 @@ describe("PesticideWorkbench", () => {
     expect(within(dialog).getByTestId("trash-widget-instrument")).toBeInTheDocument();
   });
 
-  it("opens the produce basket view on click and creates an apple locally", async () => {
+  it("opens the produce basket view on click and creates an apple through the backend", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
@@ -800,6 +874,59 @@ describe("PesticideWorkbench", () => {
       "create_produce_item",
       { produce_type: "apple" },
     );
+  });
+
+  it("moves basket produce into a sealed sampling bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+        slots: makeSlots([{ tool: makeSampleBagTool() }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceItems: [],
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("basket-open-button"));
+    const basketProduce = await screen.findByTestId("basket-produce-produce_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(basketProduce, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("bench-slot-station_1"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("bench-slot-station_1"), dragOverEvent);
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Apple 1"),
+      ).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_produce_to_workbench_tool",
+      { slot_id: "station_1", produce_item_id: "produce_1" },
+    );
+    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("0 items");
   });
 
   it("restores a trashed tool to a workbench station from the trash view", async () => {

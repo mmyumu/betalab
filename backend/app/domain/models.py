@@ -29,6 +29,7 @@ class WorkbenchTool:
     capacity_ml: float
     accepts_liquids: bool
     trashable: bool
+    produce_items: list["ProduceItem"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
 

@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
+  readProduceDragPayload,
   readRackToolDragPayload,
   readToolbarDragPayload,
   writeBenchToolDragPayload,
+  writeProduceDragPayload,
   writeRackToolDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
@@ -106,6 +108,33 @@ describe("workbench dnd helpers", () => {
       sourceKind: "palette",
       trashable: true,
       widgetType: "autosampler_rack",
+    });
+  });
+
+  it("marks basket produce drags as workbench-only drops", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(readProduceDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceItemId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+      trashable: false,
     });
   });
 

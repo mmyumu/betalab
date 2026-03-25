@@ -6,7 +6,12 @@ import {
   getLiquidVisualSegments,
   neutralLiquidPalette,
 } from "@/lib/liquid-visuals";
-import type { LiquidType, ToolType, ToolbarAccent } from "@/types/workbench";
+import type {
+  ExperimentProduceItem,
+  LiquidType,
+  ToolType,
+  ToolbarAccent,
+} from "@/types/workbench";
 
 type LabAssetIconProps = {
   accent: ToolbarAccent;
@@ -14,6 +19,7 @@ type LabAssetIconProps = {
   fillRatio?: number;
   fillSegments?: Array<{ accent: ToolbarAccent; ratio: number }>;
   kind: ToolType | LiquidType;
+  produceItems?: ExperimentProduceItem[];
   tone?: "accent" | "neutral";
 };
 
@@ -272,12 +278,101 @@ function ReagentBottleIcon({
   );
 }
 
+function SampleBagIcon({
+  glow,
+  label,
+  produceItems,
+  stroke,
+}: {
+  glow: string;
+  label: string;
+  produceItems: ExperimentProduceItem[];
+  stroke: string;
+}) {
+  const isLoaded = produceItems.length > 0;
+  const visibleProduceItems = produceItems.slice(0, 3);
+
+  return (
+    <VesselFrame glow={glow} label={label} stroke={stroke}>
+      <path d={isLoaded ? "M24 22H64" : "M28 22H60"} />
+      <path
+        d={
+          isLoaded
+            ? "M28 22L22 38V88C22 98 30 104 40 104H48C58 104 66 98 66 88V38L60 22"
+            : "M30 22L26 38V90C26 98 32 104 40 104H48C56 104 62 98 62 90V38L58 22"
+        }
+      />
+      <path d={isLoaded ? "M28 40H60" : "M32 40H56"} opacity="0.4" />
+      <path
+        d={isLoaded ? "M30 32H58V42H30V32Z" : "M34 32H54V42H34V32Z"}
+        fill="#dcfce7"
+        stroke="none"
+      />
+      <path
+        d={
+          isLoaded
+            ? "M26 50C31 45 38 43 44 45C50 47 56 47 62 44V80C62 89 55 96 44 98C33 96 26 89 26 80V50Z"
+            : "M32 48C36 46 40 46 44 48C48 50 52 50 56 48V82C56 89 51 94 44 96C37 94 32 89 32 82V48Z"
+        }
+        fill="#bbf7d0"
+        stroke="none"
+        opacity="0.85"
+      />
+      {visibleProduceItems.map((produceItem, index) => {
+        const palette =
+          produceItem.produceType === "apple"
+            ? { fill: "#ef4444", highlight: "#fca5a5", leaf: "#16a34a" }
+            : { fill: "#f59e0b", highlight: "#fde68a", leaf: "#65a30d" };
+        const positions = [
+          { cx: 36, cy: 68, rx: 7, ry: 7 },
+          { cx: 52, cy: 64, rx: 8, ry: 8 },
+          { cx: 46, cy: 78, rx: 7, ry: 7 },
+        ];
+        const position = positions[index];
+
+        return (
+          <g key={produceItem.id} opacity={0.92}>
+            <ellipse
+              cx={position.cx}
+              cy={position.cy}
+              fill={palette.fill}
+              rx={position.rx}
+              ry={position.ry}
+              stroke="none"
+            />
+            <ellipse
+              cx={position.cx - 2}
+              cy={position.cy - 2}
+              fill={palette.highlight}
+              opacity="0.45"
+              rx={Math.max(position.rx - 3, 2)}
+              ry={Math.max(position.ry - 4, 2)}
+              stroke="none"
+            />
+            <path
+              d={`M${position.cx} ${position.cy - position.ry + 1}C${position.cx + 1} ${position.cy - position.ry - 4} ${position.cx + 4} ${position.cy - position.ry - 5} ${position.cx + 6} ${position.cy - position.ry - 3}`}
+              stroke={palette.leaf}
+              strokeLinecap="round"
+              strokeWidth="2.2"
+            />
+          </g>
+        );
+      })}
+      <path d={isLoaded ? "M34 56H54" : "M38 56H50"} opacity="0.55" />
+      <path d={isLoaded ? "M32 64H56" : "M36 64H52"} opacity="0.55" />
+      <path d={isLoaded ? "M32 72H56" : "M36 72H52"} opacity="0.55" />
+      <path d={isLoaded ? "M28 28H60" : "M30 28H58"} />
+    </VesselFrame>
+  );
+}
+
 export function LabAssetIcon({
   accent,
   className,
   fillRatio,
   fillSegments,
   kind,
+  produceItems = [],
   tone = "accent",
 }: LabAssetIconProps) {
   const palette = tone === "neutral" ? neutralLiquidPalette : getLiquidAccentPalette(accent);
@@ -347,6 +442,16 @@ export function LabAssetIcon({
     case "beaker":
       icon = <BeakerIcon {...sharedProps} />;
       break;
+    case "sample_bag":
+      icon = (
+        <SampleBagIcon
+          glow={palette.glow}
+          label={label}
+          produceItems={produceItems}
+          stroke={palette.stroke}
+        />
+      );
+      break;
     case "amber_bottle":
       icon = <AmberBottleIcon {...sharedProps} />;
       break;
@@ -367,6 +472,7 @@ export function LabAssetIcon({
       className={className}
       data-fill-segments={displaySegments.length}
       data-kind={kind}
+      data-produce-count={produceItems.length}
       data-tone={tone}
     >
       {icon}
