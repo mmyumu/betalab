@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
+import { ItemCountBadge } from "@/components/item-count-badge";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 
@@ -114,5 +115,13 @@ describe("workspace equipment illustrations", () => {
     expect(screen.getByTestId("apple-illustration")).toBeInTheDocument();
     expect(screen.getByTestId("apple-illustration")).toHaveAttribute("aria-label", "Apple lot illustration");
     expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-apple-count", "3");
+  });
+
+  it("renders a reusable item count badge", () => {
+    render(<ItemCountBadge count={7} testId="item-count-badge" />);
+
+    expect(screen.getByTestId("item-count-badge")).toHaveTextContent("7");
+    expect(screen.getByTestId("item-count-badge")).toHaveClass("rounded-full");
+    expect(screen.getByTestId("item-count-badge")).toHaveClass("bg-slate-900");
   });
 });

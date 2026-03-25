@@ -6,6 +6,7 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { FloatingWidget } from "@/components/floating-widget";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
+import { ItemCountBadge } from "@/components/item-count-badge";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
@@ -90,7 +91,7 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
-  basket: { x: 1460, y: 248, width: 320, fallbackHeight: 320 },
+  basket: { x: 1554, y: 248, width: 198, fallbackHeight: 236 },
 };
 const rackSlotCount = 12;
 const rackIllustrationViewBox = { height: 320, width: 560 };
@@ -1087,6 +1088,8 @@ export function PesticideWorkbench() {
     trashedTools.length === 0 &&
     trashedProduceLots.length === 0 &&
     trashedWidgets.length === 0;
+  const trashItemCount =
+    trashedTools.length + trashedProduceLots.length + trashedWidgets.length;
   const basketProduceLots = state.experiment.workspace.produceLots;
   const handleCreateAppleLot = () => {
     void sendWorkbenchCommand("create_produce_lot", {
@@ -1193,51 +1196,58 @@ export function PesticideWorkbench() {
                       onDragOver={handleTrashDragOver}
                       onDrop={handleTrashDrop}
                     >
-                      <svg
-                        aria-hidden="true"
-                        className="h-[4.5rem] w-[4.5rem] text-slate-500"
-                        fill="none"
-                        viewBox="0 0 96 96"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M28 30H68"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="6"
+                      <div className="relative mx-auto w-fit">
+                        <ItemCountBadge
+                          className="-right-2 -top-2 absolute"
+                          count={trashItemCount}
+                          testId="trash-count-badge"
                         />
-                        <path
-                          d="M38 20H58"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="6"
-                        />
-                        <path
-                          d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="6"
-                        />
-                        <path
-                          d="M44 40V63"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="6"
-                        />
-                        <path
-                          d="M52 40V63"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="6"
-                        />
-                        <path
-                          d="M24 30H72"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeWidth="4"
-                        />
-                      </svg>
+                        <svg
+                          aria-hidden="true"
+                          className="h-[4.5rem] w-[4.5rem] text-slate-500"
+                          fill="none"
+                          viewBox="0 0 96 96"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M28 30H68"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="6"
+                          />
+                          <path
+                            d="M38 20H58"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="6"
+                          />
+                          <path
+                            d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="6"
+                          />
+                          <path
+                            d="M44 40V63"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="6"
+                          />
+                          <path
+                            d="M52 40V63"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="6"
+                          />
+                          <path
+                            d="M24 30H72"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeWidth="4"
+                          />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1366,33 +1376,39 @@ export function PesticideWorkbench() {
                 >
                   {widgetId === "basket" ? (
                     <section className="relative overflow-visible">
-                      <WorkspaceEquipmentWidget
-                        eyebrow="Produce basket"
-                      >
-                        <div className="space-y-4">
+                      <div className="overflow-hidden rounded-[1.55rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
+                        <div
+                          className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-3 py-2.5 backdrop-blur`}
+                          data-widget-drag-handle="true"
+                        >
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                            Produce basket
+                          </p>
+                        </div>
+                        <div className="px-3 py-3">
                           <button
                             aria-expanded={isBasketOpen}
                             aria-haspopup="dialog"
-                            className="block w-full rounded-[1.4rem] border border-slate-200/80 bg-white/90 px-3 py-4 text-left transition hover:border-amber-300 hover:bg-amber-50/40"
+                            aria-label={`Open produce basket (${basketProduceLots.length} lot${basketProduceLots.length === 1 ? "" : "s"})`}
+                            className="flex min-h-32 w-full items-center justify-center rounded-[1.05rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-3.5 text-left transition hover:border-amber-300 hover:bg-amber-50/40"
                             data-testid="basket-open-button"
                             onClick={() => setIsBasketOpen(true)}
                             type="button"
                           >
-                            <ProduceBasketIllustration
-                              className="mx-auto max-w-[18rem]"
-                              itemCount={6}
-                            />
-                            <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200/80 bg-white/90 px-3 py-3">
-                              <p className="text-sm text-slate-500">
-                                Click the basket to create a produce lot for sampling.
-                              </p>
-                              <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-                                {basketProduceLots.length} lot{basketProduceLots.length === 1 ? "" : "s"}
-                              </span>
+                            <div className="relative inline-flex items-center justify-center">
+                              <ItemCountBadge
+                                className="absolute right-[22px] top-1"
+                                count={basketProduceLots.length}
+                                testId="basket-count-badge"
+                              />
+                              <ProduceBasketIllustration
+                                className="block w-[10.9rem]"
+                                itemCount={6}
+                              />
                             </div>
                           </button>
                         </div>
-                      </WorkspaceEquipmentWidget>
+                      </div>
                       {isBasketOpen ? (
                         <div
                           className="absolute left-0 top-full z-[220] mt-3 w-[24rem] max-w-[min(24rem,calc(100vw-2rem))]"

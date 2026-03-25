@@ -874,6 +874,8 @@ describe("PesticideWorkbench", () => {
       expect(screen.getByTestId("trash-dropzone")).toBeInTheDocument();
     });
 
+    expect(screen.getByTestId("trash-count-badge")).toHaveTextContent("4");
+
     fireEvent.click(screen.getByTestId("trash-dropzone"));
 
     const dialog = await screen.findByRole("dialog");
@@ -907,6 +909,7 @@ describe("PesticideWorkbench", () => {
     const basketOpenButton = await screen.findByTestId("basket-open-button");
 
     expect(screen.queryByTestId("basket-dialog-overlay")).not.toBeInTheDocument();
+    expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("0");
 
     fireEvent.click(basketOpenButton);
 
@@ -923,7 +926,7 @@ describe("PesticideWorkbench", () => {
 
     expect(within(dialog).getByTestId("basket-produce-produce_1")).toBeInTheDocument();
     expect(within(dialog).getByText("12 units • 2.45 kg")).toBeInTheDocument();
-    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("1 lot");
+    expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("1");
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "create_produce_lot",
@@ -997,7 +1000,7 @@ describe("PesticideWorkbench", () => {
       "add_produce_lot_to_workbench_tool",
       { slot_id: "station_1", produce_lot_id: "produce_1" },
     );
-    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("0 lots");
+    expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("0");
   });
 
   it("discards a produce lot directly from the basket into the trash", async () => {
@@ -1036,7 +1039,7 @@ describe("PesticideWorkbench", () => {
     fireEvent.drop(screen.getByTestId("trash-dropzone"), { dataTransfer: transfer });
 
     await waitFor(() => {
-      expect(screen.getByTestId("basket-open-button")).toHaveTextContent("0 lots");
+      expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("0");
     });
 
     fireEvent.click(screen.getByTestId("trash-dropzone"));
