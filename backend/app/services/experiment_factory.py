@@ -84,7 +84,7 @@ def build_experiment() -> Experiment:
                     trashable=False,
                 ),
             ],
-            produce_items=[],
+            produce_lots=[],
         ),
         audit_log=[
             "Experiment created",

@@ -125,7 +125,7 @@ export function writeProduceDragPayload(dataTransfer: DataTransfer, payload: Pro
   dataTransfer.setData(PRODUCE_DRAG_MIME, serialized);
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
-    dataTransfer.setData(getDropTargetMime(targetType), payload.produceItemId);
+    dataTransfer.setData(getDropTargetMime(targetType), payload.produceLotId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -437,7 +437,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
 
     if (
       parsed.entityKind === "produce" &&
-      typeof parsed.produceItemId === "string" &&
+      typeof parsed.produceLotId === "string" &&
       typeof parsed.produceType === "string" &&
       typeof parsed.sourceId === "string" &&
       parsed.sourceKind === "basket" &&
@@ -447,7 +447,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
       return {
         allowedDropTargets,
         entityKind: "produce",
-        produceItemId: parsed.produceItemId,
+        produceLotId: parsed.produceLotId,
         produceType: parsed.produceType,
         sourceId: parsed.sourceId,
         sourceKind: "basket",
@@ -470,11 +470,11 @@ export function toDragDescriptor(
     | WorkspaceWidgetDragPayload
     | ProduceDragPayload,
 ): DragDescriptor {
-  if ("produceItemId" in payload) {
+  if ("produceLotId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
       entityKind: "produce",
-      produceItemId: payload.produceItemId,
+      produceLotId: payload.produceLotId,
       produceType: payload.produceType,
       sourceId: payload.sourceId,
       sourceKind: payload.sourceKind,

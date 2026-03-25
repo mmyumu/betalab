@@ -34,7 +34,7 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert created.json()["trash"]["tools"] == []
     assert created.json()["workspace"]["widgets"][0]["id"] == "workbench"
     assert created.json()["workspace"]["widgets"][2]["is_trashed"] is False
-    assert created.json()["workspace"]["produce_items"] == []
+    assert created.json()["workspace"]["produce_lots"] == []
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
 
@@ -503,7 +503,7 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
     )["is_trashed"] is True
 
 
-def test_create_produce_item_round_trip_over_http() -> None:
+def test_create_produce_lot_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
@@ -513,7 +513,7 @@ def test_create_produce_item_round_trip_over_http() -> None:
         produce_created = client.post(
             f"/experiments/{experiment_id}/commands",
             json={
-                "type": "create_produce_item",
+                "type": "create_produce_lot",
                 "payload": {
                     "produce_type": "apple",
                 },
@@ -521,12 +521,14 @@ def test_create_produce_item_round_trip_over_http() -> None:
         )
 
     assert produce_created.status_code == 200
-    assert len(produce_created.json()["workspace"]["produce_items"]) == 1
-    assert produce_created.json()["workspace"]["produce_items"][0]["produce_type"] == "apple"
-    assert produce_created.json()["workspace"]["produce_items"][0]["label"] == "Apple 1"
+    assert len(produce_created.json()["workspace"]["produce_lots"]) == 1
+    assert produce_created.json()["workspace"]["produce_lots"][0]["produce_type"] == "apple"
+    assert produce_created.json()["workspace"]["produce_lots"][0]["label"] == "Apple lot 1"
+    assert produce_created.json()["workspace"]["produce_lots"][0]["unit_count"] == 12
+    assert produce_created.json()["workspace"]["produce_lots"][0]["total_mass_g"] == 2450.0
 
 
-def test_add_produce_to_sampling_bag_round_trip_over_http() -> None:
+def test_add_produce_lot_to_sampling_bag_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 
     with TestClient(app) as client:
@@ -536,7 +538,7 @@ def test_add_produce_to_sampling_bag_round_trip_over_http() -> None:
         produce_created = client.post(
             f"/experiments/{experiment_id}/commands",
             json={
-                "type": "create_produce_item",
+                "type": "create_produce_lot",
                 "payload": {
                     "produce_type": "apple",
                 },
@@ -555,17 +557,18 @@ def test_add_produce_to_sampling_bag_round_trip_over_http() -> None:
         bag_loaded = client.post(
             f"/experiments/{experiment_id}/commands",
             json={
-                "type": "add_produce_to_workbench_tool",
+                "type": "add_produce_lot_to_workbench_tool",
                 "payload": {
                     "slot_id": "station_1",
-                    "produce_item_id": produce_created.json()["workspace"]["produce_items"][0]["id"],
+                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
                 },
             },
         )
 
     assert bag_loaded.status_code == 200
-    assert bag_loaded.json()["workspace"]["produce_items"] == []
-    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_items"][0]["produce_type"] == "apple"
+    assert bag_loaded.json()["workspace"]["produce_lots"] == []
+    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["produce_type"] == "apple"
+    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["unit_count"] == 12
 
 
 def test_remove_liquid_round_trip_over_http() -> None:

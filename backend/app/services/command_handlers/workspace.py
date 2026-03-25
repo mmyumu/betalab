@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.models import Experiment, ProduceItem, new_id
+from app.domain.models import Experiment, ProduceLot, new_id
 from app.services.command_handlers.support import find_workspace_widget
 
 
@@ -40,18 +40,20 @@ def discard_workspace_widget(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{widget.label} removed from workspace.")
 
 
-def create_produce_item(experiment: Experiment, payload: dict) -> None:
+def create_produce_lot(experiment: Experiment, payload: dict) -> None:
     produce_type = str(payload["produce_type"])
     if produce_type != "apple":
         raise ValueError("Unsupported produce type")
 
-    apple_count = sum(
-        1 for item in experiment.workspace.produce_items if item.produce_type == produce_type
+    apple_lot_count = sum(
+        1 for lot in experiment.workspace.produce_lots if lot.produce_type == produce_type
     )
-    produce_item = ProduceItem(
+    produce_lot = ProduceLot(
         id=new_id("produce"),
-        label=f"Apple {apple_count + 1}",
+        label=f"Apple lot {apple_lot_count + 1}",
         produce_type=produce_type,
+        unit_count=12,
+        total_mass_g=2450.0,
     )
-    experiment.workspace.produce_items.append(produce_item)
-    experiment.audit_log.append(f"{produce_item.label} created in Produce basket.")
+    experiment.workspace.produce_lots.append(produce_lot)
+    experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")

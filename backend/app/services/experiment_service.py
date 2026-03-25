@@ -17,7 +17,7 @@ from app.services.command_handlers.trash import (
 )
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
-    add_produce_to_workbench_tool,
+    add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
     move_tool_between_workbench_slots,
     place_tool_on_workbench,
@@ -27,7 +27,7 @@ from app.services.command_handlers.workbench import (
 )
 from app.services.command_handlers.workspace import (
     add_workspace_widget,
-    create_produce_item,
+    create_produce_lot,
     discard_workspace_widget,
     move_workspace_widget,
 )
@@ -51,14 +51,14 @@ class ExperimentService:
             "add_workspace_widget": add_workspace_widget,
             "move_workspace_widget": move_workspace_widget,
             "discard_workspace_widget": discard_workspace_widget,
-            "create_produce_item": create_produce_item,
+            "create_produce_lot": create_produce_lot,
             "place_tool_in_rack_slot": place_tool_in_rack_slot,
             "place_workbench_tool_in_rack_slot": place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": remove_rack_tool_to_workbench_slot,
             "discard_rack_tool": discard_rack_tool,
             "restore_trashed_tool_to_rack_slot": restore_trashed_tool_to_rack_slot,
             "add_liquid_to_workbench_tool": add_liquid_to_workbench_tool,
-            "add_produce_to_workbench_tool": add_produce_to_workbench_tool,
+            "add_produce_lot_to_workbench_tool": add_produce_lot_to_workbench_tool,
             "remove_liquid_from_workbench_tool": remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": update_workbench_liquid_volume,
         }

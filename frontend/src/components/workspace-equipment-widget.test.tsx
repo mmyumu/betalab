@@ -112,6 +112,7 @@ describe("workspace equipment illustrations", () => {
     render(<AppleIllustration testId="apple-illustration" />);
 
     expect(screen.getByTestId("apple-illustration")).toBeInTheDocument();
-    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("aria-label", "Apple illustration");
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("aria-label", "Apple lot illustration");
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-apple-count", "3");
   });
 });

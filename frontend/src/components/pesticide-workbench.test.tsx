@@ -78,7 +78,7 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     toolType: "sample_vial",
     capacity_ml: 2,
     accepts_liquids: true,
-    produceItems: [],
+    produceLots: [],
     trashable: true,
     liquids: [],
     ...overrides,
@@ -162,14 +162,20 @@ function makeWorkspaceWidgets(
 
 function makeWorkbenchExperiment({
   auditLog = ["Experiment created", "Start by dragging an extraction tool onto the bench."],
-  basketProduceItems = [],
+  basketProduceLots = [],
   rackSlots = makeRackSlots(),
   slots = makeSlots(),
   trashTools = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
   auditLog?: string[];
-  basketProduceItems?: { id: string; label: string; produceType: "apple" }[];
+  basketProduceLots?: {
+    id: string;
+    label: string;
+    produceType: "apple";
+    totalMassG: number;
+    unitCount: number | null;
+  }[];
   rackSlots?: RackSlot[];
   slots?: BenchSlot[];
   trashTools?: TrashToolEntry[];
@@ -181,7 +187,7 @@ function makeWorkbenchExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { tools: trashTools },
-    workspace: { produceItems: basketProduceItems, widgets: workspaceWidgets },
+    workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
     audit_log: auditLog,
   };
 }
@@ -195,7 +201,7 @@ function makeSampleBagTool(overrides: Partial<BenchToolInstance> = {}): BenchToo
     toolType: "sample_bag",
     capacity_ml: 500,
     accepts_liquids: false,
-    produceItems: [],
+    produceLots: [],
     ...overrides,
   });
 }
@@ -843,8 +849,16 @@ describe("PesticideWorkbench", () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        auditLog: ["Apple 1 created in Produce basket."],
-        basketProduceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+        auditLog: ["Apple lot 1 created in Produce basket."],
+        basketProduceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
       }),
     );
 
@@ -859,19 +873,20 @@ describe("PesticideWorkbench", () => {
     const dialog = await screen.findByRole("dialog");
     expect(screen.getByTestId("basket-dialog-overlay")).toHaveClass("absolute");
     expect(screen.getByTestId("basket-dialog-overlay")).toHaveClass("top-full");
-    expect(within(dialog).getByText("No produce created yet.")).toBeInTheDocument();
+    expect(within(dialog).getByText("No produce lots created yet.")).toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByTestId("basket-create-apple-button"));
+    fireEvent.click(within(dialog).getByTestId("basket-create-apple-lot-button"));
 
     await waitFor(() => {
-      expect(within(dialog).getByText("Apple 1")).toBeInTheDocument();
+      expect(within(dialog).getByText("Apple lot 1")).toBeInTheDocument();
     });
 
     expect(within(dialog).getByTestId("basket-produce-produce_1")).toBeInTheDocument();
-    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("1 item");
+    expect(within(dialog).getByText("12 units • 2.45 kg")).toBeInTheDocument();
+    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("1 lot");
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
-      "create_produce_item",
+      "create_produce_lot",
       { produce_type: "apple" },
     );
   });
@@ -879,17 +894,33 @@ describe("PesticideWorkbench", () => {
   it("moves basket produce into a sealed sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketProduceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+        basketProduceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
         slots: makeSlots([{ tool: makeSampleBagTool() }]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketProduceItems: [],
+        basketProduceLots: [],
         slots: makeSlots([
           {
             tool: makeSampleBagTool({
-              produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
             }),
           },
         ]),
@@ -917,16 +948,16 @@ describe("PesticideWorkbench", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByTestId("bench-slot-station_1")).getByText("Apple 1"),
+        within(screen.getByTestId("bench-slot-station_1")).getByText("Apple lot 1"),
       ).toBeInTheDocument();
     });
 
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
-      "add_produce_to_workbench_tool",
-      { slot_id: "station_1", produce_item_id: "produce_1" },
+      "add_produce_lot_to_workbench_tool",
+      { slot_id: "station_1", produce_lot_id: "produce_1" },
     );
-    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("0 items");
+    expect(screen.getByTestId("basket-open-button")).toHaveTextContent("0 lots");
   });
 
   it("restores a trashed tool to a workbench station from the trash view", async () => {

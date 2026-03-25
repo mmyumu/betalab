@@ -4,7 +4,7 @@ from app.domain.models import Experiment, WorkbenchLiquid, WorkbenchSlot, Workbe
 from app.domain.workbench_catalog import get_workbench_liquid_definition, get_workbench_tool_definition
 from app.services.command_handlers.support import (
     find_workbench_slot,
-    find_workspace_produce_item,
+    find_workspace_produce_lot,
     format_volume,
     round_volume,
 )
@@ -116,22 +116,22 @@ def add_liquid_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{liquid_definition.name} added to {slot.tool.label}.")
 
 
-def add_produce_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
+def add_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before adding produce.")
     if slot.tool.tool_type != "sample_bag":
         raise ValueError(f"{slot.tool.label} does not accept produce.")
 
-    produce_item = find_workspace_produce_item(
+    produce_lot = find_workspace_produce_lot(
         experiment.workspace,
-        str(payload["produce_item_id"]),
+        str(payload["produce_lot_id"]),
     )
-    slot.tool.produce_items.append(produce_item)
-    experiment.workspace.produce_items = [
-        item for item in experiment.workspace.produce_items if item.id != produce_item.id
+    slot.tool.produce_lots.append(produce_lot)
+    experiment.workspace.produce_lots = [
+        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
     ]
-    experiment.audit_log.append(f"{produce_item.label} added to {slot.tool.label}.")
+    experiment.audit_log.append(f"{produce_lot.label} added to {slot.tool.label}.")
 
 
 def remove_liquid_from_workbench_tool(experiment: Experiment, payload: dict) -> None:
@@ -197,6 +197,6 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
         accepts_liquids=tool_definition.accepts_liquids,
-        produce_items=[],
+        produce_lots=[],
         trashable=True,
     )

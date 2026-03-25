@@ -2,8 +2,8 @@ import type { Experiment } from "@/types/experiment";
 import type {
   BenchLiquidPortion,
   BenchSlot,
-  ExperimentProduceItem,
   BenchToolInstance,
+  ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   RackSlot,
   TrashToolEntry,
@@ -82,9 +82,9 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       tools: experiment.trash.tools.map(normalizeTrashTool),
     },
     workspace: {
-      produceItems:
-        (experiment.workspace.produceItems ?? experiment.workspace.produce_items ?? []).map(
-          normalizeProduceItem,
+      produceLots:
+        (experiment.workspace.produceLots ?? experiment.workspace.produce_lots ?? []).map(
+          normalizeProduceLot,
         ),
       widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
     },
@@ -109,8 +109,8 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
     accepts_liquids: Boolean(tool.accepts_liquids),
-    produceItems: (tool.produceItems ?? tool.produce_items ?? []).map(
-      (item) => normalizeProduceItem(item as ExperimentProduceItem & Record<string, unknown>),
+    produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map(
+      (lot) => normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
     trashable: typeof tool.trashable === "boolean" ? tool.trashable : true,
     liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
@@ -162,12 +162,17 @@ function normalizeWorkspaceWidget(
   };
 }
 
-function normalizeProduceItem(
-  item: ExperimentProduceItem & Record<string, unknown>,
-): ExperimentProduceItem {
+function normalizeProduceLot(
+  lot: ExperimentProduceLot & Record<string, unknown>,
+): ExperimentProduceLot {
+  const unitCountValue = lot.unitCount ?? lot.unit_count;
+
   return {
-    id: String(item.id),
-    label: String(item.label),
-    produceType: String(item.produceType ?? item.produce_type) as ExperimentProduceItem["produceType"],
+    id: String(lot.id),
+    label: String(lot.label),
+    produceType: String(lot.produceType ?? lot.produce_type) as ExperimentProduceLot["produceType"],
+    totalMassG: Number(lot.totalMassG ?? lot.total_mass_g),
+    unitCount:
+      unitCountValue === undefined || unitCountValue === null ? null : Number(unitCountValue),
   };
 }

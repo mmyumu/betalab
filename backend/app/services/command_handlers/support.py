@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.models import ProduceItem, Rack, RackSlot, Trash, TrashToolEntry, Workspace, WorkspaceWidget, Workbench, WorkbenchSlot
+from app.domain.models import ProduceLot, Rack, RackSlot, Trash, TrashToolEntry, Workspace, WorkspaceWidget, Workbench, WorkbenchSlot
 
 
 def find_workbench_slot(workbench: Workbench, slot_id: str) -> WorkbenchSlot:
@@ -31,11 +31,11 @@ def find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidg
     return widget
 
 
-def find_workspace_produce_item(workspace: Workspace, produce_item_id: str) -> ProduceItem:
-    produce_item = next((entry for entry in workspace.produce_items if entry.id == produce_item_id), None)
-    if produce_item is None:
-        raise ValueError("Unknown produce item")
-    return produce_item
+def find_workspace_produce_lot(workspace: Workspace, produce_lot_id: str) -> ProduceLot:
+    produce_lot = next((entry for entry in workspace.produce_lots if entry.id == produce_lot_id), None)
+    if produce_lot is None:
+        raise ValueError("Unknown produce lot")
+    return produce_lot
 
 
 def round_volume(volume_ml: float) -> float:

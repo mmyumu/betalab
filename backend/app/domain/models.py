@@ -29,7 +29,7 @@ class WorkbenchTool:
     capacity_ml: float
     accepts_liquids: bool
     trashable: bool
-    produce_items: list["ProduceItem"] = field(default_factory=list)
+    produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
 
@@ -82,16 +82,18 @@ class WorkspaceWidget:
 
 
 @dataclass
-class ProduceItem:
+class ProduceLot:
     id: str
     label: str
     produce_type: str
+    total_mass_g: float
+    unit_count: int | None = None
 
 
 @dataclass
 class Workspace:
     widgets: list[WorkspaceWidget] = field(default_factory=list)
-    produce_items: list[ProduceItem] = field(default_factory=list)
+    produce_lots: list[ProduceLot] = field(default_factory=list)
 
 
 @dataclass

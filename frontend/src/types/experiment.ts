@@ -1,6 +1,6 @@
 import type {
   BenchSlot,
-  ExperimentProduceItem,
+  ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   RackSlot,
   TrashToolEntry,
@@ -19,7 +19,7 @@ export type ExperimentTrash = {
 };
 
 export type ExperimentWorkspace = {
-  produceItems: ExperimentProduceItem[];
+  produceLots: ExperimentProduceLot[];
   widgets: ExperimentWorkspaceWidget[];
 };
 

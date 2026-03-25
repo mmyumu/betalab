@@ -25,7 +25,7 @@ export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "form
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
-export type ProduceItemType = "apple";
+export type ProduceLotType = "apple";
 export type DragEntityKind = "tool" | "liquid" | "workspace_widget" | "produce";
 export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket";
 
@@ -94,8 +94,8 @@ export type ToolbarDragPayload =
 
 export type ProduceDragPayload = BaseDragPayload & {
   entityKind: "produce";
-  produceItemId: string;
-  produceType: ProduceItemType;
+  produceLotId: string;
+  produceType: ProduceLotType;
   sourceId: string;
   sourceKind: "basket";
   trashable: false;
@@ -161,8 +161,8 @@ export type DragDescriptor =
     })
   | (BaseDragPayload & {
       entityKind: "produce";
-      produceItemId: string;
-      produceType: ProduceItemType;
+      produceLotId: string;
+      produceType: ProduceLotType;
       trashable: false;
     });
 
@@ -183,7 +183,7 @@ export type BenchToolInstance = {
   toolType: ToolType;
   capacity_ml: number;
   accepts_liquids: boolean;
-  produceItems?: ExperimentProduceItem[];
+  produceLots?: ExperimentProduceLot[];
   trashable: boolean;
   liquids: BenchLiquidPortion[];
 };
@@ -217,8 +217,10 @@ export type ExperimentWorkspaceWidget = {
   trashable: boolean;
 };
 
-export type ExperimentProduceItem = {
+export type ExperimentProduceLot = {
   id: string;
   label: string;
-  produceType: ProduceItemType;
+  produceType: ProduceLotType;
+  totalMassG: number;
+  unitCount: number | null;
 };

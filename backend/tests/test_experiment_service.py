@@ -43,7 +43,7 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[3].is_present is False
     assert experiment.workspace.widgets[4].is_present is True
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
-    assert experiment.workspace.produce_items == []
+    assert experiment.workspace.produce_lots == []
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
 
 
@@ -120,16 +120,16 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     assert slot.tool.label == "Sealed sampling bag"
     assert slot.tool.tool_type == "sample_bag"
     assert slot.tool.accepts_liquids is False
-    assert slot.tool.produce_items == []
+    assert slot.tool.produce_lots == []
 
 
-def test_add_produce_to_sampling_bag_moves_it_out_of_basket() -> None:
+def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
     created = service.apply_command(
         experiment.id,
-        "create_produce_item",
+        "create_produce_lot",
         {
             "produce_type": "apple",
         },
@@ -145,28 +145,30 @@ def test_add_produce_to_sampling_bag_moves_it_out_of_basket() -> None:
 
     updated = service.apply_command(
         experiment.id,
-        "add_produce_to_workbench_tool",
+        "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_item_id": created.workspace.produce_items[0].id,
+            "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
-    assert len(slot.tool.produce_items) == 1
-    assert slot.tool.produce_items[0].label == "Apple 1"
-    assert updated.workspace.produce_items == []
-    assert updated.audit_log[-1] == "Apple 1 added to Sealed sampling bag."
+    assert len(slot.tool.produce_lots) == 1
+    assert slot.tool.produce_lots[0].label == "Apple lot 1"
+    assert slot.tool.produce_lots[0].unit_count == 12
+    assert slot.tool.produce_lots[0].total_mass_g == 2450.0
+    assert updated.workspace.produce_lots == []
+    assert updated.audit_log[-1] == "Apple lot 1 added to Sealed sampling bag."
 
 
-def test_add_produce_requires_a_sampling_bag() -> None:
+def test_add_produce_lot_requires_a_sampling_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
     created = service.apply_command(
         experiment.id,
-        "create_produce_item",
+        "create_produce_lot",
         {
             "produce_type": "apple",
         },
@@ -183,10 +185,10 @@ def test_add_produce_requires_a_sampling_bag() -> None:
     with pytest.raises(ValueError, match="50 mL centrifuge tube does not accept produce."):
         service.apply_command(
             experiment.id,
-            "add_produce_to_workbench_tool",
+            "add_produce_lot_to_workbench_tool",
             {
                 "slot_id": "station_1",
-                "produce_item_id": created.workspace.produce_items[0].id,
+                "produce_lot_id": created.workspace.produce_lots[0].id,
             },
         )
 
@@ -401,32 +403,34 @@ def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
         )
 
 
-def test_create_produce_item_adds_apple_to_basket() -> None:
+def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
     updated = service.apply_command(
         experiment.id,
-        "create_produce_item",
+        "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
 
-    assert len(updated.workspace.produce_items) == 1
-    assert updated.workspace.produce_items[0].produce_type == "apple"
-    assert updated.workspace.produce_items[0].label == "Apple 1"
-    assert updated.audit_log[-1] == "Apple 1 created in Produce basket."
+    assert len(updated.workspace.produce_lots) == 1
+    assert updated.workspace.produce_lots[0].produce_type == "apple"
+    assert updated.workspace.produce_lots[0].label == "Apple lot 1"
+    assert updated.workspace.produce_lots[0].unit_count == 12
+    assert updated.workspace.produce_lots[0].total_mass_g == 2450.0
+    assert updated.audit_log[-1] == "Apple lot 1 created in Produce basket."
 
 
-def test_create_produce_item_rejects_unknown_produce_type() -> None:
+def test_create_produce_lot_rejects_unknown_produce_type() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Unsupported produce type"):
         service.apply_command(
             experiment.id,
-            "create_produce_item",
+            "create_produce_lot",
             {
                 "produce_type": "pear",
             },

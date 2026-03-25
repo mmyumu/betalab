@@ -12,10 +12,12 @@ class WorkbenchLiquidSchema(BaseModel):
     accent: str
 
 
-class ProduceItemSchema(BaseModel):
+class ProduceLotSchema(BaseModel):
     id: str
     label: str
     produce_type: str
+    total_mass_g: float
+    unit_count: int | None = None
 
 
 class WorkbenchToolSchema(BaseModel):
@@ -28,7 +30,7 @@ class WorkbenchToolSchema(BaseModel):
     capacity_ml: float
     accepts_liquids: bool
     trashable: bool
-    produce_items: list[ProduceItemSchema]
+    produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
 
 
@@ -75,7 +77,7 @@ class WorkspaceWidgetSchema(BaseModel):
 
 class WorkspaceSchema(BaseModel):
     widgets: list[WorkspaceWidgetSchema]
-    produce_items: list[ProduceItemSchema]
+    produce_lots: list[ProduceLotSchema]
 
 
 class ExperimentSchema(BaseModel):
@@ -99,14 +101,14 @@ class ExperimentCommandEnvelope(BaseModel):
         "add_workspace_widget",
         "move_workspace_widget",
         "discard_workspace_widget",
-        "create_produce_item",
+        "create_produce_lot",
         "place_tool_in_rack_slot",
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
         "discard_rack_tool",
         "restore_trashed_tool_to_rack_slot",
         "add_liquid_to_workbench_tool",
-        "add_produce_to_workbench_tool",
+        "add_produce_lot_to_workbench_tool",
         "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",
     ]

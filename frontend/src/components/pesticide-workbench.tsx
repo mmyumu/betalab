@@ -40,6 +40,7 @@ import type {
   BenchToolInstance,
   DragDescriptor,
   DropTargetType,
+  ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   ProduceDragPayload,
   RackSlot,
@@ -119,6 +120,24 @@ function getRackIllustrationSlotPosition(slotIndex: number) {
     left: `${(rackIllustrationBase.x + column * rackIllustrationGap.x) / rackIllustrationViewBox.width * 100}%`,
     top: `${(rackIllustrationBase.y + row * rackIllustrationGap.y) / rackIllustrationViewBox.height * 100}%`,
   };
+}
+
+function formatProduceLotMass(totalMassG: number) {
+  if (totalMassG >= 1000) {
+    return `${(totalMassG / 1000).toFixed(2)} kg`;
+  }
+
+  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
+}
+
+function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
+  const unitLabel =
+    produceLot.unitCount === null
+      ? null
+      : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
+  const massLabel = formatProduceLotMass(produceLot.totalMassG);
+
+  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
 }
 
 function isPointInsideWidget(
@@ -410,9 +429,9 @@ export function PesticideWorkbench() {
   };
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
-    void sendWorkbenchCommand("add_produce_to_workbench_tool", {
+    void sendWorkbenchCommand("add_produce_lot_to_workbench_tool", {
       slot_id: targetSlotId,
-      produce_item_id: payload.produceItemId,
+      produce_lot_id: payload.produceLotId,
     });
     clearDropTargets();
   };
@@ -865,16 +884,16 @@ export function PesticideWorkbench() {
   };
 
   const handleBasketProduceDragStart = (
-    produceItemId: string,
+    produceLotId: string,
     produceType: "apple",
     dataTransfer: DataTransfer,
   ) => {
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId,
+      produceLotId,
       produceType,
-      sourceId: produceItemId,
+      sourceId: produceLotId,
       sourceKind: "basket",
       trashable: false,
     });
@@ -882,9 +901,9 @@ export function PesticideWorkbench() {
     setActiveDragItem({
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId,
+      produceLotId,
       produceType,
-      sourceId: produceItemId,
+      sourceId: produceLotId,
       sourceKind: "basket",
       trashable: false,
     });
@@ -926,9 +945,9 @@ export function PesticideWorkbench() {
     activeDragItem.toolType === "sample_vial";
 
   const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;
-  const basketProduceItems = state.experiment.workspace.produceItems;
-  const handleCreateApple = () => {
-    void sendWorkbenchCommand("create_produce_item", {
+  const basketProduceLots = state.experiment.workspace.produceLots;
+  const handleCreateAppleLot = () => {
+    void sendWorkbenchCommand("create_produce_lot", {
       produce_type: "apple",
     });
   };
@@ -1201,10 +1220,10 @@ export function PesticideWorkbench() {
                             />
                             <div className="mt-3 flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200/80 bg-white/90 px-3 py-3">
                               <p className="text-sm text-slate-500">
-                                Click the basket to create a fruit or vegetable input.
+                                Click the basket to create a produce lot for sampling.
                               </p>
                               <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-                                {basketProduceItems.length} item{basketProduceItems.length === 1 ? "" : "s"}
+                                {basketProduceLots.length} lot{basketProduceLots.length === 1 ? "" : "s"}
                               </span>
                             </div>
                           </button>
@@ -1217,15 +1236,15 @@ export function PesticideWorkbench() {
                         >
                           <div
                             className="w-full rounded-[1.4rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
-                            role="dialog"
+                              role="dialog"
                           >
                             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                               <div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                  Create produce
+                                  Create produce lot
                                 </p>
                                 <p className="mt-1 text-sm text-slate-600">
-                                  Start the produce library for sample preparation.
+                                  Start the produce lot library for sample preparation.
                                 </p>
                               </div>
                               <button
@@ -1239,16 +1258,16 @@ export function PesticideWorkbench() {
                             <div className="space-y-4 p-4">
                               <button
                                 className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
-                                data-testid="basket-create-apple-button"
-                                onClick={handleCreateApple}
+                                data-testid="basket-create-apple-lot-button"
+                                onClick={handleCreateAppleLot}
                                 type="button"
                               >
                                 <span className="flex items-center gap-3">
                                   <AppleIllustration className="h-12 w-12 shrink-0" />
                                   <span className="min-w-0">
-                                    <span className="block text-sm font-semibold text-slate-900">Create apple</span>
+                                    <span className="block text-sm font-semibold text-slate-900">Create apple lot</span>
                                     <span className="mt-1 block text-sm text-slate-500">
-                                      Add a first produce item to the basket.
+                                      Add a representative apple lot to the basket.
                                     </span>
                                   </span>
                                 </span>
@@ -1258,37 +1277,42 @@ export function PesticideWorkbench() {
                                   Basket contents
                                 </p>
                                 <div className="mt-3 space-y-2">
-                                  {basketProduceItems.length > 0 ? (
-                                    basketProduceItems.map((item) => (
+                                  {basketProduceLots.length > 0 ? (
+                                    basketProduceLots.map((lot) => (
                                       <div
                                         className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
-                                        data-testid={`basket-produce-${item.id}`}
+                                        data-testid={`basket-produce-${lot.id}`}
                                         draggable
-                                        key={item.id}
+                                        key={lot.id}
                                         onDragEnd={clearDropTargets}
                                         onDragStart={(event) =>
                                           handleBasketProduceDragStart(
-                                            item.id,
-                                            item.produceType,
+                                            lot.id,
+                                            lot.produceType,
                                             event.dataTransfer,
                                           )}
                                       >
                                         <div className="flex min-w-0 items-center gap-3">
                                           <AppleIllustration
                                             className="h-10 w-10 shrink-0"
-                                            testId={`basket-produce-illustration-${item.id}`}
+                                            testId={`basket-produce-illustration-${lot.id}`}
                                           />
-                                          <span className="truncate text-sm font-semibold text-slate-900">
-                                            {item.label}
-                                          </span>
+                                          <div className="min-w-0">
+                                            <span className="block truncate text-sm font-semibold text-slate-900">
+                                              {lot.label}
+                                            </span>
+                                            <span className="block truncate text-xs text-slate-500">
+                                              {formatProduceLotMetadata(lot)}
+                                            </span>
+                                          </div>
                                         </div>
                                         <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                                          {item.produceType}
+                                          {lot.produceType}
                                         </span>
                                       </div>
                                     ))
                                   ) : (
-                                    <p className="text-sm text-slate-500">No produce created yet.</p>
+                                    <p className="text-sm text-slate-500">No produce lots created yet.</p>
                                   )}
                                 </div>
                               </div>

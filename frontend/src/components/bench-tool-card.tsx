@@ -70,6 +70,21 @@ function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
 }
 
+function formatMass(totalMassG: number) {
+  if (totalMassG >= 1000) {
+    return `${(totalMassG / 1000).toFixed(2)} kg`;
+  }
+
+  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
+}
+
+function formatLotMetadata(unitCount: number | null, totalMassG: number) {
+  const unitLabel = unitCount === null ? null : `${unitCount} unit${unitCount === 1 ? "" : "s"}`;
+  const massLabel = formatMass(totalMassG);
+
+  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+}
+
 export function BenchToolCard({
   draggable = false,
   onDragEnd,
@@ -78,10 +93,11 @@ export function BenchToolCard({
   onLiquidVolumeChange,
   tool,
 }: BenchToolCardProps) {
-  const produceItems = tool.produceItems ?? [];
+  const produceLots = tool.produceLots ?? [];
   const currentVolume = Number.parseFloat(
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
+  const totalProduceMassG = produceLots.reduce((total, lot) => total + lot.totalMassG, 0);
   const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const isFilled = liquidVisualState.hasVisibleLiquid;
@@ -112,16 +128,16 @@ export function BenchToolCard({
               fillRatio={fillRatio}
               fillSegments={liquidSegments}
               kind={tool.toolType}
-              produceItems={produceItems}
+              produceLots={produceLots}
               tone="neutral"
             />
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
               <p className="mt-1.5 text-[11px] font-medium text-slate-500">
                 {isSampleBag
-                  ? produceItems.length > 0
-                    ? `${produceItems.length} produce loaded`
-                    : "Ready for produce intake"
+                  ? produceLots.length > 0
+                    ? `${produceLots.length} produce lot${produceLots.length === 1 ? "" : "s"} loaded`
+                    : "Ready for produce lot intake"
                   : tool.liquids.length > 0
                     ? `${tool.liquids.length} liquid loaded`
                     : "Ready for liquid additions"}
@@ -137,9 +153,11 @@ export function BenchToolCard({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Produce load
                 </p>
-                <p className="mt-0.5 text-base font-semibold text-slate-950">{produceItems.length} item{produceItems.length === 1 ? "" : "s"}</p>
+                <p className="mt-0.5 text-base font-semibold text-slate-950">
+                  {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
+                </p>
                 <p className="text-[11px] text-slate-500">
-                  Sealed sample intake
+                  {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Sealed sample intake"}
                 </p>
               </div>
             </div>
@@ -165,23 +183,26 @@ export function BenchToolCard({
 
         <div className="space-y-0.5">
           {isSampleBag ? (
-            produceItems.length > 0 ? (
-              produceItems.map((produceItem) => (
+            produceLots.length > 0 ? (
+              produceLots.map((produceLot) => (
                 <div
-                  key={produceItem.id}
+                  key={produceLot.id}
                   className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate">{produceItem.label}</span>
+                    <span className="truncate">{produceLot.label}</span>
                     <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                      {produceItem.produceType}
+                      {produceLot.produceType}
                     </span>
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  </p>
                 </div>
               ))
             ) : (
               <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
-                Drop produce here
+                Drop produce lot here
               </span>
             )
           ) : tool.liquids.length > 0 ? (

@@ -192,7 +192,7 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
     toolType: item.toolType,
     capacity_ml: item.capacity_ml,
     accepts_liquids: item.accepts_liquids,
-    produceItems: [],
+    produceLots: [],
     trashable: item.trashable,
     liquids: [],
     ...overrides,
@@ -211,13 +211,13 @@ function makeExperiment({
   slots = makeSlots(),
   rackSlots = makeRackSlots(),
   trashTools = [],
-  produceItems = [],
+  produceLots = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
   slots?: BenchSlot[];
   rackSlots?: RackSlot[];
   trashTools?: TrashToolEntry[];
-  produceItems?: Experiment["workspace"]["produceItems"];
+  produceLots?: Experiment["workspace"]["produceLots"];
   workspaceWidgets?: ExperimentWorkspaceWidget[];
 } = {}): Experiment {
   return {
@@ -226,7 +226,7 @@ function makeExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { tools: trashTools },
-    workspace: { produceItems, widgets: workspaceWidgets },
+    workspace: { produceLots, widgets: workspaceWidgets },
     audit_log: ["Experiment created", "Start by dragging an extraction tool onto the bench."],
   };
 }
@@ -570,8 +570,8 @@ function createBasketProduceSourceCase(): DndSourceCase {
   const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
 
   return {
-    id: "basket-produce-apple",
-    label: "basket apple",
+    id: "basket-produce-lot-apple",
+    label: "basket apple lot",
     sourceTestId: "basket-produce-produce_1",
     openBasket: true,
     openTrash: false,
@@ -588,17 +588,25 @@ function createBasketProduceSourceCase(): DndSourceCase {
         slots: makeSlots([
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag" }) },
         ]),
-        produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+        produceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
         workspaceWidgets: makeWorkspaceWidgets(),
       }),
     targetExpectations: {
       "bench-slot-station_1": {
         compatible: true,
         command: {
-          type: "add_produce_to_workbench_tool",
+          type: "add_produce_lot_to_workbench_tool",
           payload: {
             slot_id: "station_1",
-            produce_item_id: "produce_1",
+            produce_lot_id: "produce_1",
           },
         },
       },

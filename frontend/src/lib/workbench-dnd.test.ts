@@ -117,7 +117,7 @@ describe("workbench dnd helpers", () => {
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId: "produce_1",
+      produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
@@ -130,7 +130,7 @@ describe("workbench dnd helpers", () => {
     expect(readProduceDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId: "produce_1",
+      produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",

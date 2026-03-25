@@ -192,7 +192,15 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               accepts_liquids: false,
-              produceItems: [{ id: "produce_1", label: "Apple 1", produceType: "apple" }],
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
               trashable: true,
               liquids: [],
             },
@@ -206,8 +214,9 @@ describe("PesticideWorkbenchPanel", () => {
       screen
         .getByTestId("bench-slot-station_1")
         .querySelector("[data-kind='sample_bag']"),
-    ).toHaveAttribute("data-produce-count", "1");
-    expect(screen.getByText("Apple 1")).toBeInTheDocument();
+    ).toHaveAttribute("data-produce-lot-count", "1");
+    expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
+    expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
   });
 
   it("accepts tool drags on stations and forwards the drop payload", () => {
@@ -384,7 +393,7 @@ describe("PesticideWorkbenchPanel", () => {
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId: "produce_1",
+      produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
@@ -411,7 +420,7 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               accepts_liquids: false,
-              produceItems: [],
+              produceLots: [],
               trashable: true,
               liquids: [],
             },
@@ -431,7 +440,7 @@ describe("PesticideWorkbenchPanel", () => {
     expect(onProduceDrop).toHaveBeenCalledWith("station_1", {
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId: "produce_1",
+      produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
@@ -445,7 +454,7 @@ describe("PesticideWorkbenchPanel", () => {
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot"],
       entityKind: "produce",
-      produceItemId: "produce_1",
+      produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
@@ -472,7 +481,7 @@ describe("PesticideWorkbenchPanel", () => {
               toolType: "centrifuge_tube",
               capacity_ml: 50,
               accepts_liquids: true,
-              produceItems: [],
+              produceLots: [],
               trashable: true,
               liquids: [],
             },
