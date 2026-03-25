@@ -887,6 +887,24 @@ describe("PesticideWorkbench", () => {
     expect(within(dialog).getByTestId("trash-widget-instrument")).toBeInTheDocument();
   });
 
+  it("closes the trash view when clicking the trash icon again", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    const trashButton = await screen.findByTestId("trash-dropzone");
+
+    fireEvent.click(trashButton);
+    await waitFor(() => {
+      expect(screen.getByTestId("trash-dialog-overlay")).toBeInTheDocument();
+    });
+
+    fireEvent.click(trashButton);
+    await waitFor(() => {
+      expect(screen.queryByTestId("trash-dialog-overlay")).not.toBeInTheDocument();
+    });
+  });
+
   it("opens the produce basket view on click and creates an apple through the backend", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand).mockResolvedValue(
@@ -932,6 +950,24 @@ describe("PesticideWorkbench", () => {
       "create_produce_lot",
       { produce_type: "apple" },
     );
+  });
+
+  it("closes the produce basket view when clicking the basket icon again", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    const basketOpenButton = await screen.findByTestId("basket-open-button");
+
+    fireEvent.click(basketOpenButton);
+    await waitFor(() => {
+      expect(screen.getByTestId("basket-dialog-overlay")).toBeInTheDocument();
+    });
+
+    fireEvent.click(basketOpenButton);
+    await waitFor(() => {
+      expect(screen.queryByTestId("basket-dialog-overlay")).not.toBeInTheDocument();
+    });
   });
 
   it("moves basket produce into a sealed sampling bag", async () => {

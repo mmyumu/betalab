@@ -6,7 +6,7 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { FloatingWidget } from "@/components/floating-widget";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
-import { ItemCountBadge } from "@/components/item-count-badge";
+import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
@@ -1172,108 +1172,70 @@ export function PesticideWorkbench() {
               position={widgetLayout.trash}
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
-              <section className="relative overflow-visible">
-                <div className="overflow-hidden rounded-[1.7rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                  <div
-                    className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-4 py-3 backdrop-blur`}
-                    data-widget-drag-handle="true"
+              <InventoryWidget
+                buttonTestId="trash-dropzone"
+                count={trashItemCount}
+                countBadgeClassName="-right-2 -top-2 absolute"
+                countTestId="trash-count-badge"
+                dataDropHighlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
+                icon={
+                  <svg
+                    aria-hidden="true"
+                    className="h-[4.5rem] w-[4.5rem] text-slate-500"
+                    fill="none"
+                    viewBox="0 0 96 96"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                      Trash
-                    </p>
-                  </div>
-                  <div className="px-4 py-4">
-                    <div
-                      className={`flex min-h-32 flex-col items-center justify-center rounded-[1.2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-4 text-center transition-colors ${
-                        isDropTargetHighlighted("trash_bin")
-                          ? "border-rose-300 bg-rose-50/70 ring-2 ring-rose-200/80"
-                          : "border-slate-300"
-                      }`}
-                      aria-haspopup="dialog"
-                      data-drop-highlighted={isDropTargetHighlighted("trash_bin") ? "true" : "false"}
-                      data-testid="trash-dropzone"
-                      onClick={() => setIsTrashOpen(true)}
-                      onDragOver={handleTrashDragOver}
-                      onDrop={handleTrashDrop}
-                    >
-                      <div className="relative mx-auto w-fit">
-                        <ItemCountBadge
-                          className="-right-2 -top-2 absolute"
-                          count={trashItemCount}
-                          testId="trash-count-badge"
-                        />
-                        <svg
-                          aria-hidden="true"
-                          className="h-[4.5rem] w-[4.5rem] text-slate-500"
-                          fill="none"
-                          viewBox="0 0 96 96"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M28 30H68"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeWidth="6"
-                          />
-                          <path
-                            d="M38 20H58"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeWidth="6"
-                          />
-                          <path
-                            d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="6"
-                          />
-                          <path
-                            d="M44 40V63"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeWidth="6"
-                          />
-                          <path
-                            d="M52 40V63"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeWidth="6"
-                          />
-                          <path
-                            d="M24 30H72"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeWidth="4"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {isTrashOpen ? (
-                  <div
-                    className="absolute left-0 top-full z-[220] mt-3 w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
-                    data-testid="trash-dialog-overlay"
-                  >
-                    <div
-                      className="w-full rounded-[1.4rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
-                      role="dialog"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                        <p className="text-sm text-slate-600">
-                          Discarded entities stay in trash by default. Drag them back to a valid target to restore them.
-                        </p>
-                        <button
-                          className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
-                          onClick={() => setIsTrashOpen(false)}
-                          type="button"
-                        >
-                          Close
-                        </button>
-                      </div>
-                      <div className="max-h-[28rem] space-y-2 overflow-y-auto p-3">
-                        {trashedTools.map((trashTool) => {
+                    <path
+                      d="M28 30H68"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="6"
+                    />
+                    <path
+                      d="M38 20H58"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="6"
+                    />
+                    <path
+                      d="M34 30V67C34 73 37 76 43 76H53C59 76 62 73 62 67V30"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="6"
+                    />
+                    <path
+                      d="M44 40V63"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="6"
+                    />
+                    <path
+                      d="M52 40V63"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="6"
+                    />
+                    <path
+                      d="M24 30H72"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="4"
+                    />
+                  </svg>
+                }
+                isDropHighlighted={isDropTargetHighlighted("trash_bin")}
+                isOpen={isTrashOpen}
+                onDragOver={handleTrashDragOver}
+                onDrop={handleTrashDrop}
+                onToggle={() => setIsTrashOpen((current) => !current)}
+                overlayTestId="trash-dialog-overlay"
+                overlayWidthClassName="w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
+                title="Trash"
+              >
+                <div className="space-y-2">
+                  {trashedTools.map((trashTool) => {
                           const totalVolume = trashTool.tool.liquids.reduce(
                             (sum, liquid) => sum + liquid.volume_ml,
                             0,
@@ -1303,56 +1265,53 @@ export function PesticideWorkbench() {
                             </div>
                           );
                         })}
-                        {trashedProduceLots.map((trashProduceLot) => (
-                          <div
-                            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
-                            data-testid={`trash-produce-lot-${trashProduceLot.id}`}
-                            draggable
-                            key={trashProduceLot.id}
-                            onDragEnd={clearDropTargets}
-                            onDragStart={(event) => handleTrashProduceLotDragStart(trashProduceLot, event.dataTransfer)}
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-900">
-                                {trashProduceLot.produceLot.label}
-                              </p>
-                              <p className="truncate text-xs text-slate-500">
-                                {trashProduceLot.originLabel} • {formatProduceLotMetadata(trashProduceLot.produceLot)}
-                              </p>
-                            </div>
-                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                              Produce lot
-                            </span>
-                          </div>
-                        ))}
-                        {trashedWidgets.map((widget) => (
-                          <div
-                            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
-                            data-testid={`trash-widget-${widget.id}`}
-                            draggable
-                            key={widget.id}
-                            onDragEnd={clearDropTargets}
-                            onDragStart={(event) => handleTrashedWidgetDragStart(widget, event.dataTransfer)}
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-900">{widget.label}</p>
-                              <p className="truncate text-xs text-slate-500">Workspace widget</p>
-                            </div>
-                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                              Widget
-                            </span>
-                          </div>
-                        ))}
-                        {isTrashEmpty ? (
-                          <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-                            Trash is empty.
-                          </div>
-                        ) : null}
+                  {trashedProduceLots.map((trashProduceLot) => (
+                    <div
+                      className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
+                      data-testid={`trash-produce-lot-${trashProduceLot.id}`}
+                      draggable
+                      key={trashProduceLot.id}
+                      onDragEnd={clearDropTargets}
+                      onDragStart={(event) => handleTrashProduceLotDragStart(trashProduceLot, event.dataTransfer)}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {trashProduceLot.produceLot.label}
+                        </p>
+                        <p className="truncate text-xs text-slate-500">
+                          {trashProduceLot.originLabel} • {formatProduceLotMetadata(trashProduceLot.produceLot)}
+                        </p>
                       </div>
+                      <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                        Produce lot
+                      </span>
                     </div>
-                  </div>
-                ) : null}
-              </section>
+                  ))}
+                  {trashedWidgets.map((widget) => (
+                    <div
+                      className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
+                      data-testid={`trash-widget-${widget.id}`}
+                      draggable
+                      key={widget.id}
+                      onDragEnd={clearDropTargets}
+                      onDragStart={(event) => handleTrashedWidgetDragStart(widget, event.dataTransfer)}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{widget.label}</p>
+                        <p className="truncate text-xs text-slate-500">Workspace widget</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                        Widget
+                      </span>
+                    </div>
+                  ))}
+                  {isTrashEmpty ? (
+                    <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                      Trash is empty.
+                    </div>
+                  ) : null}
+                </div>
+              </InventoryWidget>
             </FloatingWidget>
 
             {liveWidgetIds
@@ -1375,132 +1334,83 @@ export function PesticideWorkbench() {
                   zIndex={10 + widgetOrder.indexOf(widgetId)}
                 >
                   {widgetId === "basket" ? (
-                    <section className="relative overflow-visible">
-                      <div className="overflow-hidden rounded-[1.55rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(241,245,249,0.95))] shadow-[0_18px_40px_rgba(15,23,42,0.1)]">
-                        <div
-                          className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-3 py-2.5 backdrop-blur`}
-                          data-widget-drag-handle="true"
+                    <InventoryWidget
+                      ariaLabel={`Open produce basket (${basketProduceLots.length} lot${basketProduceLots.length === 1 ? "" : "s"})`}
+                      buttonTestId="basket-open-button"
+                      count={basketProduceLots.length}
+                      countBadgeClassName="absolute right-[22px] top-1"
+                      countTestId="basket-count-badge"
+                      frameClassName="rounded-[1.05rem] px-3 py-3.5"
+                      icon={<ProduceBasketIllustration className="block w-[10.9rem]" itemCount={6} />}
+                      isOpen={isBasketOpen}
+                      onToggle={() => setIsBasketOpen((current) => !current)}
+                      overlayTestId="basket-dialog-overlay"
+                      overlayWidthClassName="w-[24rem] max-w-[min(24rem,calc(100vw-2rem))]"
+                      title="Produce basket"
+                    >
+                      <div className="space-y-4">
+                        <button
+                          className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
+                          data-testid="basket-create-apple-lot-button"
+                          onClick={handleCreateAppleLot}
+                          type="button"
                         >
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-                            Produce basket
+                          <span className="flex items-center gap-3">
+                            <AppleIllustration className="h-12 w-12 shrink-0" />
+                            <span className="min-w-0">
+                              <span className="block text-sm font-semibold text-slate-900">Create apple lot</span>
+                              <span className="mt-1 block text-sm text-slate-500">
+                                Add a representative apple lot to the basket.
+                              </span>
+                            </span>
+                          </span>
+                        </button>
+                        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                            Basket contents
                           </p>
-                        </div>
-                        <div className="px-3 py-3">
-                          <button
-                            aria-expanded={isBasketOpen}
-                            aria-haspopup="dialog"
-                            aria-label={`Open produce basket (${basketProduceLots.length} lot${basketProduceLots.length === 1 ? "" : "s"})`}
-                            className="flex min-h-32 w-full items-center justify-center rounded-[1.05rem] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),rgba(226,232,240,0.92))] px-3 py-3.5 text-left transition hover:border-amber-300 hover:bg-amber-50/40"
-                            data-testid="basket-open-button"
-                            onClick={() => setIsBasketOpen(true)}
-                            type="button"
-                          >
-                            <div className="relative inline-flex items-center justify-center">
-                              <ItemCountBadge
-                                className="absolute right-[22px] top-1"
-                                count={basketProduceLots.length}
-                                testId="basket-count-badge"
-                              />
-                              <ProduceBasketIllustration
-                                className="block w-[10.9rem]"
-                                itemCount={6}
-                              />
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                      {isBasketOpen ? (
-                        <div
-                          className="absolute left-0 top-full z-[220] mt-3 w-[24rem] max-w-[min(24rem,calc(100vw-2rem))]"
-                          data-testid="basket-dialog-overlay"
-                        >
-                          <div
-                            className="w-full rounded-[1.4rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
-                              role="dialog"
-                          >
-                            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                              <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                  Create produce lot
-                                </p>
-                                <p className="mt-1 text-sm text-slate-600">
-                                  Start the produce lot library for sample preparation.
-                                </p>
-                              </div>
-                              <button
-                                className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
-                                onClick={() => setIsBasketOpen(false)}
-                                type="button"
-                              >
-                                Close
-                              </button>
-                            </div>
-                            <div className="space-y-4 p-4">
-                              <button
-                                className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
-                                data-testid="basket-create-apple-lot-button"
-                                onClick={handleCreateAppleLot}
-                                type="button"
-                              >
-                                <span className="flex items-center gap-3">
-                                  <AppleIllustration className="h-12 w-12 shrink-0" />
-                                  <span className="min-w-0">
-                                    <span className="block text-sm font-semibold text-slate-900">Create apple lot</span>
-                                    <span className="mt-1 block text-sm text-slate-500">
-                                      Add a representative apple lot to the basket.
-                                    </span>
+                          <div className="mt-3 space-y-2">
+                            {basketProduceLots.length > 0 ? (
+                              basketProduceLots.map((lot) => (
+                                <div
+                                  className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
+                                  data-testid={`basket-produce-${lot.id}`}
+                                  draggable
+                                  key={lot.id}
+                                  onDragEnd={clearDropTargets}
+                                  onDragStart={(event) =>
+                                    handleBasketProduceDragStart(
+                                      lot.id,
+                                      lot.produceType,
+                                      event.dataTransfer,
+                                    )}
+                                >
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <AppleIllustration
+                                      className="h-10 w-10 shrink-0"
+                                      testId={`basket-produce-illustration-${lot.id}`}
+                                    />
+                                    <div className="min-w-0">
+                                      <span className="block truncate text-sm font-semibold text-slate-900">
+                                        {lot.label}
+                                      </span>
+                                      <span className="block truncate text-xs text-slate-500">
+                                        {formatProduceLotMetadata(lot)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                                    {lot.produceType}
                                   </span>
-                                </span>
-                              </button>
-                              <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                                  Basket contents
-                                </p>
-                                <div className="mt-3 space-y-2">
-                                  {basketProduceLots.length > 0 ? (
-                                    basketProduceLots.map((lot) => (
-                                      <div
-                                        className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
-                                        data-testid={`basket-produce-${lot.id}`}
-                                        draggable
-                                        key={lot.id}
-                                        onDragEnd={clearDropTargets}
-                                        onDragStart={(event) =>
-                                          handleBasketProduceDragStart(
-                                            lot.id,
-                                            lot.produceType,
-                                            event.dataTransfer,
-                                          )}
-                                      >
-                                        <div className="flex min-w-0 items-center gap-3">
-                                          <AppleIllustration
-                                            className="h-10 w-10 shrink-0"
-                                            testId={`basket-produce-illustration-${lot.id}`}
-                                          />
-                                          <div className="min-w-0">
-                                            <span className="block truncate text-sm font-semibold text-slate-900">
-                                              {lot.label}
-                                            </span>
-                                            <span className="block truncate text-xs text-slate-500">
-                                              {formatProduceLotMetadata(lot)}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                                          {lot.produceType}
-                                        </span>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="text-sm text-slate-500">No produce lots created yet.</p>
-                                  )}
                                 </div>
-                              </div>
-                            </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-slate-500">No produce lots created yet.</p>
+                            )}
                           </div>
                         </div>
-                      ) : null}
-                    </section>
+                      </div>
+                    </InventoryWidget>
                   ) : widgetId === "rack" ? (
                     <WorkspaceEquipmentWidget
                       eyebrow="Autosampler rack"
