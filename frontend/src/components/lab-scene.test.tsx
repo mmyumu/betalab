@@ -1,7 +1,7 @@
 import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PesticideWorkbench } from "@/components/pesticide-workbench";
+import { LabScene } from "@/components/lab-scene";
 import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
@@ -18,6 +18,8 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
+
+const PesticideWorkbench = LabScene;
 
 type MockDataTransfer = {
   data: Map<string, string>;
@@ -262,7 +264,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("PesticideWorkbench", () => {
+describe("LabScene", () => {
   it("starts with an empty bench loaded from the backend", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 

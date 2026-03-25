@@ -1,7 +1,7 @@
 import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
+import { WorkbenchPanel } from "@/components/workbench-panel";
 import {
   writeBenchToolDragPayload,
   writeProduceDragPayload,
@@ -9,6 +9,8 @@ import {
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type { BenchSlot } from "@/types/workbench";
+
+const PesticideWorkbenchPanel = WorkbenchPanel;
 
 const slots: BenchSlot[] = [
   { id: "station_1", label: "Station 1", tool: null },
@@ -60,7 +62,7 @@ function writePayload(
   syncTypes(dataTransfer);
 }
 
-describe("PesticideWorkbenchPanel", () => {
+describe("WorkbenchPanel", () => {
   it("renders empty stations with add/remove controls", () => {
     render(
       <PesticideWorkbenchPanel

@@ -26,7 +26,7 @@ import type {
 
 type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
 
-type PesticideWorkbenchPanelProps = {
+type WorkbenchPanelProps = {
   onAddWorkbenchSlot?: () => void;
   canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
   onBenchToolDragStart?: (
@@ -51,7 +51,7 @@ type PesticideWorkbenchPanelProps = {
   onToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
 };
 
-export function PesticideWorkbenchPanel({
+export function WorkbenchPanel({
   onAddWorkbenchSlot,
   canDragBenchTool,
   isBenchSlotHighlighted,
@@ -66,7 +66,7 @@ export function PesticideWorkbenchPanel({
   slots,
   statusMessage,
   onToolbarItemDrop,
-}: PesticideWorkbenchPanelProps) {
+}: WorkbenchPanelProps) {
   const canAcceptWorkbenchDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
     if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
       return false;

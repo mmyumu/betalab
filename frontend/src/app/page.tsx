@@ -1,5 +1,5 @@
-import { PesticideWorkbench } from "@/components/pesticide-workbench";
+import { LabScene } from "@/components/lab-scene";
 
 export default function HomePage() {
-  return <PesticideWorkbench />;
+  return <LabScene />;
 }

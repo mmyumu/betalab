@@ -9,7 +9,7 @@ import { AutosamplerRackIllustration } from "@/components/illustrations/autosamp
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
-import { PesticideWorkbenchPanel } from "@/components/pesticide-workbench-panel";
+import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { createExperiment, sendExperimentCommand } from "@/lib/api";
@@ -32,9 +32,9 @@ import {
 } from "@/lib/workbench-dnd";
 import { getProduceLotDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
 import {
-  pesticideToolCatalog,
-  pesticideWorkflowCategories,
-} from "@/lib/pesticide-workflow-catalog";
+  labToolCatalog,
+  labWorkflowCategories,
+} from "@/lib/lab-workflow-catalog";
 import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
@@ -59,7 +59,7 @@ type WorkbenchState =
   | { experiment: Experiment; status: "ready" };
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
-const defaultErrorMessage = "Unable to load pesticide workbench";
+const defaultErrorMessage = "Unable to load lab scene";
 const widgetIds = ["toolbar", "workbench", "trash", "rack", "instrument", "basket"] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
@@ -190,7 +190,7 @@ function buildWidgetLayout(workspaceWidgets: ExperimentWorkspaceWidget[]): Recor
   return nextLayout;
 }
 
-export function PesticideWorkbench() {
+export function LabScene() {
   const [state, setState] = useState<WorkbenchState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
@@ -845,7 +845,7 @@ export function PesticideWorkbench() {
 
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     const toolbarTool =
-      toolbarPayload?.itemType === "tool" ? pesticideToolCatalog[toolbarPayload.itemId] : null;
+      toolbarPayload?.itemType === "tool" ? labToolCatalog[toolbarPayload.itemId] : null;
     if (toolbarTool?.toolType === "sample_vial") {
       event.preventDefault();
       event.stopPropagation();
@@ -1153,7 +1153,7 @@ export function PesticideWorkbench() {
               zIndex={10 + widgetOrder.indexOf("toolbar")}
             >
               <ToolbarPanel
-                categories={pesticideWorkflowCategories}
+                categories={labWorkflowCategories}
                 onItemDragEnd={clearDropTargets}
                 onItemDragStart={(item, allowedDropTargets) => {
                   const payload = createToolbarDragPayload(item);
@@ -1533,7 +1533,7 @@ export function PesticideWorkbench() {
               position={widgetLayout.workbench}
               zIndex={10 + widgetOrder.indexOf("workbench")}
             >
-              <PesticideWorkbenchPanel
+              <WorkbenchPanel
                 onAddWorkbenchSlot={handleAddWorkbenchSlot}
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}

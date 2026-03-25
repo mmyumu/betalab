@@ -1,13 +1,13 @@
-import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PesticideWorkbench } from "@/components/pesticide-workbench";
+import { LabScene } from "@/components/lab-scene";
 import {
   createDataTransfer,
   dndSourceCases,
   dndTargetCases,
   type DndTargetId,
-} from "@/components/pesticide-workbench-dnd-test-helpers";
+} from "@/components/lab-scene-dnd-test-helpers";
 
 vi.mock("@/lib/api", () => ({
   createExperiment: vi.fn(),
@@ -21,7 +21,7 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
   vi.mocked(createExperiment).mockResolvedValue(experiment);
   vi.mocked(sendExperimentCommand).mockResolvedValue(experiment);
 
-  render(<PesticideWorkbench />);
+  render(<LabScene />);
 
   await waitFor(() => {
     expect(screen.getByTestId("widget-workspace")).toBeInTheDocument();
@@ -66,7 +66,27 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("PesticideWorkbench DnD matrix", () => {
+describe("LabScene DnD actions", () => {
+  it("routes palette workspace widget dropped on the workspace inner surface to add_workspace_widget", async () => {
+    const sourceCase = dndSourceCases.find((entry) => entry.id === "palette-autosampler_rack_widget");
+    expect(sourceCase).toBeDefined();
+    await renderWorkbenchForSource(sourceCase!);
+
+    const dataTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId(sourceCase!.sourceTestId), { dataTransfer });
+    fireEvent.drop(screen.getByTestId("workspace-drop-surface-grid"), {
+      clientX: 980,
+      clientY: 420,
+      dataTransfer,
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_workspace_widget",
+      expect.objectContaining({ widget_id: "rack" }),
+    );
+  });
+
   dndSourceCases.forEach((sourceCase) => {
     dndTargetCases.forEach((targetCase) => {
       if (!isAvailableTarget(sourceCase, targetCase.id)) {
@@ -75,25 +95,31 @@ describe("PesticideWorkbench DnD matrix", () => {
 
       const expectation = sourceCase.targetExpectations[targetCase.id];
 
-      it(`marks ${sourceCase.label} ${expectation?.compatible ? "compatible" : "incompatible"} with ${targetCase.label}`, async () => {
+      it(`routes ${sourceCase.label} -> ${targetCase.label} to ${
+        expectation?.command?.type ?? "no backend command"
+      }`, async () => {
         await renderWorkbenchForSource(sourceCase);
 
         const dataTransfer = createDataTransfer();
         fireEvent.dragStart(screen.getByTestId(sourceCase.sourceTestId), { dataTransfer });
 
-        const target = screen.getByTestId(targetCase.id);
-        expect(target).toHaveAttribute(
-          "data-drop-highlighted",
-          expectation?.compatible ? "true" : "false",
-        );
+        const dropPayload =
+          targetCase.id === "widget-workspace"
+            ? { clientX: 980, clientY: 420, dataTransfer }
+            : { dataTransfer };
 
-        if (!targetCase.assertDragOver) {
+        fireEvent.drop(screen.getByTestId(targetCase.id), dropPayload);
+
+        if (!expectation?.command) {
+          expect(sendExperimentCommand).not.toHaveBeenCalled();
           return;
         }
 
-        const dragOverEvent = createEvent.dragOver(target, { dataTransfer });
-        fireEvent(target, dragOverEvent);
-        expect(dragOverEvent.defaultPrevented).toBe(expectation?.compatible ?? false);
+        expect(sendExperimentCommand).toHaveBeenCalledWith(
+          "experiment_pesticides",
+          expectation.command.type,
+          expectation.command.payload,
+        );
       });
     });
   });

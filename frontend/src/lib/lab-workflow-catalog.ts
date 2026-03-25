@@ -1,7 +1,7 @@
 import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
 
-export const pesticideWorkflowCategories: ToolbarCategory[] = [
+export const labWorkflowCategories: ToolbarCategory[] = [
   {
     id: "prep_tools",
     label: "Preparation tools",
@@ -155,15 +155,15 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
   },
 ];
 
-export const pesticideToolCatalog = Object.fromEntries(
-  pesticideWorkflowCategories
+export const labToolCatalog = Object.fromEntries(
+  labWorkflowCategories
     .flatMap((category) => category.items)
     .filter((item): item is ToolCatalogItem => item.itemType === "tool")
     .map((item) => [item.id, item]),
 ) satisfies Record<string, ToolCatalogItem>;
 
-export const pesticideLiquidCatalog = Object.fromEntries(
-  pesticideWorkflowCategories
+export const labLiquidCatalog = Object.fromEntries(
+  labWorkflowCategories
     .flatMap((category) => category.items)
     .filter((item): item is LiquidCatalogItem => item.itemType === "liquid")
     .map((item) => [item.id, item]),

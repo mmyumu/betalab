@@ -1,7 +1,7 @@
 import {
-  pesticideToolCatalog,
-  pesticideWorkflowCategories,
-} from "@/lib/pesticide-workflow-catalog";
+  labToolCatalog,
+  labWorkflowCategories,
+} from "@/lib/lab-workflow-catalog";
 import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
@@ -15,6 +15,8 @@ import type {
   WorkspaceWidgetType,
 } from "@/types/workbench";
 import { expect } from "vitest";
+
+const pesticideToolCatalog = labToolCatalog;
 
 export type MockDataTransfer = {
   data: Map<string, string>;
@@ -62,9 +64,9 @@ const workspaceWidgetItemToId = {
   lc_msms_instrument_widget: "instrument",
 } as const;
 
-const toolbarItems = pesticideWorkflowCategories.flatMap((category) => category.items);
+const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
 const toolItems = toolbarItems.filter((item): item is ToolCatalogItem => item.itemType === "tool");
-const sampleVialItem = pesticideToolCatalog.sample_vial_lcms;
+const sampleVialItem = labToolCatalog.sample_vial_lcms;
 
 export const dndTargetCases: {
   assertDragOver: boolean;
