@@ -97,7 +97,9 @@ export type ProduceDragPayload = BaseDragPayload & {
   produceLotId: string;
   produceType: ProduceLotType;
   sourceId: string;
-  sourceKind: "basket";
+  sourceKind: "basket" | "workbench" | "trash";
+  sourceSlotId?: string;
+  trashProduceLotId?: string;
   trashable: false;
 };
 
@@ -163,6 +165,8 @@ export type DragDescriptor =
       entityKind: "produce";
       produceLotId: string;
       produceType: ProduceLotType;
+      sourceSlotId?: string;
+      trashProduceLotId?: string;
       trashable: false;
     });
 
@@ -204,6 +208,12 @@ export type TrashToolEntry = {
   id: string;
   originLabel: string;
   tool: BenchToolInstance;
+};
+
+export type TrashProduceLotEntry = {
+  id: string;
+  originLabel: string;
+  produceLot: ExperimentProduceLot;
 };
 
 export type ExperimentWorkspaceWidget = {

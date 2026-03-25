@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from app.domain.models import Experiment, ProduceLot, new_id
-from app.services.command_handlers.support import find_workspace_widget
+from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, new_id
+from app.services.command_handlers.support import find_workspace_produce_lot, find_workspace_widget
 
 
 def add_workspace_widget(experiment: Experiment, payload: dict) -> None:
@@ -32,7 +32,12 @@ def discard_workspace_widget(experiment: Experiment, payload: dict) -> None:
     widget = find_workspace_widget(experiment.workspace, payload["widget_id"])
     if not widget.trashable:
         raise ValueError(f"{widget.label} cannot be discarded.")
+    if not widget.is_present and widget.is_trashed:
+        return
+
     if not widget.is_present:
+        widget.is_trashed = True
+        experiment.audit_log.append(f"{widget.label} added to trash.")
         return
 
     widget.is_present = False
@@ -57,3 +62,18 @@ def create_produce_lot(experiment: Experiment, payload: dict) -> None:
     )
     experiment.workspace.produce_lots.append(produce_lot)
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
+
+
+def discard_workspace_produce_lot(experiment: Experiment, payload: dict) -> None:
+    produce_lot = find_workspace_produce_lot(experiment.workspace, str(payload["produce_lot_id"]))
+    experiment.workspace.produce_lots = [
+        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
+    ]
+    experiment.trash.produce_lots.append(
+        TrashProduceLotEntry(
+            id=new_id("trash_produce_lot"),
+            origin_label="Produce basket",
+            produce_lot=produce_lot,
+        )
+    )
+    experiment.audit_log.append(f"{produce_lot.label} discarded from Produce basket.")

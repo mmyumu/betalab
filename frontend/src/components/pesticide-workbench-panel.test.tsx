@@ -501,6 +501,209 @@ describe("PesticideWorkbenchPanel", () => {
     expect(onProduceDrop).not.toHaveBeenCalled();
   });
 
+  it("rejects produce drags on sampling bags that already contain a lot", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceLotId: "produce_2",
+      produceType: "apple",
+      sourceId: "produce_2",
+      sourceKind: "basket",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+              trashable: true,
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(false);
+    expect(onProduceDrop).not.toHaveBeenCalled();
+  });
+
+  it("accepts produce drags coming from a workbench sample bag on empty sampling bags", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceLots: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_bag_2",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceLots: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_2");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onProduceDrop).toHaveBeenCalledWith("station_2", {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+  });
+
+  it("accepts produce drags coming from trash on empty sampling bags", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "trash",
+      trashProduceLotId: "trash_produce_lot_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              produceLots: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onProduceDrop).toHaveBeenCalledWith("station_1", {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "trash",
+      trashProduceLotId: "trash_produce_lot_1",
+      trashable: false,
+    });
+  });
+
   it("forwards bench-tool drops between stations", () => {
     const onBenchToolDrop = vi.fn();
     const dataTransfer = createDataTransfer();

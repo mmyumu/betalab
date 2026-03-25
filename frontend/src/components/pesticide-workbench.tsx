@@ -17,6 +17,7 @@ import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
   readBenchToolDragPayload,
+  readProduceDragPayload,
   readRackToolDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
@@ -28,7 +29,7 @@ import {
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
-import { getToolDropTargets } from "@/lib/tool-drop-targets";
+import { getProduceLotDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
 import {
   pesticideToolCatalog,
   pesticideWorkflowCategories,
@@ -46,6 +47,7 @@ import type {
   RackSlot,
   RackToolDragPayload,
   TrashToolDragPayload,
+  TrashProduceLotEntry,
   TrashToolEntry,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -429,10 +431,32 @@ export function PesticideWorkbench() {
   };
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
-    void sendWorkbenchCommand("add_produce_lot_to_workbench_tool", {
-      slot_id: targetSlotId,
-      produce_lot_id: payload.produceLotId,
-    });
+    if (payload.sourceKind === "basket") {
+      void sendWorkbenchCommand("add_produce_lot_to_workbench_tool", {
+        slot_id: targetSlotId,
+        produce_lot_id: payload.produceLotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
+    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
+      void sendWorkbenchCommand("move_produce_lot_between_workbench_tools", {
+        source_slot_id: payload.sourceSlotId,
+        target_slot_id: targetSlotId,
+        produce_lot_id: payload.produceLotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
+    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
+      void sendWorkbenchCommand("restore_trashed_produce_lot_to_workbench_tool", {
+        target_slot_id: targetSlotId,
+        trash_produce_lot_id: payload.trashProduceLotId,
+      });
+    }
+
     clearDropTargets();
   };
 
@@ -660,6 +684,31 @@ export function PesticideWorkbench() {
       return;
     }
 
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "tool" && toolbarPayload.trashable) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_tool_from_palette", {
+        tool_id: toolbarPayload.itemId,
+      });
+      return;
+    }
+
+    if (toolbarPayload?.itemType === "workspace_widget" && toolbarPayload.trashable) {
+      const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
+      if (!widgetId) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_workspace_widget", {
+        widget_id: widgetId,
+      });
+      return;
+    }
+
     const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
     if (benchToolPayload?.trashable) {
       event.preventDefault();
@@ -678,6 +727,28 @@ export function PesticideWorkbench() {
       clearDropTargets();
       void sendWorkbenchCommand("discard_rack_tool", {
         rack_slot_id: rackToolPayload.rackSlotId,
+      });
+      return;
+    }
+
+    const producePayload = readProduceDragPayload(event.dataTransfer);
+    if (producePayload?.sourceKind === "basket") {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_workspace_produce_lot", {
+        produce_lot_id: producePayload.produceLotId,
+      });
+      return;
+    }
+
+    if (producePayload?.sourceKind === "workbench" && producePayload.sourceSlotId) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_produce_lot_from_workbench_tool", {
+        slot_id: producePayload.sourceSlotId,
+        produce_lot_id: producePayload.produceLotId,
       });
     }
   };
@@ -722,6 +793,7 @@ export function PesticideWorkbench() {
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
   const rackSlots = state.experiment.rack.slots;
+  const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedTools = state.experiment.trash.tools;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => widget.trashable && widget.isTrashed,
@@ -803,9 +875,9 @@ export function PesticideWorkbench() {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets: DropTargetType[] = tool.trashable
-      ? ["workbench_slot", "trash_bin"]
-      : ["workbench_slot"];
+    const allowedDropTargets = getToolDropTargets(tool.toolType, {
+      includeTrash: tool.trashable,
+    });
 
     writeRackToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -834,7 +906,9 @@ export function PesticideWorkbench() {
     trashTool: TrashToolEntry,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
+    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType, {
+      includeTrash: trashTool.tool.trashable,
+    });
 
     writeTrashToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -862,8 +936,12 @@ export function PesticideWorkbench() {
     widget: ExperimentWorkspaceWidget,
     dataTransfer: DataTransfer,
   ) => {
+    const allowedDropTargets: DropTargetType[] = widget.trashable
+      ? ["workspace_canvas", "trash_bin"]
+      : ["workspace_canvas"];
+
     writeWorkspaceWidgetDragPayload(dataTransfer, {
-      allowedDropTargets: ["workspace_canvas"],
+      allowedDropTargets,
       entityKind: "workspace_widget",
       sourceId: widget.id,
       sourceKind: "trash",
@@ -871,9 +949,9 @@ export function PesticideWorkbench() {
       widgetId: widget.id,
       widgetType: widget.widgetType,
     });
-    showDropTargets(["workspace_canvas"]);
+    showDropTargets(allowedDropTargets);
     setActiveDragItem({
-      allowedDropTargets: ["workspace_canvas"],
+      allowedDropTargets,
       entityKind: "workspace_widget",
       sourceId: widget.id,
       sourceKind: "trash",
@@ -883,13 +961,44 @@ export function PesticideWorkbench() {
     });
   };
 
+  const handleTrashProduceLotDragStart = (
+    trashProduceLot: TrashProduceLotEntry,
+    dataTransfer: DataTransfer,
+  ) => {
+    const allowedDropTargets = getProduceLotDropTargets();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: trashProduceLot.produceLot.id,
+      produceType: trashProduceLot.produceLot.produceType,
+      sourceId: trashProduceLot.produceLot.id,
+      sourceKind: "trash",
+      trashProduceLotId: trashProduceLot.id,
+      trashable: false,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: trashProduceLot.produceLot.id,
+      produceType: trashProduceLot.produceLot.produceType,
+      sourceId: trashProduceLot.produceLot.id,
+      sourceKind: "trash",
+      trashProduceLotId: trashProduceLot.id,
+      trashable: false,
+    });
+  };
+
   const handleBasketProduceDragStart = (
     produceLotId: string,
     produceType: "apple",
     dataTransfer: DataTransfer,
   ) => {
+    const allowedDropTargets = getProduceLotDropTargets();
+
     writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets,
       entityKind: "produce",
       produceLotId,
       produceType,
@@ -897,14 +1006,44 @@ export function PesticideWorkbench() {
       sourceKind: "basket",
       trashable: false,
     });
-    showDropTargets(["workbench_slot"]);
+    showDropTargets(allowedDropTargets);
     setActiveDragItem({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets,
       entityKind: "produce",
       produceLotId,
       produceType,
       sourceId: produceLotId,
       sourceKind: "basket",
+      trashable: false,
+    });
+  };
+
+  const handleWorkbenchProduceLotDragStart = (
+    slotId: string,
+    produceLot: ExperimentProduceLot,
+    dataTransfer: DataTransfer,
+  ) => {
+    const allowedDropTargets = getProduceLotDropTargets();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType,
+      sourceId: produceLot.id,
+      sourceKind: "workbench",
+      sourceSlotId: slotId,
+      trashable: false,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType,
+      sourceId: produceLot.id,
+      sourceKind: "workbench",
+      sourceSlotId: slotId,
       trashable: false,
     });
   };
@@ -933,7 +1072,7 @@ export function PesticideWorkbench() {
     }
 
     if (activeDragItem.entityKind === "produce") {
-      return slot.tool?.toolType === "sample_bag";
+      return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
     }
 
     return false;
@@ -944,7 +1083,10 @@ export function PesticideWorkbench() {
     activeDragItem?.entityKind === "tool" &&
     activeDragItem.toolType === "sample_vial";
 
-  const isTrashEmpty = trashedTools.length === 0 && trashedWidgets.length === 0;
+  const isTrashEmpty =
+    trashedTools.length === 0 &&
+    trashedProduceLots.length === 0 &&
+    trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
   const handleCreateAppleLot = () => {
     void sendWorkbenchCommand("create_produce_lot", {
@@ -1110,7 +1252,7 @@ export function PesticideWorkbench() {
                     >
                       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                         <p className="text-sm text-slate-600">
-                          Drag an item back to a valid target to restore it.
+                          Discarded entities stay in trash by default. Drag them back to a valid target to restore them.
                         </p>
                         <button
                           className="rounded-full border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
@@ -1151,6 +1293,28 @@ export function PesticideWorkbench() {
                             </div>
                           );
                         })}
+                        {trashedProduceLots.map((trashProduceLot) => (
+                          <div
+                            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
+                            data-testid={`trash-produce-lot-${trashProduceLot.id}`}
+                            draggable
+                            key={trashProduceLot.id}
+                            onDragEnd={clearDropTargets}
+                            onDragStart={(event) => handleTrashProduceLotDragStart(trashProduceLot, event.dataTransfer)}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {trashProduceLot.produceLot.label}
+                              </p>
+                              <p className="truncate text-xs text-slate-500">
+                                {trashProduceLot.originLabel} • {formatProduceLotMetadata(trashProduceLot.produceLot)}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                              Produce lot
+                            </span>
+                          </div>
+                        ))}
                         {trashedWidgets.map((widget) => (
                           <div
                             className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
@@ -1450,6 +1614,7 @@ export function PesticideWorkbench() {
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
+                onProduceLotDragStart={handleWorkbenchProduceLotDragStart}
                 onProduceDrop={handleProduceDrop}
                 onRemoveLiquid={handleRemoveLiquid}
                 onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}

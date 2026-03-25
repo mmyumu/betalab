@@ -9,7 +9,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "centrifuge_tube_50ml",
-        allowedDropTargets: getToolDropTargets("centrifuge_tube"),
+        allowedDropTargets: getToolDropTargets("centrifuge_tube", { includeTrash: true }),
         itemType: "tool",
         name: "50 mL centrifuge tube",
         subtitle: "QuEChERS extraction",
@@ -22,7 +22,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "cleanup_tube_dspe",
-        allowedDropTargets: getToolDropTargets("cleanup_tube"),
+        allowedDropTargets: getToolDropTargets("cleanup_tube", { includeTrash: true }),
         itemType: "tool",
         name: "d-SPE cleanup tube",
         subtitle: "Matrix cleanup",
@@ -35,7 +35,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "sample_vial_lcms",
-        allowedDropTargets: getToolDropTargets("sample_vial"),
+        allowedDropTargets: getToolDropTargets("sample_vial", { includeTrash: true }),
         itemType: "tool",
         name: "Autosampler vial",
         subtitle: "Injection ready",
@@ -48,7 +48,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "beaker_rinse",
-        allowedDropTargets: getToolDropTargets("beaker"),
+        allowedDropTargets: getToolDropTargets("beaker", { includeTrash: true }),
         itemType: "tool",
         name: "Bench beaker",
         subtitle: "Temporary holding",
@@ -111,7 +111,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "autosampler_rack_widget",
-        allowedDropTargets: ["workspace_canvas"],
+        allowedDropTargets: ["workspace_canvas", "trash_bin"],
         itemType: "workspace_widget",
         name: "Autosampler rack",
         subtitle: "Sequence staging",
@@ -122,7 +122,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "lc_msms_instrument_widget",
-        allowedDropTargets: ["workspace_canvas"],
+        allowedDropTargets: ["workspace_canvas", "trash_bin"],
         itemType: "workspace_widget",
         name: "LC-MS/MS",
         subtitle: "Instrument system",
@@ -140,7 +140,7 @@ export const pesticideWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "sealed_sampling_bag",
-        allowedDropTargets: getToolDropTargets("sample_bag"),
+        allowedDropTargets: getToolDropTargets("sample_bag", { includeTrash: true }),
         itemType: "tool",
         name: "Sealed sampling bag",
         subtitle: "Field collection",

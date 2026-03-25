@@ -10,8 +10,10 @@ from app.services.command_handlers.rack import (
     remove_rack_tool_to_workbench_slot,
 )
 from app.services.command_handlers.trash import (
+    discard_tool_from_palette,
     discard_rack_tool,
     discard_workbench_tool,
+    restore_trashed_produce_lot_to_workbench_tool,
     restore_trashed_tool_to_rack_slot,
     restore_trashed_tool_to_workbench_slot,
 )
@@ -19,6 +21,8 @@ from app.services.command_handlers.workbench import (
     add_workbench_slot,
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
+    discard_produce_lot_from_workbench_tool,
+    move_produce_lot_between_workbench_tools,
     move_tool_between_workbench_slots,
     place_tool_on_workbench,
     remove_workbench_slot,
@@ -28,6 +32,7 @@ from app.services.command_handlers.workbench import (
 from app.services.command_handlers.workspace import (
     add_workspace_widget,
     create_produce_lot,
+    discard_workspace_produce_lot,
     discard_workspace_widget,
     move_workspace_widget,
 )
@@ -47,11 +52,13 @@ class ExperimentService:
             "place_tool_on_workbench": place_tool_on_workbench,
             "move_tool_between_workbench_slots": move_tool_between_workbench_slots,
             "discard_workbench_tool": discard_workbench_tool,
+            "discard_tool_from_palette": discard_tool_from_palette,
             "restore_trashed_tool_to_workbench_slot": restore_trashed_tool_to_workbench_slot,
             "add_workspace_widget": add_workspace_widget,
             "move_workspace_widget": move_workspace_widget,
             "discard_workspace_widget": discard_workspace_widget,
             "create_produce_lot": create_produce_lot,
+            "discard_workspace_produce_lot": discard_workspace_produce_lot,
             "place_tool_in_rack_slot": place_tool_in_rack_slot,
             "place_workbench_tool_in_rack_slot": place_workbench_tool_in_rack_slot,
             "remove_rack_tool_to_workbench_slot": remove_rack_tool_to_workbench_slot,
@@ -59,6 +66,9 @@ class ExperimentService:
             "restore_trashed_tool_to_rack_slot": restore_trashed_tool_to_rack_slot,
             "add_liquid_to_workbench_tool": add_liquid_to_workbench_tool,
             "add_produce_lot_to_workbench_tool": add_produce_lot_to_workbench_tool,
+            "discard_produce_lot_from_workbench_tool": discard_produce_lot_from_workbench_tool,
+            "move_produce_lot_between_workbench_tools": move_produce_lot_between_workbench_tools,
+            "restore_trashed_produce_lot_to_workbench_tool": restore_trashed_produce_lot_to_workbench_tool,
             "remove_liquid_from_workbench_tool": remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": update_workbench_liquid_volume,
         }

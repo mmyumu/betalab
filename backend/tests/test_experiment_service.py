@@ -193,6 +193,202 @@ def test_add_produce_lot_requires_a_sampling_bag() -> None:
         )
 
 
+def test_sampling_bag_accepts_only_one_produce_lot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    first_lot = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    second_lot = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": first_lot.workspace.produce_lots[0].id,
+        },
+    )
+
+    with pytest.raises(ValueError, match="Sealed sampling bag already contains a produce lot."):
+        service.apply_command(
+            experiment.id,
+            "add_produce_lot_to_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "produce_lot_id": second_lot.workspace.produce_lots[0].id,
+            },
+        )
+
+
+def test_discard_produce_lot_from_sampling_bag() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_produce_lot_from_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.produce_lots == []
+    assert updated.workspace.produce_lots == []
+    assert len(updated.trash.produce_lots) == 1
+    assert updated.trash.produce_lots[0].origin_label == "Sealed sampling bag"
+    assert updated.trash.produce_lots[0].produce_lot.label == "Apple lot 1"
+    assert updated.audit_log[-1] == "Apple lot 1 discarded from Sealed sampling bag."
+
+
+def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_workspace_produce_lot",
+        {
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    assert updated.workspace.produce_lots == []
+    assert len(updated.trash.produce_lots) == 1
+    assert updated.trash.produce_lots[0].origin_label == "Produce basket"
+    assert updated.audit_log[-1] == "Apple lot 1 discarded from Produce basket."
+
+
+def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    discarded = service.apply_command(
+        experiment.id,
+        "discard_workspace_produce_lot",
+        {
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "restore_trashed_produce_lot_to_workbench_tool",
+        {
+            "target_slot_id": "station_1",
+            "trash_produce_lot_id": discarded.trash.produce_lots[0].id,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.produce_lots[0].label == "Apple lot 1"
+    assert updated.trash.produce_lots == []
+
+
+def test_discard_tool_from_palette_adds_it_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_tool_from_palette",
+        {
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    assert len(updated.trash.tools) == 1
+    assert updated.trash.tools[0].origin_label == "Palette"
+    assert updated.trash.tools[0].tool.tool_type == "sample_bag"
+
+
+def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_workspace_widget",
+        {
+            "widget_id": "rack",
+        },
+    )
+
+    widget = next(widget for widget in updated.workspace.widgets if widget.id == "rack")
+    assert widget.is_present is False
+    assert widget.is_trashed is True
+    assert updated.audit_log[-1] == "Autosampler rack added to trash."
+
+
 def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

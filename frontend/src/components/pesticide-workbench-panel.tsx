@@ -17,6 +17,7 @@ import type {
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
+  ExperimentProduceLot,
   ProduceDragPayload,
   RackToolDragPayload,
   TrashToolDragPayload,
@@ -34,6 +35,11 @@ type PesticideWorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onBenchToolDragEnd?: () => void;
+  onProduceLotDragStart?: (
+    slotId: string,
+    produceLot: ExperimentProduceLot,
+    dataTransfer: DataTransfer,
+  ) => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
   onProduceDrop?: (targetSlotId: string, payload: ProduceDragPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
@@ -52,6 +58,7 @@ export function PesticideWorkbenchPanel({
   onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
+  onProduceLotDragStart,
   onProduceDrop,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
@@ -89,7 +96,7 @@ export function PesticideWorkbenchPanel({
     }
 
     if (descriptor.entityKind === "produce") {
-      return slot.tool?.toolType === "sample_bag";
+      return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
     }
 
     return false;
@@ -245,6 +252,12 @@ export function PesticideWorkbenchPanel({
                           return;
                         }
                         onBenchToolDragStart(slot.id, tool, event.dataTransfer);
+                      }}
+                      onProduceLotDragEnd={() => {
+                        onBenchToolDragEnd?.();
+                      }}
+                      onProduceLotDragStart={(produceLot, event) => {
+                        onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
                       }}
                       onDragEnd={() => {
                         onBenchToolDragEnd?.();

@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment, TrashToolEntry, new_id
-from app.services.command_handlers.support import find_rack_slot, find_trash_tool, find_workbench_slot
+from app.services.command_handlers.support import (
+    find_rack_slot,
+    find_trash_produce_lot,
+    find_trash_tool,
+    find_workbench_slot,
+)
+from app.services.command_handlers.workbench import build_workbench_tool
 
 
 def discard_workbench_tool(experiment: Experiment, payload: dict) -> None:
@@ -21,6 +27,18 @@ def discard_workbench_tool(experiment: Experiment, payload: dict) -> None:
         )
     )
     experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
+
+
+def discard_tool_from_palette(experiment: Experiment, payload: dict) -> None:
+    discarded_tool = build_workbench_tool(str(payload["tool_id"]))
+    experiment.trash.tools.append(
+        TrashToolEntry(
+            id=new_id("trash_tool"),
+            origin_label="Palette",
+            tool=discarded_tool,
+        )
+    )
+    experiment.audit_log.append(f"{discarded_tool.label} discarded from Palette.")
 
 
 def restore_trashed_tool_to_workbench_slot(experiment: Experiment, payload: dict) -> None:
@@ -73,4 +91,24 @@ def restore_trashed_tool_to_rack_slot(experiment: Experiment, payload: dict) -> 
     ]
     experiment.audit_log.append(
         f"{rack_slot.tool.label} restored from trash to {rack_slot.label}."
+    )
+
+
+def restore_trashed_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
+    trashed_produce_lot = find_trash_produce_lot(experiment.trash, payload["trash_produce_lot_id"])
+    target_slot = find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+
+    if target_slot.tool is None:
+        raise ValueError(f"Place a tool on {target_slot.label} before adding produce.")
+    if target_slot.tool.tool_type != "sample_bag":
+        raise ValueError(f"{target_slot.tool.label} does not accept produce.")
+    if target_slot.tool.produce_lots:
+        raise ValueError(f"{target_slot.tool.label} already contains a produce lot.")
+
+    target_slot.tool.produce_lots.append(trashed_produce_lot.produce_lot)
+    experiment.trash.produce_lots = [
+        entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
+    ]
+    experiment.audit_log.append(
+        f"{trashed_produce_lot.produce_lot.label} restored from trash to {target_slot.tool.label} on {target_slot.label}."
     )

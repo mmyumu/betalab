@@ -571,6 +571,113 @@ def test_add_produce_lot_to_sampling_bag_round_trip_over_http() -> None:
     assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["unit_count"] == 12
 
 
+def test_discard_produce_lot_from_sampling_bag_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        produce_created = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "create_produce_lot",
+                "payload": {
+                    "produce_type": "apple",
+                },
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sealed_sampling_bag",
+                },
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_produce_lot_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
+                },
+            },
+        )
+        bag_unloaded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_produce_lot_from_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
+                },
+            },
+        )
+
+    assert bag_unloaded.status_code == 200
+    assert bag_unloaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"] == []
+    assert len(bag_unloaded.json()["trash"]["produce_lots"]) == 1
+    assert bag_unloaded.json()["trash"]["produce_lots"][0]["origin_label"] == "Sealed sampling bag"
+    assert bag_unloaded.json()["trash"]["produce_lots"][0]["produce_lot"]["label"] == "Apple lot 1"
+
+
+def test_discard_produce_lot_from_basket_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        produce_created = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "create_produce_lot",
+                "payload": {
+                    "produce_type": "apple",
+                },
+            },
+        )
+        discarded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_workspace_produce_lot",
+                "payload": {
+                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
+                },
+            },
+        )
+
+    assert discarded.status_code == 200
+    assert discarded.json()["workspace"]["produce_lots"] == []
+    assert len(discarded.json()["trash"]["produce_lots"]) == 1
+
+
+def test_discard_tool_from_palette_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        discarded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_tool_from_palette",
+                "payload": {
+                    "tool_id": "sealed_sampling_bag",
+                },
+            },
+        )
+
+    assert discarded.status_code == 200
+    assert len(discarded.json()["trash"]["tools"]) == 1
+    assert discarded.json()["trash"]["tools"][0]["origin_label"] == "Palette"
+
+
 def test_remove_liquid_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

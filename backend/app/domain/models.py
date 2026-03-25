@@ -65,8 +65,16 @@ class TrashToolEntry:
 
 
 @dataclass
+class TrashProduceLotEntry:
+    id: str
+    origin_label: str
+    produce_lot: "ProduceLot"
+
+
+@dataclass
 class Trash:
     tools: list[TrashToolEntry] = field(default_factory=list)
+    produce_lots: list[TrashProduceLotEntry] = field(default_factory=list)
 
 
 @dataclass

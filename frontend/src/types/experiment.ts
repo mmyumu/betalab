@@ -3,6 +3,7 @@ import type {
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   RackSlot,
+  TrashProduceLotEntry,
   TrashToolEntry,
 } from "@/types/workbench";
 
@@ -15,6 +16,7 @@ export type ExperimentRack = {
 };
 
 export type ExperimentTrash = {
+  produceLots: TrashProduceLotEntry[];
   tools: TrashToolEntry[];
 };
 

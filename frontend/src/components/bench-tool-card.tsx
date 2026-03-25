@@ -7,12 +7,14 @@ import {
   getContainerLiquidVisualState,
   getLiquidAccentPalette,
 } from "@/lib/liquid-visuals";
-import type { BenchToolInstance } from "@/types/workbench";
+import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type BenchToolCardProps = {
   draggable?: boolean;
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
+  onProduceLotDragEnd?: (event: DragEvent<HTMLElement>) => void;
+  onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
   tool: BenchToolInstance;
@@ -89,6 +91,8 @@ export function BenchToolCard({
   draggable = false,
   onDragEnd,
   onDragStart,
+  onProduceLotDragEnd,
+  onProduceLotDragStart,
   onRemoveLiquid,
   onLiquidVolumeChange,
   tool,
@@ -187,7 +191,15 @@ export function BenchToolCard({
               produceLots.map((produceLot) => (
                 <div
                   key={produceLot.id}
-                  className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700"
+                  className={`rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700 ${
+                    onProduceLotDragStart ? dragAffordanceClassName : ""
+                  }`}
+                  data-testid={`bench-produce-lot-${produceLot.id}`}
+                  draggable={Boolean(onProduceLotDragStart)}
+                  onDragEnd={onProduceLotDragEnd}
+                  onDragStart={(event) => {
+                    onProduceLotDragStart?.(produceLot, event);
+                  }}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate">{produceLot.label}</span>

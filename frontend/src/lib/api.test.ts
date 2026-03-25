@@ -13,6 +13,7 @@ const makeExperiment = (): Experiment => ({
     slots: [],
   },
   trash: {
+    produceLots: [],
     tools: [],
   },
   workspace: {
@@ -137,6 +138,19 @@ describe("api client", () => {
           ],
         },
         trash: {
+          produce_lots: [
+            {
+              id: "trash_produce_lot_1",
+              origin_label: "Sealed sampling bag",
+              produce_lot: {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produce_type: "apple",
+                total_mass_g: 2450.0,
+                unit_count: 12,
+              },
+            },
+          ],
           tools: [
             {
               id: "trash_tool_1",
@@ -194,6 +208,8 @@ describe("api client", () => {
     );
     expect(experiment.rack.slots[0].tool?.toolId).toBe("sample_vial_lcms");
     expect(experiment.trash.tools[0]?.originLabel).toBe("Station 1");
+    expect(experiment.trash.produceLots[0]?.originLabel).toBe("Sealed sampling bag");
+    expect(experiment.trash.produceLots[0]?.produceLot.label).toBe("Apple lot 1");
     expect(experiment.workspace.widgets[0]?.widgetType).toBe("autosampler_rack");
     expect(experiment.workspace.widgets[0]?.isTrashed).toBe(true);
     expect(experiment.workspace.produceLots[0]?.produceType).toBe("apple");

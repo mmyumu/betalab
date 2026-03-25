@@ -16,3 +16,7 @@ export function getToolDropTargets(
 
   return targets;
 }
+
+export function getProduceLotDropTargets(): DropTargetType[] {
+  return ["workbench_slot", "trash_bin"];
+}

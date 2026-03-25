@@ -111,11 +111,11 @@ describe("workbench dnd helpers", () => {
     });
   });
 
-  it("marks basket produce drags as workbench-only drops", () => {
+  it("marks basket produce drags as workbench-and-trash drops", () => {
     const dataTransfer = createDataTransfer();
 
     writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "produce",
       produceLotId: "produce_1",
       produceType: "apple",
@@ -126,14 +126,73 @@ describe("workbench dnd helpers", () => {
     syncTypes(dataTransfer);
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
     expect(readProduceDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "produce",
       produceLotId: "produce_1",
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
+      trashable: false,
+    });
+  });
+
+  it("marks workbench produce drags as workbench-and-trash drops", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(readProduceDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+  });
+
+  it("marks trash produce drags as workbench-and-trash drops", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "trash",
+      trashProduceLotId: "trash_produce_lot_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(readProduceDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "trash",
+      trashProduceLotId: "trash_produce_lot_1",
       trashable: false,
     });
   });
