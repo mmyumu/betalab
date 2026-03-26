@@ -21,6 +21,7 @@ type LabAssetIconProps = {
   fillSegments?: Array<{ accent: ToolbarAccent; ratio: number }>;
   kind: ToolType | LiquidType;
   produceLots?: ExperimentProduceLot[];
+  sampleLabelText?: string | null;
   tone?: "accent" | "neutral";
 };
 
@@ -283,15 +284,22 @@ function SampleBagIcon({
   glow,
   label,
   produceLots,
+  sampleLabelText,
   stroke,
 }: {
   glow: string;
   label: string;
   produceLots: ExperimentProduceLot[];
+  sampleLabelText?: string | null;
   stroke: string;
 }) {
   const isLoaded = produceLots.length > 0;
   const visibleProduceLots = produceLots.slice(0, 2);
+  const normalizedLabelText = sampleLabelText?.trim() ?? "";
+  const displayLabelText =
+    normalizedLabelText.length > 12
+      ? `${normalizedLabelText.slice(0, 12).trimEnd()}...`
+      : normalizedLabelText;
 
   return (
     <VesselFrame glow={glow} label={label} stroke={stroke}>
@@ -337,6 +345,32 @@ function SampleBagIcon({
       <path d={isLoaded ? "M30 56H58" : "M38 56H50"} opacity="0.55" />
       <path d={isLoaded ? "M28 64H60" : "M36 64H52"} opacity="0.55" />
       <path d={isLoaded ? "M28 72H60" : "M36 72H52"} opacity="0.55" />
+      {displayLabelText ? (
+        <g data-sample-label-text={normalizedLabelText}>
+          <rect
+            fill="#f8fafc"
+            height={isLoaded ? "16" : "14"}
+            rx="3"
+            stroke="#7dd3fc"
+            strokeWidth="1.5"
+            width={isLoaded ? "32" : "28"}
+            x={isLoaded ? "28" : "30"}
+            y={isLoaded ? "76" : "74"}
+          />
+          <text
+            fill="#0f172a"
+            fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+            fontSize={isLoaded ? "5.2" : "4.8"}
+            fontWeight="700"
+            letterSpacing="0.35"
+            textAnchor="middle"
+            x={isLoaded ? "44" : "44"}
+            y={isLoaded ? "86.2" : "83.5"}
+          >
+            {displayLabelText}
+          </text>
+        </g>
+      ) : null}
       <path d={isLoaded ? "M24 28H64" : "M30 28H58"} />
     </VesselFrame>
   );
@@ -349,6 +383,7 @@ export function LabAssetIcon({
   fillSegments,
   kind,
   produceLots = [],
+  sampleLabelText,
   tone = "accent",
 }: LabAssetIconProps) {
   const palette = tone === "neutral" ? neutralLiquidPalette : getLiquidAccentPalette(accent);
@@ -424,6 +459,7 @@ export function LabAssetIcon({
           glow={palette.glow}
           label={label}
           produceLots={produceLots}
+          sampleLabelText={sampleLabelText}
           stroke={palette.stroke}
         />
       );
@@ -449,6 +485,7 @@ export function LabAssetIcon({
       data-fill-segments={displaySegments.length}
       data-kind={kind}
       data-produce-lot-count={produceLots.length}
+      data-sample-label-text={sampleLabelText ?? ""}
       data-tone={tone}
     >
       {icon}

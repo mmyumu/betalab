@@ -136,6 +136,7 @@ export function BenchToolCard({
               fillSegments={liquidSegments}
               kind={tool.toolType}
               produceLots={produceLots}
+              sampleLabelText={tool.sampleLabelText}
               tone="neutral"
             />
             <div className="min-w-0">

@@ -221,6 +221,44 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
   });
 
+  it("shows the sample label on the sampling bag illustration", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              sampleLabelText: "LOT-2026-041",
+              produceLots: [],
+              trashable: true,
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_bag']"),
+    ).toHaveAttribute("data-sample-label-text", "LOT-2026-041");
+    expect(screen.getByText("LOT-2026-041")).toBeInTheDocument();
+  });
+
   it("accepts tool drags on stations and forwards the drop payload", () => {
     const onToolbarItemDrop = vi.fn();
     const dataTransfer = createDataTransfer();
