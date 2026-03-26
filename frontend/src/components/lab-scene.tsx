@@ -12,7 +12,7 @@ import { ProduceBasketIllustration } from "@/components/illustrations/produce-ba
 import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
-import { createExperiment, sendExperimentCommand } from "@/lib/api";
+import { useLabExperiment } from "@/hooks/use-lab-experiment";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   createToolbarDragPayload,
@@ -35,7 +35,6 @@ import {
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
-import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
   BenchToolDragPayload,
@@ -52,11 +51,6 @@ import type {
   TrashToolEntry,
   ToolbarDragPayload,
 } from "@/types/workbench";
-
-type WorkbenchState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { experiment: Experiment; status: "ready" };
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
@@ -98,10 +92,6 @@ const rackIllustrationViewBox = { height: 320, width: 560 };
 const rackIllustrationBase = { x: 98, y: 106 };
 const rackIllustrationGap = { x: 70, y: 84 };
 const rackIllustrationColumns = Math.min(6, Math.max(rackSlotCount, 1));
-
-function getLatestStatusMessage(experiment: Experiment) {
-  return experiment.audit_log.at(-1) ?? defaultStatusMessage;
-}
 
 function isWidgetId(value: string): value is WidgetId {
   return widgetIds.includes(value as WidgetId);
@@ -191,9 +181,11 @@ function buildWidgetLayout(workspaceWidgets: ExperimentWorkspaceWidget[]): Recor
 }
 
 export function LabScene() {
-  const [state, setState] = useState<WorkbenchState>({ status: "loading" });
-  const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
-  const [isCommandPending, setIsCommandPending] = useState(false);
+  const { state, statusMessage, isCommandPending, loadExperiment, sendWorkbenchCommand } =
+    useLabExperiment({
+      defaultErrorMessage,
+      defaultStatusMessage,
+    });
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
   const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
@@ -210,7 +202,6 @@ export function LabScene() {
     instrument: widgetFrameSpecs.instrument.fallbackHeight,
     basket: widgetFrameSpecs.basket.fallbackHeight,
   });
-  const hasLoadedInitialExperiment = useRef(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const widgetLayoutRef = useRef(widgetLayout);
   const widgetHeightsRef = useRef(widgetHeights);
@@ -239,65 +230,6 @@ export function LabScene() {
     state.status === "ready" ? state.experiment.id : null,
     state.status === "ready" ? JSON.stringify(state.experiment.workspace.widgets) : null,
   ]);
-
-  const loadExperiment = async () => {
-    setState({ status: "loading" });
-
-    try {
-      const experiment = await createExperiment();
-      setState({ status: "ready", experiment });
-      setStatusMessage(getLatestStatusMessage(experiment));
-    } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : defaultErrorMessage,
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (hasLoadedInitialExperiment.current) {
-      return;
-    }
-
-    hasLoadedInitialExperiment.current = true;
-    void loadExperiment();
-  }, []);
-
-  const sendWorkbenchCommand = async (
-    type: string,
-    payload: Record<string, unknown>,
-    options?: { onSuccess?: (updatedExperiment: Experiment) => void },
-  ) => {
-    if (state.status !== "ready" || isCommandPending) {
-      return;
-    }
-
-    setIsCommandPending(true);
-
-    try {
-      let updatedExperiment: Experiment;
-
-      try {
-        updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
-      } catch (error) {
-        if (!(error instanceof Error) || error.message !== "Experiment not found") {
-          throw error;
-        }
-
-        const recreatedExperiment = await createExperiment();
-        updatedExperiment = await sendExperimentCommand(recreatedExperiment.id, type, payload);
-      }
-
-      setState({ status: "ready", experiment: updatedExperiment });
-      setStatusMessage(getLatestStatusMessage(updatedExperiment));
-      options?.onSuccess?.(updatedExperiment);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Workbench command failed");
-    } finally {
-      setIsCommandPending(false);
-    }
-  };
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
