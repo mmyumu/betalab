@@ -46,12 +46,12 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
   );
 
   return (
-    <section className="rounded-[1.55rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+    <section className="rounded-[1.55rem] border border-slate-200 bg-white p-3 shadow-sm">
       <p
         className={`${dragAffordanceClassName} text-xs font-semibold uppercase tracking-[0.24em] text-slate-500`}
         data-widget-drag-handle="true"
       >
-        Palette
+        Inventory
       </p>
 
       <div className="mt-2 space-y-3">

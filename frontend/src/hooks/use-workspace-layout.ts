@@ -11,6 +11,7 @@ type WidgetLayout = {
 };
 
 type UseWorkspaceLayoutOptions<WidgetId extends string> = {
+  fixedWidgetIds: WidgetId[];
   getIsWidgetTrashable: (widgetId: WidgetId) => boolean;
   initialLayout: Record<WidgetId, WidgetLayout>;
   initialOrder: WidgetId[];
@@ -19,7 +20,6 @@ type UseWorkspaceLayoutOptions<WidgetId extends string> = {
   onWidgetDragStateChange?: (widgetId: WidgetId | null, isTrashDropActive: boolean) => void;
   presentWidgetIds: WidgetId[];
   syncKey: string | null;
-  toolbarWidgetId: WidgetId;
   trashWidgetId: WidgetId;
   widgets: Array<{ id: WidgetId; x: number; y: number }>;
   workspaceRef: RefObject<HTMLDivElement | null>;
@@ -52,6 +52,7 @@ function isPointInsideWidget<WidgetId extends string>(
 }
 
 export function useWorkspaceLayout<WidgetId extends string>({
+  fixedWidgetIds,
   getIsWidgetTrashable,
   initialLayout,
   initialOrder,
@@ -60,7 +61,6 @@ export function useWorkspaceLayout<WidgetId extends string>({
   onWidgetDragStateChange,
   presentWidgetIds,
   syncKey,
-  toolbarWidgetId,
   trashWidgetId,
   widgets,
   workspaceRef,
@@ -71,7 +71,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
   const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...initialOrder]);
   const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>(
     Object.fromEntries(
-      Object.entries(initialLayout).map(([widgetId, layout]) => [
+      (Object.entries(initialLayout) as Array<[WidgetId, WidgetLayout]>).map(([widgetId, layout]) => [
         widgetId,
         layout.fallbackHeight,
       ]),
@@ -98,17 +98,28 @@ export function useWorkspaceLayout<WidgetId extends string>({
       return;
     }
 
-    const nextLayout = { ...initialLayout };
-    widgets.forEach((widget) => {
-      nextLayout[widget.id] = {
-        ...initialLayout[widget.id],
-        x: widget.x,
-        y: widget.y,
-      };
-    });
+    setWidgetLayout((current) => {
+      const nextLayout = { ...current };
 
-    setWidgetLayout(nextLayout);
-    setWidgetOrder([...initialOrder]);
+      (Object.keys(initialLayout) as WidgetId[]).forEach((widgetId) => {
+        if (!(widgetId in nextLayout)) {
+          nextLayout[widgetId] = initialLayout[widgetId];
+        }
+      });
+
+      widgets.forEach((widget) => {
+        nextLayout[widget.id] = {
+          ...nextLayout[widget.id],
+          x: widget.x,
+          y: widget.y,
+        };
+      });
+
+      return nextLayout;
+    });
+    setWidgetOrder((current) =>
+      current.length === initialOrder.length ? current : [...initialOrder],
+    );
   }, [syncKey]);
 
   const handleWidgetHeightChange = (widgetId: string, height: number) => {
@@ -218,7 +229,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
 
-      if (draggedWidgetId && draggedWidgetId !== toolbarWidgetId) {
+      if (draggedWidgetId && !fixedWidgetIds.includes(draggedWidgetId)) {
         const nextLayout = widgetLayoutRef.current[draggedWidgetId];
 
         if (shouldTrashWidget) {

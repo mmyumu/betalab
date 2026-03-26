@@ -361,19 +361,20 @@ describe("LabScene", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("widget-toolbar")).toBeInTheDocument();
+      expect(screen.getByTestId("widget-inventory")).toBeInTheDocument();
+      expect(screen.getByTestId("widget-actions")).toBeInTheDocument();
     });
 
-    const toolbarWidget = screen.getByTestId("widget-toolbar");
+    const inventoryWidget = screen.getByTestId("widget-inventory");
 
-    expect(toolbarWidget).toHaveStyle({ left: "0px", top: "0px" });
+    expect(inventoryWidget).toHaveStyle({ left: "0px", top: "0px" });
 
-    fireEvent.mouseDown(screen.getByText("Palette"), { button: 0, clientX: 24, clientY: 16 });
+    fireEvent.mouseDown(screen.getByText("Inventory"), { button: 0, clientX: 24, clientY: 16 });
     window.dispatchEvent(new MouseEvent("mousemove", { clientX: 164, clientY: 156 }));
     window.dispatchEvent(new MouseEvent("mouseup"));
 
     await waitFor(() => {
-      expect(toolbarWidget).toHaveStyle({ left: "140px", top: "140px" });
+      expect(inventoryWidget).toHaveStyle({ left: "140px", top: "140px" });
     });
   });
 

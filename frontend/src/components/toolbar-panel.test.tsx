@@ -81,7 +81,7 @@ describe("ToolbarPanel", () => {
   it("starts with categories collapsed and lets the user expand them", async () => {
     render(<ToolbarPanel categories={categories} />);
 
-    expect(screen.getByText("Palette")).toBeInTheDocument();
+    expect(screen.getByText("Inventory")).toBeInTheDocument();
     expect(screen.getByText("Glassware")).toBeInTheDocument();
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Workspace equipment")).toBeInTheDocument();

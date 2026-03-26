@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
+import { ActionBarPanel } from "@/components/action-bar-panel";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
@@ -64,14 +65,15 @@ import type {
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
-const widgetIds = ["toolbar", "workbench", "trash", "rack", "instrument", "basket"] as const;
+const widgetIds = ["inventory", "actions", "workbench", "trash", "rack", "instrument", "basket"] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
   produce_basket_widget: "basket",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
-  toolbar: false,
+  inventory: false,
+  actions: false,
   workbench: false,
   trash: false,
   rack: true,
@@ -83,7 +85,8 @@ type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
-  toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
+  inventory: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
+  actions: { x: 0, y: 404, width: 92, fallbackHeight: 104 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
   trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
@@ -95,6 +98,8 @@ const rackIllustrationViewBox = { height: 320, width: 560 };
 const rackIllustrationBase = { x: 98, y: 106 };
 const rackIllustrationGap = { x: 70, y: 84 };
 const rackIllustrationColumns = Math.min(6, Math.max(rackSlotCount, 1));
+const knifeCursor =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
   return value === "rack" || value === "instrument" || value === "basket";
@@ -140,6 +145,7 @@ export function LabScene() {
     });
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
@@ -348,12 +354,13 @@ export function LabScene() {
   const liveWidgetIds: WidgetId[] =
     state.status === "ready"
       ? [
-          "toolbar",
+          "inventory",
+          "actions",
           ...state.experiment.workspace.widgets
             .filter((widget) => widget.isPresent)
             .map((widget) => widget.id),
         ]
-      : ["toolbar"];
+      : ["inventory", "actions"];
 
   const {
     activeWidgetId,
@@ -364,6 +371,7 @@ export function LabScene() {
     widgetOrder,
     workspaceHeight,
   } = useWorkspaceLayout<WidgetId>({
+    fixedWidgetIds: ["inventory", "actions"],
     getIsWidgetTrashable: (widgetId) => widgetTrashability[widgetId],
     initialLayout: widgetFrameSpecs,
     initialOrder: [...widgetIds],
@@ -388,7 +396,6 @@ export function LabScene() {
       state.status === "ready"
         ? `${state.experiment.id}:${JSON.stringify(state.experiment.workspace.widgets)}`
         : null,
-    toolbarWidgetId: "toolbar",
     trashWidgetId: "trash",
     widgets:
       state.status === "ready"
@@ -476,13 +483,13 @@ export function LabScene() {
     event.stopPropagation();
   };
 
-  const handleTrashDragOver = (event: DragEvent<HTMLDivElement>) => {
+  const handleTrashDragOver = (event: DragEvent<HTMLButtonElement>) => {
     if (hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
       event.preventDefault();
     }
   };
 
-  const handleTrashDrop = (event: DragEvent<HTMLDivElement>) => {
+  const handleTrashDrop = (event: DragEvent<HTMLButtonElement>) => {
     if (!hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
       return;
     }
@@ -956,6 +963,7 @@ export function LabScene() {
       produce_type: "apple",
     });
   };
+  const workspaceCursor = activeActionId === "knife" ? knifeCursor : undefined;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -992,7 +1000,7 @@ export function LabScene() {
             onDragOverCapture={handleWorkspaceDragOver}
             onDropCapture={handleWorkspaceDrop}
             ref={workspaceRef}
-            style={{ minHeight: workspaceHeight }}
+            style={{ cursor: workspaceCursor, minHeight: workspaceHeight }}
           >
             <div
               className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]"
@@ -1004,13 +1012,13 @@ export function LabScene() {
             />
 
             <FloatingWidget
-              id="toolbar"
-              isActive={activeWidgetId === "toolbar"}
-              label="Toolbar Widget"
+              id="inventory"
+              isActive={activeWidgetId === "inventory"}
+              label="Inventory Widget"
               onDragStart={handleWidgetDragStart}
               onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.toolbar}
-              zIndex={10 + widgetOrder.indexOf("toolbar")}
+              position={widgetLayout.inventory}
+              zIndex={10 + widgetOrder.indexOf("inventory")}
             >
               <ToolbarPanel
                 categories={labWorkflowCategories}
@@ -1019,6 +1027,23 @@ export function LabScene() {
                   const payload = createToolbarDragPayload(item);
                   showDropTargets(allowedDropTargets);
                   setActiveDragItem(toDragDescriptor(payload));
+                }}
+              />
+            </FloatingWidget>
+
+            <FloatingWidget
+              id="actions"
+              isActive={activeWidgetId === "actions"}
+              label="Actions Widget"
+              onDragStart={handleWidgetDragStart}
+              onHeightChange={handleWidgetHeightChange}
+              position={widgetLayout.actions}
+              zIndex={10 + widgetOrder.indexOf("actions")}
+            >
+              <ActionBarPanel
+                activeActionId={activeActionId}
+                onToggleAction={(actionId) => {
+                  setActiveActionId((current) => (current === actionId ? null : actionId));
                 }}
               />
             </FloatingWidget>

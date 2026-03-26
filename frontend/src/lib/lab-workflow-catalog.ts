@@ -4,7 +4,7 @@ import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } f
 export const labWorkflowCategories: ToolbarCategory[] = [
   {
     id: "prep_tools",
-    label: "Preparation tools",
+    label: "Containers",
     description: "Bench containers used from extraction to cleanup before injection.",
     items: [
       {
