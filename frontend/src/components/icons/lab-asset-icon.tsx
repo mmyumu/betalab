@@ -217,6 +217,40 @@ function BeakerIcon({
   );
 }
 
+function DryIcePelletsIcon({
+  glow,
+  label,
+  stroke,
+}: {
+  glow: string;
+  label: string;
+  stroke: string;
+}) {
+  return (
+    <svg
+      aria-label={label}
+      className="h-full w-full"
+      fill="none"
+      viewBox="0 0 88 120"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect fill={glow} height="120" rx="28" width="88" />
+      <g stroke={stroke} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M24 44H64L58 96H30L24 44Z" strokeWidth="4" />
+        <path d="M28 44C34 40 54 40 60 44" opacity="0.45" strokeWidth="3" />
+      </g>
+      <g>
+        <rect fill="#e0f2fe" height="12" rx="3" width="12" x="28" y="54" />
+        <rect fill="#bae6fd" height="12" rx="3" width="12" x="43" y="52" />
+        <rect fill="#dbeafe" height="12" rx="3" width="12" x="37" y="66" />
+        <rect fill="#e0f2fe" height="10" rx="2.5" width="10" x="50" y="67" />
+        <rect fill="#f8fafc" fillOpacity="0.7" height="4" rx="1.5" width="4" x="31" y="57" />
+        <rect fill="#f8fafc" fillOpacity="0.7" height="4" rx="1.5" width="4" x="46" y="55" />
+      </g>
+    </svg>
+  );
+}
+
 function CuttingBoardIcon({
   glow,
   label,
@@ -497,6 +531,9 @@ export function LabAssetIcon({
     case "matrix_blank":
     case "apple_extract":
       icon = <ReagentBottleIcon {...sharedProps} />;
+      break;
+    case "dry_ice_pellets":
+      icon = <DryIcePelletsIcon glow={palette.glow} label={label} stroke={palette.stroke} />;
       break;
     default:
       icon = <ReagentBottleIcon {...sharedProps} />;

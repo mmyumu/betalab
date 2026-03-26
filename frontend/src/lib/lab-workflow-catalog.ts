@@ -102,6 +102,17 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         liquidType: "ultrapure_water",
         transfer_volume_ml: 5,
       },
+      {
+        id: "dry_ice_pellets",
+        allowedDropTargets: [],
+        itemType: "liquid",
+        name: "Dry ice pellets (CO2)",
+        subtitle: "Cryogenic cooling",
+        description: "Solid CO2 pellets used for chilled handling and cold-chain prep. Drop targets will come later.",
+        accent: "sky",
+        liquidType: "dry_ice_pellets",
+        transfer_volume_ml: 0,
+      },
     ],
   },
   {

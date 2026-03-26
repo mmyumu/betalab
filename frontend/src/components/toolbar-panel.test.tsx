@@ -40,6 +40,17 @@ const categories: ToolbarCategory[] = [
         liquidType: "acetonitrile",
         transfer_volume_ml: 10,
       },
+      {
+        id: "dry_ice_pellets",
+        allowedDropTargets: [],
+        itemType: "liquid",
+        name: "Dry ice pellets (CO2)",
+        subtitle: "Cryogenic cooling",
+        description: "Solid CO2 pellets for chilled handling.",
+        accent: "sky",
+        liquidType: "dry_ice_pellets",
+        transfer_volume_ml: 0,
+      },
     ],
   },
   {
@@ -114,6 +125,7 @@ describe("ToolbarPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: /Liquids/i }));
 
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("toolbar-item-dry_ice_pellets")).toHaveAttribute("draggable", "true");
 
     await userEvent.click(screen.getByRole("button", { name: /Workspace equipment/i }));
 

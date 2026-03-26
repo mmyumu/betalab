@@ -20,7 +20,14 @@ export type ToolType =
   | "cutting_board"
   | "sample_bag";
 
-export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
+export type LiquidType =
+  | "ultrapure_water"
+  | "acetonitrile"
+  | "methanol"
+  | "formic_acid"
+  | "matrix_blank"
+  | "apple_extract"
+  | "dry_ice_pellets";
 
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";

@@ -190,8 +190,7 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       typeof parsed.itemId === "string" &&
       typeof parsed.toolType === "string" &&
       parsed.sourceKind === "palette" &&
-      typeof parsed.sourceId === "string" &&
-      allowedDropTargets.length > 0
+      typeof parsed.sourceId === "string"
     ) {
       return {
         allowedDropTargets,
@@ -210,8 +209,7 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       typeof parsed.itemId === "string" &&
       typeof parsed.liquidType === "string" &&
       parsed.sourceKind === "palette" &&
-      typeof parsed.sourceId === "string" &&
-      allowedDropTargets.length > 0
+      typeof parsed.sourceId === "string"
     ) {
       return {
         allowedDropTargets,
@@ -229,8 +227,7 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       parsed.itemType === "sample_label" &&
       typeof parsed.itemId === "string" &&
       parsed.sourceKind === "palette" &&
-      typeof parsed.sourceId === "string" &&
-      allowedDropTargets.length > 0
+      typeof parsed.sourceId === "string"
     ) {
       return {
         allowedDropTargets,
@@ -248,8 +245,7 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       typeof parsed.itemId === "string" &&
       typeof parsed.widgetType === "string" &&
       parsed.sourceKind === "palette" &&
-      typeof parsed.sourceId === "string" &&
-      allowedDropTargets.length > 0
+      typeof parsed.sourceId === "string"
     ) {
       return {
         allowedDropTargets,
