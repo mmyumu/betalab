@@ -249,6 +249,48 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("contaminated")).toBeInTheDocument();
   });
 
+  it("renders cutting board produce with the apple icon and full-width status badge", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_board",
+              toolId: "cutting_board_hdpe",
+              label: "Cutting board",
+              subtitle: "Prep surface",
+              accent: "amber",
+              toolType: "cutting_board",
+              capacity_ml: 0,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                  isContaminated: false,
+                },
+              ],
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(screen.getByLabelText("Apple lot illustration")).toBeInTheDocument();
+    expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
+    expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
+    expect(screen.getByText("clean")).toBeInTheDocument();
+  });
+
   it("shows the sample label on the sampling bag illustration", () => {
     render(
       <PesticideWorkbenchPanel

@@ -1,5 +1,6 @@
 import type { DragEvent } from "react";
 
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
@@ -219,7 +220,7 @@ export function BenchToolCard({
             )}
           </div>
         ) : isProduceSurface ? (
-          <div className="space-y-2">
+          produceLots.length === 0 ? (
             <div className="rounded-[1rem] bg-gradient-to-r from-amber-200/70 to-amber-50 p-[1px]">
               <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
                 <div className="min-w-0">
@@ -227,15 +228,13 @@ export function BenchToolCard({
                     Produce surface
                   </p>
                   <p className="mt-0.5 text-base font-semibold text-slate-950">
-                    {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
+                    Ready
                   </p>
-                  <p className="text-[11px] text-slate-500">
-                    {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Ready for cutting prep"}
-                  </p>
+                  <p className="text-[11px] text-slate-500">Ready for cutting prep</p>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null
         ) : (
           <div
             className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
@@ -292,7 +291,7 @@ export function BenchToolCard({
               produceLots.map((produceLot) => (
                 <div
                   key={produceLot.id}
-                  className={`rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700 ${
+                  className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 ${
                     onProduceLotDragStart ? dragAffordanceClassName : ""
                   }`}
                   data-testid={`bench-produce-lot-${produceLot.id}`}
@@ -302,21 +301,28 @@ export function BenchToolCard({
                     onProduceLotDragStart?.(produceLot, event);
                   }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate">{produceLot.label}</span>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <AppleIllustration className="h-12 w-12 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {produceLot.label}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-slate-500">
+                          {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                        </p>
+                      </div>
+                    </div>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                      className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                         produceLot.isContaminated
-                          ? "border border-rose-200 bg-rose-50 text-rose-700"
-                          : "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                          ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
                       }`}
                     >
                       {produceLot.isContaminated ? "contaminated" : "clean"}
                     </span>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
-                  </p>
                 </div>
               ))
             ) : (
