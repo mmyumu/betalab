@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState } from "react";
+import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { InventoryWidget } from "@/components/inventory-widget";
@@ -13,6 +13,7 @@ import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
+import { type WidgetLayout, useWorkspaceLayout } from "@/hooks/use-workspace-layout";
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
@@ -71,13 +72,6 @@ const widgetTrashability: Record<WidgetId, boolean> = {
 type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
-type WidgetLayout = {
-  fallbackHeight: number;
-  width: number;
-  x: number;
-  y: number;
-};
-
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   toolbar: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
@@ -91,10 +85,6 @@ const rackIllustrationViewBox = { height: 320, width: 560 };
 const rackIllustrationBase = { x: 98, y: 106 };
 const rackIllustrationGap = { x: 70, y: 84 };
 const rackIllustrationColumns = Math.min(6, Math.max(rackSlotCount, 1));
-
-function isWidgetId(value: string): value is WidgetId {
-  return widgetIds.includes(value as WidgetId);
-}
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
   return value === "rack" || value === "instrument" || value === "basket";
@@ -132,53 +122,6 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
   return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
 }
 
-function isPointInsideWidget(
-  widgetId: WidgetId,
-  clientX: number,
-  clientY: number,
-  workspaceElement: HTMLDivElement | null,
-  layout: Record<WidgetId, WidgetLayout>,
-  heights: Record<WidgetId, number>,
-) {
-  if (!workspaceElement) {
-    return false;
-  }
-
-  const workspaceRect = workspaceElement.getBoundingClientRect();
-  const widgetPosition = layout[widgetId];
-  const widgetHeight = heights[widgetId] ?? widgetPosition.fallbackHeight;
-  const left = workspaceRect.left + widgetPosition.x;
-  const top = workspaceRect.top + widgetPosition.y;
-
-  return (
-    clientX >= left &&
-    clientX <= left + widgetPosition.width &&
-    clientY >= top &&
-    clientY <= top + widgetHeight
-  );
-}
-
-function buildWidgetLayout(workspaceWidgets: ExperimentWorkspaceWidget[]): Record<WidgetId, WidgetLayout> {
-  const nextLayout: Record<WidgetId, WidgetLayout> = {
-    toolbar: widgetFrameSpecs.toolbar,
-    workbench: widgetFrameSpecs.workbench,
-    trash: widgetFrameSpecs.trash,
-    rack: widgetFrameSpecs.rack,
-    instrument: widgetFrameSpecs.instrument,
-    basket: widgetFrameSpecs.basket,
-  };
-
-  workspaceWidgets.forEach((widget) => {
-    nextLayout[widget.id] = {
-      ...widgetFrameSpecs[widget.id],
-      x: widget.x,
-      y: widget.y,
-    };
-  });
-
-  return nextLayout;
-}
-
 export function LabScene() {
   const { state, statusMessage, isCommandPending, loadExperiment, sendWorkbenchCommand } =
     useLabExperiment({
@@ -187,48 +130,9 @@ export function LabScene() {
     });
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
-  const [activeWidgetId, setActiveWidgetId] = useState<WidgetId | null>(null);
-  const [widgetLayout, setWidgetLayout] =
-    useState<Record<WidgetId, WidgetLayout>>(widgetFrameSpecs);
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
-  const [widgetOrder, setWidgetOrder] = useState<WidgetId[]>([...widgetIds]);
-  const [widgetHeights, setWidgetHeights] = useState<Record<WidgetId, number>>({
-    toolbar: widgetFrameSpecs.toolbar.fallbackHeight,
-    workbench: widgetFrameSpecs.workbench.fallbackHeight,
-    trash: widgetFrameSpecs.trash.fallbackHeight,
-    rack: widgetFrameSpecs.rack.fallbackHeight,
-    instrument: widgetFrameSpecs.instrument.fallbackHeight,
-    basket: widgetFrameSpecs.basket.fallbackHeight,
-  });
   const workspaceRef = useRef<HTMLDivElement | null>(null);
-  const widgetLayoutRef = useRef(widgetLayout);
-  const widgetHeightsRef = useRef(widgetHeights);
-  const dragStateRef = useRef<{
-    pointerOffsetX: number;
-    pointerOffsetY: number;
-    widgetId: WidgetId;
-  } | null>(null);
-
-  useEffect(() => {
-    widgetLayoutRef.current = widgetLayout;
-  }, [widgetLayout]);
-
-  useEffect(() => {
-    widgetHeightsRef.current = widgetHeights;
-  }, [widgetHeights]);
-
-  useEffect(() => {
-    if (state.status !== "ready") {
-      return;
-    }
-
-    setWidgetLayout(buildWidgetLayout(state.experiment.workspace.widgets));
-    setWidgetOrder([...widgetIds]);
-  }, [
-    state.status === "ready" ? state.experiment.id : null,
-    state.status === "ready" ? JSON.stringify(state.experiment.workspace.widgets) : null,
-  ]);
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
@@ -392,133 +296,6 @@ export function LabScene() {
     clearDropTargets();
   };
 
-  const handleWidgetHeightChange = (widgetId: string, height: number) => {
-    if (!isWidgetId(widgetId)) {
-      return;
-    }
-    if (height <= 0) {
-      return;
-    }
-
-    setWidgetHeights((current) => {
-      if (current[widgetId] === height) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [widgetId]: height,
-      };
-    });
-  };
-
-  const handleWidgetDragStart = (
-    widgetId: string,
-    event: ReactMouseEvent<HTMLDivElement>,
-  ) => {
-    if (!isWidgetId(widgetId)) {
-      return;
-    }
-    if (typeof event.button === "number" && event.button > 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const workspaceRect = workspaceRef.current?.getBoundingClientRect();
-    const workspaceLeft = workspaceRect?.left ?? 0;
-    const workspaceTop = workspaceRect?.top ?? 0;
-    const currentPosition = widgetLayoutRef.current[widgetId];
-
-    dragStateRef.current = {
-      widgetId,
-      pointerOffsetX: event.clientX - workspaceLeft - currentPosition.x,
-      pointerOffsetY: event.clientY - workspaceTop - currentPosition.y,
-    };
-    setActiveDropTargets(widgetTrashability[widgetId] ? ["trash_bin"] : []);
-    setActiveWidgetId(widgetId);
-    setWidgetOrder((current) => [...current.filter((id) => id !== widgetId), widgetId]);
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dragState = dragStateRef.current;
-      const workspaceNode = workspaceRef.current;
-      if (!dragState || !workspaceNode) {
-        return;
-      }
-      if (!Number.isFinite(moveEvent.clientX) || !Number.isFinite(moveEvent.clientY)) {
-        return;
-      }
-
-      const nextWorkspaceRect = workspaceNode.getBoundingClientRect();
-      const nextLayout = widgetLayoutRef.current[dragState.widgetId];
-      const widgetHeight =
-        widgetHeightsRef.current[dragState.widgetId] ?? nextLayout.fallbackHeight;
-
-      const unclampedX = moveEvent.clientX - nextWorkspaceRect.left - dragState.pointerOffsetX;
-      const unclampedY = moveEvent.clientY - nextWorkspaceRect.top - dragState.pointerOffsetY;
-
-      const maxX =
-        nextWorkspaceRect.width > 0
-          ? Math.max(nextWorkspaceRect.width - nextLayout.width, 0)
-          : Number.POSITIVE_INFINITY;
-      const maxY =
-        nextWorkspaceRect.height > 0
-          ? Math.max(nextWorkspaceRect.height - widgetHeight, 0)
-          : Number.POSITIVE_INFINITY;
-
-      setWidgetLayout((current) => ({
-        ...current,
-        [dragState.widgetId]: {
-          ...current[dragState.widgetId],
-          x: Math.min(Math.max(unclampedX, 0), maxX),
-          y: Math.min(Math.max(unclampedY, 0), maxY),
-        },
-      }));
-    };
-
-    const handleMouseUp = (upEvent: MouseEvent) => {
-      const dragState = dragStateRef.current;
-      const draggedWidgetId = dragState?.widgetId;
-      const shouldTrashWidget =
-        draggedWidgetId &&
-        widgetTrashability[draggedWidgetId] &&
-        isPointInsideWidget(
-          "trash",
-          upEvent.clientX,
-          upEvent.clientY,
-          workspaceRef.current,
-          widgetLayoutRef.current,
-          widgetHeightsRef.current,
-        );
-
-      dragStateRef.current = null;
-      clearDropTargets();
-      setActiveWidgetId(null);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-
-      if (draggedWidgetId && draggedWidgetId !== "toolbar") {
-        const nextLayout = widgetLayoutRef.current[draggedWidgetId];
-
-        if (shouldTrashWidget && widgetTrashability[draggedWidgetId]) {
-          void sendWorkbenchCommand("discard_workspace_widget", {
-            widget_id: draggedWidgetId,
-          });
-          return;
-        }
-
-        void sendWorkbenchCommand("move_workspace_widget", {
-          widget_id: draggedWidgetId,
-          x: nextLayout.x,
-          y: nextLayout.y,
-        });
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  };
-
   const liveWidgetIds: WidgetId[] =
     state.status === "ready"
       ? [
@@ -529,14 +306,60 @@ export function LabScene() {
         ]
       : ["toolbar"];
 
+  const {
+    activeWidgetId,
+    handleWidgetDragStart,
+    handleWidgetHeightChange,
+    widgetHeights,
+    widgetLayout,
+    widgetOrder,
+    workspaceHeight,
+  } = useWorkspaceLayout<WidgetId>({
+    getIsWidgetTrashable: (widgetId) => widgetTrashability[widgetId],
+    initialLayout: widgetFrameSpecs,
+    initialOrder: [...widgetIds],
+    onDiscardWidget: (widgetId) => {
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_workspace_widget", {
+        widget_id: widgetId,
+      });
+    },
+    onMoveWidget: (widgetId, nextPosition) => {
+      void sendWorkbenchCommand("move_workspace_widget", {
+        widget_id: widgetId,
+        x: nextPosition.x,
+        y: nextPosition.y,
+      });
+    },
+    onWidgetDragStateChange: (widgetId, isTrashDropActive) => {
+      setActiveDropTargets(isTrashDropActive && widgetId ? ["trash_bin"] : []);
+    },
+    presentWidgetIds: liveWidgetIds,
+    syncKey:
+      state.status === "ready"
+        ? `${state.experiment.id}:${JSON.stringify(state.experiment.workspace.widgets)}`
+        : null,
+    toolbarWidgetId: "toolbar",
+    trashWidgetId: "trash",
+    widgets:
+      state.status === "ready"
+        ? state.experiment.workspace.widgets.map((widget) => ({
+            id: widget.id,
+            x: widget.x,
+            y: widget.y,
+          }))
+        : [],
+    workspaceRef,
+  });
+
   const moveEquipmentWidgetIntoWorkspace = (
     widgetId: WorkspaceEquipmentWidgetId,
     clientX: number,
     clientY: number,
   ) => {
     const workspaceRect = workspaceRef.current?.getBoundingClientRect();
-    const nextLayout = widgetLayoutRef.current[widgetId];
-    const widgetHeight = widgetHeightsRef.current[widgetId] ?? nextLayout.fallbackHeight;
+    const nextLayout = widgetLayout[widgetId];
+    const widgetHeight = widgetHeights[widgetId] ?? nextLayout.fallbackHeight;
     const workspaceWidth = workspaceRect?.width ?? 0;
     const workspaceHeightValue = workspaceRect?.height ?? 0;
     const maxX =
@@ -560,7 +383,6 @@ export function LabScene() {
       x: nextX,
       y: nextY,
     });
-    setWidgetOrder((current) => [...current.filter((id) => id !== widgetId), widgetId]);
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -740,14 +562,6 @@ export function LabScene() {
     ),
   );
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
-  const workspaceHeight = Math.max(
-    ...liveWidgetIds.map((widgetId) => {
-      const layout = widgetLayout[widgetId];
-      const measuredHeight = widgetHeights[widgetId] ?? layout.fallbackHeight;
-      return layout.y + measuredHeight + 48;
-    }),
-    1100,
-  );
 
   const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {

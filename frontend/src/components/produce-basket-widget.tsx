@@ -1,9 +1,9 @@
 "use client";
 
+import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { InventoryWidget } from "@/components/inventory-widget";
-import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceBasketWidgetProps = {
@@ -70,34 +70,37 @@ export function ProduceBasketWidget({
           <div className="mt-3 space-y-2">
             {produceLots.length > 0 ? (
               produceLots.map((lot) => (
-                <div
-                  className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
-                  data-testid={`basket-produce-${lot.id}`}
-                  draggable
-                  key={lot.id}
-                  onDragEnd={onItemDragEnd}
-                  onDragStart={(event) =>
-                    onProduceDragStart(lot.id, lot.produceType, event.dataTransfer)
+                <DraggableInventoryItem
+                  badge={
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                      {lot.produceType}
+                    </span>
                   }
-                >
-                  <div className="flex min-w-0 items-center gap-3">
+                  className="rounded-[0.9rem] bg-white"
+                  contentClassName="flex-1"
+                  dataTestId={`basket-produce-${lot.id}`}
+                  key={lot.id}
+                  leading={
                     <AppleIllustration
                       className="h-10 w-10 shrink-0"
                       testId={`basket-produce-illustration-${lot.id}`}
                     />
-                    <div className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-slate-900">
-                        {lot.label}
-                      </span>
-                      <span className="block truncate text-xs text-slate-500">
-                        {formatProduceLotMetadata(lot)}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                    {lot.produceType}
-                  </span>
-                </div>
+                  }
+                  onDragEnd={onItemDragEnd}
+                  onDragStart={(dataTransfer) =>
+                    onProduceDragStart(lot.id, lot.produceType, dataTransfer)
+                  }
+                  subtitle={
+                    <span className="block truncate text-xs text-slate-500">
+                      {formatProduceLotMetadata(lot)}
+                    </span>
+                  }
+                  title={
+                    <span className="block truncate text-sm font-semibold text-slate-900">
+                      {lot.label}
+                    </span>
+                  }
+                />
               ))
             ) : (
               <p className="text-sm text-slate-500">No produce lots created yet.</p>

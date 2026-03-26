@@ -2,8 +2,8 @@
 
 import type { DragEvent } from "react";
 
+import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { InventoryWidget } from "@/components/inventory-widget";
-import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import type {
   ExperimentWorkspaceWidget,
   TrashProduceLotEntry,
@@ -102,73 +102,74 @@ export function TrashWidget({
           );
 
           return (
-            <div
-              className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
-              data-testid={`trash-tool-${trashTool.id}`}
-              draggable
+            <DraggableInventoryItem
+              badge={
+                <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                  Tool
+                </span>
+              }
+              dataTestId={`trash-tool-${trashTool.id}`}
               key={trashTool.id}
               onDragEnd={onItemDragEnd}
-              onDragStart={(event) => onToolDragStart(trashTool, event.dataTransfer)}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {trashTool.tool.label}
-                </p>
+              onDragStart={(dataTransfer) => onToolDragStart(trashTool, dataTransfer)}
+              subtitle={
                 <p className="truncate text-xs text-slate-500">
                   {trashTool.originLabel}
                   {totalVolume > 0 ? ` • ${totalVolume} mL` : ""}
                 </p>
-              </div>
-              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                Tool
-              </span>
-            </div>
+              }
+              title={
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {trashTool.tool.label}
+                </p>
+              }
+            />
           );
         })}
         {trashedProduceLots.map((trashProduceLot) => (
-          <div
-            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
-            data-testid={`trash-produce-lot-${trashProduceLot.id}`}
-            draggable
+          <DraggableInventoryItem
+            badge={
+              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                Produce lot
+              </span>
+            }
+            dataTestId={`trash-produce-lot-${trashProduceLot.id}`}
             key={trashProduceLot.id}
             onDragEnd={onItemDragEnd}
-            onDragStart={(event) =>
-              onTrashProduceLotDragStart(trashProduceLot, event.dataTransfer)
+            onDragStart={(dataTransfer) =>
+              onTrashProduceLotDragStart(trashProduceLot, dataTransfer)
             }
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">
-                {trashProduceLot.produceLot.label}
-              </p>
+            subtitle={
               <p className="truncate text-xs text-slate-500">
                 {trashProduceLot.originLabel} •{" "}
                 {formatProduceLotMetadata(trashProduceLot.produceLot)}
               </p>
-            </div>
-            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-              Produce lot
-            </span>
-          </div>
+            }
+            title={
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {trashProduceLot.produceLot.label}
+              </p>
+            }
+          />
         ))}
         {trashedWidgets.map((widget) => (
-          <div
-            className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2`}
-            data-testid={`trash-widget-${widget.id}`}
-            draggable
+          <DraggableInventoryItem
+            badge={
+              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                Widget
+              </span>
+            }
+            dataTestId={`trash-widget-${widget.id}`}
             key={widget.id}
             onDragEnd={onItemDragEnd}
-            onDragStart={(event) => onTrashedWidgetDragStart(widget, event.dataTransfer)}
-          >
-            <div className="min-w-0">
+            onDragStart={(dataTransfer) => onTrashedWidgetDragStart(widget, dataTransfer)}
+            subtitle={<p className="truncate text-xs text-slate-500">Workspace widget</p>}
+            title={
               <p className="truncate text-sm font-semibold text-slate-900">
                 {widget.label}
               </p>
-              <p className="truncate text-xs text-slate-500">Workspace widget</p>
-            </div>
-            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-              Widget
-            </span>
-          </div>
+            }
+          />
         ))}
         {isEmpty ? (
           <div className="rounded-[1rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
