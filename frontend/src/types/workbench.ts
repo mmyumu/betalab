@@ -26,6 +26,7 @@ export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "p
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type ProduceLotType = "apple";
+export type ProduceCutState = "whole" | "cut";
 export type DragEntityKind =
   | "tool"
   | "liquid"
@@ -257,6 +258,7 @@ export type ExperimentWorkspaceWidget = {
 };
 
 export type ExperimentProduceLot = {
+  cutState?: ProduceCutState;
   id: string;
   isContaminated?: boolean;
   label: string;

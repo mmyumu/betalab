@@ -1167,6 +1167,84 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
+  it("cuts a whole apple on a cutting board when clicking it in knife mode", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: {
+              id: "bench_tool_board",
+              toolId: "cutting_board_hdpe",
+              label: "Cutting board",
+              subtitle: "Prep surface",
+              accent: "amber",
+              toolType: "cutting_board",
+              capacity_ml: 0,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                  cutState: "whole",
+                  isContaminated: false,
+                },
+              ],
+              liquids: [],
+            },
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Apple lot 1 cut on Cutting board."],
+        slots: makeSlots([
+          {
+            tool: {
+              id: "bench_tool_board",
+              toolId: "cutting_board_hdpe",
+              label: "Cutting board",
+              subtitle: "Prep surface",
+              accent: "amber",
+              toolType: "cutting_board",
+              capacity_ml: 0,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                  cutState: "cut",
+                  isContaminated: false,
+                },
+              ],
+              liquids: [],
+            },
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Stainless steel knife" }));
+    fireEvent.click(await screen.findByTestId("bench-produce-lot-produce_1"));
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "cut_workbench_produce_lot",
+      { slot_id: "station_1", produce_lot_id: "produce_1" },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("cut")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "cut");
+  });
+
   it("applies a sampling label from the palette onto an unlabeled sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

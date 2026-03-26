@@ -356,6 +356,17 @@ export function LabScene() {
     clearDropTargets();
   };
 
+  const handleWorkbenchProduceLotClick = (slotId: string, produceLot: ExperimentProduceLot) => {
+    if (!isKnifeMode || produceLot.cutState === "cut") {
+      return;
+    }
+
+    void sendWorkbenchCommand("cut_workbench_produce_lot", {
+      slot_id: slotId,
+      produce_lot_id: produceLot.id,
+    });
+  };
+
   const liveWidgetIds: WidgetId[] =
     state.status === "ready"
       ? [
@@ -1245,6 +1256,7 @@ export function LabScene() {
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
+                onProduceLotClick={handleWorkbenchProduceLotClick}
                 onMoveSampleLabel={handleMoveSampleLabel}
                 onProduceLotDragStart={handleWorkbenchProduceLotDragStart}
                 onProduceDrop={handleProduceDrop}

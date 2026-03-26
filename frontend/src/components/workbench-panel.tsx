@@ -64,6 +64,7 @@ type WorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
+  onProduceLotClick?: (slotId: string, produceLot: ExperimentProduceLot) => void;
   onProduceDrop?: (targetSlotId: string, payload: ProduceDragPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
   onApplySampleLabel?: (slotId: string) => void;
@@ -92,6 +93,7 @@ export function WorkbenchPanel({
   onBenchToolDragEnd,
   onBenchToolDragStart,
   onBenchToolDrop,
+  onProduceLotClick,
   onProduceLotDragStart,
   onProduceDrop,
   onApplySampleLabel,
@@ -338,6 +340,13 @@ export function WorkbenchPanel({
                               onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
                             }
                       }
+                      onProduceLotClick={
+                        tool.toolType === "cutting_board"
+                          ? (produceLot) => {
+                              onProduceLotClick?.(slot.id, produceLot);
+                            }
+                          : undefined
+                      }
                       onDragEnd={() => {
                         onBenchToolDragEnd?.();
                       }}
@@ -380,16 +389,22 @@ export function WorkbenchPanel({
                             onDragEnd={() => {
                               onBenchToolDragEnd?.();
                             }}
-                            onDragStart={(event) => {
+                              onDragStart={(event) => {
                                 if (dndDisabled) {
                                   return;
                                 }
                                 onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
                               }}
+                            onClick={() => {
+                              onProduceLotClick?.(slot.id, produceLot);
+                            }}
                           >
                             <div className="space-y-3">
                               <div className="flex items-center gap-3">
-                                <AppleIllustration className="h-12 w-12 shrink-0" />
+                                <AppleIllustration
+                                  className="h-12 w-12 shrink-0"
+                                  variant={produceLot.cutState === "cut" ? "cut" : "whole"}
+                                />
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-semibold text-slate-900">
                                     {produceLot.label}
@@ -399,8 +414,18 @@ export function WorkbenchPanel({
                                   </p>
                                 </div>
                               </div>
-                              <span className="inline-flex w-full justify-center rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                                contaminated
+                              <span className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                                produceLot.isContaminated
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : produceLot.cutState === "cut"
+                                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              }`}>
+                                {produceLot.isContaminated
+                                  ? "contaminated"
+                                  : produceLot.cutState === "cut"
+                                    ? "cut"
+                                    : "clean"}
                               </span>
                             </div>
                           </div>

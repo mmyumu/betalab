@@ -289,6 +289,48 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
     expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
     expect(screen.getByText("clean")).toBeInTheDocument();
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "whole");
+  });
+
+  it("renders cut produce on a cutting board with the cut apple variant", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_board",
+              toolId: "cutting_board_hdpe",
+              label: "Cutting board",
+              subtitle: "Prep surface",
+              accent: "amber",
+              toolType: "cutting_board",
+              capacity_ml: 0,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                  cutState: "cut",
+                  isContaminated: false,
+                },
+              ],
+              liquids: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(screen.getByText("cut")).toBeInTheDocument();
+    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "cut");
   });
 
   it("shows the sample label on the sampling bag illustration", () => {

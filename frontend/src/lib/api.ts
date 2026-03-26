@@ -206,6 +206,7 @@ function normalizeProduceLot(
   const unitCountValue = lot.unitCount ?? lot.unit_count;
 
   return {
+    cutState: String(lot.cutState ?? lot.cut_state ?? "whole") as ExperimentProduceLot["cutState"],
     id: String(lot.id),
     isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
     label: String(lot.label),

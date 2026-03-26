@@ -14,6 +14,7 @@ import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench"
 type BenchToolCardProps = {
   draggable?: boolean;
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
+  onProduceLotClick?: (produceLot: ExperimentProduceLot) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
@@ -95,6 +96,7 @@ function formatLotMetadata(unitCount: number | null, totalMassG: number) {
 export function BenchToolCard({
   draggable = false,
   onDragEnd,
+  onProduceLotClick,
   onDragStart,
   onProduceLotDragEnd,
   onProduceLotDragStart,
@@ -269,6 +271,9 @@ export function BenchToolCard({
                   onDragStart={(event) => {
                     onProduceLotDragStart?.(produceLot, event);
                   }}
+                  onClick={() => {
+                    onProduceLotClick?.(produceLot);
+                  }}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate">{produceLot.label}</span>
@@ -300,10 +305,16 @@ export function BenchToolCard({
                   onDragStart={(event) => {
                     onProduceLotDragStart?.(produceLot, event);
                   }}
+                  onClick={() => {
+                    onProduceLotClick?.(produceLot);
+                  }}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <AppleIllustration className="h-12 w-12 shrink-0" />
+                      <AppleIllustration
+                        className="h-12 w-12 shrink-0"
+                        variant={produceLot.cutState === "cut" ? "cut" : "whole"}
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">
                           {produceLot.label}
@@ -317,10 +328,16 @@ export function BenchToolCard({
                       className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                         produceLot.isContaminated
                           ? "border-rose-200 bg-rose-50 text-rose-700"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : produceLot.cutState === "cut"
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
                       }`}
                     >
-                      {produceLot.isContaminated ? "contaminated" : "clean"}
+                      {produceLot.isContaminated
+                        ? "contaminated"
+                        : produceLot.cutState === "cut"
+                          ? "cut"
+                          : "clean"}
                     </span>
                   </div>
                 </div>

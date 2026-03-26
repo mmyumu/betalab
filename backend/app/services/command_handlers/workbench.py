@@ -278,6 +278,20 @@ def discard_produce_lot_from_workbench_tool(experiment: Experiment, payload: dic
     experiment.audit_log.append(f"{produce_lot.label} discarded from {origin_label}.")
 
 
+def cut_workbench_produce_lot(experiment: Experiment, payload: dict) -> None:
+    slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
+    produce_lot_id = str(payload["produce_lot_id"])
+    produce_lot, origin_label = _find_produce_lot_in_slot(slot, produce_lot_id)
+
+    if slot.tool is not None and slot.tool.tool_type != "cutting_board":
+        raise ValueError(f"{slot.tool.label} does not support cutting.")
+    if produce_lot.cut_state == "cut":
+        return
+
+    produce_lot.cut_state = "cut"
+    experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
+
+
 def _get_slot_produce_target_label(slot: WorkbenchSlot) -> str:
     if slot.tool is not None:
         return slot.tool.label
@@ -308,15 +322,26 @@ def _add_produce_lot_to_slot(slot: WorkbenchSlot, produce_lot) -> str:
 
 
 def _remove_produce_lot_from_slot(slot: WorkbenchSlot, produce_lot_id: str):
+    produce_lot, origin_label = _find_produce_lot_in_slot(slot, produce_lot_id)
+    if slot.tool is not None and origin_label == slot.tool.label:
+        slot.tool.produce_lots = [
+            lot for lot in slot.tool.produce_lots if lot.id != produce_lot_id
+        ]
+        return produce_lot, origin_label
+
+    slot.surface_produce_lots = [
+        lot for lot in slot.surface_produce_lots if lot.id != produce_lot_id
+    ]
+    return produce_lot, origin_label
+
+
+def _find_produce_lot_in_slot(slot: WorkbenchSlot, produce_lot_id: str):
     if slot.tool is not None and slot.tool.produce_lots:
         produce_lot = next(
             (lot for lot in slot.tool.produce_lots if lot.id == produce_lot_id),
             None,
         )
         if produce_lot is not None:
-            slot.tool.produce_lots = [
-                lot for lot in slot.tool.produce_lots if lot.id != produce_lot_id
-            ]
             return produce_lot, slot.tool.label
 
     produce_lot = next(
@@ -326,9 +351,6 @@ def _remove_produce_lot_from_slot(slot: WorkbenchSlot, produce_lot_id: str):
     if produce_lot is None:
         raise ValueError("Unknown produce lot")
 
-    slot.surface_produce_lots = [
-        lot for lot in slot.surface_produce_lots if lot.id != produce_lot_id
-    ]
     return produce_lot, slot.label
 
 

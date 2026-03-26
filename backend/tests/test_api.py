@@ -39,6 +39,58 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert fetched.json()["id"] == experiment_id
 
 
+def test_cut_workbench_produce_lot_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+      created = client.post("/experiments")
+      experiment_id = created.json()["id"]
+
+      produced = client.post(
+          f"/experiments/{experiment_id}/commands",
+          json={
+              "type": "create_produce_lot",
+              "payload": {
+                  "produce_type": "apple",
+              },
+          },
+      )
+      produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
+      client.post(
+          f"/experiments/{experiment_id}/commands",
+          json={
+              "type": "place_tool_on_workbench",
+              "payload": {
+                  "slot_id": "station_1",
+                  "tool_id": "cutting_board_hdpe",
+              },
+          },
+      )
+      client.post(
+          f"/experiments/{experiment_id}/commands",
+          json={
+              "type": "add_produce_lot_to_workbench_tool",
+              "payload": {
+                  "slot_id": "station_1",
+                  "produce_lot_id": produce_lot_id,
+              },
+          },
+      )
+      cut = client.post(
+          f"/experiments/{experiment_id}/commands",
+          json={
+              "type": "cut_workbench_produce_lot",
+              "payload": {
+                  "slot_id": "station_1",
+                  "produce_lot_id": produce_lot_id,
+              },
+          },
+      )
+
+    assert cut.status_code == 200
+    assert cut.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "cut"
+
+
 def test_get_experiment_returns_404_for_unknown_id() -> None:
     from fastapi.testclient import TestClient
 

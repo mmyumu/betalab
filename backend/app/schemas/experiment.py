@@ -19,6 +19,7 @@ class ProduceLotSchema(BaseModel):
     total_mass_g: float
     unit_count: int | None = None
     is_contaminated: bool = False
+    cut_state: str = "whole"
 
 
 class WorkbenchToolSchema(BaseModel):
@@ -118,6 +119,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "discard_workspace_widget",
         "create_produce_lot",
         "discard_workspace_produce_lot",
+        "cut_workbench_produce_lot",
         "place_tool_in_rack_slot",
         "place_workbench_tool_in_rack_slot",
         "remove_rack_tool_to_workbench_slot",
