@@ -61,26 +61,26 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
             className="rounded-[1.1rem] border border-slate-200 bg-slate-50/80 p-2.5"
           >
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <button
-                  aria-expanded={!collapsedCategories[category.id]}
-                  className="flex items-center gap-1.5 text-left"
-                  onClick={() => {
-                    setCollapsedCategories((current) => ({
-                      ...current,
-                      [category.id]: !current[category.id],
-                    }));
-                  }}
-                  type="button"
-                >
+              <button
+                aria-expanded={!collapsedCategories[category.id]}
+                className="flex w-full items-center justify-between gap-3 rounded-[0.8rem] text-left"
+                onClick={() => {
+                  setCollapsedCategories((current) => ({
+                    ...current,
+                    [category.id]: !current[category.id],
+                  }));
+                }}
+                type="button"
+              >
+                <div className="flex items-center gap-1.5">
                   <span className="w-2.5 text-xs font-semibold leading-none text-slate-400">
                     {collapsedCategories[category.id] ? "+" : "-"}
                   </span>
                   <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-900">
                     {category.label}
                   </h3>
-                </button>
-              </div>
+                </div>
+              </button>
             </div>
 
             <div
