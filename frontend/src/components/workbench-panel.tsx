@@ -345,49 +345,47 @@ export function WorkbenchPanel({
                       tool={tool}
                     />
                   ) : surfaceProduceLots.length > 0 ? (
-                    <div className="rounded-[1.45rem] border border-slate-200 bg-white p-2 shadow-sm">
-                      <div className="flex min-h-56 flex-col justify-between rounded-[1.4rem] border border-dashed border-amber-200 bg-amber-50/70 p-4">
-                        <div>
-                          <p className="text-base font-semibold text-slate-950">Station surface</p>
-                          <p className="mt-1 text-xs text-slate-600">
-                            Direct produce contact contaminates the lot.
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          {surfaceProduceLots.map((produceLot) => (
-                            <div
-                              key={produceLot.id}
-                              className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 ${
-                                onProduceLotDragStart ? dragAffordanceClassName : ""
-                              }`}
-                              data-testid={`bench-surface-produce-lot-${produceLot.id}`}
-                              draggable={Boolean(onProduceLotDragStart)}
-                              onDragEnd={() => {
-                                onBenchToolDragEnd?.();
-                              }}
-                              onDragStart={(event) => {
-                                onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
-                              }}
-                            >
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                  <AppleIllustration className="h-12 w-12 shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-semibold text-slate-900">
-                                      {produceLot.label}
-                                    </p>
-                                    <p className="mt-1 truncate text-xs text-slate-500">
-                                      {formatProduceLotMetadata(produceLot)}
-                                    </p>
-                                  </div>
+                    <div className="flex min-h-56 flex-col justify-between p-1">
+                      <div>
+                        <p className="text-base font-semibold text-slate-950">Station surface</p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          Direct produce contact contaminates the lot.
+                        </p>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {surfaceProduceLots.map((produceLot) => (
+                          <div
+                            key={produceLot.id}
+                            className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 shadow-sm ${
+                              onProduceLotDragStart ? dragAffordanceClassName : ""
+                            }`}
+                            data-testid={`bench-surface-produce-lot-${produceLot.id}`}
+                            draggable={Boolean(onProduceLotDragStart)}
+                            onDragEnd={() => {
+                              onBenchToolDragEnd?.();
+                            }}
+                            onDragStart={(event) => {
+                              onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
+                            }}
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-3">
+                                <AppleIllustration className="h-12 w-12 shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                    {produceLot.label}
+                                  </p>
+                                  <p className="mt-1 truncate text-xs text-slate-500">
+                                    {formatProduceLotMetadata(produceLot)}
+                                  </p>
                                 </div>
-                                <span className="inline-flex w-full justify-center rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                                  contaminated
-                                </span>
                               </div>
+                              <span className="inline-flex w-full justify-center rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                                contaminated
+                              </span>
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ) : (
