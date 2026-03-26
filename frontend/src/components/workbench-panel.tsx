@@ -2,6 +2,7 @@
 
 import type { DragEvent } from "react";
 
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { BenchToolCard } from "@/components/bench-tool-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
@@ -28,6 +29,24 @@ import type {
 } from "@/types/workbench";
 
 type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
+
+function formatProduceLotMass(totalMassG: number) {
+  if (totalMassG >= 1000) {
+    return `${(totalMassG / 1000).toFixed(2)} kg`;
+  }
+
+  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
+}
+
+function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
+  const unitLabel =
+    produceLot.unitCount === null
+      ? null
+      : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
+  const massLabel = formatProduceLotMass(produceLot.totalMassG);
+
+  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+}
 
 type WorkbenchPanelProps = {
   onAddWorkbenchSlot?: () => void;
@@ -338,7 +357,7 @@ export function WorkbenchPanel({
                           {surfaceProduceLots.map((produceLot) => (
                             <div
                               key={produceLot.id}
-                              className={`rounded-[0.9rem] border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 ${
+                              className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 ${
                                 onProduceLotDragStart ? dragAffordanceClassName : ""
                               }`}
                               data-testid={`bench-surface-produce-lot-${produceLot.id}`}
@@ -350,9 +369,19 @@ export function WorkbenchPanel({
                                 onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
                               }}
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="truncate">{produceLot.label}</span>
-                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <AppleIllustration className="h-12 w-12 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                      {produceLot.label}
+                                    </p>
+                                    <p className="mt-1 truncate text-xs text-slate-500">
+                                      {formatProduceLotMetadata(produceLot)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="inline-flex w-full justify-center rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                                   contaminated
                                 </span>
                               </div>
