@@ -78,7 +78,7 @@ const categories: ToolbarCategory[] = [
 ];
 
 describe("ToolbarPanel", () => {
-  it("renders categories, their items, and exposes draggable inventory cards", async () => {
+  it("starts with categories collapsed and lets the user expand them", async () => {
     render(<ToolbarPanel categories={categories} />);
 
     expect(screen.getByText("Palette")).toBeInTheDocument();
@@ -86,18 +86,44 @@ describe("ToolbarPanel", () => {
     expect(screen.getByText("Liquids")).toBeInTheDocument();
     expect(screen.getByText("Workspace equipment")).toBeInTheDocument();
     expect(screen.getByText("MISC")).toBeInTheDocument();
-    expect(screen.getByText("Volumetric flask")).toBeInTheDocument();
-    expect(screen.getByText("Acetonitrile")).toBeInTheDocument();
-    expect(screen.getByText("Autosampler rack")).toBeInTheDocument();
-    expect(screen.getByText("Sampling label")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-category-panel-glassware")).toHaveClass("hidden");
+    expect(screen.getByTestId("toolbar-category-panel-liquids")).toHaveClass("hidden");
+    expect(screen.getByTestId("toolbar-category-panel-workspace_equipment")).toHaveClass("hidden");
+    expect(screen.getByTestId("toolbar-category-panel-misc")).toHaveClass("hidden");
     expect(screen.queryByText("Core containers for standards and samples.")).not.toBeInTheDocument();
     expect(screen.queryByText("Solvents and matrices available on the bench.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Glassware/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: /Liquids/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
+
+    expect(screen.getByRole("button", { name: /Glassware/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByTestId("toolbar-category-panel-glassware")).not.toHaveClass("hidden");
     expect(screen.getByTestId("toolbar-item-volumetric_flask")).toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("toolbar-category-panel-liquids")).toHaveClass("hidden");
+
+    await userEvent.click(screen.getByRole("button", { name: /Liquids/i }));
+
     expect(screen.getByTestId("toolbar-item-acetonitrile")).toHaveAttribute("draggable", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: /Workspace equipment/i }));
+
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toHaveAttribute(
       "draggable",
       "true",
     );
+
+    await userEvent.click(screen.getByRole("button", { name: /MISC/i }));
+
     expect(screen.getByTestId("toolbar-item-sampling_bag_label")).toHaveAttribute(
       "draggable",
       "true",
@@ -130,9 +156,9 @@ describe("ToolbarPanel", () => {
     expect(screen.queryByText("liquid")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
-    expect(screen.queryByTestId("toolbar-item-volumetric_flask")).not.toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-category-panel-glassware")).toHaveClass("hidden");
 
     await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
-    expect(screen.getByTestId("toolbar-item-volumetric_flask")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-category-panel-glassware")).not.toHaveClass("hidden");
   });
 });

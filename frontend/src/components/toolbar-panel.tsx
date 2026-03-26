@@ -41,7 +41,9 @@ function SampleLabelIcon() {
 }
 
 export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: ToolbarPanelProps) {
-  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(categories.map((category) => [category.id, true])),
+  );
 
   return (
     <section className="rounded-[1.55rem] border border-slate-200 bg-white/90 p-3 shadow-sm backdrop-blur">
@@ -81,8 +83,11 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
               </div>
             </div>
 
-            {!collapsedCategories[category.id] ? (
-              <div className="mt-2.5 space-y-2">
+            <div
+              aria-hidden={collapsedCategories[category.id]}
+              className={collapsedCategories[category.id] ? "hidden" : "mt-2.5 space-y-2"}
+              data-testid={`toolbar-category-panel-${category.id}`}
+            >
                 {category.items.map((item) => (
                   <div
                     key={item.id}
@@ -122,8 +127,7 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                     </div>
                   </div>
                 ))}
-              </div>
-            ) : null}
+            </div>
           </article>
         ))}
       </div>
