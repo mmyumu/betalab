@@ -4,7 +4,7 @@ import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { canToolAcceptLiquids } from "@/lib/entity-rules";
+import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
 import {
   hasCompatibleDropTarget,
   readDragDescriptor,
@@ -98,7 +98,7 @@ export function WorkbenchPanel({
 
     if (descriptor.entityKind === "tool") {
       if (descriptor.sourceKind === "workbench") {
-        return slot.tool === null && descriptor.sourceId !== slot.id;
+        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0 && descriptor.sourceId !== slot.id;
       }
 
       if (
@@ -106,7 +106,7 @@ export function WorkbenchPanel({
         descriptor.sourceKind === "rack" ||
         descriptor.sourceKind === "trash"
       ) {
-        return slot.tool === null;
+        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0;
       }
     }
 
@@ -115,7 +115,11 @@ export function WorkbenchPanel({
     }
 
     if (descriptor.entityKind === "produce") {
-      return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
+      if (slot.tool !== null) {
+        return canToolAcceptProduce(slot.tool.toolType) && (slot.tool.produceLots?.length ?? 0) === 0;
+      }
+
+      return (slot.surfaceProduceLots?.length ?? 0) === 0;
     }
 
     if (descriptor.entityKind === "sample_label") {
@@ -214,6 +218,7 @@ export function WorkbenchPanel({
         <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {slots.map((slot) => {
             const tool = slot.tool;
+            const surfaceProduceLots = slot.surfaceProduceLots ?? [];
             const highlightsWorkbenchDrop = isBenchSlotHighlighted?.(slot) ?? false;
             const canAcceptWorkbenchDragOver = (event: DragEvent<HTMLElement>) => {
               if (isBenchSlotHighlighted) {
@@ -232,16 +237,20 @@ export function WorkbenchPanel({
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{slot.label}</p>
                     <p className="mt-1 text-sm text-slate-600">
-                      {tool ? "Ready for liquid additions." : "Waiting for a first tool."}
+                      {tool
+                        ? "Ready for bench operations."
+                        : surfaceProduceLots.length > 0
+                          ? "Produce is resting directly on the station."
+                          : "Waiting for a first tool."}
                     </p>
                   </div>
                   <button
                     aria-label={`Remove ${slot.label}`}
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-slate-300 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
                     data-testid={`remove-workbench-slot-button-${slot.id}`}
-                    disabled={tool !== null}
+                    disabled={tool !== null || surfaceProduceLots.length > 0}
                     onClick={() => {
-                      if (tool !== null) {
+                      if (tool !== null || surfaceProduceLots.length > 0) {
                         return;
                       }
                       onRemoveWorkbenchSlot?.(slot.id);
@@ -316,6 +325,42 @@ export function WorkbenchPanel({
                       }}
                       tool={tool}
                     />
+                  ) : surfaceProduceLots.length > 0 ? (
+                    <div className="rounded-[1.45rem] border border-slate-200 bg-white p-2 shadow-sm">
+                      <div className="flex min-h-56 flex-col justify-between rounded-[1.4rem] border border-dashed border-amber-200 bg-amber-50/70 p-4">
+                        <div>
+                          <p className="text-base font-semibold text-slate-950">Station surface</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            Direct produce contact contaminates the lot.
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          {surfaceProduceLots.map((produceLot) => (
+                            <div
+                              key={produceLot.id}
+                              className={`rounded-[0.9rem] border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 ${
+                                onProduceLotDragStart ? dragAffordanceClassName : ""
+                              }`}
+                              data-testid={`bench-surface-produce-lot-${produceLot.id}`}
+                              draggable={Boolean(onProduceLotDragStart)}
+                              onDragEnd={() => {
+                                onBenchToolDragEnd?.();
+                              }}
+                              onDragStart={(event) => {
+                                onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
+                              }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate">{produceLot.label}</span>
+                                <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                                  contaminated
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex min-h-56 flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center 2xl:min-h-[20rem]">
                       <p className="text-sm font-semibold text-slate-900">Empty station</p>

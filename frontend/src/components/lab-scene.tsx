@@ -35,6 +35,7 @@ import {
 } from "@/lib/workbench-dnd";
 import {
   canToolAcceptLiquids,
+  canToolAcceptProduce,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,
@@ -920,7 +921,7 @@ export function LabScene() {
 
     if (activeDragItem.entityKind === "tool") {
       if (activeDragItem.sourceKind === "workbench") {
-        return slot.tool === null && slot.id !== activeDragItem.sourceId;
+        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0 && slot.id !== activeDragItem.sourceId;
       }
 
       if (
@@ -928,7 +929,7 @@ export function LabScene() {
         activeDragItem.sourceKind === "rack" ||
         activeDragItem.sourceKind === "trash"
       ) {
-        return slot.tool === null;
+        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0;
       }
     }
 
@@ -937,7 +938,11 @@ export function LabScene() {
     }
 
     if (activeDragItem.entityKind === "produce") {
-      return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
+      if (slot.tool !== null) {
+        return canToolAcceptProduce(slot.tool.toolType) && (slot.tool.produceLots?.length ?? 0) === 0;
+      }
+
+      return (slot.surfaceProduceLots?.length ?? 0) === 0;
     }
 
     if (activeDragItem.entityKind === "sample_label") {

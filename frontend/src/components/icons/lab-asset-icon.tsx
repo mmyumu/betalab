@@ -217,6 +217,26 @@ function BeakerIcon({
   );
 }
 
+function CuttingBoardIcon({
+  glow,
+  label,
+  stroke,
+}: {
+  glow: string;
+  label: string;
+  stroke: string;
+}) {
+  return (
+    <VesselFrame glow={glow} label={label} stroke={stroke}>
+      <rect fill="#f8fafc" height="54" rx="8" stroke={stroke} width="44" x="22" y="34" />
+      <circle cx="56" cy="46" fill="none" r="4" stroke={stroke} />
+      <path d="M30 54H50" opacity="0.35" />
+      <path d="M30 64H58" opacity="0.35" />
+      <path d="M30 74H52" opacity="0.35" />
+    </VesselFrame>
+  );
+}
+
 function AmberBottleIcon({
   fillRatio,
   glow,
@@ -452,6 +472,9 @@ export function LabAssetIcon({
       break;
     case "beaker":
       icon = <BeakerIcon {...sharedProps} />;
+      break;
+    case "cutting_board":
+      icon = <CuttingBoardIcon glow={palette.glow} label={label} stroke={palette.stroke} />;
       break;
     case "sample_bag":
       icon = (

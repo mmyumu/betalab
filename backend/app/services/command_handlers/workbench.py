@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.rules import can_tool_accept_liquids
+from app.domain.rules import can_tool_accept_liquids, can_tool_accept_produce
 from app.domain.models import (
     Experiment,
     TrashProduceLotEntry,
@@ -22,7 +22,7 @@ from app.services.command_handlers.support import (
 
 def place_tool_on_workbench(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
-    if slot.tool is not None:
+    if slot.tool is not None or slot.surface_produce_lots:
         raise ValueError(f"{slot.label} already contains a tool")
 
     slot.tool = build_workbench_tool(payload["tool_id"])
@@ -42,7 +42,7 @@ def add_workbench_slot(experiment: Experiment, payload: dict | None = None) -> N
 
 def remove_workbench_slot(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
-    if slot.tool is not None:
+    if slot.tool is not None or slot.surface_produce_lots:
         raise ValueError(f"{slot.label} must be empty before it can be removed.")
 
     experiment.workbench.slots = [
@@ -59,7 +59,7 @@ def move_tool_between_workbench_slots(experiment: Experiment, payload: dict) -> 
         return
     if source_slot.tool is None:
         raise ValueError(f"Place a tool on {source_slot.label} before moving it.")
-    if target_slot.tool is not None:
+    if target_slot.tool is not None or target_slot.surface_produce_lots:
         raise ValueError(f"{target_slot.label} already contains a tool")
 
     moved_tool = source_slot.tool
@@ -128,22 +128,20 @@ def add_liquid_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
 
 def add_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before adding produce.")
-    if slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{slot.tool.label} does not accept produce.")
-    if slot.tool.produce_lots:
-        raise ValueError(f"{slot.tool.label} already contains a produce lot.")
-
+    _validate_slot_can_accept_produce(slot)
     produce_lot = find_workspace_produce_lot(
         experiment.workspace,
         str(payload["produce_lot_id"]),
     )
-    slot.tool.produce_lots.append(produce_lot)
+    target_label = _add_produce_lot_to_slot(slot, produce_lot)
     experiment.workspace.produce_lots = [
         lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
     ]
-    experiment.audit_log.append(f"{produce_lot.label} added to {slot.tool.label}.")
+    experiment.audit_log.append(
+        f"{produce_lot.label} added to {target_label}."
+        if target_label != slot.label
+        else f"{produce_lot.label} placed directly on {slot.label} and marked contaminated."
+    )
 
 
 def apply_sample_label_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
@@ -257,58 +255,81 @@ def move_produce_lot_between_workbench_tools(experiment: Experiment, payload: di
 
     if source_slot.id == target_slot.id:
         return
-    if source_slot.tool is None:
-        raise ValueError(f"Place a tool on {source_slot.label} before moving produce.")
-    if source_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{source_slot.tool.label} does not contain produce.")
-    if target_slot.tool is None:
-        raise ValueError(f"Place a tool on {target_slot.label} before adding produce.")
-    if target_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{target_slot.tool.label} does not accept produce.")
-    if target_slot.tool.produce_lots:
-        raise ValueError(f"{target_slot.tool.label} already contains a produce lot.")
 
     produce_lot_id = str(payload["produce_lot_id"])
-    produce_lot = next(
-        (lot for lot in source_slot.tool.produce_lots if lot.id == produce_lot_id),
-        None,
-    )
-    if produce_lot is None:
-        raise ValueError("Unknown produce lot")
-
-    source_slot.tool.produce_lots = [
-        lot for lot in source_slot.tool.produce_lots if lot.id != produce_lot_id
-    ]
-    target_slot.tool.produce_lots.append(produce_lot)
+    produce_lot, source_label = _remove_produce_lot_from_slot(source_slot, produce_lot_id)
+    target_label = _add_produce_lot_to_slot(target_slot, produce_lot)
     experiment.audit_log.append(
-        f"{produce_lot.label} moved from {source_slot.tool.label} on {source_slot.label} to {target_slot.tool.label} on {target_slot.label}."
+        f"{produce_lot.label} moved from {source_label} to {target_label}."
     )
 
 
 def discard_produce_lot_from_workbench_tool(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before removing produce.")
-
     produce_lot_id = str(payload["produce_lot_id"])
+    produce_lot, origin_label = _remove_produce_lot_from_slot(slot, produce_lot_id)
+    experiment.trash.produce_lots.append(
+        TrashProduceLotEntry(
+            id=new_id("trash_produce_lot"),
+            origin_label=origin_label,
+            produce_lot=produce_lot,
+        )
+    )
+    experiment.audit_log.append(f"{produce_lot.label} discarded from {origin_label}.")
+
+
+def _get_slot_produce_target_label(slot: WorkbenchSlot) -> str:
+    if slot.tool is not None:
+        return slot.tool.label
+    return slot.label
+
+
+def _validate_slot_can_accept_produce(slot: WorkbenchSlot) -> None:
+    if slot.tool is None:
+        if slot.surface_produce_lots:
+            raise ValueError(f"{slot.label} already contains a produce lot.")
+        return
+
+    if not can_tool_accept_produce(slot.tool.tool_type):
+        raise ValueError(f"{slot.tool.label} does not accept produce.")
+    if slot.tool.produce_lots:
+        raise ValueError(f"{slot.tool.label} already contains a produce lot.")
+
+
+def _add_produce_lot_to_slot(slot: WorkbenchSlot, produce_lot) -> str:
+    _validate_slot_can_accept_produce(slot)
+    if slot.tool is None:
+        produce_lot.is_contaminated = True
+        slot.surface_produce_lots.append(produce_lot)
+        return slot.label
+
+    slot.tool.produce_lots.append(produce_lot)
+    return slot.tool.label
+
+
+def _remove_produce_lot_from_slot(slot: WorkbenchSlot, produce_lot_id: str):
+    if slot.tool is not None and slot.tool.produce_lots:
+        produce_lot = next(
+            (lot for lot in slot.tool.produce_lots if lot.id == produce_lot_id),
+            None,
+        )
+        if produce_lot is not None:
+            slot.tool.produce_lots = [
+                lot for lot in slot.tool.produce_lots if lot.id != produce_lot_id
+            ]
+            return produce_lot, slot.tool.label
+
     produce_lot = next(
-        (lot for lot in slot.tool.produce_lots if lot.id == produce_lot_id),
+        (lot for lot in slot.surface_produce_lots if lot.id == produce_lot_id),
         None,
     )
     if produce_lot is None:
         raise ValueError("Unknown produce lot")
 
-    slot.tool.produce_lots = [
-        lot for lot in slot.tool.produce_lots if lot.id != produce_lot_id
+    slot.surface_produce_lots = [
+        lot for lot in slot.surface_produce_lots if lot.id != produce_lot_id
     ]
-    experiment.trash.produce_lots.append(
-        TrashProduceLotEntry(
-            id=new_id("trash_produce_lot"),
-            origin_label=slot.tool.label,
-            produce_lot=produce_lot,
-        )
-    )
-    experiment.audit_log.append(f"{produce_lot.label} discarded from {slot.tool.label}.")
+    return produce_lot, slot.label
 
 
 def remove_liquid_from_workbench_tool(experiment: Experiment, payload: dict) -> None:

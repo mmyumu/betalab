@@ -104,6 +104,7 @@ function makeSlots(overrides: Partial<BenchSlot>[] = [], count = Math.max(2, ove
   const baseSlots: BenchSlot[] = Array.from({ length: count }, (_, index) => ({
     id: `station_${index + 1}`,
     label: `Station ${index + 1}`,
+    surfaceProduceLots: [],
     tool: null,
   }));
 
@@ -212,6 +213,7 @@ function makeTrashProduceLotEntry(): TrashProduceLotEntry {
     originLabel: "Produce basket",
     produceLot: {
       id: "produce_1",
+      isContaminated: false,
       label: "Apple lot 1",
       produceType: "apple",
       totalMassG: 2450,
@@ -684,6 +686,7 @@ function createBasketProduceSourceCase(): DndSourceCase {
         produceLots: [
           {
             id: "produce_1",
+            isContaminated: false,
             label: "Apple lot 1",
             produceType: "apple",
             totalMassG: 2450,
@@ -704,8 +707,14 @@ function createBasketProduceSourceCase(): DndSourceCase {
         },
       },
       "bench-slot-station_2": {
-        compatible: false,
-        command: null,
+        compatible: true,
+        command: {
+          type: "add_produce_lot_to_workbench_tool",
+          payload: {
+            slot_id: "station_2",
+            produce_lot_id: "produce_1",
+          },
+        },
       },
       "rack-illustration-slot-1": {
         compatible: false,
@@ -752,6 +761,7 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
               produceLots: [
                 {
                   id: "produce_1",
+                  isContaminated: false,
                   label: "Apple lot 1",
                   produceType: "apple",
                   totalMassG: 2450,
@@ -759,6 +769,77 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
                 },
               ],
             }),
+          },
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2" }) },
+        ]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: false,
+        command: null,
+      },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "move_produce_lot_between_workbench_tools",
+          payload: {
+            source_slot_id: "station_1",
+            target_slot_id: "station_2",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
+      "rack-illustration-slot-1": {
+        compatible: false,
+        command: null,
+      },
+      "widget-workspace": {
+        compatible: false,
+        command: null,
+      },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_produce_lot_from_workbench_tool",
+          payload: {
+            slot_id: "station_1",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
+    },
+  };
+}
+
+function createWorkbenchSurfaceProduceLotSourceCase(): DndSourceCase {
+  return {
+    id: "workbench-surface-produce-lot-apple",
+    label: "workbench surface apple lot",
+    sourceTestId: "bench-surface-produce-lot-produce_1",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          {
+            surfaceProduceLots: [
+              {
+                id: "produce_1",
+                isContaminated: true,
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
           },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2" }) },
         ]),
@@ -833,8 +914,14 @@ function createTrashProduceLotSourceCase(): DndSourceCase {
         },
       },
       "bench-slot-station_2": {
-        compatible: false,
-        command: null,
+        compatible: true,
+        command: {
+          type: "restore_trashed_produce_lot_to_workbench_tool",
+          payload: {
+            target_slot_id: "station_2",
+            trash_produce_lot_id: "trash_produce_lot_1",
+          },
+        },
       },
       "rack-illustration-slot-1": {
         compatible: false,
@@ -947,6 +1034,7 @@ export const dndSourceCases: DndSourceCase[] = [
   ...toolItems.map(createWorkbenchToolSourceCase),
   createBasketProduceSourceCase(),
   createWorkbenchProduceLotSourceCase(),
+  createWorkbenchSurfaceProduceLotSourceCase(),
   createWorkbenchSampleLabelSourceCase(),
   createTrashProduceLotSourceCase(),
   createTrashSampleLabelSourceCase(),

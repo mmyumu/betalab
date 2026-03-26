@@ -18,6 +18,7 @@ class ProduceLotSchema(BaseModel):
     produce_type: str
     total_mass_g: float
     unit_count: int | None = None
+    is_contaminated: bool = False
 
 
 class WorkbenchToolSchema(BaseModel):
@@ -37,6 +38,7 @@ class WorkbenchSlotSchema(BaseModel):
     id: str
     label: str
     tool: WorkbenchToolSchema | None = None
+    surface_produce_lots: list[ProduceLotSchema]
 
 
 class WorkbenchSchema(BaseModel):

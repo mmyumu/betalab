@@ -51,6 +51,17 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         toolType: "beaker",
         capacity_ml: 100,
       },
+      {
+        id: "cutting_board_hdpe",
+        allowedDropTargets: getToolDropTargets("cutting_board"),
+        itemType: "tool",
+        name: "Cutting board",
+        subtitle: "Prep surface",
+        description: "Clean prep board used to stage apples before cutting.",
+        accent: "amber",
+        toolType: "cutting_board",
+        capacity_ml: 0,
+      },
     ],
   },
   {

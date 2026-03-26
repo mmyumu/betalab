@@ -105,6 +105,9 @@ function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
   return {
     id: slot.id,
     label: slot.label,
+    surfaceProduceLots: (slot.surfaceProduceLots ?? slot.surface_produce_lots ?? []).map(
+      (lot) => normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
+    ),
     tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
   };
 }
@@ -204,6 +207,7 @@ function normalizeProduceLot(
 
   return {
     id: String(lot.id),
+    isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
     label: String(lot.label),
     produceType: String(lot.produceType ?? lot.produce_type) as ExperimentProduceLot["produceType"],
     totalMassG: Number(lot.totalMassG ?? lot.total_mass_g),

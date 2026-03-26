@@ -1,5 +1,6 @@
 export {
   canToolAcceptLiquids,
+  canToolAcceptProduce,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,

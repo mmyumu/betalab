@@ -37,6 +37,7 @@ class WorkbenchSlot:
     id: str
     label: str
     tool: WorkbenchTool | None = None
+    surface_produce_lots: list["ProduceLot"] = field(default_factory=list)
 
 
 @dataclass
@@ -102,6 +103,7 @@ class ProduceLot:
     produce_type: str
     total_mass_g: float
     unit_count: int | None = None
+    is_contaminated: bool = False
 
 
 @dataclass

@@ -17,6 +17,7 @@ export type ToolType =
   | "beaker"
   | "centrifuge_tube"
   | "cleanup_tube"
+  | "cutting_board"
   | "sample_bag";
 
 export type LiquidType = "ultrapure_water" | "acetonitrile" | "methanol" | "formic_acid" | "matrix_blank" | "apple_extract";
@@ -217,6 +218,7 @@ export type BenchToolInstance = {
 export type BenchSlot = {
   id: string;
   label: string;
+  surfaceProduceLots?: ExperimentProduceLot[];
   tool: BenchToolInstance | null;
 };
 
@@ -256,6 +258,7 @@ export type ExperimentWorkspaceWidget = {
 
 export type ExperimentProduceLot = {
   id: string;
+  isContaminated?: boolean;
   label: string;
   produceType: ProduceLotType;
   totalMassG: number;

@@ -15,7 +15,11 @@ export function getToolDropTargets(toolType: ToolType): DropTargetType[] {
 }
 
 export function canToolAcceptLiquids(toolType: ToolType): boolean {
-  return toolType !== "sample_bag";
+  return toolType !== "sample_bag" && toolType !== "cutting_board";
+}
+
+export function canToolAcceptProduce(toolType: ToolType): boolean {
+  return toolType === "sample_bag" || toolType === "cutting_board";
 }
 
 export function getProduceLotDropTargets(): DropTargetType[] {

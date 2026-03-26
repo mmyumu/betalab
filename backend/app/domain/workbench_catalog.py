@@ -54,6 +54,14 @@ WORKBENCH_TOOLS = {
         tool_type="beaker",
         capacity_ml=100.0,
     ),
+    "cutting_board_hdpe": WorkbenchToolDefinition(
+        id="cutting_board_hdpe",
+        name="Cutting board",
+        subtitle="Prep surface",
+        accent="amber",
+        tool_type="cutting_board",
+        capacity_ml=0.0,
+    ),
     "sealed_sampling_bag": WorkbenchToolDefinition(
         id="sealed_sampling_bag",
         name="Sealed sampling bag",

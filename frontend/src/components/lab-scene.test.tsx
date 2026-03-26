@@ -285,6 +285,7 @@ describe("LabScene", () => {
 
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-cutting_board_hdpe")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-sealed_sampling_bag")).toBeInTheDocument();
     expect(screen.queryByTestId("toolbar-item-produce_basket_widget")).not.toBeInTheDocument();
     expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
@@ -1021,7 +1022,7 @@ describe("LabScene", () => {
       expect(screen.getByTestId("bench-slot-station_1")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId("basket-open-button"));
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
     const basketProduce = await screen.findByTestId("basket-produce-produce_1");
     const transfer = createDataTransfer();
 
@@ -1046,6 +1047,69 @@ describe("LabScene", () => {
       { slot_id: "station_1", produce_lot_id: "produce_1" },
     );
     expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("0");
+  });
+
+  it("moves basket produce onto an empty station and marks it contaminated", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Apple lot 1 placed directly on Station 2 and marked contaminated."],
+        basketProduceLots: [],
+        slots: makeSlots([
+          {},
+          {
+            surfaceProduceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+                isContaminated: true,
+              },
+            ],
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+    const basketProduce = await screen.findByTestId("basket-produce-produce_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(basketProduce, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("bench-slot-station_2"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("bench-slot-station_2"), dragOverEvent);
+    fireEvent.drop(screen.getByTestId("bench-slot-station_2"), { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_produce_lot_to_workbench_tool",
+      { slot_id: "station_2", produce_lot_id: "produce_1" },
+    );
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("bench-slot-station_2")).getByText("contaminated"),
+      ).toBeInTheDocument();
+    });
   });
 
   it("applies a sampling label from the palette onto an unlabeled sampling bag", async () => {

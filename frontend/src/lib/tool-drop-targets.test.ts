@@ -13,6 +13,7 @@ describe("tool drop targets", () => {
 
   it("keeps non-vial tools off the rack", () => {
     expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin"]);
+    expect(getToolDropTargets("cutting_board")).toEqual(["workbench_slot", "trash_bin"]);
     expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot", "trash_bin"]);
   });
 });

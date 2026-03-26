@@ -123,6 +123,25 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     assert slot.tool.produce_lots == []
 
 
+def test_place_cutting_board_on_workbench() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.label == "Cutting board"
+    assert slot.tool.tool_type == "cutting_board"
+
+
 def test_sampling_bag_label_can_be_applied_and_edited() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -302,6 +321,77 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
     assert slot.tool.produce_lots[0].total_mass_g == 2450.0
     assert updated.workspace.produce_lots == []
     assert updated.audit_log[-1] == "Apple lot 1 added to Sealed sampling bag."
+
+
+def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert len(slot.tool.produce_lots) == 1
+    assert slot.tool.produce_lots[0].label == "Apple lot 1"
+    assert slot.tool.produce_lots[0].is_contaminated is False
+    assert updated.workspace.produce_lots == []
+    assert updated.audit_log[-1] == "Apple lot 1 added to Cutting board."
+
+
+def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is None
+    assert len(slot.surface_produce_lots) == 1
+    assert slot.surface_produce_lots[0].label == "Apple lot 1"
+    assert slot.surface_produce_lots[0].is_contaminated is True
+    assert updated.workspace.produce_lots == []
+    assert (
+        updated.audit_log[-1]
+        == "Apple lot 1 placed directly on Station 1 and marked contaminated."
+    )
 
 
 def test_add_produce_lot_requires_a_sampling_bag() -> None:

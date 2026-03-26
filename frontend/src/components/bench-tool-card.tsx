@@ -2,6 +2,7 @@ import type { DragEvent } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
+import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
   buildCssLinearGradient,
   getContainerLiquidVisualState,
@@ -108,7 +109,7 @@ export function BenchToolCard({
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
   const totalProduceMassG = produceLots.reduce((total, lot) => total + lot.totalMassG, 0);
-  const fillRatio = Math.min(currentVolume / tool.capacity_ml, 1);
+  const fillRatio = tool.capacity_ml > 0 ? Math.min(currentVolume / tool.capacity_ml, 1) : 0;
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const isFilled = liquidVisualState.hasVisibleLiquid;
   const fillPercentage = (fillRatio * 100).toFixed(2);
@@ -117,6 +118,7 @@ export function BenchToolCard({
     ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;
   const isSampleBag = tool.toolType === "sample_bag";
+  const isProduceSurface = canToolAcceptProduce(tool.toolType);
   const hasSampleLabel = isSampleBag && tool.sampleLabelText !== null && tool.sampleLabelText !== undefined;
 
   return (
@@ -150,6 +152,10 @@ export function BenchToolCard({
                   ? produceLots.length > 0
                     ? `${produceLots.length} produce lot${produceLots.length === 1 ? "" : "s"} loaded`
                     : "Ready for produce lot intake"
+                  : isProduceSurface
+                    ? produceLots.length > 0
+                      ? `${produceLots.length} produce lot${produceLots.length === 1 ? "" : "s"} staged`
+                      : "Ready for produce staging"
                   : tool.liquids.length > 0
                     ? `${tool.liquids.length} liquid loaded`
                     : "Ready for liquid additions"}
@@ -212,6 +218,24 @@ export function BenchToolCard({
               </span>
             )}
           </div>
+        ) : isProduceSurface ? (
+          <div className="space-y-2">
+            <div className="rounded-[1rem] bg-gradient-to-r from-amber-200/70 to-amber-50 p-[1px]">
+              <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Produce surface
+                  </p>
+                  <p className="mt-0.5 text-base font-semibold text-slate-950">
+                    {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Ready for cutting prep"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div
             className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
@@ -251,6 +275,43 @@ export function BenchToolCard({
                     <span className="truncate">{produceLot.label}</span>
                     <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                       {produceLot.produceType}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
+                Drop produce lot here
+              </span>
+            )
+          ) : isProduceSurface ? (
+            produceLots.length > 0 ? (
+              produceLots.map((produceLot) => (
+                <div
+                  key={produceLot.id}
+                  className={`rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700 ${
+                    onProduceLotDragStart ? dragAffordanceClassName : ""
+                  }`}
+                  data-testid={`bench-produce-lot-${produceLot.id}`}
+                  draggable={Boolean(onProduceLotDragStart)}
+                  onDragEnd={onProduceLotDragEnd}
+                  onDragStart={(event) => {
+                    onProduceLotDragStart?.(produceLot, event);
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate">{produceLot.label}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                        produceLot.isContaminated
+                          ? "border border-rose-200 bg-rose-50 text-rose-700"
+                          : "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                      }`}
+                    >
+                      {produceLot.isContaminated ? "contaminated" : "clean"}
                     </span>
                   </div>
                   <p className="mt-1 text-[11px] text-slate-500">
