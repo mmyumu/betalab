@@ -30,6 +30,7 @@ class WorkbenchToolSchema(BaseModel):
     capacity_ml: float
     accepts_liquids: bool
     trashable: bool
+    sample_label_text: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
 
@@ -123,5 +124,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "restore_trashed_produce_lot_to_workbench_tool",
         "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",
+        "apply_sample_label_to_workbench_tool",
+        "update_workbench_tool_sample_label_text",
     ]
     payload: dict = Field(default_factory=dict)

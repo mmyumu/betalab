@@ -60,6 +60,18 @@ export function createToolbarDragPayload(item: ToolbarItem): ToolbarDragPayload 
     };
   }
 
+  if (item.itemType === "sample_label") {
+    return {
+      allowedDropTargets: item.allowedDropTargets,
+      entityKind: "sample_label",
+      itemId: item.id,
+      itemType: "sample_label",
+      sourceId: item.id,
+      sourceKind: "palette",
+      trashable: item.trashable,
+    };
+  }
+
   return {
     allowedDropTargets: item.allowedDropTargets,
     entityKind: "workspace_widget",
@@ -195,6 +207,26 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         itemId: parsed.itemId,
         itemType: "liquid",
         liquidType: parsed.liquidType,
+        sourceId: parsed.sourceId,
+        sourceKind: "palette",
+        trashable: parsed.trashable,
+      };
+    }
+
+    if (
+      parsed.entityKind === "sample_label" &&
+      parsed.itemType === "sample_label" &&
+      typeof parsed.itemId === "string" &&
+      typeof parsed.trashable === "boolean" &&
+      parsed.sourceKind === "palette" &&
+      typeof parsed.sourceId === "string" &&
+      allowedDropTargets.length > 0
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "sample_label",
+        itemId: parsed.itemId,
+        itemType: "sample_label",
         sourceId: parsed.sourceId,
         sourceKind: "palette",
         trashable: parsed.trashable,
@@ -507,6 +539,17 @@ export function toDragDescriptor(
         entityKind: "liquid",
         liquidId: payload.itemId,
         liquidType: payload.liquidType,
+        sourceId: payload.sourceId,
+        sourceKind: payload.sourceKind,
+        trashable: payload.trashable,
+      };
+    }
+
+    if (payload.itemType === "sample_label") {
+      return {
+        allowedDropTargets: payload.allowedDropTargets,
+        entityKind: "sample_label",
+        sampleLabelId: payload.itemId,
         sourceId: payload.sourceId,
         sourceKind: payload.sourceKind,
         trashable: payload.trashable,

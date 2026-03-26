@@ -17,6 +17,7 @@ type BenchToolCardProps = {
   onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
+  onSampleLabelTextChange?: (sampleLabelText: string) => void;
   tool: BenchToolInstance;
 };
 
@@ -95,6 +96,7 @@ export function BenchToolCard({
   onProduceLotDragStart,
   onRemoveLiquid,
   onLiquidVolumeChange,
+  onSampleLabelTextChange,
   tool,
 }: BenchToolCardProps) {
   const produceLots = tool.produceLots ?? [];
@@ -111,6 +113,7 @@ export function BenchToolCard({
     ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;
   const isSampleBag = tool.toolType === "sample_bag";
+  const hasSampleLabel = isSampleBag && tool.sampleLabelText !== null && tool.sampleLabelText !== undefined;
 
   return (
     <article
@@ -151,20 +154,50 @@ export function BenchToolCard({
         </div>
 
         {isSampleBag ? (
-          <div className="rounded-[1rem] bg-gradient-to-r from-emerald-200/70 to-emerald-50 p-[1px]">
-            <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Produce load
-                </p>
-                <p className="mt-0.5 text-base font-semibold text-slate-950">
-                  {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Sealed sample intake"}
-                </p>
+          <div className="space-y-2">
+            <div className="rounded-[1rem] bg-gradient-to-r from-emerald-200/70 to-emerald-50 p-[1px]">
+              <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Produce load
+                  </p>
+                  <p className="mt-0.5 text-base font-semibold text-slate-950">
+                    {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Sealed sample intake"}
+                  </p>
+                </div>
               </div>
             </div>
+            {hasSampleLabel ? (
+              <div className="rounded-[0.95rem] border border-sky-200 bg-sky-50/70 px-2.5 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Sample label
+                </p>
+                <input
+                  aria-label="Sample label text"
+                  className="mt-1 w-full rounded-lg border border-sky-200 bg-white px-2 py-1 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400"
+                  data-testid={`sample-label-input-${tool.id}`}
+                  defaultValue={tool.sampleLabelText ?? ""}
+                  draggable={false}
+                  onBlur={(event) => {
+                    onSampleLabelTextChange?.(event.currentTarget.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="Enter lot number"
+                  type="text"
+                />
+              </div>
+            ) : (
+              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
+                Drop sample label here
+              </span>
+            )}
           </div>
         ) : (
           <div

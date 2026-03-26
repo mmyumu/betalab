@@ -103,11 +103,6 @@ export function TrashWidget({
 
           return (
             <DraggableInventoryItem
-              badge={
-                <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                  Tool
-                </span>
-              }
               dataTestId={`trash-tool-${trashTool.id}`}
               key={trashTool.id}
               onDragEnd={onItemDragEnd}
@@ -128,11 +123,6 @@ export function TrashWidget({
         })}
         {trashedProduceLots.map((trashProduceLot) => (
           <DraggableInventoryItem
-            badge={
-              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                Produce lot
-              </span>
-            }
             dataTestId={`trash-produce-lot-${trashProduceLot.id}`}
             key={trashProduceLot.id}
             onDragEnd={onItemDragEnd}
@@ -154,11 +144,6 @@ export function TrashWidget({
         ))}
         {trashedWidgets.map((widget) => (
           <DraggableInventoryItem
-            badge={
-              <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">
-                Widget
-              </span>
-            }
             dataTestId={`trash-widget-${widget.id}`}
             key={widget.id}
             onDragEnd={onItemDragEnd}

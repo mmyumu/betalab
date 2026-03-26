@@ -26,7 +26,7 @@ export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "p
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type ProduceLotType = "apple";
-export type DragEntityKind = "tool" | "liquid" | "workspace_widget" | "produce";
+export type DragEntityKind = "tool" | "liquid" | "workspace_widget" | "produce" | "sample_label";
 export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
@@ -47,7 +47,15 @@ export type WorkspaceWidgetCatalogItem = ToolbarBaseItem & {
   widgetType: WorkspaceWidgetType;
 };
 
-export type ToolbarItem = ToolCatalogItem | LiquidCatalogItem | WorkspaceWidgetCatalogItem;
+export type SampleLabelCatalogItem = ToolbarBaseItem & {
+  itemType: "sample_label";
+};
+
+export type ToolbarItem =
+  | ToolCatalogItem
+  | LiquidCatalogItem
+  | WorkspaceWidgetCatalogItem
+  | SampleLabelCatalogItem;
 
 export type ToolbarCategory = {
   id: string;
@@ -90,6 +98,14 @@ export type ToolbarDragPayload =
       sourceKind: "palette";
       trashable: boolean;
       widgetType: WorkspaceWidgetType;
+    })
+  | (BaseDragPayload & {
+      entityKind: "sample_label";
+      itemId: string;
+      itemType: "sample_label";
+      sourceId: string;
+      sourceKind: "palette";
+      trashable: boolean;
     });
 
 export type ProduceDragPayload = BaseDragPayload & {
@@ -162,6 +178,11 @@ export type DragDescriptor =
       widgetType: ExperimentWorkspaceWidgetType | WorkspaceWidgetType;
     })
   | (BaseDragPayload & {
+      entityKind: "sample_label";
+      sampleLabelId: string;
+      trashable: boolean;
+    })
+  | (BaseDragPayload & {
       entityKind: "produce";
       produceLotId: string;
       produceType: ProduceLotType;
@@ -187,6 +208,7 @@ export type BenchToolInstance = {
   toolType: ToolType;
   capacity_ml: number;
   accepts_liquids: boolean;
+  sampleLabelText?: string | null;
   produceLots?: ExperimentProduceLot[];
   trashable: boolean;
   liquids: BenchLiquidPortion[];

@@ -168,6 +168,20 @@ export function LabScene() {
     });
   };
 
+  const handleApplySampleLabel = (slotId: string) => {
+    clearDropTargets();
+    void sendWorkbenchCommand("apply_sample_label_to_workbench_tool", {
+      slot_id: slotId,
+    });
+  };
+
+  const handleSampleLabelTextChange = (slotId: string, sampleLabelText: string) => {
+    void sendWorkbenchCommand("update_workbench_tool_sample_label_text", {
+      slot_id: slotId,
+      sample_label_text: sampleLabelText,
+    });
+  };
+
   const handleLiquidVolumeChange = (slotId: string, liquidId: string, volumeMl: number) => {
     void sendWorkbenchCommand("update_workbench_liquid_volume", {
       slot_id: slotId,
@@ -821,6 +835,10 @@ export function LabScene() {
       return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
     }
 
+    if (activeDragItem.entityKind === "sample_label") {
+      return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
+    }
+
     return false;
   };
 
@@ -1006,6 +1024,7 @@ export function LabScene() {
             >
               <WorkbenchPanel
                 onAddWorkbenchSlot={handleAddWorkbenchSlot}
+                onApplySampleLabel={handleApplySampleLabel}
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}
                 onBenchToolDragEnd={clearDropTargets}
@@ -1015,6 +1034,7 @@ export function LabScene() {
                 onProduceDrop={handleProduceDrop}
                 onRemoveLiquid={handleRemoveLiquid}
                 onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
+                onSampleLabelTextChange={handleSampleLabelTextChange}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
                 slots={slots}
                 statusMessage={statusMessage}

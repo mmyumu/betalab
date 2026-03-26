@@ -111,6 +111,32 @@ describe("workbench dnd helpers", () => {
     });
   });
 
+  it("marks sampling label drags as workbench-slot drops", () => {
+    const dataTransfer = createDataTransfer();
+
+    writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "sample_label",
+      itemId: "sampling_bag_label",
+      itemType: "sample_label",
+      sourceId: "sampling_bag_label",
+      sourceKind: "palette",
+      trashable: false,
+    });
+
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
+    expect(readToolbarDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "sample_label",
+      itemId: "sampling_bag_label",
+      itemType: "sample_label",
+      sourceId: "sampling_bag_label",
+      sourceKind: "palette",
+      trashable: false,
+    });
+  });
+
   it("marks basket produce drags as workbench-and-trash drops", () => {
     const dataTransfer = createDataTransfer();
 

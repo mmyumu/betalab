@@ -172,6 +172,49 @@ def test_pesticide_workbench_commands_round_trip_over_http() -> None:
     assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 2.0
 
 
+def test_sampling_bag_label_commands_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "sealed_sampling_bag",
+                },
+            },
+        )
+        labeled = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "apply_sample_label_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                },
+            },
+        )
+        updated = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "update_workbench_tool_sample_label_text",
+                "payload": {
+                    "slot_id": "station_1",
+                    "sample_label_text": "LOT-2026-041",
+                },
+            },
+        )
+
+    assert labeled.status_code == 200
+    assert labeled.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == ""
+    assert updated.status_code == 200
+    assert updated.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == "LOT-2026-041"
+
+
 def test_workbench_slot_commands_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

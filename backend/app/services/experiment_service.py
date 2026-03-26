@@ -19,6 +19,7 @@ from app.services.command_handlers.trash import (
 )
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
+    apply_sample_label_to_workbench_tool,
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
     discard_produce_lot_from_workbench_tool,
@@ -27,6 +28,7 @@ from app.services.command_handlers.workbench import (
     place_tool_on_workbench,
     remove_workbench_slot,
     remove_liquid_from_workbench_tool,
+    update_workbench_tool_sample_label_text,
     update_workbench_liquid_volume,
 )
 from app.services.command_handlers.workspace import (
@@ -71,6 +73,8 @@ class ExperimentService:
             "restore_trashed_produce_lot_to_workbench_tool": restore_trashed_produce_lot_to_workbench_tool,
             "remove_liquid_from_workbench_tool": remove_liquid_from_workbench_tool,
             "update_workbench_liquid_volume": update_workbench_liquid_volume,
+            "apply_sample_label_to_workbench_tool": apply_sample_label_to_workbench_tool,
+            "update_workbench_tool_sample_label_text": update_workbench_tool_sample_label_text,
         }
 
     def create_experiment(self) -> ExperimentSchema:

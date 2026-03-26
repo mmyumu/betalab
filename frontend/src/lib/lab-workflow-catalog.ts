@@ -151,6 +151,16 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         capacity_ml: 500,
         accepts_liquids: false,
       },
+      {
+        id: "sampling_bag_label",
+        allowedDropTargets: ["workbench_slot"],
+        itemType: "sample_label",
+        name: "Sampling label",
+        subtitle: "Traceability",
+        description: "Adhesive lot label for sampling bags before accessioning.",
+        accent: "sky",
+        trashable: false,
+      },
     ],
   },
 ];

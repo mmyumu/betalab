@@ -389,6 +389,59 @@ describe("WorkbenchPanel", () => {
     expect(onToolbarItemDrop).not.toHaveBeenCalled();
   });
 
+  it("accepts sample label drags only on unlabeled sampling bags", () => {
+    const onApplySampleLabel = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writePayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "sample_label",
+      itemId: "sampling_bag_label",
+      itemType: "sample_label",
+      sourceId: "sampling_bag_label",
+      sourceKind: "palette",
+      trashable: false,
+    });
+
+    render(
+      <PesticideWorkbenchPanel
+        onApplySampleLabel={onApplySampleLabel}
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              sampleLabelText: null,
+              trashable: true,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onApplySampleLabel).toHaveBeenCalledWith("station_1");
+  });
+
   it("accepts produce drags only on stations containing a sealed sampling bag", () => {
     const onProduceDrop = vi.fn();
     const dataTransfer = createDataTransfer();

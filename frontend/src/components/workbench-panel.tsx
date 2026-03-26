@@ -43,8 +43,10 @@ type WorkbenchPanelProps = {
   onBenchToolDrop?: (targetSlotId: string, payload: ToolDropPayload) => void;
   onProduceDrop?: (targetSlotId: string, payload: ProduceDragPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
+  onApplySampleLabel?: (slotId: string) => void;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onRemoveWorkbenchSlot?: (slotId: string) => void;
+  onSampleLabelTextChange?: (slotId: string, sampleLabelText: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
   statusMessage: string;
@@ -60,8 +62,10 @@ export function WorkbenchPanel({
   onBenchToolDrop,
   onProduceLotDragStart,
   onProduceDrop,
+  onApplySampleLabel,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
+  onSampleLabelTextChange,
   onLiquidVolumeChange,
   slots,
   statusMessage,
@@ -97,6 +101,10 @@ export function WorkbenchPanel({
 
     if (descriptor.entityKind === "produce") {
       return slot.tool?.toolType === "sample_bag" && (slot.tool.produceLots?.length ?? 0) === 0;
+    }
+
+    if (descriptor.entityKind === "sample_label") {
+      return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
     }
 
     return false;
@@ -135,6 +143,11 @@ export function WorkbenchPanel({
 
     const payload = readToolbarDragPayload(event.dataTransfer);
     if (!payload) {
+      return;
+    }
+
+    if (payload.itemType === "sample_label") {
+      onApplySampleLabel?.(slot.id);
       return;
     }
 
@@ -267,6 +280,9 @@ export function WorkbenchPanel({
                       }}
                       onLiquidVolumeChange={(liquidId, volumeMl) => {
                         onLiquidVolumeChange(slot.id, liquidId, volumeMl);
+                      }}
+                      onSampleLabelTextChange={(sampleLabelText) => {
+                        onSampleLabelTextChange?.(slot.id, sampleLabelText);
                       }}
                       tool={tool}
                     />

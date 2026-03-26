@@ -87,6 +87,7 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     toolType: "sample_vial",
     capacity_ml: 2,
     accepts_liquids: true,
+    sampleLabelText: null,
     produceLots: [],
     trashable: true,
     liquids: [],
@@ -1039,6 +1040,68 @@ describe("LabScene", () => {
       { slot_id: "station_1", produce_lot_id: "produce_1" },
     );
     expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("0");
+  });
+
+  it("applies a sampling label from the palette onto an unlabeled sampling bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "" }) }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const station = await screen.findByTestId("bench-slot-station_1");
+    const labelItem = screen.getByTestId("toolbar-item-sampling_bag_label");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(labelItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "apply_sample_label_to_workbench_tool",
+      { slot_id: "station_1" },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Sample label text")).toBeInTheDocument();
+    });
+  });
+
+  it("updates the sampling label text on blur", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "" }) }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const input = await screen.findByLabelText("Sample label text");
+    fireEvent.change(input, { target: { value: "LOT-2026-041" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "update_workbench_tool_sample_label_text",
+        { slot_id: "station_1", sample_label_text: "LOT-2026-041" },
+      );
+    });
   });
 
   it("discards a produce lot directly from the basket into the trash", async () => {

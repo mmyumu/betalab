@@ -25,6 +25,21 @@ const accentClasses: Record<ToolbarAccent, string> = {
 const neutralToolClasses =
   "from-slate-200/70 via-slate-50 to-white text-slate-800 ring-slate-200";
 
+function SampleLabelIcon() {
+  return (
+    <div
+      aria-label="Sampling label"
+      className="flex h-8 w-10 shrink-0 items-center justify-center rounded-md border border-sky-200 bg-sky-50"
+      data-kind="sample_label"
+    >
+      <div className="w-7 rounded-sm border border-dashed border-sky-300 bg-white px-1 py-0.5">
+        <div className="h-1 rounded bg-sky-200" />
+        <div className="mt-0.5 h-1 rounded bg-sky-100" />
+      </div>
+    </div>
+  );
+}
+
 export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: ToolbarPanelProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
@@ -92,6 +107,8 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                           className="h-8 w-10 shrink-0 overflow-hidden rounded-md"
                           widgetType={item.widgetType}
                         />
+                      ) : item.itemType === "sample_label" ? (
+                        <SampleLabelIcon />
                       ) : (
                         <LabAssetIcon
                           accent={item.accent}

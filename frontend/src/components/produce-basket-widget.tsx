@@ -71,11 +71,6 @@ export function ProduceBasketWidget({
             {produceLots.length > 0 ? (
               produceLots.map((lot) => (
                 <DraggableInventoryItem
-                  badge={
-                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                      {lot.produceType}
-                    </span>
-                  }
                   className="rounded-[0.9rem] bg-white"
                   contentClassName="flex-1"
                   dataTestId={`basket-produce-${lot.id}`}

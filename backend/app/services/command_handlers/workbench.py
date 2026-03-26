@@ -143,6 +143,39 @@ def add_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> 
     experiment.audit_log.append(f"{produce_lot.label} added to {slot.tool.label}.")
 
 
+def apply_sample_label_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
+    slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before adding a sample label.")
+    if slot.tool.tool_type != "sample_bag":
+        raise ValueError(f"{slot.tool.label} does not accept a sample label.")
+    if slot.tool.sample_label_text is not None:
+        raise ValueError(f"{slot.tool.label} already has a sample label.")
+
+    slot.tool.sample_label_text = ""
+    experiment.audit_log.append(f"Sample label applied to {slot.tool.label} on {slot.label}.")
+
+
+def update_workbench_tool_sample_label_text(experiment: Experiment, payload: dict) -> None:
+    slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before editing its sample label.")
+    if slot.tool.tool_type != "sample_bag":
+        raise ValueError(f"{slot.tool.label} does not accept a sample label.")
+    if slot.tool.sample_label_text is None:
+        raise ValueError(f"{slot.tool.label} does not have a sample label yet.")
+
+    next_text = str(payload["sample_label_text"]).strip()
+    slot.tool.sample_label_text = next_text
+    if next_text:
+        experiment.audit_log.append(
+            f"Sample label updated to {next_text} on {slot.tool.label}."
+        )
+        return
+
+    experiment.audit_log.append(f"Sample label cleared on {slot.tool.label}.")
+
+
 def move_produce_lot_between_workbench_tools(experiment: Experiment, payload: dict) -> None:
     source_slot = find_workbench_slot(experiment.workbench, payload["source_slot_id"])
     target_slot = find_workbench_slot(experiment.workbench, payload["target_slot_id"])
@@ -266,6 +299,7 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
         accepts_liquids=tool_definition.accepts_liquids,
+        sample_label_text=None,
         produce_lots=[],
         trashable=True,
     )

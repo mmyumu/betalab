@@ -120,7 +120,46 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     assert slot.tool.label == "Sealed sampling bag"
     assert slot.tool.tool_type == "sample_bag"
     assert slot.tool.accepts_liquids is False
+    assert slot.tool.sample_label_text is None
     assert slot.tool.produce_lots == []
+
+
+def test_sampling_bag_label_can_be_applied_and_edited() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    labeled = service.apply_command(
+        experiment.id,
+        "apply_sample_label_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "update_workbench_tool_sample_label_text",
+        {
+            "slot_id": "station_1",
+            "sample_label_text": "LOT-2026-041",
+        },
+    )
+
+    labeled_slot = next(slot for slot in labeled.workbench.slots if slot.id == "station_1")
+    updated_slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert labeled_slot.tool is not None
+    assert labeled_slot.tool.sample_label_text == ""
+    assert updated_slot.tool is not None
+    assert updated_slot.tool.sample_label_text == "LOT-2026-041"
+    assert updated.audit_log[-1] == "Sample label updated to LOT-2026-041 on Sealed sampling bag."
 
 
 def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:

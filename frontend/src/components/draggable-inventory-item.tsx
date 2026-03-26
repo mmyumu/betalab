@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 
 type DraggableInventoryItemProps = {
-  badge: ReactNode;
+  badge?: ReactNode;
   children?: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -46,7 +46,7 @@ export function DraggableInventoryItem({
         )}
         {children}
       </div>
-      {badge}
+      {badge ?? null}
     </div>
   );
 }

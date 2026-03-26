@@ -114,6 +114,12 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
     accepts_liquids: Boolean(tool.accepts_liquids),
+    sampleLabelText:
+      tool.sampleLabelText !== undefined
+        ? (tool.sampleLabelText as string | null)
+        : tool.sample_label_text !== undefined
+          ? (tool.sample_label_text as string | null)
+          : null,
     produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map(
       (lot) => normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
