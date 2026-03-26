@@ -124,8 +124,8 @@ function makeWorkspaceWidgets(
       id: "trash",
       widgetType: "trash",
       label: "Trash",
-      x: 1530,
-      y: 0,
+      x: 1490,
+      y: 126,
       isPresent: true,
       isTrashed: false,
     },
@@ -151,8 +151,8 @@ function makeWorkspaceWidgets(
       id: "basket",
       widgetType: "produce_basket",
       label: "Produce basket",
-      x: 1460,
-      y: 248,
+      x: 1490,
+      y: 352,
       isPresent: true,
       isTrashed: false,
     },
@@ -1167,6 +1167,22 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
+  it("toggles the knife action with the K shortcut", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    const knifeButton = await screen.findByRole("button", { name: "Stainless steel knife" });
+
+    expect(knifeButton).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.keyDown(window, { key: "k" });
+    expect(knifeButton).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.keyDown(window, { key: "K" });
+    expect(knifeButton).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("cuts a whole apple on a cutting board when clicking it in knife mode", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
@@ -1759,7 +1775,7 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "move_workspace_widget",
-      { widget_id: "basket", x: 1460, y: 248 },
+      { widget_id: "basket", x: 1490, y: 352 },
     );
     expect(sendExperimentCommand).not.toHaveBeenCalledWith(
       "experiment_pesticides",

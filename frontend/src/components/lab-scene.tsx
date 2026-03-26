@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
@@ -87,12 +87,12 @@ type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyo
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   inventory: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
-  actions: { x: 0, y: 404, width: 92, fallbackHeight: 104 },
+  actions: { x: 1490, y: 0, width: 92, fallbackHeight: 104 },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
-  trash: { x: 1530, y: 0, width: 164, fallbackHeight: 214 },
+  trash: { x: 1490, y: 126, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
-  basket: { x: 1554, y: 248, width: 198, fallbackHeight: 236 },
+  basket: { x: 1490, y: 352, width: 198, fallbackHeight: 236 },
 };
 const rackSlotCount = 12;
 const rackIllustrationViewBox = { height: 320, width: 560 };
@@ -151,6 +151,36 @@ export function LabScene() {
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.closest("input, textarea, select, [contenteditable='true']") ||
+          target.getAttribute("role") === "textbox")
+      ) {
+        return;
+      }
+
+      if (event.key.toLowerCase() !== "k") {
+        return;
+      }
+
+      event.preventDefault();
+      clearDropTargets();
+      setActiveActionId((current) => (current === "knife" ? null : "knife"));
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
