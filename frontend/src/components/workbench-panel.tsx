@@ -4,6 +4,7 @@ import type { DragEvent } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
+import { canToolAcceptLiquids } from "@/lib/entity-rules";
 import {
   hasCompatibleDropTarget,
   readDragDescriptor,
@@ -110,7 +111,7 @@ export function WorkbenchPanel({
     }
 
     if (descriptor.entityKind === "liquid") {
-      return slot.tool !== null && slot.tool.accepts_liquids;
+      return slot.tool !== null && canToolAcceptLiquids(slot.tool.toolType);
     }
 
     if (descriptor.entityKind === "produce") {

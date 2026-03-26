@@ -8,7 +8,6 @@ type ToolbarBaseItem = {
   subtitle: string;
   description: string;
   accent: ToolbarAccent;
-  trashable: boolean;
 };
 
 export type ToolType =
@@ -38,7 +37,6 @@ export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
   toolType: ToolType;
   capacity_ml: number;
-  accepts_liquids: boolean;
 };
 
 export type LiquidCatalogItem = ToolbarBaseItem & {
@@ -84,7 +82,6 @@ export type ToolbarDragPayload =
       sourceId: string;
       sourceKind: "palette";
       toolType: ToolType;
-      trashable: boolean;
     })
   | (BaseDragPayload & {
       entityKind: "liquid";
@@ -93,7 +90,6 @@ export type ToolbarDragPayload =
       liquidType: LiquidType;
       sourceId: string;
       sourceKind: "palette";
-      trashable: boolean;
     })
   | (BaseDragPayload & {
       entityKind: "workspace_widget";
@@ -101,7 +97,6 @@ export type ToolbarDragPayload =
       itemType: "workspace_widget";
       sourceId: string;
       sourceKind: "palette";
-      trashable: boolean;
       widgetType: WorkspaceWidgetType;
     })
   | (BaseDragPayload & {
@@ -110,7 +105,6 @@ export type ToolbarDragPayload =
       itemType: "sample_label";
       sourceId: string;
       sourceKind: "palette";
-      trashable: boolean;
     });
 
 export type SampleLabelDragPayload = BaseDragPayload & {
@@ -121,7 +115,6 @@ export type SampleLabelDragPayload = BaseDragPayload & {
   sourceKind: "workbench" | "trash";
   sourceSlotId?: string;
   trashSampleLabelId?: string;
-  trashable: false;
 };
 
 export type ProduceDragPayload = BaseDragPayload & {
@@ -132,7 +125,6 @@ export type ProduceDragPayload = BaseDragPayload & {
   sourceKind: "basket" | "workbench" | "trash";
   sourceSlotId?: string;
   trashProduceLotId?: string;
-  trashable: false;
 };
 
 export type BenchToolDragPayload = BaseDragPayload & {
@@ -142,7 +134,6 @@ export type BenchToolDragPayload = BaseDragPayload & {
   sourceKind: "workbench";
   toolId: string;
   toolType: ToolType;
-  trashable: boolean;
 };
 
 export type RackToolDragPayload = BaseDragPayload & {
@@ -152,7 +143,6 @@ export type RackToolDragPayload = BaseDragPayload & {
   sourceKind: "rack";
   toolId: string;
   toolType: ToolType;
-  trashable: boolean;
 };
 
 export type TrashToolDragPayload = BaseDragPayload & {
@@ -161,7 +151,6 @@ export type TrashToolDragPayload = BaseDragPayload & {
   sourceKind: "trash";
   toolId: string;
   toolType: ToolType;
-  trashable: boolean;
   trashToolId: string;
 };
 
@@ -171,7 +160,6 @@ export type WorkspaceWidgetDragPayload = BaseDragPayload & {
   sourceKind: "trash";
   widgetId: ExperimentWorkspaceWidgetId;
   widgetType: ExperimentWorkspaceWidgetType;
-  trashable: boolean;
 };
 
 export type DragDescriptor =
@@ -179,17 +167,14 @@ export type DragDescriptor =
       entityKind: "tool";
       toolId: string;
       toolType: ToolType;
-      trashable: boolean;
     })
   | (BaseDragPayload & {
       entityKind: "liquid";
       liquidId: string;
       liquidType: LiquidType;
-      trashable: boolean;
     })
   | (BaseDragPayload & {
       entityKind: "workspace_widget";
-      trashable: boolean;
       widgetId: string;
       widgetType: ExperimentWorkspaceWidgetType | WorkspaceWidgetType;
     })
@@ -197,7 +182,6 @@ export type DragDescriptor =
       entityKind: "sample_label";
       sampleLabelId: string;
       sampleLabelText?: string;
-      trashable: boolean;
       sourceSlotId?: string;
       trashSampleLabelId?: string;
     })
@@ -207,7 +191,6 @@ export type DragDescriptor =
       produceType: ProduceLotType;
       sourceSlotId?: string;
       trashProduceLotId?: string;
-      trashable: false;
     });
 
 export type BenchLiquidPortion = {
@@ -226,10 +209,8 @@ export type BenchToolInstance = {
   accent: ToolbarAccent;
   toolType: ToolType;
   capacity_ml: number;
-  accepts_liquids: boolean;
   sampleLabelText?: string | null;
   produceLots?: ExperimentProduceLot[];
-  trashable: boolean;
   liquids: BenchLiquidPortion[];
 };
 
@@ -271,7 +252,6 @@ export type ExperimentWorkspaceWidget = {
   y: number;
   isPresent: boolean;
   isTrashed: boolean;
-  trashable: boolean;
 };
 
 export type ExperimentProduceLot = {

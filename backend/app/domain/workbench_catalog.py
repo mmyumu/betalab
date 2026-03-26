@@ -11,7 +11,6 @@ class WorkbenchToolDefinition:
     accent: str
     tool_type: str
     capacity_ml: float
-    accepts_liquids: bool = True
 
 
 @dataclass(frozen=True)
@@ -62,7 +61,6 @@ WORKBENCH_TOOLS = {
         accent="emerald",
         tool_type="sample_bag",
         capacity_ml=500.0,
-        accepts_liquids=False,
     ),
 }
 

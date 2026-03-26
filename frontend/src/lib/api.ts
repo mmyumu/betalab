@@ -118,7 +118,6 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     accent: tool.accent,
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
-    accepts_liquids: Boolean(tool.accepts_liquids),
     sampleLabelText:
       tool.sampleLabelText !== undefined
         ? (tool.sampleLabelText as string | null)
@@ -128,7 +127,6 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map(
       (lot) => normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
-    trashable: typeof tool.trashable === "boolean" ? tool.trashable : true,
     liquids: (tool.liquids as BenchLiquidPortion[] | undefined)?.map(
       (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
     ) ?? [],
@@ -196,7 +194,6 @@ function normalizeWorkspaceWidget(
     y: Number(widget.y),
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
-    trashable: Boolean(widget.trashable),
   };
 }
 

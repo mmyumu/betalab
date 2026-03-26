@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.domain.rules import is_workspace_widget_discardable
 from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, new_id
 from app.services.command_handlers.support import find_workspace_produce_lot, find_workspace_widget
 
@@ -30,7 +31,7 @@ def move_workspace_widget(experiment: Experiment, payload: dict) -> None:
 
 def discard_workspace_widget(experiment: Experiment, payload: dict) -> None:
     widget = find_workspace_widget(experiment.workspace, payload["widget_id"])
-    if not widget.trashable:
+    if not is_workspace_widget_discardable(widget.id):
         raise ValueError(f"{widget.label} cannot be discarded.")
     if not widget.is_present and widget.is_trashed:
         return

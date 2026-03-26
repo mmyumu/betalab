@@ -87,10 +87,8 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     accent: "sky",
     toolType: "sample_vial",
     capacity_ml: 2,
-    accepts_liquids: true,
     sampleLabelText: null,
     produceLots: [],
-    trashable: true,
     liquids: [],
     ...overrides,
   };
@@ -121,7 +119,6 @@ function makeWorkspaceWidgets(
       y: 0,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
     {
       id: "trash",
@@ -131,7 +128,6 @@ function makeWorkspaceWidgets(
       y: 0,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
     {
       id: "rack",
@@ -141,7 +137,6 @@ function makeWorkspaceWidgets(
       y: 886,
       isPresent: false,
       isTrashed: false,
-      trashable: true,
     },
     {
       id: "instrument",
@@ -151,7 +146,6 @@ function makeWorkspaceWidgets(
       y: 886,
       isPresent: false,
       isTrashed: false,
-      trashable: true,
     },
     {
       id: "basket",
@@ -161,7 +155,6 @@ function makeWorkspaceWidgets(
       y: 248,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
   ];
 
@@ -215,7 +208,6 @@ function makeSampleBagTool(overrides: Partial<BenchToolInstance> = {}): BenchToo
     accent: "emerald",
     toolType: "sample_bag",
     capacity_ml: 500,
-    accepts_liquids: false,
     produceLots: [],
     ...overrides,
   });
@@ -425,7 +417,6 @@ describe("LabScene", () => {
                 toolType: "sample_bag",
                 accent: "emerald",
                 capacity_ml: 500,
-                accepts_liquids: false,
               }),
             },
           ]),

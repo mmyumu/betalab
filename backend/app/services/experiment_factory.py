@@ -41,7 +41,6 @@ def build_experiment() -> Experiment:
                     y=0,
                     is_present=True,
                     is_trashed=False,
-                    trashable=False,
                 ),
                 WorkspaceWidget(
                     id="trash",
@@ -51,7 +50,6 @@ def build_experiment() -> Experiment:
                     y=0,
                     is_present=True,
                     is_trashed=False,
-                    trashable=False,
                 ),
                 WorkspaceWidget(
                     id="rack",
@@ -61,7 +59,6 @@ def build_experiment() -> Experiment:
                     y=886,
                     is_present=False,
                     is_trashed=False,
-                    trashable=True,
                 ),
                 WorkspaceWidget(
                     id="instrument",
@@ -71,7 +68,6 @@ def build_experiment() -> Experiment:
                     y=886,
                     is_present=False,
                     is_trashed=False,
-                    trashable=True,
                 ),
                 WorkspaceWidget(
                     id="basket",
@@ -81,7 +77,6 @@ def build_experiment() -> Experiment:
                     y=248,
                     is_present=True,
                     is_trashed=False,
-                    trashable=False,
                 ),
             ],
             produce_lots=[],

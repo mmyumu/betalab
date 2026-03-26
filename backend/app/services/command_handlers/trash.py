@@ -14,8 +14,6 @@ def discard_workbench_tool(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before discarding it.")
-    if not slot.tool.trashable:
-        raise ValueError(f"{slot.tool.label} cannot be discarded.")
 
     discarded_tool = slot.tool
     slot.tool = None
@@ -72,8 +70,6 @@ def discard_rack_tool(experiment: Experiment, payload: dict) -> None:
     rack_slot = find_rack_slot(experiment.rack, payload["rack_slot_id"])
     if rack_slot.tool is None:
         raise ValueError(f"Place a vial in {rack_slot.label} before discarding it.")
-    if not rack_slot.tool.trashable:
-        raise ValueError(f"{rack_slot.tool.label} cannot be discarded.")
 
     discarded_tool = rack_slot.tool
     rack_slot.tool = None

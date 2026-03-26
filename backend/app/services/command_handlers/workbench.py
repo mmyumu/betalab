@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.domain.rules import can_tool_accept_liquids
 from app.domain.models import (
     Experiment,
     TrashProduceLotEntry,
@@ -73,7 +74,7 @@ def add_liquid_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
     slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before adding liquids.")
-    if not slot.tool.accepts_liquids:
+    if not can_tool_accept_liquids(slot.tool.tool_type):
         raise ValueError(f"{slot.tool.label} does not accept liquids.")
 
     liquid_definition = get_workbench_liquid_definition(payload["liquid_id"])
@@ -372,8 +373,6 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         accent=tool_definition.accent,
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
-        accepts_liquids=tool_definition.accepts_liquids,
         sample_label_text=None,
         produce_lots=[],
-        trashable=True,
     )

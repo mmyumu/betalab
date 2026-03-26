@@ -68,7 +68,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "sample_vial_lcms",
       sourceKind: "palette",
       toolType: "sample_vial",
-      trashable: true,
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
@@ -81,7 +80,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "sample_vial_lcms",
       sourceKind: "palette",
       toolType: "sample_vial",
-      trashable: true,
     });
   });
 
@@ -95,7 +93,6 @@ describe("workbench dnd helpers", () => {
       itemType: "workspace_widget",
       sourceId: "autosampler_rack_widget",
       sourceKind: "palette",
-      trashable: true,
       widgetType: "autosampler_rack",
     });
 
@@ -108,7 +105,6 @@ describe("workbench dnd helpers", () => {
       itemType: "workspace_widget",
       sourceId: "autosampler_rack_widget",
       sourceKind: "palette",
-      trashable: true,
       widgetType: "autosampler_rack",
     });
   });
@@ -123,7 +119,6 @@ describe("workbench dnd helpers", () => {
       itemType: "sample_label",
       sourceId: "sampling_bag_label",
       sourceKind: "palette",
-      trashable: false,
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
@@ -136,7 +131,6 @@ describe("workbench dnd helpers", () => {
       itemType: "sample_label",
       sourceId: "sampling_bag_label",
       sourceKind: "palette",
-      trashable: false,
     });
   });
 
@@ -151,7 +145,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "station_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -165,7 +158,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "station_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
   });
 
@@ -179,7 +171,6 @@ describe("workbench dnd helpers", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -193,7 +184,6 @@ describe("workbench dnd helpers", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
-      trashable: false,
     });
   });
 
@@ -208,7 +198,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "produce_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -222,7 +211,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "produce_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
   });
 
@@ -237,7 +225,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "produce_1",
       sourceKind: "trash",
       trashProduceLotId: "trash_produce_lot_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -251,7 +238,6 @@ describe("workbench dnd helpers", () => {
       sourceId: "produce_1",
       sourceKind: "trash",
       trashProduceLotId: "trash_produce_lot_1",
-      trashable: false,
     });
   });
 
@@ -266,7 +252,6 @@ describe("workbench dnd helpers", () => {
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -281,7 +266,6 @@ describe("workbench dnd helpers", () => {
       sourceSlotId: "station_1",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
   });
 
@@ -296,7 +280,6 @@ describe("workbench dnd helpers", () => {
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
-      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -311,7 +294,6 @@ describe("workbench dnd helpers", () => {
       sourceSlotId: "station_2",
       toolId: "beaker_rinse",
       toolType: "beaker",
-      trashable: true,
     });
   });
 
@@ -326,7 +308,6 @@ describe("workbench dnd helpers", () => {
       sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -341,7 +322,6 @@ describe("workbench dnd helpers", () => {
       sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
   });
 });

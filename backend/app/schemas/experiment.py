@@ -28,8 +28,6 @@ class WorkbenchToolSchema(BaseModel):
     accent: str
     tool_type: str
     capacity_ml: float
-    accepts_liquids: bool
-    trashable: bool
     sample_label_text: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
@@ -87,7 +85,6 @@ class WorkspaceWidgetSchema(BaseModel):
     y: int
     is_present: bool
     is_trashed: bool
-    trashable: bool
 
 
 class WorkspaceSchema(BaseModel):

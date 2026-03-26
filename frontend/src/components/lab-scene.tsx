@@ -33,9 +33,12 @@ import {
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
 import {
+  canToolAcceptLiquids,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,
+  getWorkspaceWidgetDropTargets,
+  isWorkspaceWidgetDiscardable,
 } from "@/lib/tool-drop-targets";
 import {
   labToolCatalog,
@@ -242,7 +245,7 @@ export function LabScene() {
   };
 
   const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => {
-    return getToolDropTargets(tool.toolType, { includeTrash: tool.trashable });
+    return getToolDropTargets(tool.toolType);
   };
 
   const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
@@ -266,7 +269,6 @@ export function LabScene() {
       sourceSlotId: slotId,
       toolId: tool.toolId,
       toolType: tool.toolType,
-      trashable: tool.trashable,
     });
     const descriptor = {
       allowedDropTargets: getBenchToolAllowedDropTargets(tool),
@@ -275,7 +277,6 @@ export function LabScene() {
       sourceKind: "workbench" as const,
       toolId: tool.toolId,
       toolType: tool.toolType,
-      trashable: tool.trashable,
     };
     showDropTargets(descriptor.allowedDropTargets);
     setActiveDragItem(descriptor);
@@ -497,7 +498,7 @@ export function LabScene() {
       return;
     }
 
-    if (toolbarPayload?.itemType === "tool" && toolbarPayload.trashable) {
+    if (toolbarPayload?.itemType === "tool") {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
@@ -507,7 +508,7 @@ export function LabScene() {
       return;
     }
 
-    if (toolbarPayload?.itemType === "workspace_widget" && toolbarPayload.trashable) {
+    if (toolbarPayload?.itemType === "workspace_widget") {
       const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
       if (!widgetId) {
         return;
@@ -522,7 +523,7 @@ export function LabScene() {
     }
 
     const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload?.trashable) {
+    if (benchToolPayload) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
@@ -533,7 +534,7 @@ export function LabScene() {
     }
 
     const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload?.trashable) {
+    if (rackToolPayload) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
@@ -620,7 +621,7 @@ export function LabScene() {
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
-    (widget) => widget.trashable && widget.isTrashed,
+    (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
   );
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
@@ -691,9 +692,7 @@ export function LabScene() {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets = getToolDropTargets(tool.toolType, {
-      includeTrash: tool.trashable,
-    });
+    const allowedDropTargets = getToolDropTargets(tool.toolType);
 
     writeRackToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -703,7 +702,6 @@ export function LabScene() {
       sourceKind: "rack",
       toolId: tool.toolId,
       toolType: tool.toolType,
-      trashable: tool.trashable,
     });
     const descriptor = {
       allowedDropTargets,
@@ -712,7 +710,6 @@ export function LabScene() {
       sourceKind: "rack" as const,
       toolId: tool.toolId,
       toolType: tool.toolType,
-      trashable: tool.trashable,
     };
     showDropTargets(descriptor.allowedDropTargets);
     setActiveDragItem(descriptor);
@@ -722,9 +719,7 @@ export function LabScene() {
     trashTool: TrashToolEntry,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType, {
-      includeTrash: trashTool.tool.trashable,
-    });
+    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
 
     writeTrashToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -733,7 +728,6 @@ export function LabScene() {
       sourceKind: "trash",
       toolId: trashTool.tool.toolId,
       toolType: trashTool.tool.toolType,
-      trashable: trashTool.tool.trashable,
       trashToolId: trashTool.id,
     });
     showDropTargets(allowedDropTargets);
@@ -744,7 +738,6 @@ export function LabScene() {
       sourceKind: "trash",
       toolId: trashTool.tool.toolId,
       toolType: trashTool.tool.toolType,
-      trashable: trashTool.tool.trashable,
     });
   };
 
@@ -752,16 +745,13 @@ export function LabScene() {
     widget: ExperimentWorkspaceWidget,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets: DropTargetType[] = widget.trashable
-      ? ["workspace_canvas", "trash_bin"]
-      : ["workspace_canvas"];
+    const allowedDropTargets = getWorkspaceWidgetDropTargets(widget.id);
 
     writeWorkspaceWidgetDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "workspace_widget",
       sourceId: widget.id,
       sourceKind: "trash",
-      trashable: widget.trashable,
       widgetId: widget.id,
       widgetType: widget.widgetType,
     });
@@ -771,7 +761,6 @@ export function LabScene() {
       entityKind: "workspace_widget",
       sourceId: widget.id,
       sourceKind: "trash",
-      trashable: widget.trashable,
       widgetId: widget.id,
       widgetType: widget.widgetType,
     });
@@ -791,7 +780,6 @@ export function LabScene() {
       sourceId: trashProduceLot.produceLot.id,
       sourceKind: "trash",
       trashProduceLotId: trashProduceLot.id,
-      trashable: false,
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
@@ -802,7 +790,6 @@ export function LabScene() {
       sourceId: trashProduceLot.produceLot.id,
       sourceKind: "trash",
       trashProduceLotId: trashProduceLot.id,
-      trashable: false,
     });
   };
 
@@ -820,7 +807,6 @@ export function LabScene() {
       produceType,
       sourceId: produceLotId,
       sourceKind: "basket",
-      trashable: false,
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
@@ -830,7 +816,6 @@ export function LabScene() {
       produceType,
       sourceId: produceLotId,
       sourceKind: "basket",
-      trashable: false,
     });
   };
 
@@ -849,7 +834,6 @@ export function LabScene() {
       sourceId: produceLot.id,
       sourceKind: "workbench",
       sourceSlotId: slotId,
-      trashable: false,
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
@@ -860,7 +844,6 @@ export function LabScene() {
       sourceId: produceLot.id,
       sourceKind: "workbench",
       sourceSlotId: slotId,
-      trashable: false,
     });
   };
 
@@ -883,7 +866,6 @@ export function LabScene() {
       sourceId: slotId,
       sourceKind: "workbench",
       sourceSlotId: slotId,
-      trashable: false,
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
@@ -894,7 +876,6 @@ export function LabScene() {
       sourceId: slotId,
       sourceKind: "workbench",
       sourceSlotId: slotId,
-      trashable: false,
     });
   };
 
@@ -912,7 +893,6 @@ export function LabScene() {
       sourceId: trashSampleLabel.id,
       sourceKind: "trash",
       trashSampleLabelId: trashSampleLabel.id,
-      trashable: false,
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
@@ -923,7 +903,6 @@ export function LabScene() {
       sourceId: trashSampleLabel.id,
       sourceKind: "trash",
       trashSampleLabelId: trashSampleLabel.id,
-      trashable: false,
     });
   };
 
@@ -947,7 +926,7 @@ export function LabScene() {
     }
 
     if (activeDragItem.entityKind === "liquid") {
-      return slot.tool !== null && slot.tool.accepts_liquids;
+      return slot.tool !== null && canToolAcceptLiquids(slot.tool.toolType);
     }
 
     if (activeDragItem.entityKind === "produce") {

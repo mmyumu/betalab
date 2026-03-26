@@ -119,7 +119,6 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     assert slot.tool is not None
     assert slot.tool.label == "Sealed sampling bag"
     assert slot.tool.tool_type == "sample_bag"
-    assert slot.tool.accepts_liquids is False
     assert slot.tool.sample_label_text is None
     assert slot.tool.produce_lots == []
 

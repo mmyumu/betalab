@@ -45,7 +45,6 @@ export function createToolbarDragPayload(item: ToolbarItem): ToolbarDragPayload 
       sourceId: item.id,
       sourceKind: "palette",
       toolType: item.toolType,
-      trashable: item.trashable,
     };
   }
 
@@ -58,7 +57,6 @@ export function createToolbarDragPayload(item: ToolbarItem): ToolbarDragPayload 
       liquidType: item.liquidType,
       sourceId: item.id,
       sourceKind: "palette",
-      trashable: item.trashable,
     };
   }
 
@@ -70,7 +68,6 @@ export function createToolbarDragPayload(item: ToolbarItem): ToolbarDragPayload 
       itemType: "sample_label",
       sourceId: item.id,
       sourceKind: "palette",
-      trashable: item.trashable,
     };
   }
 
@@ -81,7 +78,6 @@ export function createToolbarDragPayload(item: ToolbarItem): ToolbarDragPayload 
     itemType: "workspace_widget",
     sourceId: item.id,
     sourceKind: "palette",
-    trashable: item.trashable,
     widgetType: item.widgetType,
   };
 }
@@ -193,7 +189,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       parsed.itemType === "tool" &&
       typeof parsed.itemId === "string" &&
       typeof parsed.toolType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       parsed.sourceKind === "palette" &&
       typeof parsed.sourceId === "string" &&
       allowedDropTargets.length > 0
@@ -206,7 +201,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         sourceId: parsed.sourceId,
         sourceKind: "palette",
         toolType: parsed.toolType,
-        trashable: parsed.trashable,
       };
     }
 
@@ -215,7 +209,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       parsed.itemType === "liquid" &&
       typeof parsed.itemId === "string" &&
       typeof parsed.liquidType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       parsed.sourceKind === "palette" &&
       typeof parsed.sourceId === "string" &&
       allowedDropTargets.length > 0
@@ -228,7 +221,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         liquidType: parsed.liquidType,
         sourceId: parsed.sourceId,
         sourceKind: "palette",
-        trashable: parsed.trashable,
       };
     }
 
@@ -236,7 +228,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       parsed.entityKind === "sample_label" &&
       parsed.itemType === "sample_label" &&
       typeof parsed.itemId === "string" &&
-      typeof parsed.trashable === "boolean" &&
       parsed.sourceKind === "palette" &&
       typeof parsed.sourceId === "string" &&
       allowedDropTargets.length > 0
@@ -248,7 +239,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         itemType: "sample_label",
         sourceId: parsed.sourceId,
         sourceKind: "palette",
-        trashable: parsed.trashable,
       };
     }
 
@@ -257,7 +247,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
       parsed.itemType === "workspace_widget" &&
       typeof parsed.itemId === "string" &&
       typeof parsed.widgetType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       parsed.sourceKind === "palette" &&
       typeof parsed.sourceId === "string" &&
       allowedDropTargets.length > 0
@@ -269,7 +258,6 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         itemType: "workspace_widget",
         sourceId: parsed.sourceId,
         sourceKind: "palette",
-        trashable: parsed.trashable,
         widgetType: parsed.widgetType,
       };
     }
@@ -306,7 +294,6 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
       parsed.sourceKind === "workbench" &&
       typeof parsed.toolId === "string" &&
       typeof parsed.toolType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -317,7 +304,6 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
         sourceSlotId: parsed.sourceSlotId,
         toolId: parsed.toolId,
         toolType: parsed.toolType,
-        trashable: parsed.trashable,
       };
     }
   } catch {
@@ -352,7 +338,6 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
       parsed.sourceKind === "rack" &&
       typeof parsed.toolId === "string" &&
       typeof parsed.toolType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -363,7 +348,6 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
         sourceKind: "rack",
         toolId: parsed.toolId,
         toolType: parsed.toolType,
-        trashable: parsed.trashable,
       };
     }
   } catch {
@@ -399,7 +383,6 @@ export function readTrashToolDragPayload(dataTransfer: DataTransfer): TrashToolD
       parsed.sourceKind === "trash" &&
       typeof parsed.toolId === "string" &&
       typeof parsed.toolType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -410,7 +393,6 @@ export function readTrashToolDragPayload(dataTransfer: DataTransfer): TrashToolD
         trashToolId: parsed.trashToolId,
         toolId: parsed.toolId,
         toolType: parsed.toolType,
-        trashable: parsed.trashable,
       };
     }
   } catch {
@@ -445,7 +427,6 @@ export function readWorkspaceWidgetDragPayload(
       parsed.entityKind === "workspace_widget" &&
       typeof parsed.widgetId === "string" &&
       typeof parsed.widgetType === "string" &&
-      typeof parsed.trashable === "boolean" &&
       typeof parsed.sourceId === "string" &&
       parsed.sourceKind === "trash" &&
       allowedDropTargets.length > 0
@@ -455,7 +436,6 @@ export function readWorkspaceWidgetDragPayload(
         entityKind: "workspace_widget",
         sourceId: parsed.sourceId,
         sourceKind: "trash",
-        trashable: parsed.trashable,
         widgetId: parsed.widgetId,
         widgetType: parsed.widgetType,
       };
@@ -494,7 +474,6 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
       (parsed.sourceKind === "basket" ||
         (parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashProduceLotId === "string")) &&
-      parsed.trashable === false &&
       allowedDropTargets.length > 0
     ) {
       return {
@@ -506,7 +485,6 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
         sourceKind: parsed.sourceKind,
         ...(parsed.sourceKind === "workbench" ? { sourceSlotId: parsed.sourceSlotId } : {}),
         ...(parsed.sourceKind === "trash" ? { trashProduceLotId: parsed.trashProduceLotId } : {}),
-        trashable: false,
       };
     }
   } catch {
@@ -540,7 +518,6 @@ export function readSampleLabelDragPayload(
       typeof parsed.sampleLabelText === "string" &&
       (parsed.sourceKind === "workbench" || parsed.sourceKind === "trash") &&
       typeof parsed.sourceId === "string" &&
-      parsed.trashable === false &&
       allowedDropTargets.length > 0 &&
       ((parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashSampleLabelId === "string"))
@@ -556,7 +533,6 @@ export function readSampleLabelDragPayload(
         ...(parsed.sourceKind === "trash"
           ? { trashSampleLabelId: parsed.trashSampleLabelId }
           : {}),
-        trashable: false,
       };
     }
   } catch {
@@ -586,7 +562,6 @@ export function toDragDescriptor(
       sourceKind: payload.sourceKind,
       ...(payload.sourceSlotId ? { sourceSlotId: payload.sourceSlotId } : {}),
       ...(payload.trashProduceLotId ? { trashProduceLotId: payload.trashProduceLotId } : {}),
-      trashable: false,
     };
   }
 
@@ -599,7 +574,6 @@ export function toDragDescriptor(
         sourceKind: payload.sourceKind,
         toolId: payload.itemId,
         toolType: payload.toolType,
-        trashable: payload.trashable,
       };
     }
 
@@ -611,7 +585,6 @@ export function toDragDescriptor(
         liquidType: payload.liquidType,
         sourceId: payload.sourceId,
         sourceKind: payload.sourceKind,
-        trashable: payload.trashable,
       };
     }
 
@@ -622,7 +595,6 @@ export function toDragDescriptor(
         sampleLabelId: payload.itemId,
         sourceId: payload.sourceId,
         sourceKind: payload.sourceKind,
-        trashable: payload.trashable,
       };
     }
 
@@ -631,7 +603,6 @@ export function toDragDescriptor(
       entityKind: "workspace_widget",
       sourceId: payload.sourceId,
       sourceKind: payload.sourceKind,
-      trashable: payload.trashable,
       widgetId: payload.itemId,
       widgetType: payload.widgetType,
     };
@@ -649,7 +620,6 @@ export function toDragDescriptor(
       ...(payload.trashSampleLabelId
         ? { trashSampleLabelId: payload.trashSampleLabelId }
         : {}),
-      trashable: payload.trashable,
     };
   }
 
@@ -661,7 +631,6 @@ export function toDragDescriptor(
       sourceKind: payload.sourceKind,
       toolId: payload.toolId,
       toolType: payload.toolType,
-      trashable: payload.trashable,
     };
   }
 
@@ -670,7 +639,6 @@ export function toDragDescriptor(
     entityKind: "workspace_widget",
     sourceId: payload.sourceId,
     sourceKind: payload.sourceKind,
-    trashable: payload.trashable,
     widgetId: payload.widgetId,
     widgetType: payload.widgetType,
   };

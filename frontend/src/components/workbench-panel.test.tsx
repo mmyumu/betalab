@@ -107,8 +107,6 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "sample_vial",
               capacity_ml: 2,
-              accepts_liquids: true,
-              trashable: true,
               liquids: [],
             },
           },
@@ -144,8 +142,6 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "centrifuge_tube",
               capacity_ml: 50,
-              accepts_liquids: true,
-              trashable: true,
               liquids: [
                 {
                   id: "bench_liquid_1",
@@ -194,7 +190,6 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [
                 {
                   id: "produce_1",
@@ -204,7 +199,6 @@ describe("WorkbenchPanel", () => {
                   unitCount: 12,
                 },
               ],
-              trashable: true,
               liquids: [],
             },
           },
@@ -240,10 +234,8 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               sampleLabelText: "LOT-2026-041",
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -271,7 +263,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "sample_vial_lcms",
       sourceKind: "palette",
       toolType: "sample_vial",
-      trashable: true,
     });
 
     render(
@@ -298,7 +289,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "sample_vial_lcms",
       sourceKind: "palette",
       toolType: "sample_vial",
-      trashable: true,
     });
   });
 
@@ -313,7 +303,6 @@ describe("WorkbenchPanel", () => {
       liquidType: "acetonitrile",
       sourceId: "acetonitrile_extraction",
       sourceKind: "palette",
-      trashable: false,
     });
 
     render(
@@ -346,7 +335,6 @@ describe("WorkbenchPanel", () => {
       liquidType: "acetonitrile",
       sourceId: "acetonitrile_extraction",
       sourceKind: "palette",
-      trashable: false,
     });
 
     render(
@@ -366,8 +354,6 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "sample_vial",
               capacity_ml: 2,
-              accepts_liquids: true,
-              trashable: true,
               liquids: [],
             },
           },
@@ -391,7 +377,6 @@ describe("WorkbenchPanel", () => {
       liquidType: "acetonitrile",
       sourceId: "acetonitrile_extraction",
       sourceKind: "palette",
-      trashable: false,
     });
   });
 
@@ -405,7 +390,6 @@ describe("WorkbenchPanel", () => {
       itemType: "workspace_widget",
       sourceId: "autosampler_rack_widget",
       sourceKind: "palette",
-      trashable: true,
       widgetType: "autosampler_rack",
     });
 
@@ -438,7 +422,6 @@ describe("WorkbenchPanel", () => {
       itemType: "sample_label",
       sourceId: "sampling_bag_label",
       sourceKind: "palette",
-      trashable: false,
     });
 
     render(
@@ -459,9 +442,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               sampleLabelText: null,
-              trashable: true,
               liquids: [],
               produceLots: [],
             },
@@ -492,7 +473,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "station_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -514,9 +494,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               sampleLabelText: "LOT-2026-041",
-              trashable: true,
               liquids: [],
               produceLots: [],
             },
@@ -532,9 +510,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               sampleLabelText: null,
-              trashable: true,
               liquids: [],
               produceLots: [],
             },
@@ -569,7 +545,6 @@ describe("WorkbenchPanel", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -591,9 +566,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -616,7 +589,6 @@ describe("WorkbenchPanel", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
-      trashable: false,
     });
   });
 
@@ -630,7 +602,6 @@ describe("WorkbenchPanel", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "basket",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -652,9 +623,7 @@ describe("WorkbenchPanel", () => {
               accent: "amber",
               toolType: "centrifuge_tube",
               capacity_ml: 50,
-              accepts_liquids: true,
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -683,7 +652,6 @@ describe("WorkbenchPanel", () => {
       produceType: "apple",
       sourceId: "produce_2",
       sourceKind: "basket",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -705,7 +673,6 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [
                 {
                   id: "produce_1",
@@ -715,7 +682,6 @@ describe("WorkbenchPanel", () => {
                   unitCount: 12,
                 },
               ],
-              trashable: true,
               liquids: [],
             },
           },
@@ -745,7 +711,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "produce_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -767,9 +732,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -784,9 +747,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -809,7 +770,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "produce_1",
       sourceKind: "workbench",
       sourceSlotId: "station_1",
-      trashable: false,
     });
   });
 
@@ -824,7 +784,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "produce_1",
       sourceKind: "trash",
       trashProduceLotId: "trash_produce_lot_1",
-      trashable: false,
     });
     syncTypes(dataTransfer);
 
@@ -846,9 +805,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              accepts_liquids: false,
               produceLots: [],
-              trashable: true,
               liquids: [],
             },
           },
@@ -872,7 +829,6 @@ describe("WorkbenchPanel", () => {
       sourceId: "produce_1",
       sourceKind: "trash",
       trashProduceLotId: "trash_produce_lot_1",
-      trashable: false,
     });
   });
 
@@ -887,7 +843,6 @@ describe("WorkbenchPanel", () => {
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
-      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -916,7 +871,6 @@ describe("WorkbenchPanel", () => {
       sourceSlotId: "station_1",
       toolId: "beaker_rinse",
       toolType: "beaker",
-      trashable: true,
     });
   });
 
@@ -931,7 +885,6 @@ describe("WorkbenchPanel", () => {
       sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
     syncTypes(dataTransfer);
 
@@ -960,7 +913,6 @@ describe("WorkbenchPanel", () => {
       sourceKind: "rack",
       toolId: "sample_vial_lcms",
       toolType: "sample_vial",
-      trashable: true,
     });
   });
 
@@ -984,8 +936,6 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "sample_vial",
               capacity_ml: 2,
-              accepts_liquids: true,
-              trashable: true,
               liquids: [],
             },
           },
@@ -1000,8 +950,6 @@ describe("WorkbenchPanel", () => {
               accent: "amber",
               toolType: "centrifuge_tube",
               capacity_ml: 50,
-              accepts_liquids: true,
-              trashable: true,
               liquids: [
                 {
                   id: "bench_liquid_2",

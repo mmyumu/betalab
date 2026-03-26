@@ -138,7 +138,6 @@ function makeWorkspaceWidgets(
       y: 0,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
     {
       id: "trash",
@@ -148,7 +147,6 @@ function makeWorkspaceWidgets(
       y: 0,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
     {
       id: "rack",
@@ -158,7 +156,6 @@ function makeWorkspaceWidgets(
       y: 886,
       isPresent: true,
       isTrashed: false,
-      trashable: true,
     },
     {
       id: "instrument",
@@ -168,7 +165,6 @@ function makeWorkspaceWidgets(
       y: 886,
       isPresent: false,
       isTrashed: false,
-      trashable: true,
     },
     {
       id: "basket",
@@ -178,7 +174,6 @@ function makeWorkspaceWidgets(
       y: 248,
       isPresent: true,
       isTrashed: false,
-      trashable: false,
     },
   ];
 
@@ -197,9 +192,7 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
     accent: item.accent,
     toolType: item.toolType,
     capacity_ml: item.capacity_ml,
-    accepts_liquids: item.accepts_liquids,
     produceLots: [],
-    trashable: item.trashable,
     liquids: [],
     ...overrides,
   };
@@ -338,7 +331,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
             : null,
       },
       "trash-dropzone": {
-        compatible: item.trashable,
+        compatible: item.allowedDropTargets.includes("trash_bin"),
         command:
           item.itemType === "tool"
             ? {
