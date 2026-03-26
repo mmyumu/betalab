@@ -1,0 +1,110 @@
+"use client";
+
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
+import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
+import { InventoryWidget } from "@/components/inventory-widget";
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
+import type { ExperimentProduceLot } from "@/types/workbench";
+
+type ProduceBasketWidgetProps = {
+  formatProduceLotMetadata: (produceLot: ExperimentProduceLot) => string;
+  isOpen: boolean;
+  onCreateAppleLot: () => void;
+  onItemDragEnd: () => void;
+  onProduceDragStart: (
+    produceLotId: string,
+    produceType: "apple",
+    dataTransfer: DataTransfer,
+  ) => void;
+  onToggle: () => void;
+  produceLots: ExperimentProduceLot[];
+};
+
+export function ProduceBasketWidget({
+  formatProduceLotMetadata,
+  isOpen,
+  onCreateAppleLot,
+  onItemDragEnd,
+  onProduceDragStart,
+  onToggle,
+  produceLots,
+}: ProduceBasketWidgetProps) {
+  return (
+    <InventoryWidget
+      ariaLabel={`Open produce basket (${produceLots.length} lot${produceLots.length === 1 ? "" : "s"})`}
+      buttonTestId="basket-open-button"
+      count={produceLots.length}
+      countBadgeClassName="absolute right-[22px] top-1"
+      countTestId="basket-count-badge"
+      frameClassName="rounded-[1.05rem] px-3 py-3.5"
+      icon={<ProduceBasketIllustration className="block w-[10.9rem]" itemCount={6} />}
+      isOpen={isOpen}
+      onToggle={onToggle}
+      overlayTestId="basket-dialog-overlay"
+      overlayWidthClassName="w-[24rem] max-w-[min(24rem,calc(100vw-2rem))]"
+      title="Produce basket"
+    >
+      <div className="space-y-4">
+        <button
+          className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
+          data-testid="basket-create-apple-lot-button"
+          onClick={onCreateAppleLot}
+          type="button"
+        >
+          <span className="flex items-center gap-3">
+            <AppleIllustration className="h-12 w-12 shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-900">
+                Create apple lot
+              </span>
+              <span className="mt-1 block text-sm text-slate-500">
+                Add a representative apple lot to the basket.
+              </span>
+            </span>
+          </span>
+        </button>
+        <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+            Basket contents
+          </p>
+          <div className="mt-3 space-y-2">
+            {produceLots.length > 0 ? (
+              produceLots.map((lot) => (
+                <div
+                  className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[0.9rem] border border-slate-200 bg-white px-3 py-2`}
+                  data-testid={`basket-produce-${lot.id}`}
+                  draggable
+                  key={lot.id}
+                  onDragEnd={onItemDragEnd}
+                  onDragStart={(event) =>
+                    onProduceDragStart(lot.id, lot.produceType, event.dataTransfer)
+                  }
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <AppleIllustration
+                      className="h-10 w-10 shrink-0"
+                      testId={`basket-produce-illustration-${lot.id}`}
+                    />
+                    <div className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-slate-900">
+                        {lot.label}
+                      </span>
+                      <span className="block truncate text-xs text-slate-500">
+                        {formatProduceLotMetadata(lot)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                    {lot.produceType}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No produce lots created yet.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </InventoryWidget>
+  );
+}
