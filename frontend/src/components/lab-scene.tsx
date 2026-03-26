@@ -4,16 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import type { DragEvent, MouseEvent as ReactMouseEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
-import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
+import { RackWidget } from "@/components/rack-widget";
 import { TrashWidget } from "@/components/trash-widget";
 import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
-import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
@@ -1150,99 +1149,19 @@ export function LabScene() {
                       produceLots={basketProduceLots}
                     />
                   ) : widgetId === "rack" ? (
-                    <WorkspaceEquipmentWidget
-                      eyebrow="Autosampler rack"
-                    >
-                      <div className="space-y-4">
-                        <div className="relative mx-auto max-w-[30rem]">
-                          <AutosamplerRackIllustration
-                            className="w-full"
-                            occupiedSlotLiquids={rackOccupiedSlotLiquids}
-                            occupiedSlots={rackOccupiedSlots}
-                            slotCount={rackSlotCount}
-                            testId="autosampler-rack-illustration"
-                            tone={rackLoadedCount > 0 ? "active" : "neutral"}
-                          />
-                          {rackSlots.map((rackSlot, slotIndex) => {
-                            const position = getRackIllustrationSlotPosition(slotIndex);
-                            const tool = rackSlot.tool;
-
-                            return (
-                              <div
-                                className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full transition-colors ${
-                                  isRackSlotHighlighted
-                                    ? "bg-sky-200/45 ring-2 ring-sky-300/90"
-                                    : ""
-                                } ${tool ? dragAffordanceClassName : ""}`}
-                                data-drop-highlighted={isRackSlotHighlighted ? "true" : "false"}
-                                data-testid={`rack-illustration-slot-${slotIndex + 1}`}
-                                key={rackSlot.id}
-                                draggable={Boolean(tool)}
-                                onDragEnd={clearDropTargets}
-                                onDragOver={handleRackSlotDragOver}
-                                onDragStart={(event) => {
-                                  if (!tool) {
-                                    return;
-                                  }
-                                  handleRackToolDragStart(rackSlot, tool, event.dataTransfer);
-                                }}
-                                onDrop={(event) => handleRackSlotDrop(event, slotIndex)}
-                                style={position}
-                              />
-                            );
-                          })}
-                        </div>
-                        <div
-                          className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3"
-                          data-testid="rack-summary"
-                        >
-                          {rackLoadedCount > 0 ? (
-                            <div className="space-y-1.5">
-                              {rackSlots.map((rackSlot, slotIndex) => {
-                                const tool = rackSlot.tool;
-                                if (!tool) {
-                                  return null;
-                                }
-
-                                return (
-                                  <div
-                                    className="flex items-center justify-between gap-3 rounded-[0.85rem] border border-slate-200 bg-slate-50 px-3 py-1.5"
-                                    data-testid={`rack-slot-summary-${slotIndex + 1}`}
-                                    key={rackSlot.id}
-                                  >
-                                    <div className="min-w-0 flex-1 text-sm text-slate-700">
-                                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                                        P{slotIndex + 1}
-                                      </span>
-                                      <span className="mx-2 text-slate-300">•</span>
-                                      <span className="truncate font-semibold text-slate-900">
-                                        {tool.label}
-                                      </span>
-                                    </div>
-                                    <div
-                                      className={`${dragAffordanceClassName} shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600`}
-                                      data-testid={`rack-slot-tool-${slotIndex + 1}`}
-                                      draggable
-                                      onDragEnd={clearDropTargets}
-                                      onDragStart={(event) => handleRackToolDragStart(rackSlot, tool, event.dataTransfer)}
-                                    >
-                                      {tool.liquids.reduce(
-                                        (total, liquid) => total + liquid.volume_ml,
-                                        0,
-                                      )} mL
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-slate-500">
-                              No vial staged yet.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </WorkspaceEquipmentWidget>
+                    <RackWidget
+                      getSlotPosition={getRackIllustrationSlotPosition}
+                      isSlotHighlighted={isRackSlotHighlighted}
+                      loadedCount={rackLoadedCount}
+                      occupiedSlotLiquids={rackOccupiedSlotLiquids}
+                      occupiedSlots={rackOccupiedSlots}
+                      onItemDragEnd={clearDropTargets}
+                      onRackSlotDragOver={handleRackSlotDragOver}
+                      onRackSlotDrop={handleRackSlotDrop}
+                      onRackToolDragStart={handleRackToolDragStart}
+                      rackSlots={rackSlots}
+                      slotCount={rackSlotCount}
+                    />
                   ) : (
                     <WorkspaceEquipmentWidget
                       eyebrow="LC-MS/MS"
