@@ -150,6 +150,7 @@ export function LabScene() {
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const isKnifeMode = activeActionId === "knife";
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
@@ -256,6 +257,9 @@ export function LabScene() {
   };
 
   const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
+    if (isKnifeMode) {
+      return false;
+    }
     return getBenchToolAllowedDropTargets(tool).length > 0;
   };
 
@@ -443,6 +447,9 @@ export function LabScene() {
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
     const target = event.target as HTMLElement | null;
     if (target?.closest("[data-workspace-drop-exclude='true']")) {
       return;
@@ -454,6 +461,9 @@ export function LabScene() {
   };
 
   const handleWorkspaceDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
     const target = event.target as HTMLElement | null;
     if (target?.closest("[data-workspace-drop-exclude='true']")) {
       return;
@@ -485,12 +495,18 @@ export function LabScene() {
   };
 
   const handleTrashDragOver = (event: DragEvent<HTMLButtonElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
     if (hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
       event.preventDefault();
     }
   };
 
   const handleTrashDrop = (event: DragEvent<HTMLButtonElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
     if (!hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
       return;
     }
@@ -643,12 +659,18 @@ export function LabScene() {
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
 
   const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
     if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {
       event.preventDefault();
     }
   };
 
   const handleRackSlotDrop = (event: DragEvent<HTMLDivElement>, slotIndex: number) => {
+    if (isKnifeMode) {
+      return;
+    }
     const targetRackSlot = rackSlots[slotIndex];
     if (!targetRackSlot) {
       return;
@@ -700,6 +722,9 @@ export function LabScene() {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getToolDropTargets(tool.toolType);
 
     writeRackToolDragPayload(dataTransfer, {
@@ -727,6 +752,9 @@ export function LabScene() {
     trashTool: TrashToolEntry,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
 
     writeTrashToolDragPayload(dataTransfer, {
@@ -753,6 +781,9 @@ export function LabScene() {
     widget: ExperimentWorkspaceWidget,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getWorkspaceWidgetDropTargets(widget.id);
 
     writeWorkspaceWidgetDragPayload(dataTransfer, {
@@ -778,6 +809,9 @@ export function LabScene() {
     trashProduceLot: TrashProduceLotEntry,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getProduceLotDropTargets();
 
     writeProduceDragPayload(dataTransfer, {
@@ -806,6 +840,9 @@ export function LabScene() {
     produceType: "apple",
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getProduceLotDropTargets();
 
     writeProduceDragPayload(dataTransfer, {
@@ -832,6 +869,9 @@ export function LabScene() {
     produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getProduceLotDropTargets();
 
     writeProduceDragPayload(dataTransfer, {
@@ -860,6 +900,9 @@ export function LabScene() {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     if (tool.sampleLabelText === null || tool.sampleLabelText === undefined) {
       return;
     }
@@ -891,6 +934,9 @@ export function LabScene() {
     trashSampleLabel: TrashSampleLabelEntry,
     dataTransfer: DataTransfer,
   ) => {
+    if (isKnifeMode) {
+      return;
+    }
     const allowedDropTargets = getSampleLabelDropTargets();
 
     writeSampleLabelDragPayload(dataTransfer, {
@@ -915,6 +961,9 @@ export function LabScene() {
   };
 
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
+    if (isKnifeMode) {
+      return false;
+    }
     if (!activeDropTargets.includes("workbench_slot") || !activeDragItem) {
       return false;
     }
@@ -953,6 +1002,7 @@ export function LabScene() {
   };
 
   const isRackSlotHighlighted =
+    !isKnifeMode &&
     activeDropTargets.includes("rack_slot") &&
     activeDragItem?.entityKind === "tool" &&
     activeDragItem.toolType === "sample_vial";
@@ -1020,15 +1070,24 @@ export function LabScene() {
               id="inventory"
               isActive={activeWidgetId === "inventory"}
               label="Inventory Widget"
-              onDragStart={handleWidgetDragStart}
+              onDragStart={(widgetId, event) => {
+                if (isKnifeMode) {
+                  return;
+                }
+                handleWidgetDragStart(widgetId, event);
+              }}
               onHeightChange={handleWidgetHeightChange}
               position={widgetLayout.inventory}
               zIndex={10 + widgetOrder.indexOf("inventory")}
             >
               <ToolbarPanel
                 categories={labWorkflowCategories}
+                dragDisabled={isKnifeMode}
                 onItemDragEnd={clearDropTargets}
                 onItemDragStart={(item, allowedDropTargets) => {
+                  if (isKnifeMode) {
+                    return;
+                  }
                   const payload = createToolbarDragPayload(item);
                   showDropTargets(allowedDropTargets);
                   setActiveDragItem(toDragDescriptor(payload));
@@ -1040,7 +1099,12 @@ export function LabScene() {
               id="actions"
               isActive={activeWidgetId === "actions"}
               label="Actions Widget"
-              onDragStart={handleWidgetDragStart}
+              onDragStart={(widgetId, event) => {
+                if (isKnifeMode) {
+                  return;
+                }
+                handleWidgetDragStart(widgetId, event);
+              }}
               onHeightChange={handleWidgetHeightChange}
               position={widgetLayout.actions}
               zIndex={10 + widgetOrder.indexOf("actions")}
@@ -1048,6 +1112,7 @@ export function LabScene() {
               <ActionBarPanel
                 activeActionId={activeActionId}
                 onToggleAction={(actionId) => {
+                  clearDropTargets();
                   setActiveActionId((current) => (current === actionId ? null : actionId));
                 }}
               />
@@ -1057,12 +1122,18 @@ export function LabScene() {
               id="trash"
               isActive={activeWidgetId === "trash"}
               label="Trash Widget"
-              onDragStart={handleWidgetDragStart}
+              onDragStart={(widgetId, event) => {
+                if (isKnifeMode) {
+                  return;
+                }
+                handleWidgetDragStart(widgetId, event);
+              }}
               onHeightChange={handleWidgetHeightChange}
               position={widgetLayout.trash}
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
               <TrashWidget
+                dndDisabled={isKnifeMode}
                 formatProduceLotMetadata={formatProduceLotMetadata}
                 isDropHighlighted={isDropTargetHighlighted("trash_bin")}
                 isEmpty={isTrashEmpty}
@@ -1096,13 +1167,19 @@ export function LabScene() {
                         ? "Instrument Widget"
                         : "Produce Basket Widget"
                   }
-                  onDragStart={handleWidgetDragStart}
+                  onDragStart={(widgetId, event) => {
+                    if (isKnifeMode) {
+                      return;
+                    }
+                    handleWidgetDragStart(widgetId, event);
+                  }}
                   onHeightChange={handleWidgetHeightChange}
                   position={widgetLayout[widgetId]}
                   zIndex={10 + widgetOrder.indexOf(widgetId)}
                 >
                   {widgetId === "basket" ? (
                     <ProduceBasketWidget
+                      dndDisabled={isKnifeMode}
                       formatProduceLotMetadata={formatProduceLotMetadata}
                       isOpen={isBasketOpen}
                       onCreateAppleLot={handleCreateAppleLot}
@@ -1113,6 +1190,7 @@ export function LabScene() {
                     />
                   ) : widgetId === "rack" ? (
                     <RackWidget
+                      dndDisabled={isKnifeMode}
                       getSlotPosition={getRackIllustrationSlotPosition}
                       isSlotHighlighted={isRackSlotHighlighted}
                       loadedCount={rackLoadedCount}
@@ -1148,12 +1226,18 @@ export function LabScene() {
               id="workbench"
               isActive={activeWidgetId === "workbench"}
               label="Workbench Widget"
-              onDragStart={handleWidgetDragStart}
+              onDragStart={(widgetId, event) => {
+                if (isKnifeMode) {
+                  return;
+                }
+                handleWidgetDragStart(widgetId, event);
+              }}
               onHeightChange={handleWidgetHeightChange}
               position={widgetLayout.workbench}
               zIndex={10 + widgetOrder.indexOf("workbench")}
             >
               <WorkbenchPanel
+                dndDisabled={isKnifeMode}
                 onAddWorkbenchSlot={handleAddWorkbenchSlot}
                 onApplySampleLabel={handleApplySampleLabel}
                 canDragBenchTool={canDragBenchTool}

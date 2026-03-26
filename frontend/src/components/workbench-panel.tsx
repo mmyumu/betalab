@@ -49,6 +49,7 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
 }
 
 type WorkbenchPanelProps = {
+  dndDisabled?: boolean;
   onAddWorkbenchSlot?: () => void;
   canDragBenchTool?: (slotId: string, tool: BenchToolInstance) => boolean;
   onBenchToolDragStart?: (
@@ -84,6 +85,7 @@ type WorkbenchPanelProps = {
 };
 
 export function WorkbenchPanel({
+  dndDisabled = false,
   onAddWorkbenchSlot,
   canDragBenchTool,
   isBenchSlotHighlighted,
@@ -106,6 +108,9 @@ export function WorkbenchPanel({
   onToolbarItemDrop,
 }: WorkbenchPanelProps) {
   const canAcceptWorkbenchDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
+    if (dndDisabled) {
+      return false;
+    }
     if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
       return false;
     }
@@ -149,6 +154,9 @@ export function WorkbenchPanel({
   };
 
   const handleDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {
+    if (dndDisabled) {
+      return;
+    }
     if (!canAcceptWorkbenchDrop(event, slot)) {
       return;
     }
@@ -312,7 +320,7 @@ export function WorkbenchPanel({
                   {tool ? (
                     <BenchToolCard
                       draggable={
-                        canDragBenchTool ? canDragBenchTool(slot.id, tool) : false
+                        !dndDisabled && (canDragBenchTool ? canDragBenchTool(slot.id, tool) : false)
                       }
                       onDragStart={(event) => {
                         if (!onBenchToolDragStart) {
@@ -323,9 +331,13 @@ export function WorkbenchPanel({
                       onProduceLotDragEnd={() => {
                         onBenchToolDragEnd?.();
                       }}
-                      onProduceLotDragStart={(produceLot, event) => {
-                        onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
-                      }}
+                      onProduceLotDragStart={
+                        dndDisabled
+                          ? undefined
+                          : (produceLot, event) => {
+                              onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
+                            }
+                      }
                       onDragEnd={() => {
                         onBenchToolDragEnd?.();
                       }}
@@ -339,9 +351,13 @@ export function WorkbenchPanel({
                         onSampleLabelTextChange?.(slot.id, sampleLabelText);
                       }}
                       onSampleLabelDragEnd={onSampleLabelDragEnd}
-                      onSampleLabelDragStart={(event) => {
-                        onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
-                      }}
+                      onSampleLabelDragStart={
+                        dndDisabled
+                          ? undefined
+                          : (event) => {
+                              onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
+                            }
+                      }
                       tool={tool}
                     />
                   ) : surfaceProduceLots.length > 0 ? (
@@ -357,16 +373,19 @@ export function WorkbenchPanel({
                           <div
                             key={produceLot.id}
                             className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 shadow-sm ${
-                              onProduceLotDragStart ? dragAffordanceClassName : ""
-                            }`}
-                            data-testid={`bench-surface-produce-lot-${produceLot.id}`}
-                            draggable={Boolean(onProduceLotDragStart)}
+                                !dndDisabled && onProduceLotDragStart ? dragAffordanceClassName : ""
+                              }`}
+                              data-testid={`bench-surface-produce-lot-${produceLot.id}`}
+                              draggable={!dndDisabled && Boolean(onProduceLotDragStart)}
                             onDragEnd={() => {
                               onBenchToolDragEnd?.();
                             }}
                             onDragStart={(event) => {
-                              onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
-                            }}
+                                if (dndDisabled) {
+                                  return;
+                                }
+                                onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
+                              }}
                           >
                             <div className="space-y-3">
                               <div className="flex items-center gap-3">

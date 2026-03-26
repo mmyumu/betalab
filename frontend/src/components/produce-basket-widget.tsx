@@ -7,11 +7,12 @@ import { InventoryWidget } from "@/components/inventory-widget";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceBasketWidgetProps = {
+  dndDisabled?: boolean;
   formatProduceLotMetadata: (produceLot: ExperimentProduceLot) => string;
   isOpen: boolean;
   onCreateAppleLot: () => void;
-  onItemDragEnd: () => void;
-  onProduceDragStart: (
+  onItemDragEnd?: () => void;
+  onProduceDragStart?: (
     produceLotId: string,
     produceType: "apple",
     dataTransfer: DataTransfer,
@@ -21,6 +22,7 @@ type ProduceBasketWidgetProps = {
 };
 
 export function ProduceBasketWidget({
+  dndDisabled = false,
   formatProduceLotMetadata,
   isOpen,
   onCreateAppleLot,
@@ -81,9 +83,11 @@ export function ProduceBasketWidget({
                       testId={`basket-produce-illustration-${lot.id}`}
                     />
                   }
-                  onDragEnd={onItemDragEnd}
-                  onDragStart={(dataTransfer) =>
-                    onProduceDragStart(lot.id, lot.produceType, dataTransfer)
+                  onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+                  onDragStart={
+                    dndDisabled || !onProduceDragStart
+                      ? undefined
+                      : (dataTransfer) => onProduceDragStart(lot.id, lot.produceType, dataTransfer)
                   }
                   subtitle={
                     <span className="block truncate text-xs text-slate-500">

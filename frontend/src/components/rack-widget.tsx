@@ -8,6 +8,7 @@ import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import type { BenchToolInstance, RackSlot } from "@/types/workbench";
 
 type RackWidgetProps = {
+  dndDisabled?: boolean;
   getSlotPosition: (slotIndex: number) => { left: string; top: string };
   isSlotHighlighted: boolean;
   loadedCount: number;
@@ -26,6 +27,7 @@ type RackWidgetProps = {
 };
 
 export function RackWidget({
+  dndDisabled = false,
   getSlotPosition,
   isSlotHighlighted,
   loadedCount,
@@ -58,20 +60,20 @@ export function RackWidget({
               <div
                 className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full transition-colors ${
                   isSlotHighlighted ? "bg-sky-200/45 ring-2 ring-sky-300/90" : ""
-                } ${tool ? dragAffordanceClassName : ""}`}
+                } ${tool && !dndDisabled ? dragAffordanceClassName : ""}`}
                 data-drop-highlighted={isSlotHighlighted ? "true" : "false"}
                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
-                draggable={Boolean(tool)}
+                draggable={Boolean(tool) && !dndDisabled}
                 key={rackSlot.id}
                 onDragEnd={onItemDragEnd}
-                onDragOver={onRackSlotDragOver}
+                onDragOver={dndDisabled ? undefined : onRackSlotDragOver}
                 onDragStart={(event) => {
-                  if (!tool) {
+                  if (!tool || dndDisabled) {
                     return;
                   }
                   onRackToolDragStart(rackSlot, tool, event.dataTransfer);
                 }}
-                onDrop={(event) => onRackSlotDrop(event, slotIndex)}
+                onDrop={dndDisabled ? undefined : (event) => onRackSlotDrop(event, slotIndex)}
                 style={position}
               />
             );
@@ -105,12 +107,12 @@ export function RackWidget({
                       </span>
                     </div>
                     <div
-                      className={`${dragAffordanceClassName} shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600`}
+                      className={`${dndDisabled ? "" : dragAffordanceClassName} shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600`}
                       data-testid={`rack-slot-tool-${slotIndex + 1}`}
-                      draggable
+                      draggable={!dndDisabled}
                       onDragEnd={onItemDragEnd}
                       onDragStart={(event) =>
-                        onRackToolDragStart(rackSlot, tool, event.dataTransfer)
+                        dndDisabled ? undefined : onRackToolDragStart(rackSlot, tool, event.dataTransfer)
                       }
                     >
                       {tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0)} mL

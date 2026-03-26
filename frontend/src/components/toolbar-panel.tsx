@@ -10,6 +10,7 @@ import type { DropTargetType, ToolbarAccent, ToolbarCategory, ToolbarItem } from
 
 type ToolbarPanelProps = {
   categories: ToolbarCategory[];
+  dragDisabled?: boolean;
   onItemDragEnd?: () => void;
   onItemDragStart?: (item: ToolbarItem, allowedDropTargets: DropTargetType[]) => void;
 };
@@ -40,7 +41,12 @@ function SampleLabelIcon() {
   );
 }
 
-export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: ToolbarPanelProps) {
+export function ToolbarPanel({
+  categories,
+  dragDisabled = false,
+  onItemDragEnd,
+  onItemDragStart,
+}: ToolbarPanelProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(categories.map((category) => [category.id, true])),
   );
@@ -91,15 +97,21 @@ export function ToolbarPanel({ categories, onItemDragEnd, onItemDragStart }: Too
                 {category.items.map((item) => (
                   <div
                     key={item.id}
-                    className={`${dragAffordanceClassName} rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform hover:-translate-y-0.5 ${
+                    className={`${dragDisabled ? "" : dragAffordanceClassName} rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform ${
+                      dragDisabled ? "" : "hover:-translate-y-0.5"
+                    } ${
                       item.itemType === "liquid" ? accentClasses[item.accent] : neutralToolClasses
                     }`}
                     data-testid={`toolbar-item-${item.id}`}
-                    draggable
+                    draggable={!dragDisabled}
                     onDragEnd={() => {
                       onItemDragEnd?.();
                     }}
                     onDragStart={(event) => {
+                      if (dragDisabled) {
+                        event.preventDefault();
+                        return;
+                      }
                       const payload = createToolbarDragPayload(item);
                       onItemDragStart?.(item, payload.allowedDropTargets);
                       writeToolbarDragPayload(event.dataTransfer, payload);

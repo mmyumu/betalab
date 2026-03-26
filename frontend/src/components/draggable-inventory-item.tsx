@@ -11,8 +11,8 @@ type DraggableInventoryItemProps = {
   contentClassName?: string;
   dataTestId: string;
   leading?: ReactNode;
-  onDragEnd: () => void;
-  onDragStart: (dataTransfer: DataTransfer) => void;
+  onDragEnd?: () => void;
+  onDragStart?: (dataTransfer: DataTransfer) => void;
   subtitle: ReactNode;
   title: ReactNode;
 };
@@ -31,11 +31,15 @@ export function DraggableInventoryItem({
 }: DraggableInventoryItemProps) {
   return (
     <div
-      className={`${dragAffordanceClassName} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 ${className}`.trim()}
+      className={`${onDragStart ? dragAffordanceClassName : ""} flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2 ${className}`.trim()}
       data-testid={dataTestId}
-      draggable
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => onDragStart(event.dataTransfer)}
+      draggable={Boolean(onDragStart)}
+      onDragEnd={() => {
+        onDragEnd?.();
+      }}
+      onDragStart={(event) => {
+        onDragStart?.(event.dataTransfer);
+      }}
     >
       <div className={`min-w-0 ${contentClassName}`.trim()}>
         {leading ? <div className="flex min-w-0 items-center gap-3">{leading}<div className="min-w-0">{title}{subtitle}</div></div> : (

@@ -1112,6 +1112,61 @@ describe("LabScene", () => {
     });
   });
 
+  it("disables drag and drop interactions while the knife action is selected", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
+        rackSlots: makeRackSlots([
+          {
+            tool: makeTool({
+              id: "rack_tool_1",
+              toolId: "sample_vial_lcms",
+              label: "Autosampler vial",
+              subtitle: "Injection ready",
+              accent: "sky",
+              toolType: "sample_vial",
+              capacity_ml: 2,
+              liquids: [],
+            }),
+          },
+        ]),
+        workspaceWidgets: makeWorkspaceWithRackVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Stainless steel knife" }));
+
+    const toolbarItem = screen.getByTestId("toolbar-item-sample_vial_lcms");
+    const basketOpenButton = await screen.findByTestId("basket-open-button");
+    fireEvent.click(basketOpenButton);
+    const basketProduce = await screen.findByTestId("basket-produce-produce_1");
+    const rackTool = screen.getByTestId("rack-slot-tool-1");
+
+    expect(toolbarItem).not.toHaveAttribute("draggable", "true");
+    expect(basketProduce).not.toHaveAttribute("draggable", "true");
+    expect(rackTool).not.toHaveAttribute("draggable", "true");
+
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(toolbarItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("bench-slot-station_1"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("bench-slot-station_1"), dragOverEvent);
+
+    expect(dragOverEvent.defaultPrevented).toBe(false);
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
   it("applies a sampling label from the palette onto an unlabeled sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

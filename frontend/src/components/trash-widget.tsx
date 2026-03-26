@@ -12,6 +12,7 @@ import type {
 } from "@/types/workbench";
 
 type TrashWidgetProps = {
+  dndDisabled?: boolean;
   formatProduceLotMetadata: (trashProduceLot: TrashProduceLotEntry["produceLot"]) => string;
   isDropHighlighted: boolean;
   isEmpty: boolean;
@@ -65,6 +66,7 @@ function TrashIcon() {
 }
 
 export function TrashWidget({
+  dndDisabled = false,
   formatProduceLotMetadata,
   isDropHighlighted,
   isEmpty,
@@ -95,8 +97,8 @@ export function TrashWidget({
       icon={<TrashIcon />}
       isDropHighlighted={isDropHighlighted}
       isOpen={isOpen}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragOver={dndDisabled ? undefined : onDragOver}
+      onDrop={dndDisabled ? undefined : onDrop}
       onToggle={onToggle}
       overlayTestId="trash-dialog-overlay"
       overlayWidthClassName="w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
@@ -113,8 +115,10 @@ export function TrashWidget({
             <DraggableInventoryItem
               dataTestId={`trash-tool-${trashTool.id}`}
               key={trashTool.id}
-              onDragEnd={onItemDragEnd}
-              onDragStart={(dataTransfer) => onToolDragStart(trashTool, dataTransfer)}
+              onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+              onDragStart={
+                dndDisabled ? undefined : (dataTransfer) => onToolDragStart(trashTool, dataTransfer)
+              }
               subtitle={
                 <p className="truncate text-xs text-slate-500">
                   {trashTool.originLabel}
@@ -133,9 +137,11 @@ export function TrashWidget({
           <DraggableInventoryItem
             dataTestId={`trash-produce-lot-${trashProduceLot.id}`}
             key={trashProduceLot.id}
-            onDragEnd={onItemDragEnd}
-            onDragStart={(dataTransfer) =>
-              onTrashProduceLotDragStart(trashProduceLot, dataTransfer)
+            onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+            onDragStart={
+              dndDisabled
+                ? undefined
+                : (dataTransfer) => onTrashProduceLotDragStart(trashProduceLot, dataTransfer)
             }
             subtitle={
               <p className="truncate text-xs text-slate-500">
@@ -154,8 +160,10 @@ export function TrashWidget({
           <DraggableInventoryItem
             dataTestId={`trash-widget-${widget.id}`}
             key={widget.id}
-            onDragEnd={onItemDragEnd}
-            onDragStart={(dataTransfer) => onTrashedWidgetDragStart(widget, dataTransfer)}
+            onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+            onDragStart={
+              dndDisabled ? undefined : (dataTransfer) => onTrashedWidgetDragStart(widget, dataTransfer)
+            }
             subtitle={<p className="truncate text-xs text-slate-500">Workspace widget</p>}
             title={
               <p className="truncate text-sm font-semibold text-slate-900">
@@ -168,9 +176,11 @@ export function TrashWidget({
           <DraggableInventoryItem
             dataTestId={`trash-sample-label-${trashSampleLabel.id}`}
             key={trashSampleLabel.id}
-            onDragEnd={onItemDragEnd}
-            onDragStart={(dataTransfer) =>
-              onTrashSampleLabelDragStart(trashSampleLabel, dataTransfer)
+            onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+            onDragStart={
+              dndDisabled
+                ? undefined
+                : (dataTransfer) => onTrashSampleLabelDragStart(trashSampleLabel, dataTransfer)
             }
             subtitle={
               <p className="truncate text-xs text-slate-500">
