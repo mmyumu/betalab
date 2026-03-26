@@ -5,10 +5,12 @@ import {
   readBenchToolDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
+  readSampleLabelDragPayload,
   readToolbarDragPayload,
   writeBenchToolDragPayload,
   writeProduceDragPayload,
   writeRackToolDragPayload,
+  writeSampleLabelDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type { ToolbarDragPayload } from "@/types/workbench";
@@ -111,11 +113,11 @@ describe("workbench dnd helpers", () => {
     });
   });
 
-  it("marks sampling label drags as workbench-slot drops", () => {
+  it("marks palette sampling label drags as workbench-and-trash drops", () => {
     const dataTransfer = createDataTransfer();
 
     writePayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "sample_label",
       itemId: "sampling_bag_label",
       itemType: "sample_label",
@@ -125,14 +127,44 @@ describe("workbench dnd helpers", () => {
     });
 
     expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
     expect(hasCompatibleDropTarget(dataTransfer, "rack_slot")).toBe(false);
     expect(readToolbarDragPayload(dataTransfer)).toEqual({
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "sample_label",
       itemId: "sampling_bag_label",
       itemType: "sample_label",
       sourceId: "sampling_bag_label",
       sourceKind: "palette",
+      trashable: false,
+    });
+  });
+
+  it("reads workbench sample label drags as workbench-and-trash compatible", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeSampleLabelDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "sample_label",
+      sampleLabelId: "bench_tool_bag-sample-label",
+      sampleLabelText: "LOT-2026-041",
+      sourceId: "station_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
+    expect(readSampleLabelDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "sample_label",
+      sampleLabelId: "bench_tool_bag-sample-label",
+      sampleLabelText: "LOT-2026-041",
+      sourceId: "station_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
       trashable: false,
     });
   });

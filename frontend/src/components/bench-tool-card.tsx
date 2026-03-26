@@ -18,6 +18,8 @@ type BenchToolCardProps = {
   onRemoveLiquid: (liquidId: string) => void;
   onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
   onSampleLabelTextChange?: (sampleLabelText: string) => void;
+  onSampleLabelDragEnd?: (event: DragEvent<HTMLElement>) => void;
+  onSampleLabelDragStart?: (event: DragEvent<HTMLElement>) => void;
   tool: BenchToolInstance;
 };
 
@@ -97,6 +99,8 @@ export function BenchToolCard({
   onRemoveLiquid,
   onLiquidVolumeChange,
   onSampleLabelTextChange,
+  onSampleLabelDragEnd,
+  onSampleLabelDragStart,
   tool,
 }: BenchToolCardProps) {
   const produceLots = tool.produceLots ?? [];
@@ -172,7 +176,15 @@ export function BenchToolCard({
               </div>
             </div>
             {hasSampleLabel ? (
-              <div className="rounded-[0.95rem] border border-sky-200 bg-sky-50/70 px-2.5 py-2">
+              <div
+                className={`rounded-[0.95rem] border border-sky-200 bg-sky-50/70 px-2.5 py-2 ${
+                  onSampleLabelDragStart ? dragAffordanceClassName : ""
+                }`}
+                data-testid={`sample-label-card-${tool.id}`}
+                draggable={Boolean(onSampleLabelDragStart)}
+                onDragEnd={onSampleLabelDragEnd}
+                onDragStart={onSampleLabelDragStart}
+              >
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Sample label
                 </p>

@@ -215,6 +215,91 @@ def test_sampling_bag_label_commands_round_trip_over_http() -> None:
     assert updated.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == "LOT-2026-041"
 
 
+def test_sampling_bag_label_can_move_through_trash_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "apply_sample_label_to_workbench_tool",
+                "payload": {"slot_id": "station_1"},
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "update_workbench_tool_sample_label_text",
+                "payload": {
+                    "slot_id": "station_1",
+                    "sample_label_text": "LOT-2026-041",
+                },
+            },
+        )
+        discarded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_sample_label_from_workbench_tool",
+                "payload": {"slot_id": "station_1"},
+            },
+        )
+        trash_sample_label_id = discarded.json()["trash"]["sample_labels"][0]["id"]
+        restored = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "restore_trashed_sample_label_to_workbench_tool",
+                "payload": {
+                    "target_slot_id": "station_2",
+                    "trash_sample_label_id": trash_sample_label_id,
+                },
+            },
+        )
+
+    assert discarded.status_code == 200
+    assert discarded.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] is None
+    assert discarded.json()["trash"]["sample_labels"][0]["sample_label_text"] == "LOT-2026-041"
+    assert restored.status_code == 200
+    assert restored.json()["workbench"]["slots"][1]["tool"]["sample_label_text"] == "LOT-2026-041"
+    assert restored.json()["trash"]["sample_labels"] == []
+
+
+def test_sampling_bag_label_can_be_discarded_from_palette_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        discarded = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "discard_sample_label_from_palette",
+                "payload": {"sample_label_id": "sampling_bag_label"},
+            },
+        )
+
+    assert discarded.status_code == 200
+    assert len(discarded.json()["trash"]["sample_labels"]) == 1
+    assert discarded.json()["trash"]["sample_labels"][0]["origin_label"] == "Palette"
+
+
 def test_workbench_slot_commands_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

@@ -10,6 +10,7 @@ import {
   readBenchToolDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
+  readSampleLabelDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
 } from "@/lib/workbench-dnd";
@@ -20,6 +21,7 @@ import type {
   ExperimentProduceLot,
   ProduceDragPayload,
   RackToolDragPayload,
+  SampleLabelDragPayload,
   TrashToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -44,8 +46,16 @@ type WorkbenchPanelProps = {
   onProduceDrop?: (targetSlotId: string, payload: ProduceDragPayload) => void;
   isBenchSlotHighlighted?: (slot: BenchSlot) => boolean;
   onApplySampleLabel?: (slotId: string) => void;
+  onMoveSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onRemoveWorkbenchSlot?: (slotId: string) => void;
+  onRestoreTrashedSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
+  onSampleLabelDragEnd?: () => void;
+  onSampleLabelDragStart?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    dataTransfer: DataTransfer,
+  ) => void;
   onSampleLabelTextChange?: (slotId: string, sampleLabelText: string) => void;
   onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
   slots: BenchSlot[];
@@ -63,8 +73,12 @@ export function WorkbenchPanel({
   onProduceLotDragStart,
   onProduceDrop,
   onApplySampleLabel,
+  onMoveSampleLabel,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
+  onRestoreTrashedSampleLabel,
+  onSampleLabelDragEnd,
+  onSampleLabelDragStart,
   onSampleLabelTextChange,
   onLiquidVolumeChange,
   slots,
@@ -138,6 +152,17 @@ export function WorkbenchPanel({
     const producePayload = readProduceDragPayload(event.dataTransfer);
     if (producePayload) {
       onProduceDrop?.(slot.id, producePayload);
+      return;
+    }
+
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    if (sampleLabelPayload?.sourceKind === "workbench") {
+      onMoveSampleLabel?.(slot.id, sampleLabelPayload);
+      return;
+    }
+
+    if (sampleLabelPayload?.sourceKind === "trash") {
+      onRestoreTrashedSampleLabel?.(slot.id, sampleLabelPayload);
       return;
     }
 
@@ -283,6 +308,10 @@ export function WorkbenchPanel({
                       }}
                       onSampleLabelTextChange={(sampleLabelText) => {
                         onSampleLabelTextChange?.(slot.id, sampleLabelText);
+                      }}
+                      onSampleLabelDragEnd={onSampleLabelDragEnd}
+                      onSampleLabelDragStart={(event) => {
+                        onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
                       }}
                       tool={tool}
                     />

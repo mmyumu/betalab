@@ -7,6 +7,7 @@ import type {
   ExperimentWorkspaceWidget,
   RackSlot,
   TrashProduceLotEntry,
+  TrashSampleLabelEntry,
   TrashToolEntry,
 } from "@/types/workbench";
 
@@ -83,6 +84,10 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       produceLots:
         (experiment.trash.produceLots ?? experiment.trash.produce_lots ?? []).map(
           normalizeTrashProduceLot,
+        ),
+      sampleLabels:
+        (experiment.trash.sampleLabels ?? experiment.trash.sample_labels ?? []).map(
+          normalizeTrashSampleLabel,
         ),
       tools: experiment.trash.tools.map(normalizeTrashTool),
     },
@@ -167,6 +172,16 @@ function normalizeTrashProduceLot(
     produceLot: normalizeProduceLot(
       (entry.produceLot ?? entry.produce_lot) as ExperimentProduceLot & Record<string, unknown>,
     ),
+  };
+}
+
+function normalizeTrashSampleLabel(
+  entry: TrashSampleLabelEntry & Record<string, unknown>,
+): TrashSampleLabelEntry {
+  return {
+    id: String(entry.id),
+    originLabel: String(entry.originLabel ?? entry.origin_label),
+    sampleLabelText: String(entry.sampleLabelText ?? entry.sample_label_text ?? ""),
   };
 }
 

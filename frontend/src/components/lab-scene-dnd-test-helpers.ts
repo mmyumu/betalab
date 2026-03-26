@@ -9,6 +9,7 @@ import type {
   ExperimentWorkspaceWidget,
   RackSlot,
   TrashProduceLotEntry,
+  TrashSampleLabelEntry,
   ToolbarItem,
   ToolCatalogItem,
   TrashToolEntry,
@@ -66,7 +67,9 @@ const workspaceWidgetItemToId = {
 
 const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
 const toolItems = toolbarItems.filter((item): item is ToolCatalogItem => item.itemType === "tool");
+const paletteItems = toolbarItems.filter((item) => item.itemType !== "sample_label");
 const sampleVialItem = labToolCatalog.sample_vial_lcms;
+const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
 
 export const dndTargetCases: {
   assertDragOver: boolean;
@@ -224,10 +227,19 @@ function makeTrashProduceLotEntry(): TrashProduceLotEntry {
   };
 }
 
+function makeTrashSampleLabelEntry(): TrashSampleLabelEntry {
+  return {
+    id: "trash_sample_label_1",
+    originLabel: "Sealed sampling bag",
+    sampleLabelText: "LOT-2026-041",
+  };
+}
+
 function makeExperiment({
   slots = makeSlots(),
   rackSlots = makeRackSlots(),
   trashProduceLots = [],
+  trashSampleLabels = [],
   trashTools = [],
   produceLots = [],
   workspaceWidgets = makeWorkspaceWidgets(),
@@ -235,6 +247,7 @@ function makeExperiment({
   slots?: BenchSlot[];
   rackSlots?: RackSlot[];
   trashProduceLots?: TrashProduceLotEntry[];
+  trashSampleLabels?: TrashSampleLabelEntry[];
   trashTools?: TrashToolEntry[];
   produceLots?: Experiment["workspace"]["produceLots"];
   workspaceWidgets?: ExperimentWorkspaceWidget[];
@@ -244,7 +257,7 @@ function makeExperiment({
     status: "preparing",
     workbench: { slots },
     rack: { slots: rackSlots },
-    trash: { produceLots: trashProduceLots, tools: trashTools },
+    trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots, widgets: workspaceWidgets },
     audit_log: ["Experiment created", "Start by dragging an extraction tool onto the bench."],
   };
@@ -342,6 +355,61 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
                   },
                 }
               : null,
+      },
+    },
+  };
+}
+
+function createPaletteSampleLabelSourceCase(): DndSourceCase {
+  return {
+    id: "palette-sampling_bag_label",
+    label: "palette Sampling label",
+    sourceTestId: "toolbar-item-sampling_bag_label",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: "LOT-1" }) },
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: null }) },
+        ]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: false,
+        command: null,
+      },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "apply_sample_label_to_workbench_tool",
+          payload: { slot_id: "station_2" },
+        },
+      },
+      "rack-illustration-slot-1": {
+        compatible: false,
+        command: null,
+      },
+      "widget-workspace": {
+        compatible: false,
+        command: null,
+      },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_sample_label_from_palette",
+          payload: {
+            sample_label_id: "sampling_bag_label",
+          },
+        },
       },
     },
   };
@@ -601,8 +669,6 @@ function createTrashWidgetSourceCase(
 }
 
 function createBasketProduceSourceCase(): DndSourceCase {
-  const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
-
   return {
     id: "basket-produce-lot-apple",
     label: "basket apple lot",
@@ -670,8 +736,6 @@ function createBasketProduceSourceCase(): DndSourceCase {
 }
 
 function createWorkbenchProduceLotSourceCase(): DndSourceCase {
-  const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
-
   return {
     id: "workbench-produce-lot-apple",
     label: "workbench apple lot",
@@ -745,8 +809,6 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
 }
 
 function createTrashProduceLotSourceCase(): DndSourceCase {
-  const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
-
   return {
     id: "trash-produce-lot-apple",
     label: "trash apple lot",
@@ -797,12 +859,104 @@ function createTrashProduceLotSourceCase(): DndSourceCase {
   };
 }
 
+function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
+  return {
+    id: "workbench-sample-label",
+    label: "workbench sample label",
+    sourceTestId: "sample-label-card-bench_tool_bag",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: "LOT-2026-041" }) },
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: null }) },
+        ]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": { compatible: false, command: null },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "move_sample_label_between_workbench_tools",
+          payload: {
+            source_slot_id: "station_1",
+            target_slot_id: "station_2",
+          },
+        },
+      },
+      "rack-illustration-slot-1": { compatible: false, command: null },
+      "widget-workspace": { compatible: false, command: null },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_sample_label_from_workbench_tool",
+          payload: { slot_id: "station_1" },
+        },
+      },
+    },
+  };
+}
+
+function createTrashSampleLabelSourceCase(): DndSourceCase {
+  return {
+    id: "trash-sample-label",
+    label: "trash sample label",
+    sourceTestId: "trash-sample-label-trash_sample_label_1",
+    openBasket: false,
+    openTrash: true,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: null }) },
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: "LOT-1" }) },
+        ]),
+        trashSampleLabels: [makeTrashSampleLabelEntry()],
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: true,
+        command: {
+          type: "restore_trashed_sample_label_to_workbench_tool",
+          payload: {
+            target_slot_id: "station_1",
+            trash_sample_label_id: "trash_sample_label_1",
+          },
+        },
+      },
+      "bench-slot-station_2": { compatible: false, command: null },
+      "rack-illustration-slot-1": { compatible: false, command: null },
+      "widget-workspace": { compatible: false, command: null },
+      "trash-dropzone": { compatible: true, command: null },
+    },
+  };
+}
+
 export const dndSourceCases: DndSourceCase[] = [
-  ...toolbarItems.map(createPaletteSourceCase),
+  ...paletteItems.map(createPaletteSourceCase),
+  createPaletteSampleLabelSourceCase(),
   ...toolItems.map(createWorkbenchToolSourceCase),
   createBasketProduceSourceCase(),
   createWorkbenchProduceLotSourceCase(),
+  createWorkbenchSampleLabelSourceCase(),
   createTrashProduceLotSourceCase(),
+  createTrashSampleLabelSourceCase(),
   createRackSourceCase(),
   ...toolItems.map(createTrashToolSourceCase),
   createTrashWidgetSourceCase("rack", "autosampler_rack", "Autosampler rack"),

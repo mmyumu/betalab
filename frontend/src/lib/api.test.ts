@@ -14,6 +14,7 @@ const makeExperiment = (): Experiment => ({
   },
   trash: {
     produceLots: [],
+    sampleLabels: [],
     tools: [],
   },
   workspace: {

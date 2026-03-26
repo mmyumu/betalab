@@ -10,6 +10,7 @@ from app.services.command_handlers.rack import (
     remove_rack_tool_to_workbench_slot,
 )
 from app.services.command_handlers.trash import (
+    discard_sample_label_from_palette,
     discard_tool_from_palette,
     discard_rack_tool,
     discard_workbench_tool,
@@ -22,12 +23,15 @@ from app.services.command_handlers.workbench import (
     apply_sample_label_to_workbench_tool,
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
+    discard_sample_label_from_workbench_tool,
     discard_produce_lot_from_workbench_tool,
+    move_sample_label_between_workbench_tools,
     move_produce_lot_between_workbench_tools,
     move_tool_between_workbench_slots,
     place_tool_on_workbench,
     remove_workbench_slot,
     remove_liquid_from_workbench_tool,
+    restore_trashed_sample_label_to_workbench_tool,
     update_workbench_tool_sample_label_text,
     update_workbench_liquid_volume,
 )
@@ -55,6 +59,7 @@ class ExperimentService:
             "move_tool_between_workbench_slots": move_tool_between_workbench_slots,
             "discard_workbench_tool": discard_workbench_tool,
             "discard_tool_from_palette": discard_tool_from_palette,
+            "discard_sample_label_from_palette": discard_sample_label_from_palette,
             "restore_trashed_tool_to_workbench_slot": restore_trashed_tool_to_workbench_slot,
             "add_workspace_widget": add_workspace_widget,
             "move_workspace_widget": move_workspace_widget,
@@ -75,6 +80,9 @@ class ExperimentService:
             "update_workbench_liquid_volume": update_workbench_liquid_volume,
             "apply_sample_label_to_workbench_tool": apply_sample_label_to_workbench_tool,
             "update_workbench_tool_sample_label_text": update_workbench_tool_sample_label_text,
+            "move_sample_label_between_workbench_tools": move_sample_label_between_workbench_tools,
+            "discard_sample_label_from_workbench_tool": discard_sample_label_from_workbench_tool,
+            "restore_trashed_sample_label_to_workbench_tool": restore_trashed_sample_label_to_workbench_tool,
         }
 
     def create_experiment(self) -> ExperimentSchema:

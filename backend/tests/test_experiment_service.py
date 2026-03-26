@@ -162,6 +162,110 @@ def test_sampling_bag_label_can_be_applied_and_edited() -> None:
     assert updated.audit_log[-1] == "Sample label updated to LOT-2026-041 on Sealed sampling bag."
 
 
+def test_sampling_bag_label_can_be_discarded_to_trash_and_restored() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
+    )
+    service.apply_command(
+        experiment.id,
+        "apply_sample_label_to_workbench_tool",
+        {"slot_id": "station_1"},
+    )
+    service.apply_command(
+        experiment.id,
+        "update_workbench_tool_sample_label_text",
+        {"slot_id": "station_1", "sample_label_text": "LOT-2026-041"},
+    )
+
+    discarded = service.apply_command(
+        experiment.id,
+        "discard_sample_label_from_workbench_tool",
+        {"slot_id": "station_1"},
+    )
+    restored = service.apply_command(
+        experiment.id,
+        "restore_trashed_sample_label_to_workbench_tool",
+        {
+            "target_slot_id": "station_2",
+            "trash_sample_label_id": discarded.trash.sample_labels[0].id,
+        },
+    )
+
+    discarded_slot = next(slot for slot in discarded.workbench.slots if slot.id == "station_1")
+    restored_slot = next(slot for slot in restored.workbench.slots if slot.id == "station_2")
+    assert discarded_slot.tool is not None
+    assert discarded_slot.tool.sample_label_text is None
+    assert len(discarded.trash.sample_labels) == 1
+    assert discarded.trash.sample_labels[0].sample_label_text == "LOT-2026-041"
+    assert restored_slot.tool is not None
+    assert restored_slot.tool.sample_label_text == "LOT-2026-041"
+    assert restored.trash.sample_labels == []
+
+
+def test_sampling_bag_label_can_be_discarded_from_palette() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_sample_label_from_palette",
+        {"sample_label_id": "sampling_bag_label"},
+    )
+
+    assert len(updated.trash.sample_labels) == 1
+    assert updated.trash.sample_labels[0].origin_label == "Palette"
+    assert updated.trash.sample_labels[0].sample_label_text == ""
+
+
+def test_sampling_bag_label_can_move_between_sampling_bags() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
+    )
+    service.apply_command(
+        experiment.id,
+        "apply_sample_label_to_workbench_tool",
+        {"slot_id": "station_1"},
+    )
+    service.apply_command(
+        experiment.id,
+        "update_workbench_tool_sample_label_text",
+        {"slot_id": "station_1", "sample_label_text": "LOT-2026-041"},
+    )
+
+    moved = service.apply_command(
+        experiment.id,
+        "move_sample_label_between_workbench_tools",
+        {"source_slot_id": "station_1", "target_slot_id": "station_2"},
+    )
+
+    source_slot = next(slot for slot in moved.workbench.slots if slot.id == "station_1")
+    target_slot = next(slot for slot in moved.workbench.slots if slot.id == "station_2")
+    assert source_slot.tool is not None
+    assert source_slot.tool.sample_label_text is None
+    assert target_slot.tool is not None
+    assert target_slot.tool.sample_label_text == "LOT-2026-041"
+
+
 def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

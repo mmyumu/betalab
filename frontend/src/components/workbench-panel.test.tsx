@@ -6,6 +6,7 @@ import {
   writeBenchToolDragPayload,
   writeProduceDragPayload,
   writeRackToolDragPayload,
+  writeSampleLabelDragPayload,
   writeToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type { BenchSlot } from "@/types/workbench";
@@ -431,7 +432,7 @@ describe("WorkbenchPanel", () => {
     const onApplySampleLabel = vi.fn();
     const dataTransfer = createDataTransfer();
     writePayload(dataTransfer, {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "sample_label",
       itemId: "sampling_bag_label",
       itemType: "sample_label",
@@ -478,6 +479,84 @@ describe("WorkbenchPanel", () => {
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
     expect(onApplySampleLabel).toHaveBeenCalledWith("station_1");
+  });
+
+  it("moves a labeled sample label to another unlabeled sampling bag", () => {
+    const onMoveSampleLabel = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeSampleLabelDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot", "trash_bin"],
+      entityKind: "sample_label",
+      sampleLabelId: "bench_tool_bag-sample-label",
+      sampleLabelText: "LOT-2026-041",
+      sourceId: "station_1",
+      sourceKind: "workbench",
+      sourceSlotId: "station_1",
+      trashable: false,
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onMoveSampleLabel={onMoveSampleLabel}
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              sampleLabelText: "LOT-2026-041",
+              trashable: true,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_bag_2",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              accepts_liquids: false,
+              sampleLabelText: null,
+              trashable: true,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_2");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(onMoveSampleLabel).toHaveBeenCalledWith(
+      "station_2",
+      expect.objectContaining({
+        sourceSlotId: "station_1",
+        sampleLabelText: "LOT-2026-041",
+      }),
+    );
   });
 
   it("accepts produce drags only on stations containing a sealed sampling bag", () => {

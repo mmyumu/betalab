@@ -9,6 +9,7 @@ import type {
   ExperimentWorkspaceWidget,
   RackSlot,
   TrashProduceLotEntry,
+  TrashSampleLabelEntry,
   TrashToolEntry,
 } from "@/types/workbench";
 
@@ -176,6 +177,7 @@ function makeWorkbenchExperiment({
   rackSlots = makeRackSlots(),
   slots = makeSlots(),
   trashProduceLots = [],
+  trashSampleLabels = [],
   trashTools = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
@@ -190,6 +192,7 @@ function makeWorkbenchExperiment({
   rackSlots?: RackSlot[];
   slots?: BenchSlot[];
   trashProduceLots?: TrashProduceLotEntry[];
+  trashSampleLabels?: TrashSampleLabelEntry[];
   trashTools?: TrashToolEntry[];
   workspaceWidgets?: ExperimentWorkspaceWidget[];
 } = {}): Experiment {
@@ -198,7 +201,7 @@ function makeWorkbenchExperiment({
     status: "preparing",
     workbench: { slots },
     rack: { slots: rackSlots },
-    trash: { produceLots: trashProduceLots, tools: trashTools },
+    trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
     audit_log: auditLog,
   };
@@ -240,6 +243,17 @@ function makeTrashProduceLotEntry(
       totalMassG: 2450,
       unitCount: 12,
     },
+    ...overrides,
+  };
+}
+
+function makeTrashSampleLabelEntry(
+  overrides: Partial<TrashSampleLabelEntry> = {},
+): TrashSampleLabelEntry {
+  return {
+    id: "trash_sample_label_1",
+    originLabel: "Sealed sampling bag",
+    sampleLabelText: "LOT-2026-041",
     ...overrides,
   };
 }
@@ -1100,6 +1114,81 @@ describe("LabScene", () => {
         "experiment_pesticides",
         "update_workbench_tool_sample_label_text",
         { slot_id: "station_1", sample_label_text: "LOT-2026-041" },
+      );
+    });
+  });
+
+  it("discards a sampling bag label from the bench into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+        trashSampleLabels: [makeTrashSampleLabelEntry()],
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const sampleLabel = await screen.findByTestId("sample-label-card-bench_tool_1");
+    const trash = screen.getByTestId("trash-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(sampleLabel, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(trash, { dataTransfer: transfer });
+    fireEvent(trash, dragOverEvent);
+    fireEvent.drop(trash, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "discard_sample_label_from_workbench_tool",
+        { slot_id: "station_1" },
+      );
+    });
+  });
+
+  it("restores a trashed sampling bag label onto an unlabeled sampling bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+        trashSampleLabels: [makeTrashSampleLabelEntry()],
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+        trashSampleLabels: [],
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("trash-dropzone"));
+    const trashedLabel = await screen.findByTestId("trash-sample-label-trash_sample_label_1");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(trashedLabel, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "restore_trashed_sample_label_to_workbench_tool",
+        {
+          target_slot_id: "station_1",
+          trash_sample_label_id: "trash_sample_label_1",
+        },
       );
     });
   });

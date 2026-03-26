@@ -6,6 +6,7 @@ from app.domain.models import (
     RackSlot,
     Trash,
     TrashProduceLotEntry,
+    TrashSampleLabelEntry,
     TrashToolEntry,
     Workspace,
     WorkspaceWidget,
@@ -40,6 +41,17 @@ def find_trash_produce_lot(trash: Trash, trash_produce_lot_id: str) -> TrashProd
     if produce_lot is None:
         raise ValueError("Unknown trash produce lot")
     return produce_lot
+
+
+def find_trash_sample_label(
+    trash: Trash, trash_sample_label_id: str
+) -> TrashSampleLabelEntry:
+    sample_label = next(
+        (entry for entry in trash.sample_labels if entry.id == trash_sample_label_id), None
+    )
+    if sample_label is None:
+        raise ValueError("Unknown trash sample label")
+    return sample_label
 
 
 def find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidget:

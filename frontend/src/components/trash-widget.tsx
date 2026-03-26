@@ -7,6 +7,7 @@ import { InventoryWidget } from "@/components/inventory-widget";
 import type {
   ExperimentWorkspaceWidget,
   TrashProduceLotEntry,
+  TrashSampleLabelEntry,
   TrashToolEntry,
 } from "@/types/workbench";
 
@@ -28,7 +29,12 @@ type TrashWidgetProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onItemDragEnd: () => void;
+  onTrashSampleLabelDragStart: (
+    trashSampleLabel: TrashSampleLabelEntry,
+    dataTransfer: DataTransfer,
+  ) => void;
   trashedProduceLots: TrashProduceLotEntry[];
+  trashedSampleLabels: TrashSampleLabelEntry[];
   trashedTools: TrashToolEntry[];
   trashedWidgets: ExperimentWorkspaceWidget[];
 };
@@ -70,12 +76,14 @@ export function TrashWidget({
   onTrashedWidgetDragStart,
   onTrashProduceLotDragStart,
   onItemDragEnd,
+  onTrashSampleLabelDragStart,
   trashedProduceLots,
+  trashedSampleLabels,
   trashedTools,
   trashedWidgets,
 }: TrashWidgetProps) {
   const trashItemCount =
-    trashedTools.length + trashedProduceLots.length + trashedWidgets.length;
+    trashedTools.length + trashedProduceLots.length + trashedSampleLabels.length + trashedWidgets.length;
 
   return (
     <InventoryWidget
@@ -152,6 +160,26 @@ export function TrashWidget({
             title={
               <p className="truncate text-sm font-semibold text-slate-900">
                 {widget.label}
+              </p>
+            }
+          />
+        ))}
+        {trashedSampleLabels.map((trashSampleLabel) => (
+          <DraggableInventoryItem
+            dataTestId={`trash-sample-label-${trashSampleLabel.id}`}
+            key={trashSampleLabel.id}
+            onDragEnd={onItemDragEnd}
+            onDragStart={(dataTransfer) =>
+              onTrashSampleLabelDragStart(trashSampleLabel, dataTransfer)
+            }
+            subtitle={
+              <p className="truncate text-xs text-slate-500">
+                {trashSampleLabel.originLabel}
+              </p>
+            }
+            title={
+              <p className="truncate text-sm font-semibold text-slate-900">
+                {trashSampleLabel.sampleLabelText || "Untitled sample label"}
               </p>
             }
           />

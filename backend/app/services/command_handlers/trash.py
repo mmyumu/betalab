@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.models import Experiment, TrashToolEntry, new_id
+from app.domain.models import Experiment, TrashSampleLabelEntry, TrashToolEntry, new_id
 from app.services.command_handlers.support import (
     find_rack_slot,
     find_trash_produce_lot,
@@ -39,6 +39,17 @@ def discard_tool_from_palette(experiment: Experiment, payload: dict) -> None:
         )
     )
     experiment.audit_log.append(f"{discarded_tool.label} discarded from Palette.")
+
+
+def discard_sample_label_from_palette(experiment: Experiment, payload: dict) -> None:
+    experiment.trash.sample_labels.append(
+        TrashSampleLabelEntry(
+            id=new_id("trash_sample_label"),
+            origin_label="Palette",
+            sample_label_text="",
+        )
+    )
+    experiment.audit_log.append("Sample label discarded from Palette.")
 
 
 def restore_trashed_tool_to_workbench_slot(experiment: Experiment, payload: dict) -> None:

@@ -20,6 +20,7 @@ import {
   readBenchToolDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
+  readSampleLabelDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
   readWorkspaceWidgetDragPayload,
@@ -27,10 +28,15 @@ import {
   writeBenchToolDragPayload,
   writeProduceDragPayload,
   writeRackToolDragPayload,
+  writeSampleLabelDragPayload,
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
-import { getProduceLotDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
+import {
+  getProduceLotDropTargets,
+  getSampleLabelDropTargets,
+  getToolDropTargets,
+} from "@/lib/tool-drop-targets";
 import {
   labToolCatalog,
   labWorkflowCategories,
@@ -48,6 +54,7 @@ import type {
   RackToolDragPayload,
   TrashToolDragPayload,
   TrashProduceLotEntry,
+  TrashSampleLabelEntry,
   TrashToolEntry,
   ToolbarDragPayload,
 } from "@/types/workbench";
@@ -179,6 +186,33 @@ export function LabScene() {
     void sendWorkbenchCommand("update_workbench_tool_sample_label_text", {
       slot_id: slotId,
       sample_label_text: sampleLabelText,
+    });
+  };
+
+  const handleMoveSampleLabel = (targetSlotId: string, payload: { sourceSlotId?: string }) => {
+    if (!payload.sourceSlotId) {
+      return;
+    }
+
+    clearDropTargets();
+    void sendWorkbenchCommand("move_sample_label_between_workbench_tools", {
+      source_slot_id: payload.sourceSlotId,
+      target_slot_id: targetSlotId,
+    });
+  };
+
+  const handleRestoreTrashedSampleLabel = (
+    targetSlotId: string,
+    payload: { trashSampleLabelId?: string },
+  ) => {
+    if (!payload.trashSampleLabelId) {
+      return;
+    }
+
+    clearDropTargets();
+    void sendWorkbenchCommand("restore_trashed_sample_label_to_workbench_tool", {
+      target_slot_id: targetSlotId,
+      trash_sample_label_id: payload.trashSampleLabelId,
     });
   };
 
@@ -453,6 +487,16 @@ export function LabScene() {
     }
 
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "sample_label") {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_sample_label_from_palette", {
+        sample_label_id: toolbarPayload.itemId,
+      });
+      return;
+    }
+
     if (toolbarPayload?.itemType === "tool" && toolbarPayload.trashable) {
       event.preventDefault();
       event.stopPropagation();
@@ -518,6 +562,17 @@ export function LabScene() {
         slot_id: producePayload.sourceSlotId,
         produce_lot_id: producePayload.produceLotId,
       });
+      return;
+    }
+
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    if (sampleLabelPayload?.sourceKind === "workbench" && sampleLabelPayload.sourceSlotId) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_sample_label_from_workbench_tool", {
+        slot_id: sampleLabelPayload.sourceSlotId,
+      });
     }
   };
 
@@ -562,6 +617,7 @@ export function LabScene() {
   const slots = workbench.slots;
   const rackSlots = state.experiment.rack.slots;
   const trashedProduceLots = state.experiment.trash.produceLots;
+  const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => widget.trashable && widget.isTrashed,
@@ -808,6 +864,69 @@ export function LabScene() {
     });
   };
 
+  const handleWorkbenchSampleLabelDragStart = (
+    slotId: string,
+    tool: BenchToolInstance,
+    dataTransfer: DataTransfer,
+  ) => {
+    if (tool.sampleLabelText === null || tool.sampleLabelText === undefined) {
+      return;
+    }
+
+    const allowedDropTargets = getSampleLabelDropTargets();
+
+    writeSampleLabelDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "sample_label",
+      sampleLabelId: `${tool.id}-sample-label`,
+      sampleLabelText: tool.sampleLabelText,
+      sourceId: slotId,
+      sourceKind: "workbench",
+      sourceSlotId: slotId,
+      trashable: false,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "sample_label",
+      sampleLabelId: `${tool.id}-sample-label`,
+      sampleLabelText: tool.sampleLabelText,
+      sourceId: slotId,
+      sourceKind: "workbench",
+      sourceSlotId: slotId,
+      trashable: false,
+    });
+  };
+
+  const handleTrashSampleLabelDragStart = (
+    trashSampleLabel: TrashSampleLabelEntry,
+    dataTransfer: DataTransfer,
+  ) => {
+    const allowedDropTargets = getSampleLabelDropTargets();
+
+    writeSampleLabelDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "sample_label",
+      sampleLabelId: trashSampleLabel.id,
+      sampleLabelText: trashSampleLabel.sampleLabelText,
+      sourceId: trashSampleLabel.id,
+      sourceKind: "trash",
+      trashSampleLabelId: trashSampleLabel.id,
+      trashable: false,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "sample_label",
+      sampleLabelId: trashSampleLabel.id,
+      sampleLabelText: trashSampleLabel.sampleLabelText,
+      sourceId: trashSampleLabel.id,
+      sourceKind: "trash",
+      trashSampleLabelId: trashSampleLabel.id,
+      trashable: false,
+    });
+  };
+
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
     if (!activeDropTargets.includes("workbench_slot") || !activeDragItem) {
       return false;
@@ -850,6 +969,7 @@ export function LabScene() {
   const isTrashEmpty =
     trashedTools.length === 0 &&
     trashedProduceLots.length === 0 &&
+    trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
   const handleCreateAppleLot = () => {
@@ -945,7 +1065,9 @@ export function LabScene() {
                 onToolDragStart={handleTrashToolDragStart}
                 onTrashedWidgetDragStart={handleTrashedWidgetDragStart}
                 onTrashProduceLotDragStart={handleTrashProduceLotDragStart}
+                onTrashSampleLabelDragStart={handleTrashSampleLabelDragStart}
                 trashedProduceLots={trashedProduceLots}
+                trashedSampleLabels={trashedSampleLabels}
                 trashedTools={trashedTools}
                 trashedWidgets={trashedWidgets}
               />
@@ -1030,10 +1152,14 @@ export function LabScene() {
                 onBenchToolDragEnd={clearDropTargets}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
+                onMoveSampleLabel={handleMoveSampleLabel}
                 onProduceLotDragStart={handleWorkbenchProduceLotDragStart}
                 onProduceDrop={handleProduceDrop}
                 onRemoveLiquid={handleRemoveLiquid}
                 onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
+                onRestoreTrashedSampleLabel={handleRestoreTrashedSampleLabel}
+                onSampleLabelDragEnd={clearDropTargets}
+                onSampleLabelDragStart={handleWorkbenchSampleLabelDragStart}
                 onSampleLabelTextChange={handleSampleLabelTextChange}
                 onLiquidVolumeChange={handleLiquidVolumeChange}
                 slots={slots}

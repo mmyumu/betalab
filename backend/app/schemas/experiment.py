@@ -67,9 +67,16 @@ class TrashProduceLotEntrySchema(BaseModel):
     produce_lot: ProduceLotSchema
 
 
+class TrashSampleLabelEntrySchema(BaseModel):
+    id: str
+    origin_label: str
+    sample_label_text: str
+
+
 class TrashSchema(BaseModel):
     tools: list[TrashToolEntrySchema]
     produce_lots: list[TrashProduceLotEntrySchema]
+    sample_labels: list[TrashSampleLabelEntrySchema]
 
 
 class WorkspaceWidgetSchema(BaseModel):
@@ -125,6 +132,10 @@ class ExperimentCommandEnvelope(BaseModel):
         "remove_liquid_from_workbench_tool",
         "update_workbench_liquid_volume",
         "apply_sample_label_to_workbench_tool",
+        "discard_sample_label_from_palette",
         "update_workbench_tool_sample_label_text",
+        "move_sample_label_between_workbench_tools",
+        "discard_sample_label_from_workbench_tool",
+        "restore_trashed_sample_label_to_workbench_tool",
     ]
     payload: dict = Field(default_factory=dict)

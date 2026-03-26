@@ -1,4 +1,4 @@
-import { getToolDropTargets } from "@/lib/tool-drop-targets";
+import { getSampleLabelDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
 
 export const labWorkflowCategories: ToolbarCategory[] = [
@@ -153,7 +153,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "sampling_bag_label",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getSampleLabelDropTargets(),
         itemType: "sample_label",
         name: "Sampling label",
         subtitle: "Traceability",

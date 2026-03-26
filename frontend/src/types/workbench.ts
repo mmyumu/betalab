@@ -26,7 +26,12 @@ export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "p
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type ProduceLotType = "apple";
-export type DragEntityKind = "tool" | "liquid" | "workspace_widget" | "produce" | "sample_label";
+export type DragEntityKind =
+  | "tool"
+  | "liquid"
+  | "workspace_widget"
+  | "produce"
+  | "sample_label";
 export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
@@ -108,6 +113,17 @@ export type ToolbarDragPayload =
       trashable: boolean;
     });
 
+export type SampleLabelDragPayload = BaseDragPayload & {
+  entityKind: "sample_label";
+  sampleLabelId: string;
+  sampleLabelText: string;
+  sourceId: string;
+  sourceKind: "workbench" | "trash";
+  sourceSlotId?: string;
+  trashSampleLabelId?: string;
+  trashable: false;
+};
+
 export type ProduceDragPayload = BaseDragPayload & {
   entityKind: "produce";
   produceLotId: string;
@@ -180,7 +196,10 @@ export type DragDescriptor =
   | (BaseDragPayload & {
       entityKind: "sample_label";
       sampleLabelId: string;
+      sampleLabelText?: string;
       trashable: boolean;
+      sourceSlotId?: string;
+      trashSampleLabelId?: string;
     })
   | (BaseDragPayload & {
       entityKind: "produce";
@@ -236,6 +255,12 @@ export type TrashProduceLotEntry = {
   id: string;
   originLabel: string;
   produceLot: ExperimentProduceLot;
+};
+
+export type TrashSampleLabelEntry = {
+  id: string;
+  originLabel: string;
+  sampleLabelText: string;
 };
 
 export type ExperimentWorkspaceWidget = {
