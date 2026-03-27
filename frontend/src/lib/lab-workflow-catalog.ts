@@ -140,6 +140,16 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         accent: "emerald",
         widgetType: "lc_msms_instrument",
       },
+      {
+        id: "cryogenic_grinder_widget",
+        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        itemType: "workspace_widget",
+        name: "Cryogenic grinder",
+        subtitle: "Cold homogenization",
+        description: "Benchtop grinder used to homogenize chilled produce before extraction.",
+        accent: "amber",
+        widgetType: "cryogenic_grinder",
+      },
     ],
   },
   {

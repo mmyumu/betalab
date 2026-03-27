@@ -63,6 +63,7 @@ export type DndSourceCase = {
 const workspaceWidgetItemToId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
+  cryogenic_grinder_widget: "grinder",
 } as const;
 
 const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
@@ -179,6 +180,16 @@ function makeWorkspaceWidgets(
       offsetX: 70,
       offsetY: 248,
       isPresent: true,
+      isTrashed: false,
+    },
+    {
+      id: "grinder",
+      widgetType: "cryogenic_grinder",
+      label: "Cryogenic grinder",
+      anchor: "top-left",
+      offsetX: 980,
+      offsetY: 886,
+      isPresent: false,
       isTrashed: false,
     },
   ];
@@ -596,7 +607,7 @@ function createTrashToolSourceCase(item: ToolCatalogItem): DndSourceCase {
 }
 
 function createTrashWidgetSourceCase(
-  widgetId: "rack" | "instrument" | "basket",
+  widgetId: "rack" | "instrument" | "basket" | "grinder",
   widgetType: WorkspaceWidgetType,
   label: string,
 ): DndSourceCase {
@@ -636,6 +647,9 @@ function createTrashWidgetSourceCase(
             ? { isPresent: false, isTrashed: true }
             : {},
           widgetId === "basket"
+            ? { isPresent: false, isTrashed: true }
+            : {},
+          widgetId === "grinder"
             ? { isPresent: false, isTrashed: true }
             : {},
         ]),
@@ -1047,4 +1061,5 @@ export const dndSourceCases: DndSourceCase[] = [
   ...toolItems.map(createTrashToolSourceCase),
   createTrashWidgetSourceCase("rack", "autosampler_rack", "Autosampler rack"),
   createTrashWidgetSourceCase("instrument", "lc_msms_instrument", "LC-MS/MS"),
+  createTrashWidgetSourceCase("grinder", "cryogenic_grinder", "Cryogenic grinder"),
 ];

@@ -29,8 +29,18 @@ export type LiquidType =
   | "apple_extract"
   | "dry_ice_pellets";
 
-export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
-export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
+export type WorkspaceWidgetType =
+  | "autosampler_rack"
+  | "lc_msms_instrument"
+  | "cryogenic_grinder"
+  | "produce_basket";
+export type ExperimentWorkspaceWidgetId =
+  | "workbench"
+  | "trash"
+  | "rack"
+  | "instrument"
+  | "grinder"
+  | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";

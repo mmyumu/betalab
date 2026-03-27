@@ -161,6 +161,16 @@ function makeWorkspaceWidgets(
       isPresent: true,
       isTrashed: false,
     },
+    {
+      id: "grinder",
+      widgetType: "cryogenic_grinder",
+      label: "Cryogenic grinder",
+      anchor: "top-left",
+      offsetX: 980,
+      offsetY: 886,
+      isPresent: false,
+      isTrashed: false,
+    },
   ];
 
   return baseWidgets.map((widget, index) => ({
@@ -290,6 +300,7 @@ describe("LabScene", () => {
 
     expect(screen.getByTestId("toolbar-item-autosampler_rack_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeInTheDocument();
+    expect(screen.getByTestId("toolbar-item-cryogenic_grinder_widget")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-cutting_board_hdpe")).toBeInTheDocument();
     expect(screen.getByTestId("toolbar-item-sealed_sampling_bag")).toBeInTheDocument();
     expect(screen.queryByTestId("toolbar-item-produce_basket_widget")).not.toBeInTheDocument();

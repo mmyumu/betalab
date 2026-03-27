@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
+import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { ItemCountBadge } from "@/components/item-count-badge";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
@@ -106,6 +107,16 @@ describe("workspace equipment illustrations", () => {
     expect(screen.getByTestId("produce-basket-illustration")).toHaveAttribute(
       "data-item-count",
       "8",
+    );
+  });
+
+  it("renders cryogenic grinder illustration", () => {
+    render(<CryogenicGrinderIllustration testId="cryogenic-grinder-illustration" />);
+
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toBeInTheDocument();
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "aria-label",
+      "Cryogenic grinder illustration",
     );
   });
 

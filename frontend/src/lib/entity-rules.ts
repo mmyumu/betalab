@@ -31,7 +31,7 @@ export function getSampleLabelDropTargets(): DropTargetType[] {
 }
 
 export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidgetId): boolean {
-  return widgetId === "rack" || widgetId === "instrument";
+  return widgetId === "rack" || widgetId === "instrument" || widgetId === "grinder";
 }
 
 export function getWorkspaceWidgetDropTargets(

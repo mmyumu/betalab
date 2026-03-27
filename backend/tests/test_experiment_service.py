@@ -36,12 +36,14 @@ def test_create_experiment_returns_empty_workbench() -> None:
         "rack",
         "instrument",
         "basket",
+        "grinder",
     ]
     assert experiment.workspace.widgets[0].is_present is True
     assert experiment.workspace.widgets[1].is_present is True
     assert experiment.workspace.widgets[2].is_present is False
     assert experiment.workspace.widgets[3].is_present is False
     assert experiment.workspace.widgets[4].is_present is True
+    assert experiment.workspace.widgets[5].is_present is False
     assert experiment.workspace.widgets[1].anchor == "top-right"
     assert experiment.workspace.widgets[1].offset_x == 0
     assert experiment.workspace.widgets[1].offset_y == 126

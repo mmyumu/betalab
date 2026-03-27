@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
+import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
@@ -70,10 +71,20 @@ import type {
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
-const widgetIds = ["inventory", "actions", "workbench", "trash", "rack", "instrument", "basket"] as const;
+const widgetIds = [
+  "inventory",
+  "actions",
+  "workbench",
+  "trash",
+  "rack",
+  "instrument",
+  "basket",
+  "grinder",
+] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
+  cryogenic_grinder_widget: "grinder",
   produce_basket_widget: "basket",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
@@ -83,6 +94,7 @@ const widgetTrashability: Record<WidgetId, boolean> = {
   trash: false,
   rack: true,
   instrument: true,
+  grinder: true,
   basket: false,
 };
 
@@ -113,6 +125,7 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
   basket: { x: 1490, y: 352, width: 198, fallbackHeight: 236 },
+  grinder: { x: 980, y: 886, width: 430, fallbackHeight: 340 },
 };
 const rackSlotCount = 12;
 const rackIllustrationViewBox = { height: 320, width: 560 };
@@ -123,7 +136,7 @@ const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
-  return value === "rack" || value === "instrument" || value === "basket";
+  return value === "rack" || value === "instrument" || value === "basket" || value === "grinder";
 }
 
 function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
@@ -1236,7 +1249,9 @@ export function LabScene() {
                       ? "Rack Widget"
                       : widgetId === "instrument"
                         ? "Instrument Widget"
-                        : "Produce Basket Widget"
+                        : widgetId === "grinder"
+                          ? "Grinder Widget"
+                          : "Produce Basket Widget"
                   }
                   onDragStart={(widgetId, event) => {
                     if (isKnifeMode) {
@@ -1274,7 +1289,7 @@ export function LabScene() {
                       rackSlots={rackSlots}
                       slotCount={rackSlotCount}
                     />
-                  ) : (
+                  ) : widgetId === "instrument" ? (
                     <WorkspaceEquipmentWidget
                       eyebrow="LC-MS/MS"
                       footer={
@@ -1287,6 +1302,19 @@ export function LabScene() {
                         className="mx-auto max-w-[36rem]"
                         status={instrumentStatus}
                         testId="lc-msms-instrument-illustration"
+                      />
+                    </WorkspaceEquipmentWidget>
+                  ) : (
+                    <WorkspaceEquipmentWidget
+                      badge="Prep"
+                      description="Compact benchtop mill for chilled sample homogenization before extraction."
+                      eyebrow="Cryogenic grinder"
+                      footer="Use this to represent the cold grinding step once homogenization actions are wired."
+                      title="Cryogenic grinder"
+                    >
+                      <CryogenicGrinderIllustration
+                        className="mx-auto max-w-[24rem]"
+                        testId="cryogenic-grinder-illustration"
                       />
                     </WorkspaceEquipmentWidget>
                   )}
