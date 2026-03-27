@@ -9,6 +9,7 @@ import type {
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
   TrashToolEntry,
+  WidgetAnchor,
 } from "@/types/workbench";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -189,12 +190,18 @@ function normalizeTrashSampleLabel(
 function normalizeWorkspaceWidget(
   widget: ExperimentWorkspaceWidget & Record<string, unknown>,
 ): ExperimentWorkspaceWidget {
+  const legacyX = Number(widget.x ?? 0);
+  const legacyY = Number(widget.y ?? 0);
+
   return {
     id: String(widget.id) as ExperimentWorkspaceWidget["id"],
     widgetType: String(widget.widgetType ?? widget.widget_type) as ExperimentWorkspaceWidget["widgetType"],
     label: String(widget.label),
-    x: Number(widget.x),
-    y: Number(widget.y),
+    anchor: String(widget.anchor ?? "top-left") as WidgetAnchor,
+    offsetX: Number(widget.offsetX ?? widget.offset_x ?? legacyX),
+    offsetY: Number(widget.offsetY ?? widget.offset_y ?? legacyY),
+    x: legacyX,
+    y: legacyY,
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
   };

@@ -1,5 +1,7 @@
 "use client";
 
+import { dragAffordanceClassName } from "@/lib/drag-affordance";
+
 type ActionDefinition = {
   id: string;
   label: string;
@@ -67,7 +69,7 @@ export function ActionBarPanel({ activeActionId, onToggleAction }: ActionBarPane
   return (
     <section className="rounded-[1.2rem] border border-slate-200 bg-white p-2 shadow-sm">
       <p
-        className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500"
+        className={`${dragAffordanceClassName} text-xs font-semibold uppercase tracking-[0.24em] text-slate-500`}
         data-widget-drag-handle="true"
       >
         Actions

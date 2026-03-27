@@ -84,8 +84,9 @@ class WorkspaceWidgetSchema(BaseModel):
     id: str
     widget_type: str
     label: str
-    x: int
-    y: int
+    anchor: str
+    offset_x: int
+    offset_y: int
     is_present: bool
     is_trashed: bool
 

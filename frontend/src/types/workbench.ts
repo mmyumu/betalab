@@ -32,6 +32,7 @@ export type LiquidType =
 export type WorkspaceWidgetType = "autosampler_rack" | "lc_msms_instrument" | "produce_basket";
 export type ExperimentWorkspaceWidgetId = "workbench" | "trash" | "rack" | "instrument" | "basket";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
+export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
 export type ProduceCutState = "whole" | "cut";
 export type DragEntityKind =
@@ -258,8 +259,11 @@ export type ExperimentWorkspaceWidget = {
   id: ExperimentWorkspaceWidgetId;
   widgetType: ExperimentWorkspaceWidgetType;
   label: string;
-  x: number;
-  y: number;
+  anchor: WidgetAnchor;
+  offsetX: number;
+  offsetY: number;
+  x?: number;
+  y?: number;
   isPresent: boolean;
   isTrashed: boolean;
 };

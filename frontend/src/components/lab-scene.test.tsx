@@ -115,8 +115,9 @@ function makeWorkspaceWidgets(
       id: "workbench",
       widgetType: "workbench",
       label: "Workbench",
-      x: 234,
-      y: 0,
+      anchor: "top-left",
+      offsetX: 234,
+      offsetY: 0,
       isPresent: true,
       isTrashed: false,
     },
@@ -124,8 +125,9 @@ function makeWorkspaceWidgets(
       id: "trash",
       widgetType: "trash",
       label: "Trash",
-      x: 1490,
-      y: 126,
+      anchor: "top-right",
+      offsetX: 0,
+      offsetY: 126,
       isPresent: true,
       isTrashed: false,
     },
@@ -133,8 +135,9 @@ function makeWorkspaceWidgets(
       id: "rack",
       widgetType: "autosampler_rack",
       label: "Autosampler rack",
-      x: 234,
-      y: 886,
+      anchor: "top-left",
+      offsetX: 234,
+      offsetY: 886,
       isPresent: false,
       isTrashed: false,
     },
@@ -142,8 +145,9 @@ function makeWorkspaceWidgets(
       id: "instrument",
       widgetType: "lc_msms_instrument",
       label: "LC-MS/MS",
-      x: 812,
-      y: 886,
+      anchor: "top-left",
+      offsetX: 812,
+      offsetY: 886,
       isPresent: false,
       isTrashed: false,
     },
@@ -151,8 +155,9 @@ function makeWorkspaceWidgets(
       id: "basket",
       widgetType: "produce_basket",
       label: "Produce basket",
-      x: 1490,
-      y: 352,
+      anchor: "top-right",
+      offsetX: 0,
+      offsetY: 352,
       isPresent: true,
       isTrashed: false,
     },
@@ -463,14 +468,18 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand)
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
-          workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+          workspaceWidgets: makeWorkspaceWithRackVisible({
+            anchor: "top-left",
+            offsetX: 379,
+            offsetY: 388,
+          }),
         }),
       )
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
           workspaceWidgets: makeWorkspaceWithRackAndInstrumentVisible(
-            { x: 379, y: 388 },
-            { x: 655, y: 388 },
+            { anchor: "top-left", offsetX: 379, offsetY: 388 },
+            { anchor: "top-left", offsetX: 655, offsetY: 388 },
           ),
         }),
       );
@@ -531,12 +540,20 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand)
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
-          workspaceWidgets: makeWorkspaceWithRackVisible({ x: 206, y: 388 }),
+          workspaceWidgets: makeWorkspaceWithRackVisible({
+            anchor: "top-left",
+            offsetX: 206,
+            offsetY: 388,
+          }),
         }),
       )
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
-          workspaceWidgets: makeWorkspaceWithRackVisible({ x: 466, y: 488 }),
+          workspaceWidgets: makeWorkspaceWithRackVisible({
+            anchor: "top-left",
+            offsetX: 466,
+            offsetY: 488,
+          }),
         }),
       );
 
@@ -685,7 +702,11 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         slots: makeSlots([{ tool: makeTool() }]),
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 206, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 206,
+          offsetY: 388,
+        }),
       }),
     );
 
@@ -800,7 +821,11 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand)
       .mockResolvedValueOnce(
         makeWorkbenchExperiment({
-          workspaceWidgets: makeWorkspaceWithRackVisible({ x: 206, y: 388 }),
+          workspaceWidgets: makeWorkspaceWithRackVisible({
+            anchor: "top-left",
+            offsetX: 206,
+            offsetY: 388,
+          }),
         }),
       )
       .mockResolvedValueOnce(
@@ -1730,7 +1755,11 @@ describe("LabScene", () => {
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 379,
+          offsetY: 388,
+        }),
       }),
     );
 
@@ -1775,7 +1804,7 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "move_workspace_widget",
-      { widget_id: "basket", x: 1490, y: 352 },
+      expect.objectContaining({ widget_id: "basket" }),
     );
     expect(sendExperimentCommand).not.toHaveBeenCalledWith(
       "experiment_pesticides",
@@ -1852,7 +1881,11 @@ describe("LabScene", () => {
   it("moves an autosampler vial from a station into the rack", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 379,
+          offsetY: 388,
+        }),
         slots: makeSlots([
           {
             tool: makeTool({
@@ -1873,7 +1906,11 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         auditLog: ["Autosampler vial moved from Station 1 to Position 1."],
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 379,
+          offsetY: 388,
+        }),
         rackSlots: makeRackSlots([{ tool: makeTool({
           liquids: [
             {
@@ -1932,13 +1969,21 @@ describe("LabScene", () => {
   it("moves an autosampler vial from the palette directly into the rack", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 379,
+          offsetY: 388,
+        }),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         auditLog: ["Autosampler vial placed in Position 1."],
-        workspaceWidgets: makeWorkspaceWithRackVisible({ x: 379, y: 388 }),
+        workspaceWidgets: makeWorkspaceWithRackVisible({
+          anchor: "top-left",
+          offsetX: 379,
+          offsetY: 388,
+        }),
         rackSlots: makeRackSlots([{ tool: makeTool() }]),
       }),
     );

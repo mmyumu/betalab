@@ -637,8 +637,9 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
                 "type": "add_workspace_widget",
                 "payload": {
                     "widget_id": "rack",
-                    "x": 480,
-                    "y": 420,
+                    "anchor": "top-left",
+                    "offset_x": 480,
+                    "offset_y": 420,
                 },
             },
         )
@@ -648,8 +649,9 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
                 "type": "move_workspace_widget",
                 "payload": {
                     "widget_id": "rack",
-                    "x": 520,
-                    "y": 460,
+                    "anchor": "top-right",
+                    "offset_x": 120,
+                    "offset_y": 460,
                 },
             },
         )
@@ -672,8 +674,8 @@ def test_workspace_widget_commands_round_trip_over_http() -> None:
     ] is False
     assert moved.status_code == 200
     assert next(widget for widget in moved.json()["workspace"]["widgets"] if widget["id"] == "rack")[
-        "x"
-    ] == 520
+        "anchor"
+    ] == "top-right"
     assert discarded.status_code == 200
     assert next(
         widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"

@@ -180,8 +180,9 @@ describe("api client", () => {
               id: "rack",
               widget_type: "autosampler_rack",
               label: "Autosampler rack",
-              x: 234,
-              y: 886,
+              anchor: "top-left",
+              offset_x: 234,
+              offset_y: 886,
               is_present: false,
               is_trashed: true,
             },
@@ -204,6 +205,8 @@ describe("api client", () => {
     expect(experiment.trash.produceLots[0]?.originLabel).toBe("Sealed sampling bag");
     expect(experiment.trash.produceLots[0]?.produceLot.label).toBe("Apple lot 1");
     expect(experiment.workspace.widgets[0]?.widgetType).toBe("autosampler_rack");
+    expect(experiment.workspace.widgets[0]?.anchor).toBe("top-left");
+    expect(experiment.workspace.widgets[0]?.offsetX).toBe(234);
     expect(experiment.workspace.widgets[0]?.isTrashed).toBe(true);
     expect(experiment.workspace.produceLots[0]?.produceType).toBe("apple");
     expect(experiment.workspace.produceLots[0]?.label).toBe("Apple lot 1");

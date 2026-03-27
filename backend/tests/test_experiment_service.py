@@ -42,6 +42,9 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[2].is_present is False
     assert experiment.workspace.widgets[3].is_present is False
     assert experiment.workspace.widgets[4].is_present is True
+    assert experiment.workspace.widgets[1].anchor == "top-right"
+    assert experiment.workspace.widgets[1].offset_x == 0
+    assert experiment.workspace.widgets[1].offset_y == 126
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.workspace.produce_lots == []
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
@@ -779,15 +782,17 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
         "add_workspace_widget",
         {
             "widget_id": "rack",
-            "x": 480,
-            "y": 420,
+            "anchor": "top-left",
+            "offset_x": 480,
+            "offset_y": 420,
         },
     )
     rack_widget = next(widget for widget in added.workspace.widgets if widget.id == "rack")
     assert rack_widget.is_present is True
     assert rack_widget.is_trashed is False
-    assert rack_widget.x == 480
-    assert rack_widget.y == 420
+    assert rack_widget.anchor == "top-left"
+    assert rack_widget.offset_x == 480
+    assert rack_widget.offset_y == 420
     assert added.audit_log[-1] == "Autosampler rack added to workspace."
 
     moved = service.apply_command(
@@ -795,13 +800,15 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
         "move_workspace_widget",
         {
             "widget_id": "rack",
-            "x": 520,
-            "y": 460,
+            "anchor": "top-right",
+            "offset_x": 120,
+            "offset_y": 460,
         },
     )
     rack_widget = next(widget for widget in moved.workspace.widgets if widget.id == "rack")
-    assert rack_widget.x == 520
-    assert rack_widget.y == 460
+    assert rack_widget.anchor == "top-right"
+    assert rack_widget.offset_x == 120
+    assert rack_widget.offset_y == 460
     assert moved.audit_log[-1] == "Autosampler rack moved in workspace."
 
     discarded = service.apply_command(

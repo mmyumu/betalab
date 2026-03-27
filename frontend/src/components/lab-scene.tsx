@@ -14,7 +14,11 @@ import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
-import { type WidgetLayout, useWorkspaceLayout } from "@/hooks/use-workspace-layout";
+import {
+  inferAnchoredLayout,
+  type WidgetLayout,
+  useWorkspaceLayout,
+} from "@/hooks/use-workspace-layout";
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
@@ -86,8 +90,24 @@ type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
-  inventory: { x: 0, y: 0, width: 202, fallbackHeight: 720 },
-  actions: { x: 1490, y: 0, width: 92, fallbackHeight: 104 },
+  inventory: {
+    anchor: "top-left",
+    x: 0,
+    y: 0,
+    offsetX: 0,
+    offsetY: 0,
+    width: 202,
+    fallbackHeight: 720,
+  },
+  actions: {
+    anchor: "top-right",
+    x: 1490,
+    y: 0,
+    offsetX: 0,
+    offsetY: 0,
+    width: 92,
+    fallbackHeight: 104,
+  },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
   trash: { x: 1490, y: 126, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
@@ -430,8 +450,9 @@ export function LabScene() {
     onMoveWidget: (widgetId, nextPosition) => {
       void sendWorkbenchCommand("move_workspace_widget", {
         widget_id: widgetId,
-        x: nextPosition.x,
-        y: nextPosition.y,
+        anchor: nextPosition.anchor,
+        offset_x: nextPosition.offsetX,
+        offset_y: nextPosition.offsetY,
       });
     },
     onWidgetDragStateChange: (widgetId, isTrashDropActive) => {
@@ -446,7 +467,10 @@ export function LabScene() {
     widgets:
       state.status === "ready"
         ? state.experiment.workspace.widgets.map((widget) => ({
+            anchor: widget.anchor,
             id: widget.id,
+            offsetX: widget.offsetX,
+            offsetY: widget.offsetY,
             x: widget.x,
             y: widget.y,
           }))
@@ -479,11 +503,17 @@ export function LabScene() {
 
     const nextX = Math.min(Math.max(unclampedX, 0), maxX);
     const nextY = Math.min(Math.max(unclampedY, 0), maxY);
+    const nextAnchoredLayout = inferAnchoredLayout(
+      { x: nextX, y: nextY },
+      { height: widgetHeight, width: nextLayout.width },
+      workspaceRect ? { height: workspaceRect.height, width: workspaceRect.width } : null,
+    );
 
     void sendWorkbenchCommand("add_workspace_widget", {
       widget_id: widgetId,
-      x: nextX,
-      y: nextY,
+      anchor: nextAnchoredLayout.anchor,
+      offset_x: nextAnchoredLayout.offsetX,
+      offset_y: nextAnchoredLayout.offsetY,
     });
   };
 
@@ -1275,7 +1305,7 @@ export function LabScene() {
               }}
               onHeightChange={handleWidgetHeightChange}
               position={widgetLayout.workbench}
-              zIndex={10 + widgetOrder.indexOf("workbench")}
+              zIndex={5}
             >
               <WorkbenchPanel
                 dndDisabled={isKnifeMode}

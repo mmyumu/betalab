@@ -3,11 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 
+import type { WidgetAnchor } from "@/types/workbench";
+
 type WidgetLayout = {
+  anchor?: WidgetAnchor;
   fallbackHeight: number;
+  offsetX?: number;
+  offsetY?: number;
   width: number;
   x: number;
   y: number;
+};
+
+type AnchoredWidgetLayout = {
+  anchor: WidgetAnchor;
+  offsetX: number;
+  offsetY: number;
+};
+
+type WorkspaceWidgetSync<WidgetId extends string> = {
+  anchor?: WidgetAnchor;
+  id: WidgetId;
+  offsetX?: number;
+  offsetY?: number;
+  x?: number;
+  y?: number;
 };
 
 type UseWorkspaceLayoutOptions<WidgetId extends string> = {
@@ -16,14 +36,105 @@ type UseWorkspaceLayoutOptions<WidgetId extends string> = {
   initialLayout: Record<WidgetId, WidgetLayout>;
   initialOrder: WidgetId[];
   onDiscardWidget: (widgetId: WidgetId) => void;
-  onMoveWidget: (widgetId: WidgetId, nextPosition: { x: number; y: number }) => void;
+  onMoveWidget: (widgetId: WidgetId, nextLayout: AnchoredWidgetLayout) => void;
   onWidgetDragStateChange?: (widgetId: WidgetId | null, isTrashDropActive: boolean) => void;
   presentWidgetIds: WidgetId[];
   syncKey: string | null;
   trashWidgetId: WidgetId;
-  widgets: Array<{ id: WidgetId; x: number; y: number }>;
+  widgets: Array<WorkspaceWidgetSync<WidgetId>>;
   workspaceRef: RefObject<HTMLDivElement | null>;
 };
+
+type WorkspaceSize = {
+  height: number;
+  width: number;
+};
+
+function resolveAnchoredPosition(
+  layout: AnchoredWidgetLayout,
+  widgetSize: { height: number; width: number },
+  workspaceSize: WorkspaceSize | null,
+  fallbackPosition: { x: number; y: number },
+) {
+  if (!workspaceSize || workspaceSize.width <= 0 || workspaceSize.height <= 0) {
+    return fallbackPosition;
+  }
+
+  if (layout.anchor === "top-left") {
+    return { x: layout.offsetX, y: layout.offsetY };
+  }
+
+  if (layout.anchor === "top-right") {
+    return {
+      x: Math.max(workspaceSize.width - widgetSize.width - layout.offsetX, 0),
+      y: layout.offsetY,
+    };
+  }
+
+  if (layout.anchor === "bottom-left") {
+    return {
+      x: layout.offsetX,
+      y: Math.max(workspaceSize.height - widgetSize.height - layout.offsetY, 0),
+    };
+  }
+
+  return {
+    x: Math.max(workspaceSize.width - widgetSize.width - layout.offsetX, 0),
+    y: Math.max(workspaceSize.height - widgetSize.height - layout.offsetY, 0),
+  };
+}
+
+function inferAnchoredLayout(
+  position: { x: number; y: number },
+  widgetSize: { height: number; width: number },
+  workspaceSize: WorkspaceSize | null,
+): AnchoredWidgetLayout {
+  if (!workspaceSize || workspaceSize.width <= 0 || workspaceSize.height <= 0) {
+    return {
+      anchor: "top-left",
+      offsetX: Math.round(position.x),
+      offsetY: Math.round(position.y),
+    };
+  }
+
+  const leftDistance = position.x;
+  const rightDistance = workspaceSize.width - (position.x + widgetSize.width);
+  const topDistance = position.y;
+  const bottomDistance = workspaceSize.height - (position.y + widgetSize.height);
+  const horizontalAnchor: "left" | "right" = leftDistance <= rightDistance ? "left" : "right";
+  const verticalAnchor: "top" | "bottom" = topDistance <= bottomDistance ? "top" : "bottom";
+  const anchor = `${verticalAnchor}-${horizontalAnchor}` as WidgetAnchor;
+
+  if (anchor === "top-left") {
+    return {
+      anchor,
+      offsetX: Math.round(leftDistance),
+      offsetY: Math.round(topDistance),
+    };
+  }
+
+  if (anchor === "top-right") {
+    return {
+      anchor,
+      offsetX: Math.round(Math.max(rightDistance, 0)),
+      offsetY: Math.round(topDistance),
+    };
+  }
+
+  if (anchor === "bottom-left") {
+    return {
+      anchor,
+      offsetX: Math.round(leftDistance),
+      offsetY: Math.round(Math.max(bottomDistance, 0)),
+    };
+  }
+
+  return {
+    anchor,
+    offsetX: Math.round(Math.max(rightDistance, 0)),
+    offsetY: Math.round(Math.max(bottomDistance, 0)),
+  };
+}
 
 function isPointInsideWidget<WidgetId extends string>(
   widgetId: WidgetId,
@@ -79,6 +190,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
   );
   const widgetLayoutRef = useRef(widgetLayout);
   const widgetHeightsRef = useRef(widgetHeights);
+  const widgetsRef = useRef(widgets);
+  const [workspaceSize, setWorkspaceSize] = useState<WorkspaceSize | null>(null);
   const dragStateRef = useRef<{
     pointerOffsetX: number;
     pointerOffsetY: number;
@@ -94,6 +207,85 @@ export function useWorkspaceLayout<WidgetId extends string>({
   }, [widgetHeights]);
 
   useEffect(() => {
+    widgetsRef.current = widgets;
+  }, [widgets]);
+
+  useEffect(() => {
+    const workspaceNode = workspaceRef.current;
+    if (!workspaceNode) {
+      return;
+    }
+
+    const updateWorkspaceSize = () => {
+      const rect = workspaceNode.getBoundingClientRect();
+      setWorkspaceSize((current) => {
+        if (current?.height === rect.height && current.width === rect.width) {
+          return current;
+        }
+
+        return { height: rect.height, width: rect.width };
+      });
+    };
+
+    updateWorkspaceSize();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      updateWorkspaceSize();
+    });
+    observer.observe(workspaceNode);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [workspaceRef, syncKey]);
+
+  useEffect(() => {
+    if (!workspaceSize) {
+      return;
+    }
+
+    setWidgetLayout((current) => {
+      const nextLayout = { ...current };
+
+      (Object.keys(nextLayout) as WidgetId[]).forEach((widgetId) => {
+        const currentLayout = nextLayout[widgetId];
+        if (
+          !currentLayout.anchor ||
+          currentLayout.offsetX === undefined ||
+          currentLayout.offsetY === undefined
+        ) {
+          return;
+        }
+
+        const widgetHeight =
+          widgetHeightsRef.current[widgetId] ?? currentLayout.fallbackHeight;
+        const resolvedPosition = resolveAnchoredPosition(
+          {
+            anchor: currentLayout.anchor,
+            offsetX: currentLayout.offsetX,
+            offsetY: currentLayout.offsetY,
+          },
+          { height: widgetHeight, width: currentLayout.width },
+          workspaceSize,
+          { x: currentLayout.x, y: currentLayout.y },
+        );
+
+        nextLayout[widgetId] = {
+          ...currentLayout,
+          x: resolvedPosition.x,
+          y: resolvedPosition.y,
+        };
+      });
+
+      return nextLayout;
+    });
+  }, [workspaceSize]);
+
+  useEffect(() => {
     if (!syncKey) {
       return;
     }
@@ -107,11 +299,36 @@ export function useWorkspaceLayout<WidgetId extends string>({
         }
       });
 
-      widgets.forEach((widget) => {
+      widgetsRef.current.forEach((widget) => {
+        const currentLayout = nextLayout[widget.id];
+        const widgetHeight = widgetHeightsRef.current[widget.id] ?? currentLayout.fallbackHeight;
+        const resolvedPosition =
+          widget.anchor && widget.offsetX !== undefined && widget.offsetY !== undefined
+            ? resolveAnchoredPosition(
+                {
+                  anchor: widget.anchor,
+                  offsetX: widget.offsetX,
+                  offsetY: widget.offsetY,
+                },
+                { height: widgetHeight, width: currentLayout.width },
+                workspaceSize,
+                {
+                  x: widget.x ?? currentLayout.x,
+                  y: widget.y ?? currentLayout.y,
+                },
+              )
+            : {
+                x: widget.x ?? currentLayout.x,
+                y: widget.y ?? currentLayout.y,
+              };
+
         nextLayout[widget.id] = {
-          ...nextLayout[widget.id],
-          x: widget.x,
-          y: widget.y,
+          ...currentLayout,
+          anchor: widget.anchor ?? currentLayout.anchor,
+          offsetX: widget.offsetX ?? currentLayout.offsetX,
+          offsetY: widget.offsetY ?? currentLayout.offsetY,
+          x: resolvedPosition.x,
+          y: resolvedPosition.y,
         };
       });
 
@@ -229,7 +446,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
 
-      if (draggedWidgetId && !fixedWidgetIds.includes(draggedWidgetId)) {
+      if (draggedWidgetId) {
         const nextLayout = widgetLayoutRef.current[draggedWidgetId];
 
         if (shouldTrashWidget) {
@@ -237,10 +454,33 @@ export function useWorkspaceLayout<WidgetId extends string>({
           return;
         }
 
-        onMoveWidget(draggedWidgetId, {
-          x: nextLayout.x,
-          y: nextLayout.y,
-        });
+        const widgetHeight =
+          widgetHeightsRef.current[draggedWidgetId] ?? nextLayout.fallbackHeight;
+
+        const anchoredLayout = inferAnchoredLayout(
+          {
+            x: nextLayout.x,
+            y: nextLayout.y,
+          },
+          { height: widgetHeight, width: nextLayout.width },
+          workspaceSize,
+        );
+
+        setWidgetLayout((current) => ({
+          ...current,
+          [draggedWidgetId]: {
+            ...current[draggedWidgetId],
+            anchor: anchoredLayout.anchor,
+            offsetX: anchoredLayout.offsetX,
+            offsetY: anchoredLayout.offsetY,
+          },
+        }));
+
+        if (fixedWidgetIds.includes(draggedWidgetId)) {
+          return;
+        }
+
+        onMoveWidget(draggedWidgetId, anchoredLayout);
       }
     };
 
@@ -269,3 +509,4 @@ export function useWorkspaceLayout<WidgetId extends string>({
 }
 
 export type { WidgetLayout };
+export { inferAnchoredLayout, resolveAnchoredPosition };
