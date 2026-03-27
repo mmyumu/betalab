@@ -1,4 +1,4 @@
-import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LabScene } from "@/components/lab-scene";
@@ -1211,25 +1211,10 @@ describe("LabScene", () => {
     });
   });
 
-  it("drops dry ice pellets into the grinder", async () => {
+  it("opens a dosing popover when dry ice pellets are dropped into the grinder", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible(),
-      }),
-    );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 1000,
-              accent: "sky",
-            },
-          ],
-        }),
       }),
     );
 
@@ -1250,11 +1235,60 @@ describe("LabScene", () => {
     fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
-    expect(sendExperimentCommand).toHaveBeenCalledWith(
-      "experiment_pesticides",
-      "add_liquid_to_workspace_widget",
-      { widget_id: "grinder", liquid_id: "dry_ice_pellets" },
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+    expect(screen.getByText("Dose Dry ice pellets (CO2)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Dry ice draft mass")).toHaveValue(1000);
+  });
+
+  it("sends the dosed dry ice mass only after the user confirms the grinder popover", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible(),
+      }),
     );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1200,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-dropzone")).toBeInTheDocument();
+    });
+
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-dry_ice_pellets"), {
+      dataTransfer: transfer,
+    });
+    fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
+
+    fireEvent.click(screen.getByLabelText("Increase dry ice draft mass"));
+    fireEvent.click(screen.getByLabelText("Increase dry ice draft mass"));
+    fireEvent.click(screen.getByText("Add"));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "add_liquid_to_workspace_widget",
+        {
+          widget_id: "grinder",
+          liquid_id: "dry_ice_pellets",
+          volume_ml: 1200,
+        },
+      );
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Dry ice pellets")).toBeInTheDocument();
@@ -1391,6 +1425,51 @@ describe("LabScene", () => {
         );
       },
       { timeout: 2500 },
+    );
+  });
+
+  it("pauses cryogenic ticks while the grinder mass input is focused", async () => {
+    vi.useFakeTimers();
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              produceType: "apple",
+              temperatureC: 12,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1000,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    await act(async () => {
+      render(<PesticideWorkbench />);
+      await Promise.resolve();
+    });
+
+    fireEvent.focus(screen.getByLabelText("Dry ice pellets mass"));
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(sendExperimentCommand).not.toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "advance_workspace_cryogenics",
+      expect.anything(),
     );
   });
 

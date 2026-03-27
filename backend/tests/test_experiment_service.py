@@ -235,6 +235,47 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     assert updated.audit_log[-1] == "Dry ice pellets adjusted to 12.346 g in Cryogenic grinder."
 
 
+def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+
+    first_addition = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 250.0,
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 125.5,
+        },
+    )
+
+    first_grinder = next(widget for widget in first_addition.workspace.widgets if widget.id == "grinder")
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert first_grinder.liquids[0].volume_ml == 250.0
+    assert grinder.liquids[0].volume_ml == 375.5
+    assert updated.audit_log[-1] == "Dry ice pellets increased in Cryogenic grinder."
+
+
 def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -282,8 +323,8 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
     )
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-    assert 18.0 < grinder.produce_lots[0].temperature_c < 19.0
-    assert 980.0 < grinder.liquids[0].volume_ml < 985.0
+    assert 13.0 < grinder.produce_lots[0].temperature_c < 14.0
+    assert 897.0 < grinder.liquids[0].volume_ml < 898.0
     assert updated.audit_log[-1] == "Dry ice pellets added to Cryogenic grinder."
 
 

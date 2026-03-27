@@ -94,6 +94,10 @@ def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> Non
     if liquid_definition.id != "dry_ice_pellets":
         raise ValueError(f"{widget.label} only accepts dry ice pellets.")
 
+    added_mass_g = round_volume(
+        max(float(payload.get("volume_ml", liquid_definition.transfer_volume_ml)), 0.0)
+    )
+
     existing_liquid = next(
         (liquid for liquid in widget.liquids if liquid.liquid_id == liquid_definition.id),
         None,
@@ -104,14 +108,14 @@ def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> Non
                 id=new_id("workspace_liquid"),
                 liquid_id=liquid_definition.id,
                 name=liquid_definition.name,
-                volume_ml=liquid_definition.transfer_volume_ml,
+                volume_ml=added_mass_g,
                 accent=liquid_definition.accent,
             )
         )
         experiment.audit_log.append(f"{liquid_definition.name} added to {widget.label}.")
         return
 
-    existing_liquid.volume_ml += liquid_definition.transfer_volume_ml
+    existing_liquid.volume_ml = round_volume(existing_liquid.volume_ml + added_mass_g)
     experiment.audit_log.append(f"{liquid_definition.name} increased in {widget.label}.")
 
 

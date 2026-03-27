@@ -330,16 +330,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
       },
       "grinder-dropzone": {
         compatible: item.itemType === "liquid" && item.id === "dry_ice_pellets",
-        command:
-          item.itemType === "liquid" && item.id === "dry_ice_pellets"
-            ? {
-                type: "add_liquid_to_workspace_widget",
-                payload: {
-                  widget_id: "grinder",
-                  liquid_id: item.id,
-                },
-              }
-            : null,
+        command: null,
       },
       "rack-illustration-slot-1": {
         compatible: item.itemType === "tool" && item.toolType === "sample_vial",

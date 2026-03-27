@@ -52,6 +52,7 @@ import {
   isWorkspaceWidgetDiscardable,
 } from "@/lib/tool-drop-targets";
 import {
+  labLiquidCatalog,
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
@@ -183,10 +184,16 @@ export function LabScene() {
       defaultErrorMessage,
       defaultStatusMessage,
     });
+  const [pendingGrinderLiquidDraft, setPendingGrinderLiquidDraft] = useState<{
+    liquidId: "dry_ice_pellets";
+    massG: number;
+    name: string;
+  } | null>(null);
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [isBasketOpen, setIsBasketOpen] = useState(false);
+  const [isEditingGrinderMass, setIsEditingGrinderMass] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
@@ -210,6 +217,10 @@ export function LabScene() {
       return;
     }
 
+    if (pendingGrinderLiquidDraft || isEditingGrinderMass) {
+      return;
+    }
+
     const intervalId = window.setInterval(() => {
       if (isCommandPending) {
         return;
@@ -223,7 +234,7 @@ export function LabScene() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isCommandPending, sendWorkbenchCommand, state]);
+  }, [isCommandPending, isEditingGrinderMass, pendingGrinderLiquidDraft, sendWorkbenchCommand, state]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -355,6 +366,28 @@ export function LabScene() {
       liquid_entry_id: liquidId,
       volume_ml: volumeMl,
     });
+  };
+
+  const handleOpenGrinderLiquidDraft = (liquidId: "dry_ice_pellets") => {
+    const liquidDefinition = labLiquidCatalog[liquidId];
+    setPendingGrinderLiquidDraft({
+      liquidId,
+      massG: liquidDefinition?.transfer_volume_ml ?? 1000,
+      name: liquidDefinition?.name ?? "Dry ice pellets",
+    });
+  };
+
+  const handleConfirmGrinderLiquidDraft = () => {
+    if (!pendingGrinderLiquidDraft) {
+      return;
+    }
+
+    void sendWorkbenchCommand("add_liquid_to_workspace_widget", {
+      widget_id: "grinder",
+      liquid_id: pendingGrinderLiquidDraft.liquidId,
+      volume_ml: pendingGrinderLiquidDraft.massG,
+    });
+    setPendingGrinderLiquidDraft(null);
   };
 
   const handleAddWorkbenchSlot = () => {
@@ -651,10 +684,10 @@ export function LabScene() {
     if (toolbarPayload?.itemType === "liquid") {
       event.preventDefault();
       clearDropTargets();
-      void sendWorkbenchCommand("add_liquid_to_workspace_widget", {
-        widget_id: "grinder",
-        liquid_id: toolbarPayload.itemId,
-      });
+      if (toolbarPayload.itemId === "dry_ice_pellets") {
+        handleOpenGrinderLiquidDraft("dry_ice_pellets");
+        return;
+      }
       return;
     }
 
@@ -848,6 +881,7 @@ export function LabScene() {
   );
   const grinderProduceLots = grinderWidget?.produceLots ?? [];
   const grinderLiquids = grinderWidget?.liquids ?? [];
+  const hasPendingGrinderLiquidDraft = pendingGrinderLiquidDraft !== null;
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -1480,8 +1514,14 @@ export function LabScene() {
                                   <InlineQuantityInput
                                     ariaLabel={`${liquid.name} mass`}
                                     inputStep={1}
+                                    onBlur={() => {
+                                      setIsEditingGrinderMass(false);
+                                    }}
                                     onChange={(value) => {
                                       handleWorkspaceWidgetLiquidVolumeChange("grinder", liquid.id, value);
+                                    }}
+                                    onFocus={() => {
+                                      setIsEditingGrinderMass(true);
                                     }}
                                     unitLabel="g"
                                     value={liquid.volume_ml}
@@ -1496,7 +1536,94 @@ export function LabScene() {
                               }
                             />
                           ))}
-                          {grinderProduceLots.length === 0 && grinderLiquids.length === 0 ? (
+                          {hasPendingGrinderLiquidDraft ? (
+                            <div className="rounded-[1rem] border border-sky-200 bg-sky-50/80 px-4 py-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    Dose {pendingGrinderLiquidDraft.name}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-600">
+                                    Set the mass before adding it to the grinder.
+                                  </p>
+                                </div>
+                                <button
+                                  className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                                  onClick={() => {
+                                    setPendingGrinderLiquidDraft(null);
+                                  }}
+                                  type="button"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    aria-label="Decrease dry ice draft mass"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                    onClick={() => {
+                                      setPendingGrinderLiquidDraft((current) =>
+                                        current
+                                          ? {
+                                              ...current,
+                                              massG: Math.max(current.massG - 100, 0),
+                                            }
+                                          : current,
+                                      );
+                                    }}
+                                    type="button"
+                                  >
+                                    -
+                                  </button>
+                                  <InlineQuantityInput
+                                    ariaLabel="Dry ice draft mass"
+                                    inputStep={1}
+                                    onChange={(value) => {
+                                      setPendingGrinderLiquidDraft((current) =>
+                                        current
+                                          ? {
+                                              ...current,
+                                              massG: Math.max(value, 0),
+                                            }
+                                          : current,
+                                      );
+                                    }}
+                                    unitLabel="g"
+                                    value={pendingGrinderLiquidDraft.massG}
+                                    wheelStep={100}
+                                  />
+                                  <button
+                                    aria-label="Increase dry ice draft mass"
+                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                    onClick={() => {
+                                      setPendingGrinderLiquidDraft((current) =>
+                                        current
+                                          ? {
+                                              ...current,
+                                              massG: current.massG + 100,
+                                            }
+                                          : current,
+                                      );
+                                    }}
+                                    type="button"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <button
+                                  className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                  onClick={handleConfirmGrinderLiquidDraft}
+                                  type="button"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
+                          {grinderProduceLots.length === 0 &&
+                          grinderLiquids.length === 0 &&
+                          !hasPendingGrinderLiquidDraft ? (
                             <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/75 px-4 py-4 text-sm text-slate-500">
                               Drop an apple lot or dry ice pellets into the grinder.
                             </div>

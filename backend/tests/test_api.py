@@ -949,6 +949,41 @@ def test_update_workspace_widget_liquid_volume_round_trip_over_http() -> None:
     assert updated.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 8.5
 
 
+def test_add_workspace_widget_liquid_accepts_an_explicit_dosed_mass_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "anchor": "top-right",
+                    "offset_x": 0,
+                    "offset_y": 420,
+                },
+            },
+        )
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "liquid_id": "dry_ice_pellets",
+                    "volume_ml": 275.25,
+                },
+            },
+        )
+
+    assert added.status_code == 200
+    assert added.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 275.25
+
+
 def test_advance_workspace_cryogenics_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 
