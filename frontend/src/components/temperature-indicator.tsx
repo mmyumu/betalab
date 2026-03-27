@@ -25,7 +25,7 @@ function getCryogenicStatus(temperatureC: number) {
 
 export function TemperatureIndicator({ temperatureC }: TemperatureIndicatorProps) {
   const normalizedFill = clamp(
-    (ambientTemperatureC - temperatureC) / (ambientTemperatureC - cryogenicTemperatureC),
+    (temperatureC - cryogenicTemperatureC) / (ambientTemperatureC - cryogenicTemperatureC),
     0,
     1,
   );
@@ -36,6 +36,7 @@ export function TemperatureIndicator({ temperatureC }: TemperatureIndicatorProps
       <div className="relative flex h-10 w-4 items-end rounded-full border border-slate-300 bg-white p-[2px]">
         <div
           className="w-full rounded-full bg-[linear-gradient(180deg,#f59e0b_0%,#22d3ee_45%,#0284c7_100%)] transition-[height] duration-700"
+          data-testid="temperature-indicator-fill"
           style={{ height: `${Math.max(normalizedFill * 100, 10)}%` }}
         />
         <span className="absolute -bottom-1 left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full border border-slate-300 bg-sky-500" />
