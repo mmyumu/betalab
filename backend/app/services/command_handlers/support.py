@@ -11,6 +11,7 @@ from app.domain.models import (
     Workspace,
     WorkspaceWidget,
     Workbench,
+    WorkbenchLiquid,
     WorkbenchSlot,
 )
 
@@ -66,6 +67,13 @@ def find_workspace_produce_lot(workspace: Workspace, produce_lot_id: str) -> Pro
     if produce_lot is None:
         raise ValueError("Unknown produce lot")
     return produce_lot
+
+
+def find_workspace_widget_liquid(widget: WorkspaceWidget, liquid_entry_id: str) -> WorkbenchLiquid:
+    liquid_entry = next((entry for entry in widget.liquids if entry.id == liquid_entry_id), None)
+    if liquid_entry is None:
+        raise ValueError("Unknown workspace widget liquid")
+    return liquid_entry
 
 
 def round_volume(volume_ml: float) -> float:

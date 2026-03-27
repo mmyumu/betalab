@@ -14,6 +14,7 @@ import { TrashWidget } from "@/components/trash-widget";
 import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
+import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
 import {
   inferAnchoredLayout,
@@ -578,6 +579,67 @@ export function LabScene() {
     event.stopPropagation();
   };
 
+  const handleGrinderDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
+    if (hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
+      event.preventDefault();
+    }
+  };
+
+  const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
+    if (!hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
+      return;
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "liquid") {
+      event.preventDefault();
+      clearDropTargets();
+      void sendWorkbenchCommand("add_liquid_to_workspace_widget", {
+        widget_id: "grinder",
+        liquid_id: toolbarPayload.itemId,
+      });
+      return;
+    }
+
+    const producePayload = readProduceDragPayload(event.dataTransfer);
+    if (!producePayload) {
+      return;
+    }
+
+    event.preventDefault();
+    clearDropTargets();
+
+    if (producePayload.sourceKind === "basket") {
+      void sendWorkbenchCommand("add_workspace_produce_lot_to_widget", {
+        widget_id: "grinder",
+        produce_lot_id: producePayload.produceLotId,
+      });
+      return;
+    }
+
+    if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
+      void sendWorkbenchCommand("move_workbench_produce_lot_to_widget", {
+        widget_id: "grinder",
+        source_slot_id: producePayload.sourceSlotId,
+        produce_lot_id: producePayload.produceLotId,
+      });
+      return;
+    }
+
+    if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
+      void sendWorkbenchCommand("restore_trashed_produce_lot_to_widget", {
+        widget_id: "grinder",
+        trash_produce_lot_id: producePayload.trashProduceLotId,
+      });
+    }
+  };
+
   const handleTrashDragOver = (event: DragEvent<HTMLButtonElement>) => {
     if (isKnifeMode) {
       return;
@@ -728,9 +790,13 @@ export function LabScene() {
   const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
+  const grinderWidget =
+    state.experiment.workspace.widgets.find((widget) => widget.id === "grinder") ?? null;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
   );
+  const grinderProduceLots = grinderWidget?.produceLots ?? [];
+  const grinderLiquids = grinderWidget?.liquids ?? [];
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -1307,15 +1373,69 @@ export function LabScene() {
                   ) : (
                     <WorkspaceEquipmentWidget
                       badge="Prep"
+                      dataDropHighlighted={isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
                       description="Compact benchtop mill for chilled sample homogenization before extraction."
+                      dropZoneTestId="grinder-dropzone"
                       eyebrow="Cryogenic grinder"
                       footer="Use this to represent the cold grinding step once homogenization actions are wired."
+                      onDragOver={handleGrinderDragOver}
+                      onDrop={handleGrinderDrop}
                       title="Cryogenic grinder"
                     >
-                      <CryogenicGrinderIllustration
-                        className="mx-auto max-w-[24rem]"
-                        testId="cryogenic-grinder-illustration"
-                      />
+                      <div className="space-y-4">
+                        <CryogenicGrinderIllustration
+                          className="mx-auto max-w-[24rem]"
+                          testId="cryogenic-grinder-illustration"
+                        />
+                        <div className="space-y-2">
+                          {grinderProduceLots.map((lot) => (
+                            <DraggableInventoryItem
+                              className="rounded-[0.9rem] bg-white"
+                              contentClassName="flex-1"
+                              dataTestId={`grinder-produce-${lot.id}`}
+                              key={lot.id}
+                              leading={
+                                <div className="h-10 w-10 shrink-0">
+                                  <CryogenicGrinderIllustration className="h-10 w-10" />
+                                </div>
+                              }
+                              subtitle={
+                                <span className="block truncate text-xs text-slate-500">
+                                  {formatProduceLotMetadata(lot)}
+                                </span>
+                              }
+                              title={
+                                <span className="block truncate text-sm font-semibold text-slate-900">
+                                  {lot.label}
+                                </span>
+                              }
+                            />
+                          ))}
+                          {grinderLiquids.map((liquid) => (
+                            <DraggableInventoryItem
+                              className="rounded-[0.9rem] bg-white"
+                              contentClassName="flex-1"
+                              dataTestId={`grinder-liquid-${liquid.id}`}
+                              key={liquid.id}
+                              subtitle={
+                                <span className="block truncate text-xs text-slate-500">
+                                  Cooling medium
+                                </span>
+                              }
+                              title={
+                                <span className="block truncate text-sm font-semibold text-slate-900">
+                                  {liquid.name}
+                                </span>
+                              }
+                            />
+                          ))}
+                          {grinderProduceLots.length === 0 && grinderLiquids.length === 0 ? (
+                            <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/75 px-4 py-4 text-sm text-slate-500">
+                              Drop an apple lot or dry ice pellets into the grinder.
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
                     </WorkspaceEquipmentWidget>
                   )}
                 </FloatingWidget>

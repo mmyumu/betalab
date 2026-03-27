@@ -1,5 +1,10 @@
 export type ToolbarAccent = "amber" | "emerald" | "rose" | "sky";
-export type DropTargetType = "workbench_slot" | "workspace_canvas" | "rack_slot" | "trash_bin";
+export type DropTargetType =
+  | "workbench_slot"
+  | "workspace_canvas"
+  | "rack_slot"
+  | "trash_bin"
+  | "grinder_widget";
 
 type ToolbarBaseItem = {
   allowedDropTargets: DropTargetType[];
@@ -276,6 +281,8 @@ export type ExperimentWorkspaceWidget = {
   y?: number;
   isPresent: boolean;
   isTrashed: boolean;
+  produceLots?: ExperimentProduceLot[];
+  liquids?: BenchLiquidPortion[];
 };
 
 export type ExperimentProduceLot = {

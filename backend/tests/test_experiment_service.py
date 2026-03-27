@@ -147,6 +147,55 @@ def test_place_cutting_board_on_workbench() -> None:
     assert slot.tool.tool_type == "cutting_board"
 
 
+def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+
+    moved = service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert moved.workspace.produce_lots == []
+    assert len(grinder.produce_lots) == 1
+    assert grinder.produce_lots[0].produce_type == "apple"
+    assert len(grinder.liquids) == 1
+    assert grinder.liquids[0].liquid_id == "dry_ice_pellets"
+    assert grinder.liquids[0].volume_ml == 1.0
+    assert updated.audit_log[-1] == "Dry ice pellets added to Cryogenic grinder."
+
+
 def test_sampling_bag_label_can_be_applied_and_edited() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

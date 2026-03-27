@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from app.domain.rules import is_workspace_widget_discardable
-from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, new_id
-from app.services.command_handlers.support import find_workspace_produce_lot, find_workspace_widget
+from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, WorkbenchLiquid, new_id
+from app.domain.workbench_catalog import get_workbench_liquid_definition
+from app.services.command_handlers.support import (
+    find_trash_produce_lot,
+    find_workbench_slot,
+    find_workspace_produce_lot,
+    find_workspace_widget,
+)
 
 
 def _apply_widget_layout_payload(widget, payload: dict) -> None:
@@ -75,6 +81,82 @@ def create_produce_lot(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 
 
+def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    liquid_definition = get_workbench_liquid_definition(str(payload["liquid_id"]))
+
+    if liquid_definition.id != "dry_ice_pellets":
+        raise ValueError(f"{widget.label} only accepts dry ice pellets.")
+
+    existing_liquid = next(
+        (liquid for liquid in widget.liquids if liquid.liquid_id == liquid_definition.id),
+        None,
+    )
+    if existing_liquid is None:
+        widget.liquids.append(
+            WorkbenchLiquid(
+                id=new_id("workspace_liquid"),
+                liquid_id=liquid_definition.id,
+                name=liquid_definition.name,
+                volume_ml=liquid_definition.transfer_volume_ml,
+                accent=liquid_definition.accent,
+            )
+        )
+        experiment.audit_log.append(f"{liquid_definition.name} added to {widget.label}.")
+        return
+
+    existing_liquid.volume_ml += liquid_definition.transfer_volume_ml
+    experiment.audit_log.append(f"{liquid_definition.name} increased in {widget.label}.")
+
+
+def add_workspace_produce_lot_to_widget(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    produce_lot = find_workspace_produce_lot(experiment.workspace, str(payload["produce_lot_id"]))
+    _add_produce_lot_to_widget(widget, produce_lot)
+    experiment.workspace.produce_lots = [
+        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
+    ]
+    experiment.audit_log.append(f"{produce_lot.label} added to {widget.label}.")
+
+
+def move_workbench_produce_lot_to_widget(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    source_slot = find_workbench_slot(experiment.workbench, str(payload["source_slot_id"]))
+    produce_lot_id = str(payload["produce_lot_id"])
+    produce_lot = next(
+        (
+            lot
+            for lot in ((source_slot.tool.produce_lots if source_slot.tool else []) + source_slot.surface_produce_lots)
+            if lot.id == produce_lot_id
+        ),
+        None,
+    )
+    if produce_lot is None:
+        raise ValueError("Unknown produce lot")
+
+    if source_slot.tool is not None:
+        source_slot.tool.produce_lots = [
+            lot for lot in source_slot.tool.produce_lots if lot.id != produce_lot.id
+        ]
+    source_slot.surface_produce_lots = [
+        lot for lot in source_slot.surface_produce_lots if lot.id != produce_lot.id
+    ]
+    _add_produce_lot_to_widget(widget, produce_lot)
+    experiment.audit_log.append(f"{produce_lot.label} moved to {widget.label}.")
+
+
+def restore_trashed_produce_lot_to_widget(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    trashed_produce_lot = find_trash_produce_lot(experiment.trash, str(payload["trash_produce_lot_id"]))
+    _add_produce_lot_to_widget(widget, trashed_produce_lot.produce_lot)
+    experiment.trash.produce_lots = [
+        entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
+    ]
+    experiment.audit_log.append(
+        f"{trashed_produce_lot.produce_lot.label} restored from trash to {widget.label}."
+    )
+
+
 def discard_workspace_produce_lot(experiment: Experiment, payload: dict) -> None:
     produce_lot = find_workspace_produce_lot(experiment.workspace, str(payload["produce_lot_id"]))
     experiment.workspace.produce_lots = [
@@ -88,3 +170,16 @@ def discard_workspace_produce_lot(experiment: Experiment, payload: dict) -> None
         )
     )
     experiment.audit_log.append(f"{produce_lot.label} discarded from Produce basket.")
+
+
+def _find_grinder_widget(experiment: Experiment, widget_id: str):
+    widget = find_workspace_widget(experiment.workspace, widget_id)
+    if widget.id != "grinder" or widget.widget_type != "cryogenic_grinder":
+        raise ValueError(f"{widget.label} does not accept grinder contents.")
+    return widget
+
+
+def _add_produce_lot_to_widget(widget, produce_lot: ProduceLot) -> None:
+    if widget.produce_lots:
+        raise ValueError(f"{widget.label} already contains a produce lot.")
+    widget.produce_lots.append(produce_lot)

@@ -266,7 +266,7 @@ function makeTrashSampleLabelEntry(
 }
 
 function makeWorkspaceWithRackVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
-  return makeWorkspaceWidgets([{}, {}, { isPresent: true, ...overrides }, {}, {}]);
+  return makeWorkspaceWidgets([{}, {}, { isPresent: true, ...overrides }, {}, {}, {}]);
 }
 
 function makeWorkspaceWithRackAndInstrumentVisible(
@@ -279,7 +279,12 @@ function makeWorkspaceWithRackAndInstrumentVisible(
     { isPresent: true, ...rackOverrides },
     { isPresent: true, ...instrumentOverrides },
     {},
+    {},
   ]);
+}
+
+function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
+  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, { isPresent: true, ...overrides }]);
 }
 
 afterEach(() => {
@@ -1145,6 +1150,113 @@ describe("LabScene", () => {
       expect(
         within(screen.getByTestId("bench-slot-station_2")).getByText("contaminated"),
       ).toBeInTheDocument();
+    });
+  });
+
+  it("drops a basket apple lot into the grinder", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
+        workspaceWidgets: makeWorkspaceWithGrinderVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketProduceLots: [],
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              produceType: "apple",
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+    const basketProduce = await screen.findByTestId("basket-produce-produce_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(basketProduce, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("grinder-dropzone"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("grinder-dropzone"), dragOverEvent);
+    fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_workspace_produce_lot_to_widget",
+      { widget_id: "grinder", produce_lot_id: "produce_1" },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-produce-produce_1")).toBeInTheDocument();
+    });
+  });
+
+  it("drops dry ice pellets into the grinder", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-dropzone")).toBeInTheDocument();
+    });
+
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-dry_ice_pellets"), {
+      dataTransfer: transfer,
+    });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("grinder-dropzone"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("grinder-dropzone"), dragOverEvent);
+    fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "add_liquid_to_workspace_widget",
+      { widget_id: "grinder", liquid_id: "dry_ice_pellets" },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Dry ice pellets")).toBeInTheDocument();
     });
   });
 

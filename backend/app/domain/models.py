@@ -95,6 +95,8 @@ class WorkspaceWidget:
     offset_y: int
     is_present: bool
     is_trashed: bool
+    produce_lots: list["ProduceLot"] = field(default_factory=list)
+    liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
 
 @dataclass

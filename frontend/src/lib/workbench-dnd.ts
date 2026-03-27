@@ -181,7 +181,8 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -280,7 +281,8 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -324,7 +326,8 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -369,7 +372,8 @@ export function readTrashToolDragPayload(dataTransfer: DataTransfer): TrashToolD
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -416,7 +420,8 @@ export function readWorkspaceWidgetDragPayload(
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -459,7 +464,8 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
           targetType === "workbench_slot" ||
           targetType === "workspace_canvas" ||
           targetType === "rack_slot" ||
-          targetType === "trash_bin",
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (
@@ -505,7 +511,9 @@ export function readSampleLabelDragPayload(
     const allowedDropTargets =
       parsed.allowedDropTargets?.filter(
         (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" || targetType === "trash_bin",
+          targetType === "workbench_slot" ||
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
       ) ?? [];
 
     if (

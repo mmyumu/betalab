@@ -92,6 +92,12 @@ WORKBENCH_LIQUIDS = {
         accent="sky",
         transfer_volume_ml=5.0,
     ),
+    "dry_ice_pellets": WorkbenchLiquidDefinition(
+        id="dry_ice_pellets",
+        name="Dry ice pellets",
+        accent="sky",
+        transfer_volume_ml=1.0,
+    ),
 }
 
 

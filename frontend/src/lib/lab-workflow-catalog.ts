@@ -1,4 +1,4 @@
-import { getSampleLabelDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
+import { getLiquidDropTargets, getSampleLabelDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
 
 export const labWorkflowCategories: ToolbarCategory[] = [
@@ -71,7 +71,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "acetonitrile_extraction",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getLiquidDropTargets("acetonitrile"),
         itemType: "liquid",
         name: "Acetonitrile",
         subtitle: "Extraction solvent",
@@ -82,7 +82,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "apple_extract",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getLiquidDropTargets("apple_extract"),
         itemType: "liquid",
         name: "Apple extract",
         subtitle: "Homogenized sample",
@@ -93,7 +93,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "ultrapure_water_rinse",
-        allowedDropTargets: ["workbench_slot"],
+        allowedDropTargets: getLiquidDropTargets("ultrapure_water"),
         itemType: "liquid",
         name: "Ultrapure water",
         subtitle: "Rinse / dilution",
@@ -104,11 +104,11 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "dry_ice_pellets",
-        allowedDropTargets: [],
+        allowedDropTargets: getLiquidDropTargets("dry_ice_pellets"),
         itemType: "liquid",
         name: "Dry ice pellets (CO2)",
         subtitle: "Cryogenic cooling",
-        description: "Solid CO2 pellets used for chilled handling and cold-chain prep. Drop targets will come later.",
+        description: "Solid CO2 pellets used for chilled handling and cold-chain prep in the cryogenic grinder.",
         accent: "sky",
         liquidType: "dry_ice_pellets",
         transfer_volume_ml: 0,

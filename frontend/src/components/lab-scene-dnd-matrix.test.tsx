@@ -30,6 +30,14 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
     expect(screen.getByTestId("trash-dropzone")).toBeInTheDocument();
   });
 
+  if (sourceCase.availableTargets.includes("grinder-dropzone")) {
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-dropzone")).toBeInTheDocument();
+    });
+  } else {
+    expect(screen.queryByTestId("grinder-dropzone")).not.toBeInTheDocument();
+  }
+
   if (sourceCase.expectRackWidget) {
     await waitFor(() => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();

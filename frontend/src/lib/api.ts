@@ -204,6 +204,12 @@ function normalizeWorkspaceWidget(
     y: legacyY,
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
+    produceLots: (widget.produceLots ?? widget.produce_lots ?? []).map(
+      (lot) => normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
+    ),
+    liquids: (widget.liquids as BenchLiquidPortion[] | undefined)?.map(
+      (liquid) => normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
+    ) ?? [],
   };
 }
 

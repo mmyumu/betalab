@@ -89,6 +89,8 @@ class WorkspaceWidgetSchema(BaseModel):
     offset_y: int
     is_present: bool
     is_trashed: bool
+    produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
+    liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
 
 
 class WorkspaceSchema(BaseModel):
@@ -118,6 +120,10 @@ class ExperimentCommandEnvelope(BaseModel):
         "add_workspace_widget",
         "move_workspace_widget",
         "discard_workspace_widget",
+        "add_liquid_to_workspace_widget",
+        "add_workspace_produce_lot_to_widget",
+        "move_workbench_produce_lot_to_widget",
+        "restore_trashed_produce_lot_to_widget",
         "create_produce_lot",
         "discard_workspace_produce_lot",
         "cut_workbench_produce_lot",

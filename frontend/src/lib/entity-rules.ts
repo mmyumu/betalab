@@ -1,4 +1,5 @@
 import type {
+  LiquidType,
   DropTargetType,
   ExperimentWorkspaceWidgetId,
   ToolType,
@@ -23,11 +24,19 @@ export function canToolAcceptProduce(toolType: ToolType): boolean {
 }
 
 export function getProduceLotDropTargets(): DropTargetType[] {
-  return ["workbench_slot", "trash_bin"];
+  return ["workbench_slot", "grinder_widget", "trash_bin"];
 }
 
 export function getSampleLabelDropTargets(): DropTargetType[] {
   return ["workbench_slot", "trash_bin"];
+}
+
+export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
+  if (liquidType === "dry_ice_pellets") {
+    return ["grinder_widget"];
+  }
+
+  return ["workbench_slot"];
 }
 
 export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidgetId): boolean {

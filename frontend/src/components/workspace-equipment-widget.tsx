@@ -1,24 +1,32 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { DragEvent, ReactNode } from "react";
 
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 
 type WorkspaceEquipmentWidgetProps = {
   badge?: string;
   children: ReactNode;
+  dataDropHighlighted?: "true" | "false";
   description?: string;
+  dropZoneTestId?: string;
   eyebrow: string;
   footer?: string;
+  onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop?: (event: DragEvent<HTMLDivElement>) => void;
   title?: string;
 };
 
 export function WorkspaceEquipmentWidget({
   badge,
   children,
+  dataDropHighlighted = "false",
   description,
+  dropZoneTestId,
   eyebrow,
   footer,
+  onDragOver,
+  onDrop,
   title,
 }: WorkspaceEquipmentWidgetProps) {
   return (
@@ -48,7 +56,17 @@ export function WorkspaceEquipmentWidget({
       </div>
 
       <div className="px-5 py-5 xl:px-6 xl:py-6">
-        <div className="rounded-[1.8rem] border border-slate-200/80 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),rgba(241,245,249,0.95))] p-4 shadow-inner">
+        <div
+          className={`rounded-[1.8rem] border bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),rgba(241,245,249,0.95))] p-4 shadow-inner transition-colors ${
+            dataDropHighlighted === "true"
+              ? "border-sky-300 ring-2 ring-sky-200/80"
+              : "border-slate-200/80"
+          }`}
+          data-drop-highlighted={dataDropHighlighted}
+          data-testid={dropZoneTestId}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
           {children}
         </div>
         {footer ? <p className="mt-4 text-sm text-slate-600">{footer}</p> : null}

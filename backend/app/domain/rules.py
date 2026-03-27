@@ -10,4 +10,4 @@ def can_tool_accept_produce(tool_type: str) -> bool:
 
 
 def is_workspace_widget_discardable(widget_id: str) -> bool:
-    return widget_id in {"rack", "instrument"}
+    return widget_id in {"rack", "instrument", "grinder"}

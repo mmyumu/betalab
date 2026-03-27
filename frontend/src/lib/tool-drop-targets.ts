@@ -1,4 +1,5 @@
 export {
+  getLiquidDropTargets,
   canToolAcceptLiquids,
   canToolAcceptProduce,
   getProduceLotDropTargets,

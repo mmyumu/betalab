@@ -31,6 +31,7 @@ export type MockDataTransfer = {
 export type DndTargetId =
   | "bench-slot-station_1"
   | "bench-slot-station_2"
+  | "grinder-dropzone"
   | "rack-illustration-slot-1"
   | "widget-workspace"
   | "trash-dropzone";
@@ -79,6 +80,7 @@ export const dndTargetCases: {
 }[] = [
   { id: "bench-slot-station_1", label: "occupied station", assertDragOver: true },
   { id: "bench-slot-station_2", label: "empty station", assertDragOver: true },
+  { id: "grinder-dropzone", label: "grinder", assertDragOver: true },
   { id: "rack-illustration-slot-1", label: "rack slot", assertDragOver: true },
   { id: "widget-workspace", label: "workspace canvas", assertDragOver: false },
   { id: "trash-dropzone", label: "trash", assertDragOver: true },
@@ -189,7 +191,7 @@ function makeWorkspaceWidgets(
       anchor: "top-left",
       offsetX: 980,
       offsetY: 886,
-      isPresent: false,
+      isPresent: true,
       isTrashed: false,
     },
   ];
@@ -290,6 +292,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -300,9 +303,9 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
       }),
     targetExpectations: {
       "bench-slot-station_1": {
-        compatible: item.itemType === "liquid",
+        compatible: item.itemType === "liquid" && item.id !== "dry_ice_pellets",
         command:
-          item.itemType === "liquid"
+          item.itemType === "liquid" && item.id !== "dry_ice_pellets"
             ? {
                 type: "add_liquid_to_workbench_tool",
                 payload: {
@@ -321,6 +324,19 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
                 payload: {
                   slot_id: "station_2",
                   tool_id: item.id,
+                },
+              }
+            : null,
+      },
+      "grinder-dropzone": {
+        compatible: item.itemType === "liquid" && item.id === "dry_ice_pellets",
+        command:
+          item.itemType === "liquid" && item.id === "dry_ice_pellets"
+            ? {
+                type: "add_liquid_to_workspace_widget",
+                payload: {
+                  widget_id: "grinder",
+                  liquid_id: item.id,
                 },
               }
             : null,
@@ -382,6 +398,7 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -404,6 +421,10 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
           type: "apply_sample_label_to_workbench_tool",
           payload: { slot_id: "station_2" },
         },
+      },
+      "grinder-dropzone": {
+        compatible: false,
+        command: null,
       },
       "rack-illustration-slot-1": {
         compatible: false,
@@ -437,6 +458,7 @@ function createWorkbenchToolSourceCase(item: ToolCatalogItem): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -459,6 +481,10 @@ function createWorkbenchToolSourceCase(item: ToolCatalogItem): DndSourceCase {
             target_slot_id: "station_2",
           },
         },
+      },
+      "grinder-dropzone": {
+        compatible: false,
+        command: null,
       },
       "rack-illustration-slot-1": {
         compatible: item.toolType === "sample_vial",
@@ -501,6 +527,7 @@ function createRackSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -524,6 +551,10 @@ function createRackSourceCase(): DndSourceCase {
             target_slot_id: "station_2",
           },
         },
+      },
+      "grinder-dropzone": {
+        compatible: false,
+        command: null,
       },
       "rack-illustration-slot-1": {
         compatible: true,
@@ -557,6 +588,7 @@ function createTrashToolSourceCase(item: ToolCatalogItem): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -580,6 +612,10 @@ function createTrashToolSourceCase(item: ToolCatalogItem): DndSourceCase {
             trash_tool_id: "trash_tool_1",
           },
         },
+      },
+      "grinder-dropzone": {
+        compatible: false,
+        command: null,
       },
       "rack-illustration-slot-1": {
         compatible: item.toolType === "sample_vial",
@@ -612,6 +648,7 @@ function createTrashWidgetSourceCase(
   label: string,
 ): DndSourceCase {
   const rackIsPresent = widgetId !== "rack";
+  const grinderIsPresent = widgetId !== "grinder";
 
   return {
     id: `trash-widget-${widgetId}`,
@@ -620,20 +657,14 @@ function createTrashWidgetSourceCase(
     openBasket: false,
     openTrash: true,
     expectRackWidget: rackIsPresent,
-    availableTargets: rackIsPresent
-      ? [
-          "bench-slot-station_1",
-          "bench-slot-station_2",
-          "rack-illustration-slot-1",
-          "widget-workspace",
-          "trash-dropzone",
-        ]
-      : [
-          "bench-slot-station_1",
-          "bench-slot-station_2",
-          "widget-workspace",
-          "trash-dropzone",
-        ],
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      ...(grinderIsPresent ? (["grinder-dropzone"] as const) : []),
+      ...(rackIsPresent ? (["rack-illustration-slot-1"] as const) : []),
+      "widget-workspace",
+      "trash-dropzone",
+    ],
     buildExperiment: () =>
       makeExperiment({
         slots: makeSlots([{ tool: makeTool(sampleVialItem) }]),
@@ -660,6 +691,10 @@ function createTrashWidgetSourceCase(
         command: null,
       },
       "bench-slot-station_2": {
+        compatible: false,
+        command: null,
+      },
+      "grinder-dropzone": {
         compatible: false,
         command: null,
       },
@@ -693,6 +728,7 @@ function createBasketProduceSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -735,6 +771,16 @@ function createBasketProduceSourceCase(): DndSourceCase {
           },
         },
       },
+      "grinder-dropzone": {
+        compatible: true,
+        command: {
+          type: "add_workspace_produce_lot_to_widget",
+          payload: {
+            widget_id: "grinder",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": {
         compatible: false,
         command: null,
@@ -767,6 +813,7 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -808,6 +855,17 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
           },
         },
       },
+      "grinder-dropzone": {
+        compatible: true,
+        command: {
+          type: "move_workbench_produce_lot_to_widget",
+          payload: {
+            source_slot_id: "station_1",
+            widget_id: "grinder",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": {
         compatible: false,
         command: null,
@@ -841,6 +899,7 @@ function createWorkbenchSurfaceProduceLotSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -879,6 +938,17 @@ function createWorkbenchSurfaceProduceLotSourceCase(): DndSourceCase {
           },
         },
       },
+      "grinder-dropzone": {
+        compatible: true,
+        command: {
+          type: "move_workbench_produce_lot_to_widget",
+          payload: {
+            source_slot_id: "station_1",
+            widget_id: "grinder",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": {
         compatible: false,
         command: null,
@@ -912,6 +982,7 @@ function createTrashProduceLotSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -938,6 +1009,16 @@ function createTrashProduceLotSourceCase(): DndSourceCase {
           type: "restore_trashed_produce_lot_to_workbench_tool",
           payload: {
             target_slot_id: "station_2",
+            trash_produce_lot_id: "trash_produce_lot_1",
+          },
+        },
+      },
+      "grinder-dropzone": {
+        compatible: true,
+        command: {
+          type: "restore_trashed_produce_lot_to_widget",
+          payload: {
+            widget_id: "grinder",
             trash_produce_lot_id: "trash_produce_lot_1",
           },
         },
@@ -969,6 +1050,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -991,6 +1073,10 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
             target_slot_id: "station_2",
           },
         },
+      },
+      "grinder-dropzone": {
+        compatible: false,
+        command: null,
       },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
@@ -1016,6 +1102,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -1039,6 +1126,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
           },
         },
       },
+      "grinder-dropzone": { compatible: false, command: null },
       "bench-slot-station_2": { compatible: false, command: null },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
