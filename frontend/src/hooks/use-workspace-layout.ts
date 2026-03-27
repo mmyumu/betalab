@@ -100,10 +100,10 @@ function inferAnchoredLayout(
   const leftDistance = position.x;
   const rightDistance = workspaceSize.width - (position.x + widgetSize.width);
   const topDistance = position.y;
-  const bottomDistance = workspaceSize.height - (position.y + widgetSize.height);
   const horizontalAnchor: "left" | "right" = leftDistance <= rightDistance ? "left" : "right";
-  const verticalAnchor: "top" | "bottom" = topDistance <= bottomDistance ? "top" : "bottom";
-  const anchor = `${verticalAnchor}-${horizontalAnchor}` as WidgetAnchor;
+  // The workspace height grows with the lowest widget, so anchoring moved widgets
+  // to the bottom makes them drift as the canvas expands.
+  const anchor = `top-${horizontalAnchor}` as WidgetAnchor;
 
   if (anchor === "top-left") {
     return {
@@ -121,18 +121,10 @@ function inferAnchoredLayout(
     };
   }
 
-  if (anchor === "bottom-left") {
-    return {
-      anchor,
-      offsetX: Math.round(leftDistance),
-      offsetY: Math.round(Math.max(bottomDistance, 0)),
-    };
-  }
-
   return {
     anchor,
     offsetX: Math.round(Math.max(rightDistance, 0)),
-    offsetY: Math.round(Math.max(bottomDistance, 0)),
+    offsetY: Math.round(topDistance),
   };
 }
 
@@ -250,8 +242,13 @@ export function useWorkspaceLayout<WidgetId extends string>({
 
     setWidgetLayout((current) => {
       const nextLayout = { ...current };
+      const draggedWidgetId = dragStateRef.current?.widgetId ?? null;
 
       (Object.keys(nextLayout) as WidgetId[]).forEach((widgetId) => {
+        if (widgetId === draggedWidgetId) {
+          return;
+        }
+
         const currentLayout = nextLayout[widgetId];
         if (
           !currentLayout.anchor ||
