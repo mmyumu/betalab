@@ -39,6 +39,39 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert fetched.json()["id"] == experiment_id
 
 
+def test_add_liquid_to_workbench_tool_accepts_an_explicit_dosed_volume_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "place_tool_on_workbench",
+                "payload": {
+                    "slot_id": "station_1",
+                    "tool_id": "centrifuge_tube_50ml",
+                },
+            },
+        )
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workbench_tool",
+                "payload": {
+                    "slot_id": "station_1",
+                    "liquid_id": "acetonitrile_extraction",
+                    "volume_ml": 7.5,
+                },
+            },
+        )
+
+    assert added.status_code == 200
+    assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 7.5
+
+
 def test_cut_workbench_produce_lot_round_trip_over_http() -> None:
     from fastapi.testclient import TestClient
 

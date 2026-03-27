@@ -83,7 +83,10 @@ def add_liquid_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
     if remaining_capacity <= 0:
         raise ValueError(f"{slot.tool.label} is already full.")
 
-    volume_to_add = round_volume(min(liquid_definition.transfer_volume_ml, remaining_capacity))
+    requested_volume = round_volume(
+        max(float(payload.get("volume_ml", liquid_definition.transfer_volume_ml)), 0.0)
+    )
+    volume_to_add = round_volume(min(requested_volume, remaining_capacity))
     existing_liquid = next(
         (liquid for liquid in slot.tool.liquids if liquid.liquid_id == liquid_definition.id),
         None,
@@ -106,7 +109,7 @@ def add_liquid_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
         updated_volume = existing_liquid.volume_ml
         existing_liquid_was_present = True
 
-    if volume_to_add < liquid_definition.transfer_volume_ml:
+    if volume_to_add < requested_volume:
         if existing_liquid_was_present:
             experiment.audit_log.append(
                 f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {slot.tool.label} (remaining capacity)."

@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { BenchToolCard } from "@/components/bench-tool-card";
@@ -79,7 +79,7 @@ type WorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onSampleLabelTextChange?: (slotId: string, sampleLabelText: string) => void;
-  onLiquidVolumeChange: (slotId: string, liquidId: string, volumeMl: number) => void;
+  renderPendingContent?: (slot: BenchSlot, tool: BenchToolInstance) => ReactNode;
   slots: BenchSlot[];
   statusMessage: string;
   onToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
@@ -104,7 +104,7 @@ export function WorkbenchPanel({
   onSampleLabelDragEnd,
   onSampleLabelDragStart,
   onSampleLabelTextChange,
-  onLiquidVolumeChange,
+  renderPendingContent,
   slots,
   statusMessage,
   onToolbarItemDrop,
@@ -353,9 +353,6 @@ export function WorkbenchPanel({
                       onRemoveLiquid={(liquidId) => {
                         onRemoveLiquid(slot.id, liquidId);
                       }}
-                      onLiquidVolumeChange={(liquidId, volumeMl) => {
-                        onLiquidVolumeChange(slot.id, liquidId, volumeMl);
-                      }}
                       onSampleLabelTextChange={(sampleLabelText) => {
                         onSampleLabelTextChange?.(slot.id, sampleLabelText);
                       }}
@@ -367,6 +364,7 @@ export function WorkbenchPanel({
                               onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
                             }
                       }
+                      pendingContent={renderPendingContent?.(slot, tool)}
                       tool={tool}
                     />
                   ) : surfaceProduceLots.length > 0 ? (

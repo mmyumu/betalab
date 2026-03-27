@@ -1,8 +1,7 @@
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
-import { InlineQuantityInput } from "@/components/inline-quantity-input";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
@@ -17,10 +16,10 @@ type BenchToolCardProps = {
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotClick?: (produceLot: ExperimentProduceLot) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
+  pendingContent?: ReactNode;
   onProduceLotDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
-  onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void;
   onSampleLabelTextChange?: (sampleLabelText: string) => void;
   onSampleLabelDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onSampleLabelDragStart?: (event: DragEvent<HTMLElement>) => void;
@@ -53,10 +52,10 @@ export function BenchToolCard({
   onDragEnd,
   onProduceLotClick,
   onDragStart,
+  pendingContent,
   onProduceLotDragEnd,
   onProduceLotDragStart,
   onRemoveLiquid,
-  onLiquidVolumeChange,
   onSampleLabelTextChange,
   onSampleLabelDragEnd,
   onSampleLabelDragStart,
@@ -302,6 +301,8 @@ export function BenchToolCard({
                 Drop produce lot here
               </span>
             )
+          ) : pendingContent ? (
+            pendingContent
           ) : tool.liquids.length > 0 ? (
             tool.liquids.map((liquid) => (
               <div
@@ -367,14 +368,9 @@ export function BenchToolCard({
                     </svg>
                   </button>
 
-                  <InlineQuantityInput
-                    ariaLabel={`${liquid.name} volume`}
-                    onChange={(value) => {
-                      onLiquidVolumeChange(liquid.id, value);
-                    }}
-                    unitLabel="mL"
-                    value={liquid.volume_ml}
-                  />
+                  <span className="text-[11px] font-semibold text-slate-600">
+                    {formatVolume(liquid.volume_ml)} mL
+                  </span>
                 </div>
               </div>
             ))

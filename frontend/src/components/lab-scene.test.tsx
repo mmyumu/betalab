@@ -1274,8 +1274,8 @@ describe("LabScene", () => {
     });
     fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
 
-    fireEvent.click(screen.getByLabelText("Increase dry ice draft mass"));
-    fireEvent.click(screen.getByLabelText("Increase dry ice draft mass"));
+    fireEvent.click(screen.getByLabelText("Increase Dry ice draft mass"));
+    fireEvent.click(screen.getByLabelText("Increase Dry ice draft mass"));
     fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {
@@ -1295,7 +1295,7 @@ describe("LabScene", () => {
     });
   });
 
-  it("lets the user edit the dry ice pellet mass in the grinder", async () => {
+  it("shows poured dry ice as a read-only mass label in the grinder", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
@@ -1311,49 +1311,14 @@ describe("LabScene", () => {
         }),
       }),
     );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        auditLog: ["Dry ice pellets adjusted to 1.5 g in Cryogenic grinder."],
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 1.5,
-              accent: "sky",
-            },
-          ],
-        }),
-      }),
-    );
 
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("1000")).toBeInTheDocument();
+      expect(screen.getByText("1000 g")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText("Dry ice pellets mass"), {
-      target: { value: "1.5" },
-    });
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("1.5")).toBeInTheDocument();
-    });
-
-    expect(sendExperimentCommand).toHaveBeenCalledWith(
-      "experiment_pesticides",
-      "update_workspace_widget_liquid_volume",
-      {
-        widget_id: "grinder",
-        liquid_entry_id: "workspace_liquid_1",
-        volume_ml: 1.5,
-      },
-    );
-    expect(
-      screen.getByText("Dry ice pellets adjusted to 1.5 g in Cryogenic grinder."),
-    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Dry ice pellets mass")).not.toBeInTheDocument();
   });
 
   it("shows a thermometer for grinder produce and advances cryogenics over time", async () => {
@@ -1428,49 +1393,31 @@ describe("LabScene", () => {
     );
   });
 
-  it("pauses cryogenic ticks while the grinder mass input is focused", async () => {
-    vi.useFakeTimers();
+  it("pauses cryogenic ticks while the grinder dosing draft is open", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              temperatureC: 12,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
-          ],
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 1000,
-              accent: "sky",
-            },
-          ],
-        }),
+        workspaceWidgets: makeWorkspaceWithGrinderVisible(),
       }),
     );
 
-    await act(async () => {
-      render(<PesticideWorkbench />);
-      await Promise.resolve();
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-dropzone")).toBeInTheDocument();
     });
 
-    fireEvent.focus(screen.getByLabelText("Dry ice pellets mass"));
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-dry_ice_pellets"), {
+      dataTransfer: transfer,
+    });
+    fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
+
+    vi.useFakeTimers();
     await act(async () => {
       vi.advanceTimersByTime(1500);
     });
 
-    expect(sendExperimentCommand).not.toHaveBeenCalledWith(
-      "experiment_pesticides",
-      "advance_workspace_cryogenics",
-      expect.anything(),
-    );
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
   it("disables drag and drop interactions while the knife action is selected", async () => {
@@ -2513,6 +2460,11 @@ describe("LabScene", () => {
       dataTransfer: liquidTransfer,
     });
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: liquidTransfer });
+    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Dose Acetonitrile")).toBeInTheDocument();
+    expect(screen.getByLabelText("Acetonitrile draft volume")).toHaveValue(10);
+
+    fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {
       expect(
@@ -2541,9 +2493,9 @@ describe("LabScene", () => {
       2,
       "experiment_pesticides",
       "add_liquid_to_workbench_tool",
-      { slot_id: "station_1", liquid_id: "acetonitrile_extraction" },
+      { slot_id: "station_1", liquid_id: "acetonitrile_extraction", volume_ml: 10 },
     );
-    expect(screen.getByDisplayValue("2")).toBeInTheDocument();
+    expect(screen.getByText("2 mL")).toBeInTheDocument();
   });
 
   it("shows a syncing status and ignores additional commands while one is pending", async () => {
@@ -2587,7 +2539,7 @@ describe("LabScene", () => {
     });
   });
 
-  it("merges repeated drops of the same liquid via backend state", async () => {
+  it("sends the selected dosed volume when adding a liquid to a bench tool", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         slots: makeSlots([{ tool: makeTool({ toolId: "centrifuge_tube_50ml", label: "50 mL centrifuge tube", toolType: "centrifuge_tube", capacity_ml: 50 }) }]),
@@ -2595,7 +2547,7 @@ describe("LabScene", () => {
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        auditLog: ["Acetonitrile increased to 20 mL in 50 mL centrifuge tube."],
+        auditLog: ["Acetonitrile increased to 15 mL in 50 mL centrifuge tube."],
         slots: makeSlots([
           {
             tool: makeTool({
@@ -2608,7 +2560,7 @@ describe("LabScene", () => {
                   id: "bench_liquid_1",
                   liquidId: "acetonitrile_extraction",
                   name: "Acetonitrile",
-                  volume_ml: 20,
+                  volume_ml: 15,
                   accent: "amber",
                 },
               ],
@@ -2631,78 +2583,27 @@ describe("LabScene", () => {
       dataTransfer: liquidTransfer,
     });
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: liquidTransfer });
+    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {
-      expect(screen.getByText("Acetonitrile increased to 20 mL in 50 mL centrifuge tube.")).toBeInTheDocument();
-    });
-
-    expect(screen.getByDisplayValue("20")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Acetonitrile volume")).toHaveLength(1);
-  });
-
-  it("lets the user edit the liquid volume through a backend command", async () => {
-    vi.mocked(createExperiment).mockResolvedValue(
-      makeWorkbenchExperiment({
-        slots: makeSlots([
-          {
-            tool: makeTool({
-              liquids: [
-                {
-                  id: "bench_liquid_1",
-                  liquidId: "acetonitrile_extraction",
-                  name: "Acetonitrile",
-                  volume_ml: 2,
-                  accent: "amber",
-                },
-              ],
-            }),
-          },
-        ]),
-      }),
-    );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        auditLog: ["Acetonitrile adjusted to 1.5 mL in Autosampler vial."],
-        slots: makeSlots([
-          {
-            tool: makeTool({
-              liquids: [
-                {
-                  id: "bench_liquid_1",
-                  liquidId: "acetonitrile_extraction",
-                  name: "Acetonitrile",
-                  volume_ml: 1.5,
-                  accent: "amber",
-                },
-              ],
-            }),
-          },
-        ]),
-      }),
-    );
-
-    render(<PesticideWorkbench />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("2")).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText("Acetonitrile volume"), { target: { value: "1.5" } });
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("1.5")).toBeInTheDocument();
+      expect(screen.getByText("Acetonitrile increased to 15 mL in 50 mL centrifuge tube.")).toBeInTheDocument();
     });
 
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
-      "update_workbench_liquid_volume",
+      "add_liquid_to_workbench_tool",
       {
         slot_id: "station_1",
-        liquid_entry_id: "bench_liquid_1",
-        volume_ml: 1.5,
+        liquid_id: "acetonitrile_extraction",
+        volume_ml: 5,
       },
     );
-    expect(screen.getByText("Acetonitrile adjusted to 1.5 mL in Autosampler vial.")).toBeInTheDocument();
+    expect(screen.getByText("15 mL")).toBeInTheDocument();
   });
 
   it("lets the user remove a liquid from a tool through a backend command", async () => {
@@ -2752,7 +2653,7 @@ describe("LabScene", () => {
         liquid_entry_id: "bench_liquid_1",
       },
     );
-    expect(screen.queryByLabelText("Acetonitrile volume")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 mL")).not.toBeInTheDocument();
   });
 
   it("surfaces backend command failures in the status panel without mutating the bench", async () => {
@@ -2844,6 +2745,8 @@ describe("LabScene", () => {
     fireEvent.drop(station, { dataTransfer: liquidTransfer });
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {
       expect(screen.getByText("Ultrapure water added to Autosampler vial.")).toBeInTheDocument();
@@ -2852,121 +2755,8 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "add_liquid_to_workbench_tool",
-      { slot_id: "station_1", liquid_id: "ultrapure_water_rinse" },
+      { slot_id: "station_1", liquid_id: "ultrapure_water_rinse", volume_ml: 5 },
     );
-  });
-
-
-  it("changes the volume with the mouse wheel only while the input is focused", async () => {
-    vi.mocked(createExperiment).mockResolvedValue(
-      makeWorkbenchExperiment({
-        slots: makeSlots([
-          {
-            tool: makeTool({
-              liquids: [
-                {
-                  id: "bench_liquid_1",
-                  liquidId: "acetonitrile_extraction",
-                  name: "Acetonitrile",
-                  volume_ml: 2,
-                  accent: "amber",
-                },
-              ],
-            }),
-          },
-        ]),
-      }),
-    );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        auditLog: ["Acetonitrile adjusted to 1.9 mL in Autosampler vial."],
-        slots: makeSlots([
-          {
-            tool: makeTool({
-              liquids: [
-                {
-                  id: "bench_liquid_1",
-                  liquidId: "acetonitrile_extraction",
-                  name: "Acetonitrile",
-                  volume_ml: 1.9,
-                  accent: "amber",
-                },
-              ],
-            }),
-          },
-        ]),
-      }),
-    );
-
-    render(<PesticideWorkbench />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("2")).toBeInTheDocument();
-    });
-
-    const volumeInput = screen.getByLabelText("Acetonitrile volume");
-    fireEvent.focus(volumeInput);
-    fireEvent.wheel(volumeInput, { deltaY: 100 });
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("1.9")).toBeInTheDocument();
-    });
-
-    fireEvent.blur(volumeInput);
-    fireEvent.wheel(volumeInput, { deltaY: -100 });
-    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
-  });
-
-  it("changes the dry ice pellet mass with the mouse wheel only while the grinder input is focused", async () => {
-    vi.mocked(createExperiment).mockResolvedValue(
-      makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 1000,
-              accent: "sky",
-            },
-          ],
-        }),
-      }),
-    );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        auditLog: ["Dry ice pellets adjusted to 999 g in Cryogenic grinder."],
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 999,
-              accent: "sky",
-            },
-          ],
-        }),
-      }),
-    );
-
-    render(<PesticideWorkbench />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("1000")).toBeInTheDocument();
-    });
-
-    const massInput = screen.getByLabelText("Dry ice pellets mass");
-    fireEvent.focus(massInput);
-    fireEvent.wheel(massInput, { deltaY: 100 });
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue("999")).toBeInTheDocument();
-    });
-
-    fireEvent.blur(massInput);
-    fireEvent.wheel(massInput, { deltaY: -100 });
-    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
   });
 
   it("marks the rack and instrument as ready when a vial is staged in the rack", async () => {

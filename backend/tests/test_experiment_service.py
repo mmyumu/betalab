@@ -107,6 +107,47 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
 
 
+def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    first_addition = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 7.5,
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 1.25,
+        },
+    )
+
+    first_slot = next(slot for slot in first_addition.workbench.slots if slot.id == "station_1")
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert first_slot.tool is not None
+    assert slot.tool is not None
+    assert first_slot.tool.liquids[0].volume_ml == 7.5
+    assert slot.tool.liquids[0].volume_ml == 8.75
+    assert updated.audit_log[-1] == "Acetonitrile increased to 8.75 mL in 50 mL centrifuge tube."
+
+
 def test_place_sealed_sampling_bag_on_workbench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

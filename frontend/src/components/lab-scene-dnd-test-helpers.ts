@@ -304,16 +304,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
     targetExpectations: {
       "bench-slot-station_1": {
         compatible: item.itemType === "liquid" && item.id !== "dry_ice_pellets",
-        command:
-          item.itemType === "liquid" && item.id !== "dry_ice_pellets"
-            ? {
-                type: "add_liquid_to_workbench_tool",
-                payload: {
-                  slot_id: "station_1",
-                  liquid_id: item.id,
-                },
-              }
-            : null,
+        command: null,
       },
       "bench-slot-station_2": {
         compatible: item.itemType === "tool",
