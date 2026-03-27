@@ -1372,15 +1372,11 @@ export function LabScene() {
                     </WorkspaceEquipmentWidget>
                   ) : (
                     <WorkspaceEquipmentWidget
-                      badge="Prep"
                       dataDropHighlighted={isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
-                      description="Compact benchtop mill for chilled sample homogenization before extraction."
                       dropZoneTestId="grinder-dropzone"
                       eyebrow="Cryogenic grinder"
-                      footer="Use this to represent the cold grinding step once homogenization actions are wired."
                       onDragOver={handleGrinderDragOver}
                       onDrop={handleGrinderDrop}
-                      title="Cryogenic grinder"
                     >
                       <div className="space-y-4">
                         <CryogenicGrinderIllustration
