@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
+import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { InlineQuantityInput } from "@/components/inline-quantity-input";
 import { InventoryWidget } from "@/components/inventory-widget";
@@ -1405,7 +1406,10 @@ export function LabScene() {
                               key={lot.id}
                               leading={
                                 <div className="h-10 w-10 shrink-0">
-                                  <CryogenicGrinderIllustration className="h-10 w-10" />
+                                  <AppleIllustration
+                                    className="h-10 w-10"
+                                    variant={lot.cutState === "cut" ? "cut" : "whole"}
+                                  />
                                 </div>
                               }
                               subtitle={
