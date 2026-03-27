@@ -3,6 +3,13 @@ import { expect, test } from "@playwright/test";
 import { dragAndDrop } from "./support/drag-and-drop";
 import { mockWorkbenchApi } from "./support/workbench-api";
 
+async function expandToolbarCategory(page: Parameters<typeof test.beforeEach>[0]["page"], name: string) {
+  const toggle = page.getByRole("button", { name: new RegExp(name, "i") });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
 test.describe("Pesticide workbench", () => {
   let api: Awaited<ReturnType<typeof mockWorkbenchApi>>;
 
@@ -15,6 +22,10 @@ test.describe("Pesticide workbench", () => {
 
   test("loads the initial lab workspace from the mocked backend", async ({ page }) => {
     await expect(page.getByText("Empty station")).toHaveCount(2);
+
+    await expandToolbarCategory(page, "Workspace equipment");
+    await expandToolbarCategory(page, "MISC");
+
     await expect(page.getByTestId("toolbar-item-autosampler_rack_widget")).toBeVisible();
     await expect(page.getByTestId("toolbar-item-lc_msms_instrument_widget")).toBeVisible();
     await expect(page.getByTestId("toolbar-item-sealed_sampling_bag")).toBeVisible();
@@ -36,6 +47,9 @@ test.describe("Pesticide workbench", () => {
   test("stages an autosampler vial from the palette onto the bench and into the rack", async ({
     page,
   }) => {
+    await expandToolbarCategory(page, "Workspace equipment");
+    await expandToolbarCategory(page, "Containers");
+
     await dragAndDrop(
       page.getByTestId("toolbar-item-autosampler_rack_widget"),
       page.getByTestId("widget-workspace"),
@@ -75,6 +89,8 @@ test.describe("Pesticide workbench", () => {
   });
 
   test("moves a discarded tool into trash and restores it back to the bench", async ({ page }) => {
+    await expandToolbarCategory(page, "MISC");
+
     await dragAndDrop(
       page.getByTestId("toolbar-item-sealed_sampling_bag"),
       page.getByTestId("bench-slot-station_1"),
