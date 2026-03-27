@@ -121,6 +121,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "move_workspace_widget",
         "discard_workspace_widget",
         "add_liquid_to_workspace_widget",
+        "update_workspace_widget_liquid_volume",
         "add_workspace_produce_lot_to_widget",
         "move_workbench_produce_lot_to_widget",
         "restore_trashed_produce_lot_to_widget",

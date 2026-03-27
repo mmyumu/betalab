@@ -6,6 +6,7 @@ import type { DragEvent } from "react";
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
+import { InlineQuantityInput } from "@/components/inline-quantity-input";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
@@ -303,6 +304,18 @@ export function LabScene() {
     void sendWorkbenchCommand("remove_liquid_from_workbench_tool", {
       slot_id: slotId,
       liquid_entry_id: liquidId,
+    });
+  };
+
+  const handleWorkspaceWidgetLiquidVolumeChange = (
+    widgetId: string,
+    liquidId: string,
+    volumeMl: number,
+  ) => {
+    void sendWorkbenchCommand("update_workspace_widget_liquid_volume", {
+      widget_id: widgetId,
+      liquid_entry_id: liquidId,
+      volume_ml: volumeMl,
     });
   };
 
@@ -1414,9 +1427,21 @@ export function LabScene() {
                               dataTestId={`grinder-liquid-${liquid.id}`}
                               key={liquid.id}
                               subtitle={
-                                <span className="block truncate text-xs text-slate-500">
-                                  Cooling medium
-                                </span>
+                                <div className="mt-1 flex items-center justify-between gap-3">
+                                  <span className="block truncate text-xs text-slate-500">
+                                    Cooling medium
+                                  </span>
+                                  <InlineQuantityInput
+                                    ariaLabel={`${liquid.name} mass`}
+                                    inputStep={1}
+                                    onChange={(value) => {
+                                      handleWorkspaceWidgetLiquidVolumeChange("grinder", liquid.id, value);
+                                    }}
+                                    unitLabel="g"
+                                    value={liquid.volume_ml}
+                                    wheelStep={1}
+                                  />
+                                </div>
                               }
                               title={
                                 <span className="block truncate text-sm font-semibold text-slate-900">

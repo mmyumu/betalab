@@ -96,7 +96,7 @@ WORKBENCH_LIQUIDS = {
         id="dry_ice_pellets",
         name="Dry ice pellets",
         accent="sky",
-        transfer_volume_ml=1.0,
+        transfer_volume_ml=1000.0,
     ),
 }
 

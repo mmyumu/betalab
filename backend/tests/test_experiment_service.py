@@ -192,8 +192,47 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
     assert grinder.produce_lots[0].produce_type == "apple"
     assert len(grinder.liquids) == 1
     assert grinder.liquids[0].liquid_id == "dry_ice_pellets"
-    assert grinder.liquids[0].volume_ml == 1.0
+    assert grinder.liquids[0].volume_ml == 1000.0
     assert updated.audit_log[-1] == "Dry ice pellets added to Cryogenic grinder."
+
+
+def test_grinder_dry_ice_mass_can_be_edited() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    added = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    liquid_id = next(widget for widget in added.workspace.widgets if widget.id == "grinder").liquids[0].id
+    updated = service.apply_command(
+        experiment.id,
+        "update_workspace_widget_liquid_volume",
+        {
+            "widget_id": "grinder",
+            "liquid_entry_id": liquid_id,
+            "volume_ml": 12.3456,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.liquids[0].volume_ml == 12.346
+    assert updated.audit_log[-1] == "Dry ice pellets adjusted to 12.346 g in Cryogenic grinder."
 
 
 def test_sampling_bag_label_can_be_applied_and_edited() -> None:

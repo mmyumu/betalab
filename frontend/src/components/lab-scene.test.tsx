@@ -1224,7 +1224,7 @@ describe("LabScene", () => {
               id: "workspace_liquid_1",
               liquidId: "dry_ice_pellets",
               name: "Dry ice pellets",
-              volume_ml: 1,
+              volume_ml: 1000,
               accent: "sky",
             },
           ],
@@ -1258,6 +1258,67 @@ describe("LabScene", () => {
     await waitFor(() => {
       expect(screen.getByText("Dry ice pellets")).toBeInTheDocument();
     });
+  });
+
+  it("lets the user edit the dry ice pellet mass in the grinder", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1000,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Dry ice pellets adjusted to 1.5 g in Cryogenic grinder."],
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1.5,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("1000")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Dry ice pellets mass"), {
+      target: { value: "1.5" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("1.5")).toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "update_workspace_widget_liquid_volume",
+      {
+        widget_id: "grinder",
+        liquid_entry_id: "workspace_liquid_1",
+        volume_ml: 1.5,
+      },
+    );
+    expect(
+      screen.getByText("Dry ice pellets adjusted to 1.5 g in Cryogenic grinder."),
+    ).toBeInTheDocument();
   });
 
   it("disables drag and drop interactions while the knife action is selected", async () => {
@@ -2701,6 +2762,58 @@ describe("LabScene", () => {
 
     fireEvent.blur(volumeInput);
     fireEvent.wheel(volumeInput, { deltaY: -100 });
+    expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it("changes the dry ice pellet mass with the mouse wheel only while the grinder input is focused", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1000,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Dry ice pellets adjusted to 999 g in Cryogenic grinder."],
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 999,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("1000")).toBeInTheDocument();
+    });
+
+    const massInput = screen.getByLabelText("Dry ice pellets mass");
+    fireEvent.focus(massInput);
+    fireEvent.wheel(massInput, { deltaY: 100 });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("999")).toBeInTheDocument();
+    });
+
+    fireEvent.blur(massInput);
+    fireEvent.wheel(massInput, { deltaY: -100 });
     expect(sendExperimentCommand).toHaveBeenCalledTimes(1);
   });
 

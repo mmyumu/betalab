@@ -7,7 +7,10 @@ from app.services.command_handlers.support import (
     find_trash_produce_lot,
     find_workbench_slot,
     find_workspace_produce_lot,
+    find_workspace_widget_liquid,
+    format_volume,
     find_workspace_widget,
+    round_volume,
 )
 
 
@@ -107,6 +110,16 @@ def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> Non
 
     existing_liquid.volume_ml += liquid_definition.transfer_volume_ml
     experiment.audit_log.append(f"{liquid_definition.name} increased in {widget.label}.")
+
+
+def update_workspace_widget_liquid_volume(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
+    liquid_entry = find_workspace_widget_liquid(widget, str(payload["liquid_entry_id"]))
+
+    liquid_entry.volume_ml = round_volume(max(float(payload["volume_ml"]), 0.0))
+    experiment.audit_log.append(
+        f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}."
+    )
 
 
 def add_workspace_produce_lot_to_widget(experiment: Experiment, payload: dict) -> None:

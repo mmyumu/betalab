@@ -111,7 +111,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         description: "Solid CO2 pellets used for chilled handling and cold-chain prep in the cryogenic grinder.",
         accent: "sky",
         liquidType: "dry_ice_pellets",
-        transfer_volume_ml: 0,
+        transfer_volume_ml: 1000,
       },
     ],
   },

@@ -46,6 +46,7 @@ from app.services.command_handlers.workspace import (
     move_workbench_produce_lot_to_widget,
     move_workspace_widget,
     restore_trashed_produce_lot_to_widget,
+    update_workspace_widget_liquid_volume,
 )
 from app.services.experiment_factory import build_experiment
 
@@ -70,6 +71,7 @@ class ExperimentService:
             "move_workspace_widget": move_workspace_widget,
             "discard_workspace_widget": discard_workspace_widget,
             "add_liquid_to_workspace_widget": add_liquid_to_workspace_widget,
+            "update_workspace_widget_liquid_volume": update_workspace_widget_liquid_volume,
             "add_workspace_produce_lot_to_widget": add_workspace_produce_lot_to_widget,
             "move_workbench_produce_lot_to_widget": move_workbench_produce_lot_to_widget,
             "restore_trashed_produce_lot_to_widget": restore_trashed_produce_lot_to_widget,

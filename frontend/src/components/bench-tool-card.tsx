@@ -2,6 +2,7 @@ import type { DragEvent } from "react";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
+import { InlineQuantityInput } from "@/components/inline-quantity-input";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
@@ -27,52 +28,6 @@ type BenchToolCardProps = {
 };
 
 const neutralToneClass = "from-slate-300 to-slate-100";
-
-const wheelListenerRegistry = new WeakMap<HTMLInputElement, EventListener>();
-
-function attachWheelListener(
-  input: HTMLInputElement,
-  liquidId: string,
-  onLiquidVolumeChange: (liquidId: string, volumeMl: number) => void,
-) {
-  const existingListener = wheelListenerRegistry.get(input);
-  if (existingListener) {
-    input.removeEventListener("wheel", existingListener);
-  }
-
-  const listener: EventListener = (event) => {
-    if (!(event instanceof WheelEvent)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const direction = Math.sign(event.deltaY);
-    if (direction === 0) {
-      return;
-    }
-
-    const currentValue = Number.parseFloat(input.value);
-    const safeCurrentValue = Number.isFinite(currentValue) ? currentValue : 0;
-    const delta = direction < 0 ? 0.1 : -0.1;
-    const nextVolume = Number((safeCurrentValue + delta).toFixed(1));
-
-    onLiquidVolumeChange(liquidId, nextVolume);
-  };
-
-  input.addEventListener("wheel", listener, { passive: false });
-  wheelListenerRegistry.set(input, listener);
-}
-
-function detachWheelListener(input: HTMLInputElement) {
-  const listener = wheelListenerRegistry.get(input);
-  if (!listener) {
-    return;
-  }
-
-  input.removeEventListener("wheel", listener);
-  wheelListenerRegistry.delete(input);
-}
 
 function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
@@ -412,29 +367,14 @@ export function BenchToolCard({
                     </svg>
                   </button>
 
-                  <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                    <span className="sr-only">{liquid.name} volume</span>
-                    <input
-                      aria-label={`${liquid.name} volume`}
-                      className="w-16 rounded-lg border border-slate-200 bg-white px-2 py-0 text-right text-[11px] font-semibold text-slate-900 outline-none transition focus:border-slate-400"
-                      draggable={false}
-                      min={0}
-                      onChange={(event) => {
-                        const parsed = Number.parseFloat(event.target.value);
-                        onLiquidVolumeChange(liquid.id, Number.isFinite(parsed) ? parsed : 0);
-                      }}
-                      onBlur={(event) => {
-                        detachWheelListener(event.currentTarget);
-                      }}
-                      onFocus={(event) => {
-                        attachWheelListener(event.currentTarget, liquid.id, onLiquidVolumeChange);
-                      }}
-                      step={0.1}
-                      type="number"
-                      value={liquid.volume_ml}
-                    />
-                    <span>mL</span>
-                  </label>
+                  <InlineQuantityInput
+                    ariaLabel={`${liquid.name} volume`}
+                    onChange={(value) => {
+                      onLiquidVolumeChange(liquid.id, value);
+                    }}
+                    unitLabel="mL"
+                    value={liquid.volume_ml}
+                  />
                 </div>
               </div>
             ))

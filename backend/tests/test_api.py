@@ -901,3 +901,49 @@ def test_remove_liquid_round_trip_over_http() -> None:
 
     assert removed.status_code == 200
     assert removed.json()["workbench"]["slots"][0]["tool"]["liquids"] == []
+
+
+def test_update_workspace_widget_liquid_volume_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "anchor": "top-right",
+                    "offset_x": 0,
+                    "offset_y": 420,
+                },
+            },
+        )
+        added = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "liquid_id": "dry_ice_pellets",
+                },
+            },
+        )
+        liquid_id = added.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
+        updated = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "update_workspace_widget_liquid_volume",
+                "payload": {
+                    "widget_id": "grinder",
+                    "liquid_entry_id": liquid_id,
+                    "volume_ml": 8.5,
+                },
+            },
+        )
+
+    assert updated.status_code == 200
+    assert updated.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 8.5
