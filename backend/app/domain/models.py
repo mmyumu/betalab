@@ -108,6 +108,7 @@ class ProduceLot:
     unit_count: int | None = None
     is_contaminated: bool = False
     cut_state: str = "whole"
+    temperature_c: float = 20.0
 
 
 @dataclass

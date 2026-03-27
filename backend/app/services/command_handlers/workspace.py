@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.domain.rules import is_workspace_widget_discardable
 from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, WorkbenchLiquid, new_id
 from app.domain.workbench_catalog import get_workbench_liquid_definition
+from app.services.cryogenic_simulation_service import CryogenicSimulationService
 from app.services.command_handlers.support import (
     find_trash_produce_lot,
     find_workbench_slot,
@@ -12,6 +13,8 @@ from app.services.command_handlers.support import (
     find_workspace_widget,
     round_volume,
 )
+
+cryogenic_simulation_service = CryogenicSimulationService()
 
 
 def _apply_widget_layout_payload(widget, payload: dict) -> None:
@@ -120,6 +123,16 @@ def update_workspace_widget_liquid_volume(experiment: Experiment, payload: dict)
     experiment.audit_log.append(
         f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}."
     )
+
+
+def advance_workspace_cryogenics(experiment: Experiment, payload: dict) -> None:
+    elapsed_ms = min(max(float(payload.get("elapsed_ms", 0.0)), 0.0), 5000.0)
+    if elapsed_ms <= 0:
+        return
+
+    elapsed_seconds = elapsed_ms / 1000.0
+    for widget in experiment.workspace.widgets:
+        cryogenic_simulation_service.advance_widget(widget, elapsed_seconds)
 
 
 def add_workspace_produce_lot_to_widget(experiment: Experiment, payload: dict) -> None:

@@ -235,6 +235,185 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     assert updated.audit_log[-1] == "Dry ice pellets adjusted to 12.346 g in Cryogenic grinder."
 
 
+def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "advance_workspace_cryogenics",
+        {
+            "elapsed_ms": 1000,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert 18.0 < grinder.produce_lots[0].temperature_c < 19.0
+    assert 980.0 < grinder.liquids[0].volume_ml < 985.0
+    assert updated.audit_log[-1] == "Dry ice pellets added to Cryogenic grinder."
+
+
+def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+    cooled = service.apply_command(
+        experiment.id,
+        "advance_workspace_cryogenics",
+        {
+            "elapsed_ms": 60000,
+        },
+    )
+
+    grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
+    cooled_temperature = grinder.produce_lots[0].temperature_c
+    service.apply_command(
+        experiment.id,
+        "update_workspace_widget_liquid_volume",
+        {
+            "widget_id": "grinder",
+            "liquid_entry_id": grinder.liquids[0].id,
+            "volume_ml": 0,
+        },
+    )
+    rewarmed = service.apply_command(
+        experiment.id,
+        "advance_workspace_cryogenics",
+        {
+            "elapsed_ms": 60000,
+        },
+    )
+
+    grinder = next(widget for widget in rewarmed.workspace.widgets if widget.id == "grinder")
+    assert grinder.produce_lots[0].temperature_c > cooled_temperature
+    assert grinder.produce_lots[0].temperature_c <= 20.0
+
+
+def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    updated = None
+    exhausted_temperature = None
+    for _ in range(3600):
+        updated = service.apply_command(
+            experiment.id,
+            "advance_workspace_cryogenics",
+            {
+                "elapsed_ms": 1000,
+            },
+        )
+        grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+        if grinder.liquids[0].volume_ml == 0.0:
+            exhausted_temperature = grinder.produce_lots[0].temperature_c
+            break
+
+    assert exhausted_temperature is not None
+    assert exhausted_temperature > -5.0
+    assert exhausted_temperature < 0.0
+
+
 def test_sampling_bag_label_can_be_applied_and_edited() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

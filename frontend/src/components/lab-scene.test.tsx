@@ -288,6 +288,7 @@ function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceW
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -1319,6 +1320,78 @@ describe("LabScene", () => {
     expect(
       screen.getByText("Dry ice pellets adjusted to 1.5 g in Cryogenic grinder."),
     ).toBeInTheDocument();
+  });
+
+  it("shows a thermometer for grinder produce and advances cryogenics over time", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              produceType: "apple",
+              temperatureC: 12,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 1000,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              produceType: "apple",
+              temperatureC: 8,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 998.4,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("12.0 C")).toBeInTheDocument();
+    });
+
+    await waitFor(
+      () => {
+        expect(sendExperimentCommand).toHaveBeenCalledWith(
+          "experiment_pesticides",
+          "advance_workspace_cryogenics",
+          {
+            elapsed_ms: 1000,
+          },
+        );
+      },
+      { timeout: 2500 },
+    );
   });
 
   it("disables drag and drop interactions while the knife action is selected", async () => {

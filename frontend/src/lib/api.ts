@@ -224,6 +224,7 @@ function normalizeProduceLot(
     isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
     label: String(lot.label),
     produceType: String(lot.produceType ?? lot.produce_type) as ExperimentProduceLot["produceType"],
+    temperatureC: Number(lot.temperatureC ?? lot.temperature_c ?? 20),
     totalMassG: Number(lot.totalMassG ?? lot.total_mass_g),
     unitCount:
       unitCountValue === undefined || unitCountValue === null ? null : Number(unitCountValue),

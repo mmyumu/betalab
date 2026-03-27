@@ -20,6 +20,7 @@ class ProduceLotSchema(BaseModel):
     unit_count: int | None = None
     is_contaminated: bool = False
     cut_state: str = "whole"
+    temperature_c: float = 20.0
 
 
 class WorkbenchToolSchema(BaseModel):
@@ -122,6 +123,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "discard_workspace_widget",
         "add_liquid_to_workspace_widget",
         "update_workspace_widget_liquid_volume",
+        "advance_workspace_cryogenics",
         "add_workspace_produce_lot_to_widget",
         "move_workbench_produce_lot_to_widget",
         "restore_trashed_produce_lot_to_widget",

@@ -947,3 +947,67 @@ def test_update_workspace_widget_liquid_volume_round_trip_over_http() -> None:
 
     assert updated.status_code == 200
     assert updated.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 8.5
+
+
+def test_advance_workspace_cryogenics_round_trip_over_http() -> None:
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        created = client.post("/experiments")
+        experiment_id = created.json()["id"]
+
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "anchor": "top-right",
+                    "offset_x": 0,
+                    "offset_y": 420,
+                },
+            },
+        )
+        produced = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "create_produce_lot",
+                "payload": {
+                    "produce_type": "apple",
+                },
+            },
+        )
+        produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_workspace_produce_lot_to_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "produce_lot_id": produce_lot_id,
+                },
+            },
+        )
+        client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "add_liquid_to_workspace_widget",
+                "payload": {
+                    "widget_id": "grinder",
+                    "liquid_id": "dry_ice_pellets",
+                },
+            },
+        )
+        advanced = client.post(
+            f"/experiments/{experiment_id}/commands",
+            json={
+                "type": "advance_workspace_cryogenics",
+                "payload": {
+                    "elapsed_ms": 10000,
+                },
+            },
+        )
+
+    assert advanced.status_code == 200
+    assert advanced.json()["workspace"]["widgets"][5]["produce_lots"][0]["temperature_c"] < 20.0
+    assert advanced.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] < 1000.0

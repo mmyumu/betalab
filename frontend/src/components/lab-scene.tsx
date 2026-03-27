@@ -12,6 +12,7 @@ import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
 import { RackWidget } from "@/components/rack-widget";
+import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { TrashWidget } from "@/components/trash-widget";
 import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
@@ -74,6 +75,8 @@ import type {
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
+const ambientTemperatureC = 20;
+const cryogenicTickMs = 1000;
 const widgetIds = [
   "inventory",
   "actions",
@@ -187,6 +190,40 @@ export function LabScene() {
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    const hasActiveCryogenics = state.experiment.workspace.widgets.some((widget) => {
+      const dryIceMass =
+        widget.liquids?.find((liquid) => liquid.liquidId === "dry_ice_pellets")?.volume_ml ?? 0;
+      const hasColdProduce = (widget.produceLots ?? []).some(
+        (lot) => (lot.temperatureC ?? ambientTemperatureC) < ambientTemperatureC - 0.1,
+      );
+
+      return dryIceMass > 0 || hasColdProduce;
+    });
+
+    if (!hasActiveCryogenics) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (isCommandPending) {
+        return;
+      }
+
+      void sendWorkbenchCommand("advance_workspace_cryogenics", {
+        elapsed_ms: cryogenicTickMs,
+      });
+    }, cryogenicTickMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isCommandPending, sendWorkbenchCommand, state]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1413,9 +1450,14 @@ export function LabScene() {
                                 </div>
                               }
                               subtitle={
-                                <span className="block truncate text-xs text-slate-500">
-                                  {formatProduceLotMetadata(lot)}
-                                </span>
+                                <div className="mt-1 flex items-center justify-between gap-3">
+                                  <span className="block truncate text-xs text-slate-500">
+                                    {formatProduceLotMetadata(lot)}
+                                  </span>
+                                  <TemperatureIndicator
+                                    temperatureC={lot.temperatureC ?? ambientTemperatureC}
+                                  />
+                                </div>
                               }
                               title={
                                 <span className="block truncate text-sm font-semibold text-slate-900">
