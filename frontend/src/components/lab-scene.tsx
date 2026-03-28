@@ -574,6 +574,16 @@ export function LabScene() {
       return;
     }
 
+    if (payload.sourceKind === "grinder") {
+      void sendWorkbenchCommand("move_widget_produce_lot_to_workbench_tool", {
+        widget_id: "grinder",
+        target_slot_id: targetSlotId,
+        produce_lot_id: payload.produceLotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
     if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
       void sendWorkbenchCommand("restore_trashed_produce_lot_to_workbench_tool", {
         target_slot_id: targetSlotId,
@@ -884,6 +894,17 @@ export function LabScene() {
       event.stopPropagation();
       clearDropTargets();
       void sendWorkbenchCommand("discard_workspace_produce_lot", {
+        produce_lot_id: producePayload.produceLotId,
+      });
+      return;
+    }
+
+    if (producePayload?.sourceKind === "grinder") {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("discard_widget_produce_lot", {
+        widget_id: "grinder",
         produce_lot_id: producePayload.produceLotId,
       });
       return;
@@ -1296,6 +1317,34 @@ export function LabScene() {
       produceType,
       sourceId: produceLotId,
       sourceKind: "basket",
+    });
+  };
+
+  const handleGrinderProduceDragStart = (
+    produceLot: ExperimentProduceLot,
+    dataTransfer: DataTransfer,
+  ) => {
+    if (isKnifeMode) {
+      return;
+    }
+    const allowedDropTargets = getProduceLotDropTargets();
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType,
+      sourceId: produceLot.id,
+      sourceKind: "grinder",
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType,
+      sourceId: produceLot.id,
+      sourceKind: "grinder",
     });
   };
 
@@ -1750,6 +1799,12 @@ export function LabScene() {
                                 <span className="block truncate text-sm font-semibold text-slate-900">
                                   {lot.label}
                                 </span>
+                              }
+                              onDragEnd={isKnifeMode ? undefined : clearDropTargets}
+                              onDragStart={
+                                isKnifeMode
+                                  ? undefined
+                                  : (dataTransfer) => handleGrinderProduceDragStart(lot, dataTransfer)
                               }
                             />
                           ))}

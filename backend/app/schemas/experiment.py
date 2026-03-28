@@ -129,6 +129,8 @@ class ExperimentCommandEnvelope(BaseModel):
         "restore_trashed_produce_lot_to_widget",
         "create_produce_lot",
         "discard_workspace_produce_lot",
+        "move_widget_produce_lot_to_workbench_tool",
+        "discard_widget_produce_lot",
         "cut_workbench_produce_lot",
         "place_tool_in_rack_slot",
         "place_workbench_tool_in_rack_slot",

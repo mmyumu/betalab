@@ -953,6 +953,94 @@ function createWorkbenchSurfaceProduceLotSourceCase(): DndSourceCase {
   };
 }
 
+function createGrinderProduceLotSourceCase(): DndSourceCase {
+  return {
+    id: "grinder-produce-lot-apple",
+    label: "grinder apple lot",
+    sourceTestId: "grinder-produce-produce_1",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "grinder-dropzone",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([{ tool: makeTool(sampleBagItem, { id: "bench_tool_bag" }) }]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          {},
+          {},
+          {},
+          {
+            produceLots: [
+              {
+                id: "produce_1",
+                isContaminated: false,
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+          },
+        ]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: true,
+        command: {
+          type: "move_widget_produce_lot_to_workbench_tool",
+          payload: {
+            widget_id: "grinder",
+            target_slot_id: "station_1",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "move_widget_produce_lot_to_workbench_tool",
+          payload: {
+            widget_id: "grinder",
+            target_slot_id: "station_2",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
+      "grinder-dropzone": {
+        compatible: true,
+        command: null,
+      },
+      "rack-illustration-slot-1": {
+        compatible: false,
+        command: null,
+      },
+      "widget-workspace": {
+        compatible: false,
+        command: null,
+      },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_widget_produce_lot",
+          payload: {
+            widget_id: "grinder",
+            produce_lot_id: "produce_1",
+          },
+        },
+      },
+    },
+  };
+}
+
 function createTrashProduceLotSourceCase(): DndSourceCase {
   return {
     id: "trash-produce-lot-apple",
@@ -1124,6 +1212,7 @@ export const dndSourceCases: DndSourceCase[] = [
   createBasketProduceSourceCase(),
   createWorkbenchProduceLotSourceCase(),
   createWorkbenchSurfaceProduceLotSourceCase(),
+  createGrinderProduceLotSourceCase(),
   createWorkbenchSampleLabelSourceCase(),
   createTrashProduceLotSourceCase(),
   createTrashSampleLabelSourceCase(),

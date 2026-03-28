@@ -56,7 +56,7 @@ export type DragEntityKind =
   | "workspace_widget"
   | "produce"
   | "sample_label";
-export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket";
+export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket" | "grinder";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
@@ -147,7 +147,7 @@ export type ProduceDragPayload = BaseDragPayload & {
   produceLotId: string;
   produceType: ProduceLotType;
   sourceId: string;
-  sourceKind: "basket" | "workbench" | "trash";
+  sourceKind: "basket" | "workbench" | "trash" | "grinder";
   sourceSlotId?: string;
   trashProduceLotId?: string;
 };

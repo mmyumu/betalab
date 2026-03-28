@@ -1588,7 +1588,27 @@ describe("LabScene", () => {
             }),
           },
         ]),
-        workspaceWidgets: makeWorkspaceWithRackVisible(),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          { isPresent: true },
+          {},
+          {},
+          {
+            isPresent: true,
+            produceLots: [
+              {
+                id: "grinder_produce_1",
+                label: "Cold apple lot",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+                cutState: "cut",
+                temperatureC: -35,
+              },
+            ],
+          },
+        ]),
       }),
     );
 
@@ -1601,10 +1621,12 @@ describe("LabScene", () => {
     fireEvent.click(basketOpenButton);
     const basketProduce = await screen.findByTestId("basket-produce-produce_1");
     const rackTool = screen.getByTestId("rack-slot-tool-1");
+    const grinderProduce = await screen.findByTestId("grinder-produce-grinder_produce_1");
 
     expect(toolbarItem).not.toHaveAttribute("draggable", "true");
     expect(basketProduce).not.toHaveAttribute("draggable", "true");
     expect(rackTool).not.toHaveAttribute("draggable", "true");
+    expect(grinderProduce).not.toHaveAttribute("draggable", "true");
 
     const transfer = createDataTransfer();
     fireEvent.dragStart(toolbarItem, { dataTransfer: transfer });

@@ -187,6 +187,30 @@ def restore_trashed_produce_lot_to_widget(experiment: Experiment, payload: dict)
     )
 
 
+def move_widget_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    target_slot = find_workbench_slot(experiment.workbench, str(payload["target_slot_id"]))
+    produce_lot = _remove_widget_produce_lot(widget, str(payload["produce_lot_id"]))
+
+    if target_slot.tool is None:
+        if target_slot.surface_produce_lots:
+            raise ValueError(f"{target_slot.label} already contains produce.")
+        target_slot.surface_produce_lots.append(produce_lot)
+        produce_lot.is_contaminated = True
+        experiment.audit_log.append(
+            f"{produce_lot.label} moved from {widget.label} to {target_slot.label} and marked contaminated."
+        )
+        return
+
+    if target_slot.tool.tool_type != "sample_bag":
+        raise ValueError(f"{target_slot.tool.label} does not accept produce.")
+    if target_slot.tool.produce_lots:
+        raise ValueError(f"{target_slot.tool.label} already contains produce.")
+
+    target_slot.tool.produce_lots.append(produce_lot)
+    experiment.audit_log.append(f"{produce_lot.label} moved from {widget.label} to {target_slot.tool.label}.")
+
+
 def discard_workspace_produce_lot(experiment: Experiment, payload: dict) -> None:
     produce_lot = find_workspace_produce_lot(experiment.workspace, str(payload["produce_lot_id"]))
     experiment.workspace.produce_lots = [
@@ -202,6 +226,19 @@ def discard_workspace_produce_lot(experiment: Experiment, payload: dict) -> None
     experiment.audit_log.append(f"{produce_lot.label} discarded from Produce basket.")
 
 
+def discard_widget_produce_lot(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, payload["widget_id"])
+    produce_lot = _remove_widget_produce_lot(widget, str(payload["produce_lot_id"]))
+    experiment.trash.produce_lots.append(
+        TrashProduceLotEntry(
+            id=new_id("trash_produce_lot"),
+            origin_label=widget.label,
+            produce_lot=produce_lot,
+        )
+    )
+    experiment.audit_log.append(f"{produce_lot.label} discarded from {widget.label}.")
+
+
 def _find_grinder_widget(experiment: Experiment, widget_id: str):
     widget = find_workspace_widget(experiment.workspace, widget_id)
     if widget.id != "grinder" or widget.widget_type != "cryogenic_grinder":
@@ -213,3 +250,12 @@ def _add_produce_lot_to_widget(widget, produce_lot: ProduceLot) -> None:
     if widget.produce_lots:
         raise ValueError(f"{widget.label} already contains a produce lot.")
     widget.produce_lots.append(produce_lot)
+
+
+def _remove_widget_produce_lot(widget, produce_lot_id: str) -> ProduceLot:
+    produce_lot = next((lot for lot in widget.produce_lots if lot.id == produce_lot_id), None)
+    if produce_lot is None:
+        raise ValueError("Unknown produce lot")
+
+    widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot.id]
+    return produce_lot

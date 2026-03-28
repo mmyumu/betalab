@@ -898,6 +898,92 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
     assert updated.audit_log[-1] == "Apple lot 1 discarded from Produce basket."
 
 
+def test_move_grinder_produce_lot_to_workbench_tool() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "move_widget_produce_lot_to_workbench_tool",
+        {
+            "widget_id": "grinder",
+            "target_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    station_1 = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+
+    assert grinder.produce_lots == []
+    assert station_1.tool is not None
+    assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Sealed sampling bag."
+
+
+def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.apply_command(
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "discard_widget_produce_lot",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+
+    assert grinder.produce_lots == []
+    assert len(updated.trash.produce_lots) == 1
+    assert updated.trash.produce_lots[0].origin_label == "Cryogenic grinder"
+    assert updated.audit_log[-1] == "Apple lot 1 discarded from Cryogenic grinder."
+
+
 def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

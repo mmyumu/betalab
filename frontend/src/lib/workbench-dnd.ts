@@ -474,6 +474,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
       typeof parsed.produceType === "string" &&
       typeof parsed.sourceId === "string" &&
       (parsed.sourceKind === "basket" ||
+        parsed.sourceKind === "grinder" ||
         (parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashProduceLotId === "string")) &&
       allowedDropTargets.length > 0
