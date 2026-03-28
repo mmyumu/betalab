@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createExperiment, getExperiment, sendExperimentCommand } from "@/lib/api";
+import { createExperiment, getExperiment, placeToolOnWorkbench } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
 
 const makeExperiment = (): Experiment => ({
@@ -45,7 +45,7 @@ describe("api client", () => {
     });
   });
 
-  it("sends a command to the experiment endpoint", async () => {
+  it("places a tool on the workbench via its dedicated endpoint", async () => {
     const experiment = makeExperiment();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -55,7 +55,7 @@ describe("api client", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+      placeToolOnWorkbench("experiment_123", {
         slot_id: "station_1",
         tool_id: "sample_vial_lcms",
       }),
@@ -236,11 +236,11 @@ describe("api client", () => {
     );
 
     await expect(
-      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+      placeToolOnWorkbench("experiment_123", {
         slot_id: "station_1",
         tool_id: "sample_vial_lcms",
       }),
-    ).rejects.toThrow("Failed to send experiment command");
+    ).rejects.toThrow("Failed to send experiment mutation");
   });
 
   it("surfaces backend error detail for command execution failures", async () => {
@@ -253,7 +253,7 @@ describe("api client", () => {
     );
 
     await expect(
-      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+      placeToolOnWorkbench("experiment_123", {
         slot_id: "station_1",
         tool_id: "sample_vial_lcms",
       }),

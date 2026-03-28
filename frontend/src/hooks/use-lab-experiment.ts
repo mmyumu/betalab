@@ -2,7 +2,49 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { createExperiment, sendExperimentCommand } from "@/lib/api";
+import {
+  addLiquidToWorkbenchTool,
+  addLiquidToWorkspaceWidget,
+  addProduceLotToWorkbenchTool,
+  addWorkbenchSlot,
+  addWorkspaceProduceLotToWidget,
+  addWorkspaceWidget,
+  advanceWorkspaceCryogenics,
+  applySampleLabelToWorkbenchTool,
+  completeGrinderCycle,
+  createExperiment,
+  createProduceLot,
+  cutWorkbenchProduceLot,
+  discardProduceLotFromWorkbenchTool,
+  discardRackTool,
+  discardSampleLabelFromPalette,
+  discardSampleLabelFromWorkbenchTool,
+  discardToolFromPalette,
+  discardWidgetProduceLot,
+  discardWorkbenchTool,
+  discardWorkspaceProduceLot,
+  discardWorkspaceWidget,
+  moveProduceLotBetweenWorkbenchTools,
+  moveRackToolBetweenSlots,
+  moveSampleLabelBetweenWorkbenchTools,
+  moveToolBetweenWorkbenchSlots,
+  moveWidgetProduceLotToWorkbenchTool,
+  moveWorkbenchProduceLotToWidget,
+  moveWorkspaceWidget,
+  placeToolInRackSlot,
+  placeToolOnWorkbench,
+  placeWorkbenchToolInRackSlot,
+  removeLiquidFromWorkbenchTool,
+  removeLiquidFromWorkspaceWidget,
+  removeRackToolToWorkbenchSlot,
+  removeWorkbenchSlot,
+  restoreTrashedProduceLotToWorkbenchTool,
+  restoreTrashedProduceLotToWidget,
+  restoreTrashedSampleLabelToWorkbenchTool,
+  restoreTrashedToolToRackSlot,
+  restoreTrashedToolToWorkbenchSlot,
+  updateWorkbenchToolSampleLabelText,
+} from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
 
 type LabExperimentState =
@@ -14,6 +56,51 @@ type UseLabExperimentOptions = {
   defaultErrorMessage: string;
   defaultStatusMessage: string;
 };
+
+type MutationFn = (experimentId: string, payload?: Record<string, unknown>) => Promise<Experiment>;
+
+const mutationFns = {
+  addLiquidToWorkbenchTool,
+  addLiquidToWorkspaceWidget,
+  addProduceLotToWorkbenchTool,
+  addWorkbenchSlot,
+  addWorkspaceProduceLotToWidget,
+  addWorkspaceWidget,
+  advanceWorkspaceCryogenics,
+  applySampleLabelToWorkbenchTool,
+  completeGrinderCycle,
+  createProduceLot,
+  cutWorkbenchProduceLot,
+  discardProduceLotFromWorkbenchTool,
+  discardRackTool,
+  discardSampleLabelFromPalette,
+  discardSampleLabelFromWorkbenchTool,
+  discardToolFromPalette,
+  discardWidgetProduceLot,
+  discardWorkbenchTool,
+  discardWorkspaceProduceLot,
+  discardWorkspaceWidget,
+  moveProduceLotBetweenWorkbenchTools,
+  moveRackToolBetweenSlots,
+  moveSampleLabelBetweenWorkbenchTools,
+  moveToolBetweenWorkbenchSlots,
+  moveWidgetProduceLotToWorkbenchTool,
+  moveWorkbenchProduceLotToWidget,
+  moveWorkspaceWidget,
+  placeToolInRackSlot,
+  placeToolOnWorkbench,
+  placeWorkbenchToolInRackSlot,
+  removeLiquidFromWorkbenchTool,
+  removeLiquidFromWorkspaceWidget,
+  removeRackToolToWorkbenchSlot,
+  removeWorkbenchSlot,
+  restoreTrashedProduceLotToWorkbenchTool,
+  restoreTrashedProduceLotToWidget,
+  restoreTrashedSampleLabelToWorkbenchTool,
+  restoreTrashedToolToRackSlot,
+  restoreTrashedToolToWorkbenchSlot,
+  updateWorkbenchToolSampleLabelText,
+} satisfies Record<string, MutationFn>;
 
 export function useLabExperiment({
   defaultErrorMessage,
@@ -52,9 +139,9 @@ export function useLabExperiment({
     void loadExperiment();
   }, []);
 
-  const sendWorkbenchCommand = async (
-    type: string,
-    payload: Record<string, unknown>,
+  const executeMutation = async (
+    mutation: MutationFn,
+    payload?: Record<string, unknown>,
     options?: { onSuccess?: (updatedExperiment: Experiment) => void },
   ) => {
     if (state.status !== "ready" || isCommandPending) {
@@ -67,21 +154,21 @@ export function useLabExperiment({
       let updatedExperiment: Experiment;
 
       try {
-        updatedExperiment = await sendExperimentCommand(state.experiment.id, type, payload);
+        updatedExperiment = await mutation(state.experiment.id, payload);
       } catch (error) {
         if (!(error instanceof Error) || error.message !== "Experiment not found") {
           throw error;
         }
 
         const recreatedExperiment = await createExperiment();
-        updatedExperiment = await sendExperimentCommand(recreatedExperiment.id, type, payload);
+        updatedExperiment = await mutation(recreatedExperiment.id, payload);
       }
 
       setState({ status: "ready", experiment: updatedExperiment });
       setStatusMessage(getLatestStatusMessage(updatedExperiment));
       options?.onSuccess?.(updatedExperiment);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Workbench command failed");
+      setStatusMessage(error instanceof Error ? error.message : "Experiment mutation failed");
     } finally {
       setIsCommandPending(false);
     }
@@ -90,8 +177,86 @@ export function useLabExperiment({
   return {
     isCommandPending,
     loadExperiment,
-    sendWorkbenchCommand,
     state,
     statusMessage,
+    addLiquidToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.addLiquidToWorkbenchTool, payload),
+    addLiquidToWorkspaceWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.addLiquidToWorkspaceWidget, payload),
+    addProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.addProduceLotToWorkbenchTool, payload),
+    addWorkbenchSlot: () => executeMutation(mutationFns.addWorkbenchSlot),
+    addWorkspaceProduceLotToWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.addWorkspaceProduceLotToWidget, payload),
+    addWorkspaceWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.addWorkspaceWidget, payload),
+    advanceWorkspaceCryogenics: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.advanceWorkspaceCryogenics, payload),
+    applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
+    completeGrinderCycle: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.completeGrinderCycle, payload),
+    createProduceLot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.createProduceLot, payload),
+    cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
+    discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardProduceLotFromWorkbenchTool, payload),
+    discardRackTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardRackTool, payload),
+    discardSampleLabelFromPalette: (payload?: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardSampleLabelFromPalette, payload),
+    discardSampleLabelFromWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardSampleLabelFromWorkbenchTool, payload),
+    discardToolFromPalette: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardToolFromPalette, payload),
+    discardWidgetProduceLot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardWidgetProduceLot, payload),
+    discardWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardWorkbenchTool, payload),
+    discardWorkspaceProduceLot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardWorkspaceProduceLot, payload),
+    discardWorkspaceWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardWorkspaceWidget, payload),
+    moveProduceLotBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveProduceLotBetweenWorkbenchTools, payload),
+    moveRackToolBetweenSlots: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveRackToolBetweenSlots, payload),
+    moveSampleLabelBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveSampleLabelBetweenWorkbenchTools, payload),
+    moveToolBetweenWorkbenchSlots: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveToolBetweenWorkbenchSlots, payload),
+    moveWidgetProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWidgetProduceLotToWorkbenchTool, payload),
+    moveWorkbenchProduceLotToWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWorkbenchProduceLotToWidget, payload),
+    moveWorkspaceWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWorkspaceWidget, payload),
+    placeToolInRackSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.placeToolInRackSlot, payload),
+    placeToolOnWorkbench: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.placeToolOnWorkbench, payload),
+    placeWorkbenchToolInRackSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.placeWorkbenchToolInRackSlot, payload),
+    removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.removeLiquidFromWorkbenchTool, payload),
+    removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.removeLiquidFromWorkspaceWidget, payload),
+    removeRackToolToWorkbenchSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.removeRackToolToWorkbenchSlot, payload),
+    removeWorkbenchSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.removeWorkbenchSlot, payload),
+    restoreTrashedProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedProduceLotToWorkbenchTool, payload),
+    restoreTrashedProduceLotToWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedProduceLotToWidget, payload),
+    restoreTrashedSampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedSampleLabelToWorkbenchTool, payload),
+    restoreTrashedToolToRackSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedToolToRackSlot, payload),
+    restoreTrashedToolToWorkbenchSlot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedToolToWorkbenchSlot, payload),
+    updateWorkbenchToolSampleLabelText: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.updateWorkbenchToolSampleLabelText, payload),
   };
 }

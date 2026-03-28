@@ -17,9 +17,11 @@ const experimentCache = new Map<string, Experiment>();
 
 type ApiRequest = {
   body?: Record<string, unknown>;
-  method: "DELETE" | "GET" | "PATCH" | "POST";
+  method: "DELETE" | "PATCH" | "POST";
   path: string;
 };
+
+type MutationPayload = Record<string, unknown> | undefined;
 
 async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
   try {
@@ -32,6 +34,31 @@ async function buildApiError(response: Response, fallbackMessage: string): Promi
   }
 
   return new Error(fallbackMessage);
+}
+
+async function sendMutationRequest(
+  experimentId: string,
+  request: ApiRequest,
+): Promise<Experiment> {
+  const response = await fetch(`${API_BASE_URL}${request.path}`, {
+    method: request.method,
+    ...(request.body
+      ? {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(request.body),
+        }
+      : {}),
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, "Failed to send experiment mutation");
+  }
+
+  const experiment = normalizeExperiment((await response.json()) as Experiment);
+  experimentCache.set(experimentId, experiment);
+  return experiment;
 }
 
 export async function createExperiment(): Promise<Experiment> {
@@ -60,391 +87,12 @@ export async function getExperiment(experimentId: string): Promise<Experiment> {
   return experiment;
 }
 
-export async function sendExperimentCommand(
-  experimentId: string,
-  type: string,
-  payload: Record<string, unknown>,
-): Promise<Experiment> {
-  const request = buildExperimentCommandRequest(
-    experimentId,
-    type,
-    payload,
-    experimentCache.get(experimentId),
-  );
-  const response = await fetch(`${API_BASE_URL}${request.path}`, {
-    method: request.method,
-    ...(request.body
-      ? {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(request.body),
-        }
-      : {}),
-  });
-
-  if (!response.ok) {
-    throw await buildApiError(response, "Failed to send experiment command");
-  }
-
-  const experiment = normalizeExperiment((await response.json()) as Experiment);
-  experimentCache.set(experiment.id, experiment);
-  return experiment;
+function getCachedExperiment(experimentId: string): Experiment | undefined {
+  return experimentCache.get(experimentId);
 }
 
-function buildExperimentCommandRequest(
-  experimentId: string,
-  type: string,
-  payload: Record<string, unknown>,
-  experiment?: Experiment,
-): ApiRequest {
-  const rootPath = `/experiments/${experimentId}`;
-
-  switch (type) {
-    case "add_workbench_slot":
-      return { method: "POST", path: `${rootPath}/workbench/slots` };
-    case "remove_workbench_slot":
-      return {
-        method: "DELETE",
-        path: `${rootPath}/workbench/slots/${requireString(payload.slot_id, "slot_id")}`,
-      };
-    case "place_tool_on_workbench":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/slots/${requireString(payload.slot_id, "slot_id")}/place-tool`,
-        body: { tool_id: requireString(payload.tool_id, "tool_id") },
-      };
-    case "move_tool_between_workbench_slots":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.source_slot_id, "source_slot_id"),
-        )}/move-to-slot`,
-        body: { target_slot_id: requireString(payload.target_slot_id, "target_slot_id") },
-      };
-    case "discard_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/discard`,
-      };
-    case "discard_tool_from_palette":
-      return {
-        method: "POST",
-        path: `${rootPath}/palette/tools/discard`,
-        body: { tool_id: requireString(payload.tool_id, "tool_id") },
-      };
-    case "discard_sample_label_from_palette":
-      return {
-        method: "POST",
-        path: `${rootPath}/palette/sample-labels/discard`,
-      };
-    case "restore_trashed_tool_to_workbench_slot":
-      return {
-        method: "POST",
-        path: `${rootPath}/trash/tools/${requireString(payload.trash_tool_id, "trash_tool_id")}/restore-to-workbench`,
-        body: { target_slot_id: requireString(payload.target_slot_id, "target_slot_id") },
-      };
-    case "add_workspace_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets`,
-        body: {
-          widget_id: requireString(payload.widget_id, "widget_id"),
-          anchor: requireString(payload.anchor, "anchor"),
-          offset_x: requireNumber(payload.offset_x, "offset_x"),
-          offset_y: requireNumber(payload.offset_y, "offset_y"),
-        },
-      };
-    case "move_workspace_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/move`,
-        body: {
-          anchor: requireString(payload.anchor, "anchor"),
-          offset_x: requireNumber(payload.offset_x, "offset_x"),
-          offset_y: requireNumber(payload.offset_y, "offset_y"),
-        },
-      };
-    case "discard_workspace_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/discard`,
-      };
-    case "add_liquid_to_workspace_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/liquids`,
-        body: {
-          liquid_id: requireString(payload.liquid_id, "liquid_id"),
-          ...optionalNumberBody("volume_ml", payload.volume_ml),
-        },
-      };
-    case "update_workspace_widget_liquid_volume":
-      return {
-        method: "PATCH",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/liquids/${requireString(payload.liquid_entry_id, "liquid_entry_id")}`,
-        body: { volume_ml: requireNumber(payload.volume_ml, "volume_ml") },
-      };
-    case "remove_liquid_from_workspace_widget":
-      return {
-        method: "DELETE",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/liquids/${requireString(payload.liquid_entry_id, "liquid_entry_id")}`,
-      };
-    case "complete_grinder_cycle":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/complete-grinder-cycle`,
-      };
-    case "advance_workspace_cryogenics":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/advance-cryogenics`,
-        body: { elapsed_ms: requireNumber(payload.elapsed_ms, "elapsed_ms") },
-      };
-    case "add_workspace_produce_lot_to_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/add-produce-lot`,
-        body: { produce_lot_id: requireString(payload.produce_lot_id, "produce_lot_id") },
-      };
-    case "move_workbench_produce_lot_to_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/move-workbench-produce-lot`,
-        body: {
-          source_slot_id: requireString(payload.source_slot_id, "source_slot_id"),
-          produce_lot_id: requireString(payload.produce_lot_id, "produce_lot_id"),
-        },
-      };
-    case "restore_trashed_produce_lot_to_widget":
-      return {
-        method: "POST",
-        path: `${rootPath}/trash/produce-lots/${requireString(payload.trash_produce_lot_id, "trash_produce_lot_id")}/restore-to-widget`,
-        body: { widget_id: requireString(payload.widget_id, "widget_id") },
-      };
-    case "create_produce_lot":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/produce-lots`,
-        body: { produce_type: requireString(payload.produce_type, "produce_type") },
-      };
-    case "discard_workspace_produce_lot":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/discard`,
-      };
-    case "move_widget_produce_lot_to_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/move-to-workbench-tool`,
-        body: { target_slot_id: requireString(payload.target_slot_id, "target_slot_id") },
-      };
-    case "discard_widget_produce_lot":
-      return {
-        method: "POST",
-        path: `${rootPath}/workspace/widgets/${requireString(payload.widget_id, "widget_id")}/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/discard`,
-      };
-    case "place_tool_in_rack_slot":
-      return {
-        method: "POST",
-        path: `${rootPath}/rack/slots/${requireString(payload.rack_slot_id, "rack_slot_id")}/place-tool-from-palette`,
-        body: { tool_id: requireString(payload.tool_id, "tool_id") },
-      };
-    case "place_workbench_tool_in_rack_slot":
-      return {
-        method: "POST",
-        path: `${rootPath}/rack/slots/${requireString(payload.rack_slot_id, "rack_slot_id")}/place-tool-from-workbench`,
-        body: { source_slot_id: requireString(payload.source_slot_id, "source_slot_id") },
-      };
-    case "move_rack_tool_between_slots":
-      return {
-        method: "POST",
-        path: `${rootPath}/rack/tools/${findRackToolId(
-          experiment,
-          requireString(payload.source_rack_slot_id, "source_rack_slot_id"),
-        )}/move-to-slot`,
-        body: { target_rack_slot_id: requireString(payload.target_rack_slot_id, "target_rack_slot_id") },
-      };
-    case "remove_rack_tool_to_workbench_slot":
-      return {
-        method: "POST",
-        path: `${rootPath}/rack/tools/${findRackToolId(
-          experiment,
-          requireString(payload.rack_slot_id, "rack_slot_id"),
-        )}/move-to-workbench-slot`,
-        body: { target_slot_id: requireString(payload.target_slot_id, "target_slot_id") },
-      };
-    case "discard_rack_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/rack/tools/${findRackToolId(
-          experiment,
-          requireString(payload.rack_slot_id, "rack_slot_id"),
-        )}/discard`,
-      };
-    case "restore_trashed_tool_to_rack_slot":
-      return {
-        method: "POST",
-        path: `${rootPath}/trash/tools/${requireString(payload.trash_tool_id, "trash_tool_id")}/restore-to-rack`,
-        body: { rack_slot_id: requireString(payload.rack_slot_id, "rack_slot_id") },
-      };
-    case "add_liquid_to_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/liquids`,
-        body: {
-          liquid_id: requireString(payload.liquid_id, "liquid_id"),
-          ...optionalNumberBody("volume_ml", payload.volume_ml),
-        },
-      };
-    case "add_produce_lot_to_workbench_tool": {
-      const slotId = requireString(payload.slot_id, "slot_id");
-      const toolId = findWorkbenchToolIdIfPresent(experiment, slotId);
-
-      return toolId
-        ? {
-            method: "POST",
-            path: `${rootPath}/workbench/tools/${toolId}/add-produce-lot`,
-            body: { produce_lot_id: requireString(payload.produce_lot_id, "produce_lot_id") },
-          }
-        : {
-            method: "POST",
-            path: `${rootPath}/workbench/slots/${slotId}/add-produce-lot`,
-            body: { produce_lot_id: requireString(payload.produce_lot_id, "produce_lot_id") },
-          };
-    }
-    case "discard_produce_lot_from_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/discard`,
-        body: { slot_id: requireString(payload.slot_id, "slot_id") },
-      };
-    case "cut_workbench_produce_lot":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/cut`,
-        body: { slot_id: requireString(payload.slot_id, "slot_id") },
-      };
-    case "move_produce_lot_between_workbench_tools":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/produce-lots/${requireString(payload.produce_lot_id, "produce_lot_id")}/move-to-tool`,
-        body: {
-          source_slot_id: requireString(payload.source_slot_id, "source_slot_id"),
-          target_slot_id: requireString(payload.target_slot_id, "target_slot_id"),
-        },
-      };
-    case "restore_trashed_produce_lot_to_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/trash/produce-lots/${requireString(payload.trash_produce_lot_id, "trash_produce_lot_id")}/restore-to-workbench-tool`,
-        body: { target_slot_id: requireString(payload.target_slot_id, "target_slot_id") },
-      };
-    case "remove_liquid_from_workbench_tool":
-      return {
-        method: "DELETE",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/liquids/${requireString(payload.liquid_entry_id, "liquid_entry_id")}`,
-      };
-    case "update_workbench_liquid_volume":
-      return {
-        method: "PATCH",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/liquids/${requireString(payload.liquid_entry_id, "liquid_entry_id")}`,
-        body: { volume_ml: requireNumber(payload.volume_ml, "volume_ml") },
-      };
-    case "apply_sample_label_to_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/sample-label`,
-      };
-    case "update_workbench_tool_sample_label_text":
-      return {
-        method: "PATCH",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/sample-label`,
-        body: { sample_label_text: requireString(payload.sample_label_text, "sample_label_text") },
-      };
-    case "move_sample_label_between_workbench_tools":
-      return {
-        method: "POST",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.source_slot_id, "source_slot_id"),
-        )}/sample-label/move-to-tool`,
-        body: {
-          target_tool_id: findWorkbenchToolId(
-            experiment,
-            requireString(payload.target_slot_id, "target_slot_id"),
-          ),
-        },
-      };
-    case "discard_sample_label_from_workbench_tool":
-      return {
-        method: "DELETE",
-        path: `${rootPath}/workbench/tools/${findWorkbenchToolId(
-          experiment,
-          requireString(payload.slot_id, "slot_id"),
-        )}/sample-label`,
-      };
-    case "restore_trashed_sample_label_to_workbench_tool":
-      return {
-        method: "POST",
-        path: `${rootPath}/trash/sample-labels/${requireString(payload.trash_sample_label_id, "trash_sample_label_id")}/restore-to-workbench-tool`,
-        body: {
-          target_tool_id: findWorkbenchToolId(
-            experiment,
-            requireString(payload.target_slot_id, "target_slot_id"),
-          ),
-        },
-      };
-    default:
-      throw new Error(`Unsupported experiment command: ${type}`);
-  }
-}
-
-function requireString(value: unknown, fieldName: string): string {
-  if (typeof value === "string" && value.length > 0) {
-    return value;
-  }
-
-  throw new Error(`Missing ${fieldName}`);
-}
-
-function requireNumber(value: unknown, fieldName: string): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  throw new Error(`Missing ${fieldName}`);
-}
-
-function optionalNumberBody(fieldName: string, value: unknown): Record<string, number> {
-  if (value === undefined) {
-    return {};
-  }
-
-  return { [fieldName]: requireNumber(value, fieldName) };
-}
-
-function findWorkbenchToolId(experiment: Experiment | undefined, slotId: string): string {
-  const toolId = findWorkbenchToolIdIfPresent(experiment, slotId);
+function findWorkbenchToolId(experimentId: string, slotId: string): string {
+  const toolId = getCachedExperiment(experimentId)?.workbench.slots.find((slot) => slot.id === slotId)?.tool?.id;
   if (toolId) {
     return toolId;
   }
@@ -452,19 +100,441 @@ function findWorkbenchToolId(experiment: Experiment | undefined, slotId: string)
   throw new Error("Unknown workbench tool");
 }
 
-function findWorkbenchToolIdIfPresent(experiment: Experiment | undefined, slotId: string): string | null {
-  return (
-    experiment?.workbench.slots.find((slot) => slot.id === slotId)?.tool?.id ?? null
-  );
+function findWorkbenchToolIdIfPresent(experimentId: string, slotId: string): string | null {
+  return getCachedExperiment(experimentId)?.workbench.slots.find((slot) => slot.id === slotId)?.tool?.id ?? null;
 }
 
-function findRackToolId(experiment: Experiment | undefined, rackSlotId: string): string {
-  const toolId = experiment?.rack.slots.find((slot) => slot.id === rackSlotId)?.tool?.id;
+function findRackToolId(experimentId: string, rackSlotId: string): string {
+  const toolId = getCachedExperiment(experimentId)?.rack.slots.find((slot) => slot.id === rackSlotId)?.tool?.id;
   if (toolId) {
     return toolId;
   }
 
   throw new Error("Unknown rack tool");
+}
+
+function requirePayload(payload: MutationPayload): Record<string, unknown> {
+  return payload ?? {};
+}
+
+function requireString(payload: Record<string, unknown>, fieldName: string): string {
+  const value = payload[fieldName];
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  throw new Error(`Missing ${fieldName}`);
+}
+
+function requireNumber(payload: Record<string, unknown>, fieldName: string): number {
+  const value = payload[fieldName];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  throw new Error(`Missing ${fieldName}`);
+}
+
+function optionalNumberBody(payload: Record<string, unknown>, fieldName: string): Record<string, number> {
+  const value = payload[fieldName];
+  if (value === undefined) {
+    return {};
+  }
+
+  return { [fieldName]: requireNumber(payload, fieldName) };
+}
+
+export async function addWorkbenchSlot(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/slots`,
+  });
+}
+
+export async function removeWorkbenchSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "DELETE",
+    path: `/experiments/${experimentId}/workbench/slots/${requireString(body, "slot_id")}`,
+  });
+}
+
+export async function placeToolOnWorkbench(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/slots/${requireString(body, "slot_id")}/place-tool`,
+    body: { tool_id: requireString(body, "tool_id") },
+  });
+}
+
+export async function moveToolBetweenWorkbenchSlots(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "source_slot_id"))}/move-to-slot`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function discardWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/discard`,
+  });
+}
+
+export async function discardToolFromPalette(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/palette/tools/discard`,
+    body: { tool_id: requireString(body, "tool_id") },
+  });
+}
+
+export async function discardSampleLabelFromPalette(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/palette/sample-labels/discard`,
+  });
+}
+
+export async function restoreTrashedToolToWorkbenchSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/trash/tools/${requireString(body, "trash_tool_id")}/restore-to-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function addWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets`,
+    body: {
+      widget_id: requireString(body, "widget_id"),
+      anchor: requireString(body, "anchor"),
+      offset_x: requireNumber(body, "offset_x"),
+      offset_y: requireNumber(body, "offset_y"),
+    },
+  });
+}
+
+export async function moveWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/move`,
+    body: {
+      anchor: requireString(body, "anchor"),
+      offset_x: requireNumber(body, "offset_x"),
+      offset_y: requireNumber(body, "offset_y"),
+    },
+  });
+}
+
+export async function discardWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/discard`,
+  });
+}
+
+export async function addLiquidToWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/liquids`,
+    body: {
+      liquid_id: requireString(body, "liquid_id"),
+      ...optionalNumberBody(body, "volume_ml"),
+    },
+  });
+}
+
+export async function updateWorkspaceWidgetLiquidVolume(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "PATCH",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/liquids/${requireString(body, "liquid_entry_id")}`,
+    body: { volume_ml: requireNumber(body, "volume_ml") },
+  });
+}
+
+export async function removeLiquidFromWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "DELETE",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/liquids/${requireString(body, "liquid_entry_id")}`,
+  });
+}
+
+export async function completeGrinderCycle(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/complete-grinder-cycle`,
+  });
+}
+
+export async function advanceWorkspaceCryogenics(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/advance-cryogenics`,
+    body: { elapsed_ms: requireNumber(body, "elapsed_ms") },
+  });
+}
+
+export async function addWorkspaceProduceLotToWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/add-produce-lot`,
+    body: { produce_lot_id: requireString(body, "produce_lot_id") },
+  });
+}
+
+export async function moveWorkbenchProduceLotToWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/move-workbench-produce-lot`,
+    body: {
+      source_slot_id: requireString(body, "source_slot_id"),
+      produce_lot_id: requireString(body, "produce_lot_id"),
+    },
+  });
+}
+
+export async function restoreTrashedProduceLotToWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/trash/produce-lots/${requireString(body, "trash_produce_lot_id")}/restore-to-widget`,
+    body: { widget_id: requireString(body, "widget_id") },
+  });
+}
+
+export async function createProduceLot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/produce-lots`,
+    body: { produce_type: requireString(body, "produce_type") },
+  });
+}
+
+export async function discardWorkspaceProduceLot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/produce-lots/${requireString(body, "produce_lot_id")}/discard`,
+  });
+}
+
+export async function moveWidgetProduceLotToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/produce-lots/${requireString(body, "produce_lot_id")}/move-to-workbench-tool`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function discardWidgetProduceLot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/produce-lots/${requireString(body, "produce_lot_id")}/discard`,
+  });
+}
+
+export async function placeToolInRackSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/rack/slots/${requireString(body, "rack_slot_id")}/place-tool-from-palette`,
+    body: { tool_id: requireString(body, "tool_id") },
+  });
+}
+
+export async function placeWorkbenchToolInRackSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/rack/slots/${requireString(body, "rack_slot_id")}/place-tool-from-workbench`,
+    body: { source_slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
+export async function moveRackToolBetweenSlots(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/rack/tools/${findRackToolId(experimentId, requireString(body, "source_rack_slot_id"))}/move-to-slot`,
+    body: { target_rack_slot_id: requireString(body, "target_rack_slot_id") },
+  });
+}
+
+export async function removeRackToolToWorkbenchSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/rack/tools/${findRackToolId(experimentId, requireString(body, "rack_slot_id"))}/move-to-workbench-slot`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function discardRackTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/rack/tools/${findRackToolId(experimentId, requireString(body, "rack_slot_id"))}/discard`,
+  });
+}
+
+export async function restoreTrashedToolToRackSlot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/trash/tools/${requireString(body, "trash_tool_id")}/restore-to-rack`,
+    body: { rack_slot_id: requireString(body, "rack_slot_id") },
+  });
+}
+
+export async function addLiquidToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/liquids`,
+    body: {
+      liquid_id: requireString(body, "liquid_id"),
+      ...optionalNumberBody(body, "volume_ml"),
+    },
+  });
+}
+
+export async function addProduceLotToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  const slotId = requireString(body, "slot_id");
+  const toolId = findWorkbenchToolIdIfPresent(experimentId, slotId);
+
+  return sendMutationRequest(experimentId, toolId
+    ? {
+        method: "POST",
+        path: `/experiments/${experimentId}/workbench/tools/${toolId}/add-produce-lot`,
+        body: { produce_lot_id: requireString(body, "produce_lot_id") },
+      }
+    : {
+        method: "POST",
+        path: `/experiments/${experimentId}/workbench/slots/${slotId}/add-produce-lot`,
+        body: { produce_lot_id: requireString(body, "produce_lot_id") },
+      });
+}
+
+export async function discardProduceLotFromWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/produce-lots/${requireString(body, "produce_lot_id")}/discard`,
+    body: { slot_id: requireString(body, "slot_id") },
+  });
+}
+
+export async function cutWorkbenchProduceLot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/produce-lots/${requireString(body, "produce_lot_id")}/cut`,
+    body: { slot_id: requireString(body, "slot_id") },
+  });
+}
+
+export async function moveProduceLotBetweenWorkbenchTools(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/produce-lots/${requireString(body, "produce_lot_id")}/move-to-tool`,
+    body: {
+      source_slot_id: requireString(body, "source_slot_id"),
+      target_slot_id: requireString(body, "target_slot_id"),
+    },
+  });
+}
+
+export async function restoreTrashedProduceLotToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/trash/produce-lots/${requireString(body, "trash_produce_lot_id")}/restore-to-workbench-tool`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function removeLiquidFromWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "DELETE",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/liquids/${requireString(body, "liquid_entry_id")}`,
+  });
+}
+
+export async function updateWorkbenchLiquidVolume(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "PATCH",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/liquids/${requireString(body, "liquid_entry_id")}`,
+    body: { volume_ml: requireNumber(body, "volume_ml") },
+  });
+}
+
+export async function applySampleLabelToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-label`,
+  });
+}
+
+export async function updateWorkbenchToolSampleLabelText(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "PATCH",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-label`,
+    body: { sample_label_text: requireString(body, "sample_label_text") },
+  });
+}
+
+export async function moveSampleLabelBetweenWorkbenchTools(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "source_slot_id"))}/sample-label/move-to-tool`,
+    body: { target_tool_id: findWorkbenchToolId(experimentId, requireString(body, "target_slot_id")) },
+  });
+}
+
+export async function discardSampleLabelFromWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "DELETE",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-label`,
+  });
+}
+
+export async function restoreTrashedSampleLabelToWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/trash/sample-labels/${requireString(body, "trash_sample_label_id")}/restore-to-workbench-tool`,
+    body: { target_tool_id: findWorkbenchToolId(experimentId, requireString(body, "target_slot_id")) },
+  });
 }
 
 function normalizeExperiment(experiment: Experiment): Experiment {

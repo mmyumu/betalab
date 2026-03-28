@@ -184,11 +184,11 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
 }
 
 export function LabScene() {
-  const { state, statusMessage, isCommandPending, loadExperiment, sendWorkbenchCommand } =
-    useLabExperiment({
-      defaultErrorMessage,
-      defaultStatusMessage,
-    });
+  const experimentApi = useLabExperiment({
+    defaultErrorMessage,
+    defaultStatusMessage,
+  });
+  const { state, statusMessage, isCommandPending, loadExperiment } = experimentApi;
   const [pendingQuantityDraft, setPendingQuantityDraft] = useState<{
     itemId: string;
     name: string;
@@ -255,7 +255,7 @@ export function LabScene() {
         return;
       }
 
-      void sendWorkbenchCommand("advance_workspace_cryogenics", {
+      void experimentApi.advanceWorkspaceCryogenics( {
         elapsed_ms: cryogenicTickMs,
       });
     }, cryogenicTickMs);
@@ -263,7 +263,7 @@ export function LabScene() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isCommandPending, pendingQuantityDraft, sendWorkbenchCommand, state]);
+  }, [isCommandPending, pendingQuantityDraft, experimentApi, state]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -365,7 +365,7 @@ export function LabScene() {
   const handleToolbarItemDrop = (slotId: string, payload: ToolbarDragPayload) => {
     if (payload.itemType === "tool") {
       clearDropTargets();
-      void sendWorkbenchCommand("place_tool_on_workbench", {
+      void experimentApi.placeToolOnWorkbench( {
         slot_id: slotId,
         tool_id: payload.itemId,
       });
@@ -391,13 +391,13 @@ export function LabScene() {
 
   const handleApplySampleLabel = (slotId: string) => {
     clearDropTargets();
-    void sendWorkbenchCommand("apply_sample_label_to_workbench_tool", {
+    void experimentApi.applySampleLabelToWorkbenchTool( {
       slot_id: slotId,
     });
   };
 
   const handleSampleLabelTextChange = (slotId: string, sampleLabelText: string) => {
-    void sendWorkbenchCommand("update_workbench_tool_sample_label_text", {
+    void experimentApi.updateWorkbenchToolSampleLabelText( {
       slot_id: slotId,
       sample_label_text: sampleLabelText,
     });
@@ -409,7 +409,7 @@ export function LabScene() {
     }
 
     clearDropTargets();
-    void sendWorkbenchCommand("move_sample_label_between_workbench_tools", {
+    void experimentApi.moveSampleLabelBetweenWorkbenchTools( {
       source_slot_id: payload.sourceSlotId,
       target_slot_id: targetSlotId,
     });
@@ -424,14 +424,14 @@ export function LabScene() {
     }
 
     clearDropTargets();
-    void sendWorkbenchCommand("restore_trashed_sample_label_to_workbench_tool", {
+    void experimentApi.restoreTrashedSampleLabelToWorkbenchTool( {
       target_slot_id: targetSlotId,
       trash_sample_label_id: payload.trashSampleLabelId,
     });
   };
 
   const handleRemoveLiquid = (slotId: string, liquidId: string) => {
-    void sendWorkbenchCommand("remove_liquid_from_workbench_tool", {
+    void experimentApi.removeLiquidFromWorkbenchTool( {
       slot_id: slotId,
       liquid_entry_id: liquidId,
     });
@@ -480,7 +480,7 @@ export function LabScene() {
     }
 
     if (pendingQuantityDraft.targetKind === "workspace_widget") {
-      void sendWorkbenchCommand("add_liquid_to_workspace_widget", {
+      void experimentApi.addLiquidToWorkspaceWidget( {
         widget_id: pendingQuantityDraft.targetId,
         liquid_id: pendingQuantityDraft.itemId,
         volume_ml: pendingQuantityDraft.quantity,
@@ -489,7 +489,7 @@ export function LabScene() {
       return;
     }
 
-    void sendWorkbenchCommand("add_liquid_to_workbench_tool", {
+    void experimentApi.addLiquidToWorkbenchTool( {
       slot_id: pendingQuantityDraft.targetId,
       liquid_id: pendingQuantityDraft.itemId,
       volume_ml: pendingQuantityDraft.quantity,
@@ -498,11 +498,11 @@ export function LabScene() {
   };
 
   const handleAddWorkbenchSlot = () => {
-    void sendWorkbenchCommand("add_workbench_slot", {});
+    void experimentApi.addWorkbenchSlot();
   };
 
   const handleRemoveWorkbenchSlot = (slotId: string) => {
-    void sendWorkbenchCommand("remove_workbench_slot", {
+    void experimentApi.removeWorkbenchSlot( {
       slot_id: slotId,
     });
   };
@@ -557,7 +557,7 @@ export function LabScene() {
         return;
       }
 
-      void sendWorkbenchCommand("move_tool_between_workbench_slots", {
+      void experimentApi.moveToolBetweenWorkbenchSlots( {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
       });
@@ -566,7 +566,7 @@ export function LabScene() {
     }
 
     if ("trashToolId" in payload) {
-      void sendWorkbenchCommand("restore_trashed_tool_to_workbench_slot", {
+      void experimentApi.restoreTrashedToolToWorkbenchSlot( {
         target_slot_id: targetSlotId,
         trash_tool_id: payload.trashToolId,
       });
@@ -574,7 +574,7 @@ export function LabScene() {
       return;
     }
 
-    void sendWorkbenchCommand("remove_rack_tool_to_workbench_slot", {
+    void experimentApi.removeRackToolToWorkbenchSlot( {
       rack_slot_id: payload.rackSlotId,
       target_slot_id: targetSlotId,
     });
@@ -583,7 +583,7 @@ export function LabScene() {
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
     if (payload.sourceKind === "basket") {
-      void sendWorkbenchCommand("add_produce_lot_to_workbench_tool", {
+      void experimentApi.addProduceLotToWorkbenchTool( {
         slot_id: targetSlotId,
         produce_lot_id: payload.produceLotId,
       });
@@ -592,7 +592,7 @@ export function LabScene() {
     }
 
     if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
-      void sendWorkbenchCommand("move_produce_lot_between_workbench_tools", {
+      void experimentApi.moveProduceLotBetweenWorkbenchTools( {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
         produce_lot_id: payload.produceLotId,
@@ -602,7 +602,7 @@ export function LabScene() {
     }
 
     if (payload.sourceKind === "grinder") {
-      void sendWorkbenchCommand("move_widget_produce_lot_to_workbench_tool", {
+      void experimentApi.moveWidgetProduceLotToWorkbenchTool( {
         widget_id: "grinder",
         target_slot_id: targetSlotId,
         produce_lot_id: payload.produceLotId,
@@ -612,7 +612,7 @@ export function LabScene() {
     }
 
     if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
-      void sendWorkbenchCommand("restore_trashed_produce_lot_to_workbench_tool", {
+      void experimentApi.restoreTrashedProduceLotToWorkbenchTool( {
         target_slot_id: targetSlotId,
         trash_produce_lot_id: payload.trashProduceLotId,
       });
@@ -626,7 +626,7 @@ export function LabScene() {
       return;
     }
 
-    void sendWorkbenchCommand("cut_workbench_produce_lot", {
+    void experimentApi.cutWorkbenchProduceLot( {
       slot_id: slotId,
       produce_lot_id: produceLot.id,
     });
@@ -658,12 +658,12 @@ export function LabScene() {
     initialOrder: [...widgetIds],
     onDiscardWidget: (widgetId) => {
       clearDropTargets();
-      void sendWorkbenchCommand("discard_workspace_widget", {
+      void experimentApi.discardWorkspaceWidget( {
         widget_id: widgetId,
       });
     },
     onMoveWidget: (widgetId, nextPosition) => {
-      void sendWorkbenchCommand("move_workspace_widget", {
+      void experimentApi.moveWorkspaceWidget( {
         widget_id: widgetId,
         anchor: nextPosition.anchor,
         offset_x: nextPosition.offsetX,
@@ -724,7 +724,7 @@ export function LabScene() {
       workspaceRect ? { height: workspaceRect.height, width: workspaceRect.width } : null,
     );
 
-    void sendWorkbenchCommand("add_workspace_widget", {
+    void experimentApi.addWorkspaceWidget( {
       widget_id: widgetId,
       anchor: nextAnchoredLayout.anchor,
       offset_x: nextAnchoredLayout.offsetX,
@@ -817,7 +817,7 @@ export function LabScene() {
     clearDropTargets();
 
     if (producePayload.sourceKind === "basket") {
-      void sendWorkbenchCommand("add_workspace_produce_lot_to_widget", {
+      void experimentApi.addWorkspaceProduceLotToWidget( {
         widget_id: "grinder",
         produce_lot_id: producePayload.produceLotId,
       });
@@ -825,7 +825,7 @@ export function LabScene() {
     }
 
     if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
-      void sendWorkbenchCommand("move_workbench_produce_lot_to_widget", {
+      void experimentApi.moveWorkbenchProduceLotToWidget( {
         widget_id: "grinder",
         source_slot_id: producePayload.sourceSlotId,
         produce_lot_id: producePayload.produceLotId,
@@ -834,7 +834,7 @@ export function LabScene() {
     }
 
     if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
-      void sendWorkbenchCommand("restore_trashed_produce_lot_to_widget", {
+      void experimentApi.restoreTrashedProduceLotToWidget( {
         widget_id: "grinder",
         trash_produce_lot_id: producePayload.trashProduceLotId,
       });
@@ -863,7 +863,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_sample_label_from_palette", {
+      void experimentApi.discardSampleLabelFromPalette( {
         sample_label_id: toolbarPayload.itemId,
       });
       return;
@@ -873,7 +873,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_tool_from_palette", {
+      void experimentApi.discardToolFromPalette( {
         tool_id: toolbarPayload.itemId,
       });
       return;
@@ -887,7 +887,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_workspace_widget", {
+      void experimentApi.discardWorkspaceWidget( {
         widget_id: widgetId,
       });
       return;
@@ -898,7 +898,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_workbench_tool", {
+      void experimentApi.discardWorkbenchTool( {
         slot_id: benchToolPayload.sourceSlotId,
       });
       return;
@@ -909,7 +909,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_rack_tool", {
+      void experimentApi.discardRackTool( {
         rack_slot_id: rackToolPayload.rackSlotId,
       });
       return;
@@ -920,7 +920,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("remove_liquid_from_workspace_widget", {
+      void experimentApi.removeLiquidFromWorkspaceWidget( {
         widget_id: workspaceLiquidPayload.widgetId,
         liquid_entry_id: workspaceLiquidPayload.liquidEntryId,
       });
@@ -932,7 +932,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_workspace_produce_lot", {
+      void experimentApi.discardWorkspaceProduceLot( {
         produce_lot_id: producePayload.produceLotId,
       });
       return;
@@ -942,7 +942,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_widget_produce_lot", {
+      void experimentApi.discardWidgetProduceLot( {
         widget_id: "grinder",
         produce_lot_id: producePayload.produceLotId,
       });
@@ -953,7 +953,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_produce_lot_from_workbench_tool", {
+      void experimentApi.discardProduceLotFromWorkbenchTool( {
         slot_id: producePayload.sourceSlotId,
         produce_lot_id: producePayload.produceLotId,
       });
@@ -965,7 +965,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void sendWorkbenchCommand("discard_sample_label_from_workbench_tool", {
+      void experimentApi.discardSampleLabelFromWorkbenchTool( {
         slot_id: sampleLabelPayload.sourceSlotId,
       });
     }
@@ -1069,7 +1069,7 @@ export function LabScene() {
     grinderRunTimeoutRef.current = window.setTimeout(() => {
       void (async () => {
         try {
-          await sendWorkbenchCommand("complete_grinder_cycle", {
+          await experimentApi.completeGrinderCycle( {
             widget_id: "grinder",
           });
         } finally {
@@ -1172,7 +1172,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
 
-      void sendWorkbenchCommand("place_workbench_tool_in_rack_slot", {
+      void experimentApi.placeWorkbenchToolInRackSlot( {
         source_slot_id: benchToolPayload.sourceSlotId,
         rack_slot_id: targetRackSlot.id,
       });
@@ -1190,7 +1190,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
 
-      void sendWorkbenchCommand("move_rack_tool_between_slots", {
+      void experimentApi.moveRackToolBetweenSlots( {
         source_rack_slot_id: rackToolPayload.rackSlotId,
         target_rack_slot_id: targetRackSlot.id,
       });
@@ -1205,7 +1205,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
 
-      void sendWorkbenchCommand("place_tool_in_rack_slot", {
+      void experimentApi.placeToolInRackSlot( {
         rack_slot_id: targetRackSlot.id,
         tool_id: toolbarTool.id,
       });
@@ -1218,7 +1218,7 @@ export function LabScene() {
       event.preventDefault();
       event.stopPropagation();
 
-      void sendWorkbenchCommand("restore_trashed_tool_to_rack_slot", {
+      void experimentApi.restoreTrashedToolToRackSlot( {
         rack_slot_id: targetRackSlot.id,
         trash_tool_id: trashToolPayload.trashToolId,
       });
@@ -1551,7 +1551,7 @@ export function LabScene() {
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
   const handleCreateAppleLot = () => {
-    void sendWorkbenchCommand("create_produce_lot", {
+    void experimentApi.createProduceLot( {
       produce_type: "apple",
     });
   };

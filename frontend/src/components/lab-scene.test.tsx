@@ -13,12 +13,9 @@ import type {
   TrashToolEntry,
 } from "@/types/workbench";
 
-vi.mock("@/lib/api", () => ({
-  createExperiment: vi.fn(),
-  sendExperimentCommand: vi.fn(),
-}));
+vi.mock("@/lib/api", async () => await import("@/test-support/api-mock"));
 
-import { createExperiment, sendExperimentCommand } from "@/lib/api";
+import { createExperiment, sendExperimentCommand } from "@/test-support/api-mock";
 
 const PesticideWorkbench = LabScene;
 
