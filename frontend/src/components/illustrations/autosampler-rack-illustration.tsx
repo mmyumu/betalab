@@ -18,7 +18,6 @@ const rackPalette = {
     frame: "#0f172a",
     panel: "#e2e8f0",
     tray: "#f8fafc",
-    shadow: "#cbd5e1",
     slot: "#94a3b8",
     liquid: "#38bdf8",
     accent: "#0ea5e9",
@@ -28,7 +27,6 @@ const rackPalette = {
     frame: "#334155",
     panel: "#e2e8f0",
     tray: "#ffffff",
-    shadow: "#e2e8f0",
     slot: "#cbd5e1",
     liquid: "#94a3b8",
     accent: "#64748b",
@@ -49,11 +47,11 @@ export function AutosamplerRackIllustration({
     occupiedSlots.filter((slotNumber) => Number.isInteger(slotNumber) && slotNumber >= 1),
   );
   const slots = Array.from({ length: slotCount }, (_, index) => index + 1);
-  const columns = Math.min(6, Math.max(slotCount, 1));
-  const baseX = 98;
-  const baseY = 106;
-  const slotGapX = 70;
-  const slotGapY = 84;
+  const columns = Math.min(4, Math.max(slotCount, 1));
+  const baseX = 182;
+  const baseY = 111;
+  const slotGapX = 61;
+  const slotGapY = 49;
 
   return (
     <div
@@ -67,42 +65,70 @@ export function AutosamplerRackIllustration({
       <svg
         className="h-full w-full"
         fill="none"
-        viewBox="0 0 560 320"
+        viewBox="0 0 560 360"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect fill="#f8fafc" height="320" rx="36" width="560" />
-        <ellipse cx="280" cy="278" fill={palette.shadow} opacity="0.65" rx="186" ry="22" />
+        <defs>
+          <linearGradient id="rack-plate" x1="120" x2="440" y1="70" y2="300" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#eef3f7" offset="0" />
+            <stop stopColor="#c5d0d8" offset="1" />
+          </linearGradient>
+          <linearGradient id="rack-well" x1="0" x2="0" y1="86" y2="254" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#dfe7ed" offset="0" />
+            <stop stopColor="#b7c3cc" offset="1" />
+          </linearGradient>
+          <linearGradient id="rack-cap" x1="0" x2="0" y1="90" y2="250" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#616f79" offset="0" />
+            <stop stopColor="#45525b" offset="1" />
+          </linearGradient>
+          <linearGradient id="rack-glass" x1="0" x2="0" y1="102" y2="240" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#eefcff" offset="0" />
+            <stop stopColor="#bfe8f0" offset="1" />
+          </linearGradient>
+        </defs>
+
+        <rect fill="#f8fafc" height="360" rx="36" width="560" />
+        <rect
+          fill="url(#rack-plate)"
+          height="188"
+          rx="24"
+          stroke={palette.frame}
+          strokeWidth="5"
+          width="328"
+          x="116"
+          y="68"
+        />
         <rect
           fill={palette.panel}
-          height="150"
-          rx="28"
-          stroke={palette.frame}
-          strokeWidth="6"
-          width="412"
-          x="74"
-          y="84"
-        />
-        <rect
-          fill={palette.tray}
-          height="112"
-          rx="22"
-          stroke={palette.frame}
-          strokeWidth="4"
-          width="372"
-          x="94"
-          y="102"
+          height="140"
+          rx="18"
+          stroke="#93a4ae"
+          strokeWidth="3"
+          width="270"
+          x="145"
+          y="90"
         />
         <rect
           fill={palette.panel}
-          height="22"
-          rx="11"
-          stroke={palette.frame}
-          strokeWidth="4"
-          width="156"
-          x="202"
-          y="50"
+          height="62"
+          rx="10"
+          stroke="#8798a3"
+          strokeWidth="3"
+          width="18"
+          x="99"
+          y="131"
         />
-        <path d="M186 50H374" stroke={palette.frame} strokeLinecap="round" strokeWidth="5" />
+        <rect
+          fill={palette.panel}
+          height="62"
+          rx="10"
+          stroke="#8798a3"
+          strokeWidth="3"
+          width="18"
+          x="443"
+          y="131"
+        />
+        <rect fill="#c5d0d8" height="124" opacity="0.9" rx="8" width="14" x="391" y="98" />
 
         {slots.map((slotNumber, index) => {
           const column = index % columns;
@@ -115,7 +141,6 @@ export function AutosamplerRackIllustration({
           const vialPalette = occupied ? liquidVisualState.palette : neutralLiquidPalette;
           const liquidSegments = liquidVisualState.segments;
           const gradientId = `${testId ?? "autosampler-rack"}-slot-gradient-${slotNumber}`;
-          const slotGlow = occupied ? vialPalette.glow : palette.tray;
           const slotLiquid =
             occupied && liquidSegments.length > 1
               ? `url(#${gradientId})`
@@ -133,8 +158,8 @@ export function AutosamplerRackIllustration({
                   <linearGradient
                     data-testid={testId ? `${testId}-slot-gradient-${slotNumber}` : undefined}
                     id={gradientId}
-                    x1="0%"
-                    x2="0%"
+                    x1="50%"
+                    x2="50%"
                     y1="100%"
                     y2="0%"
                   >
@@ -164,60 +189,63 @@ export function AutosamplerRackIllustration({
               <circle
                 cx={cx}
                 cy={cy}
-                fill={slotGlow}
-                r="18"
+                fill="url(#rack-well)"
+                r="16"
                 stroke={palette.slot}
-                strokeWidth="4"
+                strokeWidth="2.5"
               />
               <circle
                 cx={cx}
                 cy={cy}
-                fill={slotLiquid}
-                opacity={occupied ? 0.95 : 0.35}
-                r={occupied ? "10" : "6"}
+                fill={occupied ? "url(#rack-cap)" : "#cbd5e1"}
+                opacity={occupied ? 1 : 0.55}
+                r="12"
+                stroke={occupied ? "#3f4c56" : "#94a3b8"}
+                strokeWidth="2.5"
+              />
+              <circle
+                cx={cx}
+                cy={cy}
+                fill={occupied ? "url(#rack-glass)" : "#eef3f7"}
+                opacity={occupied ? 1 : 0.75}
+                r="7.5"
+                stroke={occupied ? vialStroke : "#a8b7c1"}
+                strokeWidth="2"
               />
               {occupied ? (
                 <>
-                  <rect
-                    fill="#0f172a"
-                    height="14"
-                    rx="3"
-                    width="10"
-                    x={cx - 5}
-                    y={cy - 32}
-                  />
-                  <path
-                    d={`M${cx - 7} ${cy - 18}H${cx + 7}V${cy + 4}C${cx + 7} ${cy + 10} ${cx + 3} ${cy + 15} ${cx} ${cy + 15}C${cx - 3} ${cy + 15} ${cx - 7} ${cy + 10} ${cx - 7} ${cy + 4}V${cy - 18}Z`}
-                    fill="#f8fafc"
-                    opacity="0.96"
-                    stroke={vialStroke}
-                    strokeWidth="3"
-                  />
-                  <path
+                  <circle
+                    cx={cx}
+                    cy={cy}
                     data-testid={testId ? `${testId}-slot-liquid-${slotNumber}` : undefined}
-                    d={`M${cx - 4} ${cy - 2}H${cx + 4}V${cy + 4}C${cx + 4} ${cy + 7} ${cx + 2} ${cy + 10} ${cx} ${cy + 10}C${cx - 2} ${cy + 10} ${cx - 4} ${cy + 7} ${cx - 4} ${cy + 4}V${cy - 2}Z`}
                     fill={slotLiquid}
+                    r="3.5"
                   />
                 </>
-              ) : null}
+              ) : (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    data-testid={testId ? `${testId}-slot-liquid-${slotNumber}` : undefined}
+                    fill={palette.slot}
+                    opacity="0.6"
+                    r="3.5"
+                  />
+              )}
               <text
                 fill={palette.label}
                 fontFamily="ui-sans-serif, system-ui, sans-serif"
-                fontSize="13"
+                fontSize="11"
                 fontWeight="700"
-                textAnchor="middle"
-                x={cx}
-                y={cy + 38}
+                textAnchor="end"
+                x={cx - 20}
+                y={cy + 4}
               >
                 {slotNumber}
               </text>
             </g>
           );
         })}
-
-        <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="102" x="116" y="248" />
-        <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="68" x="234" y="248" />
-        <rect fill={palette.slot} height="10" opacity="0.35" rx="5" width="86" x="314" y="248" />
       </svg>
     </div>
   );

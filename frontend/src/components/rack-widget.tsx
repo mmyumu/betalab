@@ -58,8 +58,8 @@ export function RackWidget({
 
             return (
               <div
-                className={`absolute h-14 w-12 -translate-x-1/2 -translate-y-[70%] rounded-full transition-colors ${
-                  isSlotHighlighted ? "bg-sky-200/45 ring-2 ring-sky-300/90" : ""
+                className={`absolute h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${
+                  isSlotHighlighted ? "bg-sky-200/30 ring-2 ring-sky-300/75" : ""
                 } ${tool && !dndDisabled ? dragAffordanceClassName : ""}`}
                 data-drop-highlighted={isSlotHighlighted ? "true" : "false"}
                 data-testid={`rack-illustration-slot-${slotIndex + 1}`}
@@ -93,9 +93,16 @@ export function RackWidget({
 
                 return (
                   <div
-                    className="flex items-center justify-between gap-3 rounded-[0.85rem] border border-slate-200 bg-slate-50 px-3 py-1.5"
+                    className={`flex items-center justify-between gap-3 rounded-[0.85rem] border border-slate-200 bg-slate-50 px-3 py-1.5 ${
+                      dndDisabled ? "" : dragAffordanceClassName
+                    }`}
                     data-testid={`rack-slot-summary-${slotIndex + 1}`}
+                    draggable={!dndDisabled}
                     key={rackSlot.id}
+                    onDragEnd={onItemDragEnd}
+                    onDragStart={(event) =>
+                      dndDisabled ? undefined : onRackToolDragStart(rackSlot, tool, event.dataTransfer)
+                    }
                   >
                     <div className="min-w-0 flex-1 text-sm text-slate-700">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -107,13 +114,8 @@ export function RackWidget({
                       </span>
                     </div>
                     <div
-                      className={`${dndDisabled ? "" : dragAffordanceClassName} shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600`}
+                      className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
                       data-testid={`rack-slot-tool-${slotIndex + 1}`}
-                      draggable={!dndDisabled}
-                      onDragEnd={onItemDragEnd}
-                      onDragStart={(event) =>
-                        dndDisabled ? undefined : onRackToolDragStart(rackSlot, tool, event.dataTransfer)
-                      }
                     >
                       {tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0)} mL
                     </div>
