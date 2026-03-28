@@ -1106,6 +1106,24 @@ export function LabScene() {
       return;
     }
 
+    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
+    if (rackToolPayload?.toolType === "sample_vial") {
+      if (rackToolPayload.rackSlotId === targetRackSlot.id) {
+        clearDropTargets();
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      void sendWorkbenchCommand("move_rack_tool_between_slots", {
+        source_rack_slot_id: rackToolPayload.rackSlotId,
+        target_rack_slot_id: targetRackSlot.id,
+      });
+      clearDropTargets();
+      return;
+    }
+
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     const toolbarTool =
       toolbarPayload?.itemType === "tool" ? labToolCatalog[toolbarPayload.itemId] : null;

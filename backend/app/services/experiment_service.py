@@ -5,6 +5,7 @@ from dataclasses import asdict
 from app.domain.models import Experiment
 from app.schemas.experiment import ExperimentSchema
 from app.services.command_handlers.rack import (
+    move_rack_tool_between_slots,
     place_tool_in_rack_slot,
     place_workbench_tool_in_rack_slot,
     remove_rack_tool_to_workbench_slot,
@@ -81,6 +82,7 @@ class ExperimentService:
             "discard_workspace_produce_lot": discard_workspace_produce_lot,
             "place_tool_in_rack_slot": place_tool_in_rack_slot,
             "place_workbench_tool_in_rack_slot": place_workbench_tool_in_rack_slot,
+            "move_rack_tool_between_slots": move_rack_tool_between_slots,
             "remove_rack_tool_to_workbench_slot": remove_rack_tool_to_workbench_slot,
             "discard_rack_tool": discard_rack_tool,
             "restore_trashed_tool_to_rack_slot": restore_trashed_tool_to_rack_slot,

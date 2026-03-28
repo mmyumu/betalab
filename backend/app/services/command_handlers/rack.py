@@ -50,3 +50,19 @@ def remove_rack_tool_to_workbench_slot(experiment: Experiment, payload: dict) ->
     experiment.audit_log.append(
         f"{target_slot.tool.label} moved from {rack_slot.label} to {target_slot.label}."
     )
+
+
+def move_rack_tool_between_slots(experiment: Experiment, payload: dict) -> None:
+    source_slot = find_rack_slot(experiment.rack, payload["source_rack_slot_id"])
+    target_slot = find_rack_slot(experiment.rack, payload["target_rack_slot_id"])
+
+    if source_slot.tool is None:
+        raise ValueError(f"Place a vial in {source_slot.label} before moving it.")
+    if target_slot.tool is not None:
+        raise ValueError(f"{target_slot.label} already contains a vial")
+
+    target_slot.tool = source_slot.tool
+    source_slot.tool = None
+    experiment.audit_log.append(
+        f"{target_slot.tool.label} moved from {source_slot.label} to {target_slot.label}."
+    )

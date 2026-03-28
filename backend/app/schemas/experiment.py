@@ -132,6 +132,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "cut_workbench_produce_lot",
         "place_tool_in_rack_slot",
         "place_workbench_tool_in_rack_slot",
+        "move_rack_tool_between_slots",
         "remove_rack_tool_to_workbench_slot",
         "discard_rack_tool",
         "restore_trashed_tool_to_rack_slot",

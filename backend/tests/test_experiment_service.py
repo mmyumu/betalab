@@ -1431,6 +1431,42 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
     assert updated.audit_log[-1] == "Autosampler vial moved from Position 1 to Station 2."
 
 
+def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sample_vial_lcms",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "place_workbench_tool_in_rack_slot",
+        {
+            "source_slot_id": "station_1",
+            "rack_slot_id": "rack_slot_1",
+        },
+    )
+
+    updated = service.apply_command(
+        experiment.id,
+        "move_rack_tool_between_slots",
+        {
+            "source_rack_slot_id": "rack_slot_1",
+            "target_rack_slot_id": "rack_slot_2",
+        },
+    )
+
+    assert updated.rack.slots[0].tool is None
+    assert updated.rack.slots[1].tool is not None
+    assert updated.rack.slots[1].tool.label == "Autosampler vial"
+    assert updated.audit_log[-1] == "Autosampler vial moved from Position 1 to Position 2."
+
+
 def test_discard_rack_tool_removes_it_from_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
