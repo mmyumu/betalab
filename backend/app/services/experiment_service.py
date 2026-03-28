@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Callable, TypeVar
 
 from app.domain.models import Experiment
 from app.schemas.experiment import ExperimentSchema
@@ -54,7 +55,18 @@ from app.services.command_handlers.workspace import (
     restore_trashed_produce_lot_to_widget,
     update_workspace_widget_liquid_volume,
 )
+from app.services.commands import (
+    AddWorkspaceProduceLotToWidgetCommand,
+    CreateProduceLotCommand,
+    DiscardWidgetProduceLotCommand,
+    DiscardWorkspaceProduceLotCommand,
+    MoveWorkbenchProduceLotToWidgetCommand,
+    MoveWidgetProduceLotToWorkbenchToolCommand,
+    RestoreTrashedProduceLotToWidgetCommand,
+)
 from app.services.experiment_factory import build_experiment
+
+CommandT = TypeVar("CommandT")
 
 
 class ExperimentNotFoundError(KeyError):
@@ -178,51 +190,64 @@ class ExperimentService:
         return self._to_schema(experiment)
 
     def add_workspace_produce_lot_to_widget(self, experiment_id: str, widget_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        add_workspace_produce_lot_to_widget(
-            experiment,
-            {"widget_id": widget_id, "produce_lot_id": produce_lot_id},
+        return self._apply_command(
+            experiment_id,
+            add_workspace_produce_lot_to_widget,
+            AddWorkspaceProduceLotToWidgetCommand(widget_id=widget_id, produce_lot_id=produce_lot_id),
         )
-        return self._to_schema(experiment)
 
     def move_workbench_produce_lot_to_widget(self, experiment_id: str, widget_id: str, source_slot_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_workbench_produce_lot_to_widget(
-            experiment,
-            {"widget_id": widget_id, "source_slot_id": source_slot_id, "produce_lot_id": produce_lot_id},
+        return self._apply_command(
+            experiment_id,
+            move_workbench_produce_lot_to_widget,
+            MoveWorkbenchProduceLotToWidgetCommand(
+                widget_id=widget_id,
+                source_slot_id=source_slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def restore_trashed_produce_lot_to_widget(self, experiment_id: str, trash_produce_lot_id: str, widget_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        restore_trashed_produce_lot_to_widget(
-            experiment,
-            {"trash_produce_lot_id": trash_produce_lot_id, "widget_id": widget_id},
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_produce_lot_to_widget,
+            RestoreTrashedProduceLotToWidgetCommand(
+                trash_produce_lot_id=trash_produce_lot_id,
+                widget_id=widget_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def create_produce_lot(self, experiment_id: str, produce_type: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        create_produce_lot(experiment, {"produce_type": produce_type})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            create_produce_lot,
+            CreateProduceLotCommand(produce_type=produce_type),
+        )
 
     def discard_workspace_produce_lot(self, experiment_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_workspace_produce_lot(experiment, {"produce_lot_id": produce_lot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_workspace_produce_lot,
+            DiscardWorkspaceProduceLotCommand(produce_lot_id=produce_lot_id),
+        )
 
     def move_widget_produce_lot_to_workbench_tool(self, experiment_id: str, widget_id: str, produce_lot_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_widget_produce_lot_to_workbench_tool(
-            experiment,
-            {"widget_id": widget_id, "produce_lot_id": produce_lot_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            move_widget_produce_lot_to_workbench_tool,
+            MoveWidgetProduceLotToWorkbenchToolCommand(
+                widget_id=widget_id,
+                produce_lot_id=produce_lot_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_widget_produce_lot(self, experiment_id: str, widget_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_widget_produce_lot(experiment, {"widget_id": widget_id, "produce_lot_id": produce_lot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_widget_produce_lot,
+            DiscardWidgetProduceLotCommand(widget_id=widget_id, produce_lot_id=produce_lot_id),
+        )
 
     def place_tool_in_rack_slot(self, experiment_id: str, rack_slot_id: str, tool_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
@@ -366,6 +391,16 @@ class ExperimentService:
         if experiment is None:
             raise ExperimentNotFoundError(experiment_id)
         return experiment
+
+    def _apply_command(
+        self,
+        experiment_id: str,
+        handler: Callable[[Experiment, CommandT], None],
+        command: CommandT,
+    ) -> ExperimentSchema:
+        experiment = self._require_experiment(experiment_id)
+        handler(experiment, command)
+        return self._to_schema(experiment)
 
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema:
         return ExperimentSchema.model_validate(
