@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.rules import can_tool_accept_liquids, can_tool_accept_produce
+from app.domain.rules import can_tool_accept_liquids
 from app.domain.models import (
     Experiment,
     TrashProduceLotEntry,
@@ -26,13 +26,20 @@ from app.services.commands import (
     WorkbenchProduceLotCommand,
     WorkbenchSlotCommand,
 )
+from app.services.produce_lot_transfer import (
+    ProduceLotTransferService,
+    WorkbenchProduceLotSource,
+    WorkbenchProduceLotTarget,
+    WorkspaceProduceLotSource,
+)
 from app.services.command_handlers.support import (
     find_trash_sample_label,
     find_workbench_slot,
-    find_workspace_produce_lot,
     format_volume,
     round_volume,
 )
+
+produce_lot_transfer_service = ProduceLotTransferService()
 
 
 def place_tool_on_workbench(experiment: Experiment, command: PlaceToolOnWorkbenchCommand) -> None:
@@ -154,20 +161,15 @@ def add_produce_lot_to_workbench_tool(
     experiment: Experiment,
     command: AddProduceLotToWorkbenchToolCommand,
 ) -> None:
-    slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    _validate_slot_can_accept_produce(slot)
-    produce_lot = find_workspace_produce_lot(
-        experiment.workspace,
-        command.produce_lot_id,
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        WorkspaceProduceLotSource(produce_lot_id=command.produce_lot_id),
+        WorkbenchProduceLotTarget(slot_id=command.slot_id),
     )
-    target_label = _add_produce_lot_to_slot(slot, produce_lot)
-    experiment.workspace.produce_lots = [
-        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
-    ]
     experiment.audit_log.append(
-        f"{produce_lot.label} added to {target_label}."
-        if target_label != slot.label
-        else f"{produce_lot.label} placed directly on {slot.label} and marked contaminated."
+        f"{transfer.produce_lot.label} added to {transfer.target_label}."
+        if not transfer.contamination_applied
+        else f"{transfer.produce_lot.label} placed directly on {transfer.target_label} and marked contaminated."
     )
 
 
@@ -295,17 +297,19 @@ def move_produce_lot_between_workbench_tools(
     experiment: Experiment,
     command: MoveProduceLotBetweenWorkbenchToolsCommand,
 ) -> None:
-    source_slot = find_workbench_slot(experiment.workbench, command.source_slot_id)
-    target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
-
-    if source_slot.id == target_slot.id:
+    if command.source_slot_id == command.target_slot_id:
         return
 
-    produce_lot_id = command.produce_lot_id
-    produce_lot, source_label = _remove_produce_lot_from_slot(source_slot, produce_lot_id)
-    target_label = _add_produce_lot_to_slot(target_slot, produce_lot)
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        WorkbenchProduceLotSource(
+            slot_id=command.source_slot_id,
+            produce_lot_id=command.produce_lot_id,
+        ),
+        WorkbenchProduceLotTarget(slot_id=command.target_slot_id),
+    )
     experiment.audit_log.append(
-        f"{produce_lot.label} moved from {source_label} to {target_label}."
+        f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label}."
     )
 
 
@@ -338,35 +342,6 @@ def cut_workbench_produce_lot(experiment: Experiment, command: WorkbenchProduceL
 
     produce_lot.cut_state = "cut"
     experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
-
-
-def _get_slot_produce_target_label(slot: WorkbenchSlot) -> str:
-    if slot.tool is not None:
-        return slot.tool.label
-    return slot.label
-
-
-def _validate_slot_can_accept_produce(slot: WorkbenchSlot) -> None:
-    if slot.tool is None:
-        if slot.surface_produce_lots:
-            raise ValueError(f"{slot.label} already contains a produce lot.")
-        return
-
-    if not can_tool_accept_produce(slot.tool.tool_type):
-        raise ValueError(f"{slot.tool.label} does not accept produce.")
-    if slot.tool.produce_lots:
-        raise ValueError(f"{slot.tool.label} already contains a produce lot.")
-
-
-def _add_produce_lot_to_slot(slot: WorkbenchSlot, produce_lot) -> str:
-    _validate_slot_can_accept_produce(slot)
-    if slot.tool is None:
-        produce_lot.is_contaminated = True
-        slot.surface_produce_lots.append(produce_lot)
-        return slot.label
-
-    slot.tool.produce_lots.append(produce_lot)
-    return slot.tool.label
 
 
 def _remove_produce_lot_from_slot(slot: WorkbenchSlot, produce_lot_id: str):

@@ -19,9 +19,16 @@ from app.services.commands import (
     WorkspaceWidgetLayoutCommand,
     WorkspaceWidgetLiquidCommand,
 )
+from app.services.produce_lot_transfer import (
+    GrinderProduceLotSource,
+    GrinderProduceLotTarget,
+    ProduceLotTransferService,
+    TrashProduceLotSource,
+    WorkbenchProduceLotSource,
+    WorkbenchProduceLotTarget,
+    WorkspaceProduceLotSource,
+)
 from app.services.command_handlers.support import (
-    find_trash_produce_lot,
-    find_workbench_slot,
     find_workspace_produce_lot,
     find_workspace_widget_liquid,
     format_volume,
@@ -30,6 +37,7 @@ from app.services.command_handlers.support import (
 )
 
 cryogenic_simulation_service = CryogenicSimulationService()
+produce_lot_transfer_service = ProduceLotTransferService()
 
 
 def _apply_widget_layout_command(widget, command: WorkspaceWidgetLayoutCommand) -> None:
@@ -185,56 +193,40 @@ def add_workspace_produce_lot_to_widget(
     experiment: Experiment,
     command: AddWorkspaceProduceLotToWidgetCommand,
 ) -> None:
-    widget = _find_grinder_widget(experiment, command.widget_id)
-    produce_lot = find_workspace_produce_lot(experiment.workspace, command.produce_lot_id)
-    _add_produce_lot_to_widget(widget, produce_lot)
-    experiment.workspace.produce_lots = [
-        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
-    ]
-    experiment.audit_log.append(f"{produce_lot.label} added to {widget.label}.")
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        WorkspaceProduceLotSource(produce_lot_id=command.produce_lot_id),
+        GrinderProduceLotTarget(widget_id=command.widget_id),
+    )
+    experiment.audit_log.append(f"{transfer.produce_lot.label} added to {transfer.location_label}.")
 
 
 def move_workbench_produce_lot_to_widget(
     experiment: Experiment,
     command: MoveWorkbenchProduceLotToWidgetCommand,
 ) -> None:
-    widget = _find_grinder_widget(experiment, command.widget_id)
-    source_slot = find_workbench_slot(experiment.workbench, command.source_slot_id)
-    produce_lot_id = command.produce_lot_id
-    produce_lot = next(
-        (
-            lot
-            for lot in ((source_slot.tool.produce_lots if source_slot.tool else []) + source_slot.surface_produce_lots)
-            if lot.id == produce_lot_id
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        WorkbenchProduceLotSource(
+            slot_id=command.source_slot_id,
+            produce_lot_id=command.produce_lot_id,
         ),
-        None,
+        GrinderProduceLotTarget(widget_id=command.widget_id),
     )
-    if produce_lot is None:
-        raise ValueError("Unknown produce lot")
-
-    if source_slot.tool is not None:
-        source_slot.tool.produce_lots = [
-            lot for lot in source_slot.tool.produce_lots if lot.id != produce_lot.id
-        ]
-    source_slot.surface_produce_lots = [
-        lot for lot in source_slot.surface_produce_lots if lot.id != produce_lot.id
-    ]
-    _add_produce_lot_to_widget(widget, produce_lot)
-    experiment.audit_log.append(f"{produce_lot.label} moved to {widget.label}.")
+    experiment.audit_log.append(f"{transfer.produce_lot.label} moved to {transfer.location_label}.")
 
 
 def restore_trashed_produce_lot_to_widget(
     experiment: Experiment,
     command: RestoreTrashedProduceLotToWidgetCommand,
 ) -> None:
-    widget = _find_grinder_widget(experiment, command.widget_id)
-    trashed_produce_lot = find_trash_produce_lot(experiment.trash, command.trash_produce_lot_id)
-    _add_produce_lot_to_widget(widget, trashed_produce_lot.produce_lot)
-    experiment.trash.produce_lots = [
-        entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
-    ]
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        TrashProduceLotSource(trash_produce_lot_id=command.trash_produce_lot_id),
+        GrinderProduceLotTarget(widget_id=command.widget_id),
+    )
     experiment.audit_log.append(
-        f"{trashed_produce_lot.produce_lot.label} restored from trash to {widget.label}."
+        f"{transfer.produce_lot.label} restored from trash to {transfer.location_label}."
     )
 
 
@@ -242,27 +234,26 @@ def move_widget_produce_lot_to_workbench_tool(
     experiment: Experiment,
     command: MoveWidgetProduceLotToWorkbenchToolCommand,
 ) -> None:
-    widget = _find_grinder_widget(experiment, command.widget_id)
-    target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
-    produce_lot = _remove_widget_produce_lot(widget, command.produce_lot_id)
-
-    if target_slot.tool is None:
-        if target_slot.surface_produce_lots:
-            raise ValueError(f"{target_slot.label} already contains produce.")
-        target_slot.surface_produce_lots.append(produce_lot)
-        produce_lot.is_contaminated = True
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        GrinderProduceLotSource(
+            widget_id=command.widget_id,
+            produce_lot_id=command.produce_lot_id,
+        ),
+        WorkbenchProduceLotTarget(
+            slot_id=command.target_slot_id,
+            allowed_tool_types=frozenset({"sample_bag"}),
+        ),
+    )
+    if transfer.contamination_applied:
         experiment.audit_log.append(
-            f"{produce_lot.label} moved from {widget.label} to {target_slot.label} and marked contaminated."
+            f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label} and marked contaminated."
         )
         return
 
-    if target_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{target_slot.tool.label} does not accept produce.")
-    if target_slot.tool.produce_lots:
-        raise ValueError(f"{target_slot.tool.label} already contains produce.")
-
-    target_slot.tool.produce_lots.append(produce_lot)
-    experiment.audit_log.append(f"{produce_lot.label} moved from {widget.label} to {target_slot.tool.label}.")
+    experiment.audit_log.append(
+        f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label}."
+    )
 
 
 def discard_workspace_produce_lot(
@@ -304,12 +295,6 @@ def _find_grinder_widget(experiment: Experiment, widget_id: str):
     if widget.id != "grinder" or widget.widget_type != "cryogenic_grinder":
         raise ValueError(f"{widget.label} does not accept grinder contents.")
     return widget
-
-
-def _add_produce_lot_to_widget(widget, produce_lot: ProduceLot) -> None:
-    if widget.produce_lots:
-        raise ValueError(f"{widget.label} already contains a produce lot.")
-    widget.produce_lots.append(produce_lot)
 
 
 def _remove_widget_produce_lot(widget, produce_lot_id: str) -> ProduceLot:

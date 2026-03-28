@@ -10,6 +10,11 @@ from app.services.commands import (
     RestoreTrashedToolToWorkbenchSlotCommand,
     WorkbenchSlotCommand,
 )
+from app.services.produce_lot_transfer import (
+    ProduceLotTransferService,
+    TrashProduceLotSource,
+    WorkbenchProduceLotTarget,
+)
 from app.services.command_handlers.support import (
     find_rack_slot,
     find_trash_produce_lot,
@@ -17,6 +22,8 @@ from app.services.command_handlers.support import (
     find_workbench_slot,
 )
 from app.services.command_handlers.workbench import build_workbench_tool
+
+produce_lot_transfer_service = ProduceLotTransferService()
 
 
 def discard_workbench_tool(experiment: Experiment, command: WorkbenchSlotCommand) -> None:
@@ -123,31 +130,14 @@ def restore_trashed_produce_lot_to_workbench_tool(
     experiment: Experiment,
     command: RestoreTrashedProduceLotToWorkbenchToolCommand,
 ) -> None:
-    trashed_produce_lot = find_trash_produce_lot(experiment.trash, command.trash_produce_lot_id)
-    target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
-    restored_target_label = _restore_produce_lot_to_slot(
-        target_slot, trashed_produce_lot.produce_lot
+    transfer = produce_lot_transfer_service.transfer(
+        experiment,
+        TrashProduceLotSource(trash_produce_lot_id=command.trash_produce_lot_id),
+        WorkbenchProduceLotTarget(
+            slot_id=command.target_slot_id,
+            allowed_tool_types=frozenset({"sample_bag", "cutting_board"}),
+        ),
     )
-    experiment.trash.produce_lots = [
-        entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
-    ]
     experiment.audit_log.append(
-        f"{trashed_produce_lot.produce_lot.label} restored from trash to {restored_target_label}."
+        f"{transfer.produce_lot.label} restored from trash to {transfer.location_label}."
     )
-
-
-def _restore_produce_lot_to_slot(target_slot, produce_lot):
-    if target_slot.tool is None:
-        if target_slot.surface_produce_lots:
-            raise ValueError(f"{target_slot.label} already contains a produce lot.")
-        produce_lot.is_contaminated = True
-        target_slot.surface_produce_lots.append(produce_lot)
-        return target_slot.label
-
-    if target_slot.tool.tool_type not in {"sample_bag", "cutting_board"}:
-        raise ValueError(f"{target_slot.tool.label} does not accept produce.")
-    if target_slot.tool.produce_lots:
-        raise ValueError(f"{target_slot.tool.label} already contains a produce lot.")
-
-    target_slot.tool.produce_lots.append(produce_lot)
-    return f"{target_slot.tool.label} on {target_slot.label}"
