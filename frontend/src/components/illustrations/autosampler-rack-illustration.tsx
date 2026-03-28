@@ -46,10 +46,12 @@ export function AutosamplerRackIllustration({
 }: AutosamplerRackIllustrationProps) {
   const palette = rackPalette[tone];
   const { defs: surfaceDefs, surface } = buildEquipmentIllustrationSurface({
-    height: 360,
+    height: 290,
     idPrefix: testId ?? "autosampler-rack-illustration",
     radius: 36,
-    width: 560,
+    width: 480,
+    x: 40,
+    y: 20,
   });
   const occupiedSet = new Set(
     occupiedSlots.filter((slotNumber) => Number.isInteger(slotNumber) && slotNumber >= 1),
@@ -73,7 +75,7 @@ export function AutosamplerRackIllustration({
       <svg
         className="h-full w-full"
         fill="none"
-        viewBox="0 0 560 360"
+        viewBox="40 20 480 290"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>

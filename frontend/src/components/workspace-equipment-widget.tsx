@@ -6,6 +6,7 @@ import { dragAffordanceClassName } from "@/lib/drag-affordance";
 
 type WorkspaceEquipmentWidgetProps = {
   badge?: string;
+  bodyClassName?: string;
   children: ReactNode;
   dataDropHighlighted?: "true" | "false";
   description?: string;
@@ -19,6 +20,7 @@ type WorkspaceEquipmentWidgetProps = {
 
 export function WorkspaceEquipmentWidget({
   badge,
+  bodyClassName,
   children,
   dataDropHighlighted = "false",
   description,
@@ -55,7 +57,7 @@ export function WorkspaceEquipmentWidget({
         </div>
       </div>
 
-      <div className="px-5 py-5 xl:px-6 xl:py-6">
+      <div className={bodyClassName ?? "px-5 py-5 xl:px-6 xl:py-6"}>
         <div
           className={`rounded-[1.8rem] border bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.9),rgba(241,245,249,0.95))] p-4 shadow-inner transition-colors ${
             dataDropHighlighted === "true"

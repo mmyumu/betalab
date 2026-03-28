@@ -131,14 +131,14 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
   trash: { x: 1490, y: 126, width: 164, fallbackHeight: 214 },
-  rack: { x: 234, y: 886, width: 548, fallbackHeight: 392 },
+  rack: { x: 234, y: 886, width: 500, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
   basket: { x: 1490, y: 352, width: 198, fallbackHeight: 236 },
   grinder: { x: 980, y: 886, width: 430, fallbackHeight: 340 },
 };
 const rackSlotCount = 12;
-const rackIllustrationViewBox = { height: 360, width: 560 };
-const rackIllustrationBase = { x: 182, y: 111 };
+const rackIllustrationViewBox = { height: 290, width: 480 };
+const rackIllustrationBase = { x: 142, y: 91 };
 const rackIllustrationGap = { x: 61, y: 49 };
 const rackIllustrationColumns = Math.min(4, Math.max(rackSlotCount, 1));
 const knifeCursor =

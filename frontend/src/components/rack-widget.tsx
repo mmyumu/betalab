@@ -41,9 +41,12 @@ export function RackWidget({
   slotCount,
 }: RackWidgetProps) {
   return (
-    <WorkspaceEquipmentWidget eyebrow="Autosampler rack">
-      <div className="space-y-4">
-        <div className="relative mx-auto max-w-[30rem]">
+    <WorkspaceEquipmentWidget
+      bodyClassName="px-4 py-4 xl:px-5 xl:py-5"
+      eyebrow="Autosampler rack"
+    >
+      <div className="space-y-3">
+        <div className="relative mx-auto max-w-[25.75rem]">
           <AutosamplerRackIllustration
             className="w-full"
             occupiedSlotLiquids={occupiedSlotLiquids}
@@ -80,7 +83,7 @@ export function RackWidget({
           })}
         </div>
         <div
-          className="rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3"
+          className="mx-auto w-full max-w-[25.75rem] rounded-[1.2rem] border border-slate-200/80 bg-white/90 px-3 py-3"
           data-testid="rack-summary"
         >
           {loadedCount > 0 ? (
