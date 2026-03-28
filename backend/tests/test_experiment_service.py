@@ -9,7 +9,144 @@ def apply_command(
     command_type: str,
     payload: dict,
 ):
-    return getattr(service, command_type)(experiment_id, payload)
+    handlers = {
+        "add_workbench_slot": lambda: service.add_workbench_slot(experiment_id),
+        "remove_workbench_slot": lambda: service.remove_workbench_slot(experiment_id, payload["slot_id"]),
+        "place_tool_on_workbench": lambda: service.place_tool_on_workbench(
+            experiment_id, payload["slot_id"], payload["tool_id"]
+        ),
+        "move_tool_between_workbench_slots": lambda: service.move_tool_between_workbench_slots(
+            experiment_id, payload["source_slot_id"], payload["target_slot_id"]
+        ),
+        "discard_workbench_tool": lambda: service.discard_workbench_tool(experiment_id, payload["slot_id"]),
+        "discard_tool_from_palette": lambda: service.discard_tool_from_palette(experiment_id, payload["tool_id"]),
+        "discard_sample_label_from_palette": lambda: service.discard_sample_label_from_palette(
+            experiment_id, payload["sample_label_id"]
+        ),
+        "restore_trashed_tool_to_workbench_slot": lambda: service.restore_trashed_tool_to_workbench_slot(
+            experiment_id, payload["trash_tool_id"], payload["target_slot_id"]
+        ),
+        "add_workspace_widget": lambda: service.add_workspace_widget(
+            experiment_id,
+            payload["widget_id"],
+            payload["anchor"],
+            payload["offset_x"],
+            payload["offset_y"],
+        ),
+        "move_workspace_widget": lambda: service.move_workspace_widget(
+            experiment_id,
+            payload["widget_id"],
+            payload["anchor"],
+            payload["offset_x"],
+            payload["offset_y"],
+        ),
+        "discard_workspace_widget": lambda: service.discard_workspace_widget(experiment_id, payload["widget_id"]),
+        "add_liquid_to_workspace_widget": lambda: service.add_liquid_to_workspace_widget(
+            experiment_id,
+            payload["widget_id"],
+            payload["liquid_id"],
+            payload.get("volume_ml"),
+        ),
+        "update_workspace_widget_liquid_volume": lambda: service.update_workspace_widget_liquid_volume(
+            experiment_id,
+            payload["widget_id"],
+            payload["liquid_entry_id"],
+            payload["volume_ml"],
+        ),
+        "remove_liquid_from_workspace_widget": lambda: service.remove_liquid_from_workspace_widget(
+            experiment_id,
+            payload["widget_id"],
+            payload["liquid_entry_id"],
+        ),
+        "complete_grinder_cycle": lambda: service.complete_grinder_cycle(experiment_id, payload["widget_id"]),
+        "advance_workspace_cryogenics": lambda: service.advance_workspace_cryogenics(
+            experiment_id, payload["elapsed_ms"]
+        ),
+        "add_workspace_produce_lot_to_widget": lambda: service.add_workspace_produce_lot_to_widget(
+            experiment_id, payload["widget_id"], payload["produce_lot_id"]
+        ),
+        "move_workbench_produce_lot_to_widget": lambda: service.move_workbench_produce_lot_to_widget(
+            experiment_id,
+            payload["widget_id"],
+            payload["source_slot_id"],
+            payload["produce_lot_id"],
+        ),
+        "restore_trashed_produce_lot_to_widget": lambda: service.restore_trashed_produce_lot_to_widget(
+            experiment_id, payload["trash_produce_lot_id"], payload["widget_id"]
+        ),
+        "create_produce_lot": lambda: service.create_produce_lot(experiment_id, payload["produce_type"]),
+        "discard_workspace_produce_lot": lambda: service.discard_workspace_produce_lot(
+            experiment_id, payload["produce_lot_id"]
+        ),
+        "move_widget_produce_lot_to_workbench_tool": lambda: service.move_widget_produce_lot_to_workbench_tool(
+            experiment_id,
+            payload["widget_id"],
+            payload["produce_lot_id"],
+            payload["target_slot_id"],
+        ),
+        "discard_widget_produce_lot": lambda: service.discard_widget_produce_lot(
+            experiment_id, payload["widget_id"], payload["produce_lot_id"]
+        ),
+        "place_tool_in_rack_slot": lambda: service.place_tool_in_rack_slot(
+            experiment_id, payload["rack_slot_id"], payload["tool_id"]
+        ),
+        "place_workbench_tool_in_rack_slot": lambda: service.place_workbench_tool_in_rack_slot(
+            experiment_id, payload["source_slot_id"], payload["rack_slot_id"]
+        ),
+        "move_rack_tool_between_slots": lambda: service.move_rack_tool_between_slots(
+            experiment_id, payload["source_rack_slot_id"], payload["target_rack_slot_id"]
+        ),
+        "remove_rack_tool_to_workbench_slot": lambda: service.remove_rack_tool_to_workbench_slot(
+            experiment_id, payload["rack_slot_id"], payload["target_slot_id"]
+        ),
+        "discard_rack_tool": lambda: service.discard_rack_tool(experiment_id, payload["rack_slot_id"]),
+        "restore_trashed_tool_to_rack_slot": lambda: service.restore_trashed_tool_to_rack_slot(
+            experiment_id, payload["trash_tool_id"], payload["rack_slot_id"]
+        ),
+        "add_liquid_to_workbench_tool": lambda: service.add_liquid_to_workbench_tool(
+            experiment_id, payload["slot_id"], payload["liquid_id"], payload.get("volume_ml")
+        ),
+        "add_produce_lot_to_workbench_tool": lambda: service.add_produce_lot_to_workbench_tool(
+            experiment_id, payload["slot_id"], payload["produce_lot_id"]
+        ),
+        "discard_produce_lot_from_workbench_tool": lambda: service.discard_produce_lot_from_workbench_tool(
+            experiment_id, payload["slot_id"], payload["produce_lot_id"]
+        ),
+        "cut_workbench_produce_lot": lambda: service.cut_workbench_produce_lot(
+            experiment_id, payload["slot_id"], payload["produce_lot_id"]
+        ),
+        "move_produce_lot_between_workbench_tools": lambda: service.move_produce_lot_between_workbench_tools(
+            experiment_id,
+            payload["source_slot_id"],
+            payload["target_slot_id"],
+            payload["produce_lot_id"],
+        ),
+        "restore_trashed_produce_lot_to_workbench_tool": lambda: service.restore_trashed_produce_lot_to_workbench_tool(
+            experiment_id, payload["trash_produce_lot_id"], payload["target_slot_id"]
+        ),
+        "remove_liquid_from_workbench_tool": lambda: service.remove_liquid_from_workbench_tool(
+            experiment_id, payload["slot_id"], payload["liquid_entry_id"]
+        ),
+        "update_workbench_liquid_volume": lambda: service.update_workbench_liquid_volume(
+            experiment_id, payload["slot_id"], payload["liquid_entry_id"], payload["volume_ml"]
+        ),
+        "apply_sample_label_to_workbench_tool": lambda: service.apply_sample_label_to_workbench_tool(
+            experiment_id, payload["slot_id"]
+        ),
+        "update_workbench_tool_sample_label_text": lambda: service.update_workbench_tool_sample_label_text(
+            experiment_id, payload["slot_id"], payload["sample_label_text"]
+        ),
+        "move_sample_label_between_workbench_tools": lambda: service.move_sample_label_between_workbench_tools(
+            experiment_id, payload["source_slot_id"], payload["target_slot_id"]
+        ),
+        "discard_sample_label_from_workbench_tool": lambda: service.discard_sample_label_from_workbench_tool(
+            experiment_id, payload["slot_id"]
+        ),
+        "restore_trashed_sample_label_to_workbench_tool": lambda: service.restore_trashed_sample_label_to_workbench_tool(
+            experiment_id, payload["trash_sample_label_id"], payload["target_slot_id"]
+        ),
+    }
+    return handlers[command_type]()
 
 
 def test_create_experiment_returns_empty_workbench() -> None:
