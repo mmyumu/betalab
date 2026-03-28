@@ -3,6 +3,15 @@ import pytest
 from app.services.experiment_service import ExperimentService
 
 
+def apply_command(
+    service: ExperimentService,
+    experiment_id: str,
+    command_type: str,
+    payload: dict,
+):
+    return getattr(service, command_type)(experiment_id, payload)
+
+
 def test_create_experiment_returns_empty_workbench() -> None:
     service = ExperimentService()
 
@@ -56,7 +65,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -64,7 +73,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
             "tool_id": "centrifuge_tube_50ml",
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -79,7 +88,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert len(slot.tool.liquids) == 1
     assert slot.tool.liquids[0].volume_ml == 10.0
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -92,7 +101,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert len(slot.tool.liquids) == 1
     assert slot.tool.liquids[0].volume_ml == 20.0
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "update_workbench_liquid_volume",
         {
@@ -111,7 +120,7 @@ def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -120,7 +129,7 @@ def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
         },
     )
 
-    first_addition = service.apply_command(
+    first_addition = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -129,7 +138,7 @@ def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
             "volume_ml": 7.5,
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -152,7 +161,7 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -173,7 +182,7 @@ def test_place_cutting_board_on_workbench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -192,7 +201,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -202,7 +211,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
             "offset_y": 420,
         },
     )
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -210,7 +219,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
         },
     )
 
-    moved = service.apply_command(
+    moved = apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -218,7 +227,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
             "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -241,7 +250,7 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -251,7 +260,7 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
             "offset_y": 420,
         },
     )
-    added = service.apply_command(
+    added = apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -261,7 +270,7 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     )
 
     liquid_id = next(widget for widget in added.workspace.widgets if widget.id == "grinder").liquids[0].id
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "update_workspace_widget_liquid_volume",
         {
@@ -280,7 +289,7 @@ def test_grinder_dry_ice_can_be_removed() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -290,7 +299,7 @@ def test_grinder_dry_ice_can_be_removed() -> None:
             "offset_y": 420,
         },
     )
-    added = service.apply_command(
+    added = apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -300,7 +309,7 @@ def test_grinder_dry_ice_can_be_removed() -> None:
     )
 
     liquid_id = next(widget for widget in added.workspace.widgets if widget.id == "grinder").liquids[0].id
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "remove_liquid_from_workspace_widget",
         {
@@ -318,7 +327,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -326,7 +335,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
         },
     )
     produce_lot_id = created.workspace.produce_lots[0].id
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -334,7 +343,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "tool_id": "cutting_board_hdpe",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -342,7 +351,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "produce_lot_id": produce_lot_id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "cut_workbench_produce_lot",
         {
@@ -350,7 +359,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "produce_lot_id": produce_lot_id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "move_workbench_produce_lot_to_widget",
         {
@@ -359,7 +368,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "produce_lot_id": produce_lot_id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -368,7 +377,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "volume_ml": 1000,
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "complete_grinder_cycle",
         {
@@ -386,7 +395,7 @@ def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -397,7 +406,7 @@ def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
         },
     )
 
-    first_addition = service.apply_command(
+    first_addition = apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -406,7 +415,7 @@ def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
             "volume_ml": 250.0,
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -427,7 +436,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -437,14 +446,14 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
             "offset_y": 420,
         },
     )
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -452,7 +461,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
             "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -461,7 +470,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "advance_workspace_cryogenics",
         {
@@ -479,7 +488,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -489,14 +498,14 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
             "offset_y": 420,
         },
     )
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -504,7 +513,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
             "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -512,7 +521,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
             "liquid_id": "dry_ice_pellets",
         },
     )
-    cooled = service.apply_command(
+    cooled = apply_command(service, 
         experiment.id,
         "advance_workspace_cryogenics",
         {
@@ -522,7 +531,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
 
     grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
     cooled_temperature = grinder.produce_lots[0].temperature_c
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "update_workspace_widget_liquid_volume",
         {
@@ -531,7 +540,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
             "volume_ml": 0,
         },
     )
-    rewarmed = service.apply_command(
+    rewarmed = apply_command(service, 
         experiment.id,
         "advance_workspace_cryogenics",
         {
@@ -548,7 +557,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -558,14 +567,14 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
             "offset_y": 420,
         },
     )
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -573,7 +582,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
             "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -585,7 +594,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
     updated = None
     exhausted_temperature = None
     for _ in range(3600):
-        updated = service.apply_command(
+        updated = apply_command(service, 
             experiment.id,
             "advance_workspace_cryogenics",
             {
@@ -606,7 +615,7 @@ def test_sampling_bag_label_can_be_applied_and_edited() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -615,14 +624,14 @@ def test_sampling_bag_label_can_be_applied_and_edited() -> None:
         },
     )
 
-    labeled = service.apply_command(
+    labeled = apply_command(service, 
         experiment.id,
         "apply_sample_label_to_workbench_tool",
         {
             "slot_id": "station_1",
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "update_workbench_tool_sample_label_text",
         {
@@ -644,33 +653,33 @@ def test_sampling_bag_label_can_be_discarded_to_trash_and_restored() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "apply_sample_label_to_workbench_tool",
         {"slot_id": "station_1"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "update_workbench_tool_sample_label_text",
         {"slot_id": "station_1", "sample_label_text": "LOT-2026-041"},
     )
 
-    discarded = service.apply_command(
+    discarded = apply_command(service, 
         experiment.id,
         "discard_sample_label_from_workbench_tool",
         {"slot_id": "station_1"},
     )
-    restored = service.apply_command(
+    restored = apply_command(service, 
         experiment.id,
         "restore_trashed_sample_label_to_workbench_tool",
         {
@@ -694,7 +703,7 @@ def test_sampling_bag_label_can_be_discarded_from_palette() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_sample_label_from_palette",
         {"sample_label_id": "sampling_bag_label"},
@@ -709,28 +718,28 @@ def test_sampling_bag_label_can_move_between_sampling_bags() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "apply_sample_label_to_workbench_tool",
         {"slot_id": "station_1"},
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "update_workbench_tool_sample_label_text",
         {"slot_id": "station_1", "sample_label_text": "LOT-2026-041"},
     )
 
-    moved = service.apply_command(
+    moved = apply_command(service, 
         experiment.id,
         "move_sample_label_between_workbench_tools",
         {"source_slot_id": "station_1", "target_slot_id": "station_2"},
@@ -748,14 +757,14 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -764,7 +773,7 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -787,14 +796,14 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -803,7 +812,7 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -825,7 +834,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -833,7 +842,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -858,14 +867,14 @@ def test_add_produce_lot_requires_a_sampling_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -875,7 +884,7 @@ def test_add_produce_lot_requires_a_sampling_bag() -> None:
     )
 
     with pytest.raises(ValueError, match="50 mL centrifuge tube does not accept produce."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "add_produce_lot_to_workbench_tool",
             {
@@ -889,21 +898,21 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    first_lot = service.apply_command(
+    first_lot = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    second_lot = service.apply_command(
+    second_lot = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -911,7 +920,7 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
             "tool_id": "sealed_sampling_bag",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -921,7 +930,7 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
     )
 
     with pytest.raises(ValueError, match="Sealed sampling bag already contains a produce lot."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "add_produce_lot_to_workbench_tool",
             {
@@ -935,14 +944,14 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -950,7 +959,7 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
             "tool_id": "sealed_sampling_bag",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -959,7 +968,7 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_produce_lot_from_workbench_tool",
         {
@@ -982,7 +991,7 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -990,7 +999,7 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_workspace_produce_lot",
         {
@@ -1008,7 +1017,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -1016,7 +1025,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
         },
     )
     produce_lot_id = created.workspace.produce_lots[0].id
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -1024,7 +1033,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
             "produce_lot_id": produce_lot_id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1033,7 +1042,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "move_widget_produce_lot_to_workbench_tool",
         {
@@ -1056,7 +1065,7 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -1064,7 +1073,7 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
         },
     )
     produce_lot_id = created.workspace.produce_lots[0].id
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
         {
@@ -1073,7 +1082,7 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_widget_produce_lot",
         {
@@ -1094,21 +1103,21 @@ def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
             "produce_type": "apple",
         },
     )
-    discarded = service.apply_command(
+    discarded = apply_command(service, 
         experiment.id,
         "discard_workspace_produce_lot",
         {
             "produce_lot_id": created.workspace.produce_lots[0].id,
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1117,7 +1126,7 @@ def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "restore_trashed_produce_lot_to_workbench_tool",
         {
@@ -1136,7 +1145,7 @@ def test_discard_tool_from_palette_adds_it_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_tool_from_palette",
         {
@@ -1153,7 +1162,7 @@ def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_workspace_widget",
         {
@@ -1171,7 +1180,7 @@ def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    added = service.apply_command(
+    added = apply_command(service, 
         experiment.id,
         "add_workbench_slot",
         {},
@@ -1184,7 +1193,7 @@ def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
     ]
     assert added.audit_log[-1] == "Station 3 added to workbench."
 
-    removed = service.apply_command(
+    removed = apply_command(service, 
         experiment.id,
         "remove_workbench_slot",
         {
@@ -1203,7 +1212,7 @@ def test_remove_workbench_slot_requires_an_empty_station() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1213,7 +1222,7 @@ def test_remove_workbench_slot_requires_an_empty_station() -> None:
     )
 
     with pytest.raises(ValueError, match="Station 1 must be empty before it can be removed."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "remove_workbench_slot",
             {
@@ -1226,7 +1235,7 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1234,7 +1243,7 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
             "tool_id": "centrifuge_tube_50ml",
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -1244,7 +1253,7 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
     )
 
     liquid_id = updated.workbench.slots[0].tool.liquids[0].id
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "remove_liquid_from_workbench_tool",
         {
@@ -1264,7 +1273,7 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
 
     service = ExperimentService()
     experiment = service.create_experiment()
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1273,7 +1282,7 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "move_tool_between_workbench_slots",
         {
@@ -1292,7 +1301,7 @@ def test_discard_workbench_tool_removes_it_from_station() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1301,7 +1310,7 @@ def test_discard_workbench_tool_removes_it_from_station() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_workbench_tool",
         {
@@ -1320,7 +1329,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    added = service.apply_command(
+    added = apply_command(service, 
         experiment.id,
         "add_workspace_widget",
         {
@@ -1338,7 +1347,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert rack_widget.offset_y == 420
     assert added.audit_log[-1] == "Autosampler rack added to workspace."
 
-    moved = service.apply_command(
+    moved = apply_command(service, 
         experiment.id,
         "move_workspace_widget",
         {
@@ -1354,7 +1363,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert rack_widget.offset_y == 460
     assert moved.audit_log[-1] == "Autosampler rack moved in workspace."
 
-    discarded = service.apply_command(
+    discarded = apply_command(service, 
         experiment.id,
         "discard_workspace_widget",
         {
@@ -1372,7 +1381,7 @@ def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Produce basket cannot be discarded."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "discard_workspace_widget",
             {
@@ -1385,7 +1394,7 @@ def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -1406,7 +1415,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -1414,7 +1423,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
         },
     )
     produce_lot_id = created.workspace.produce_lots[0].id
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1422,7 +1431,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
             "tool_id": "cutting_board_hdpe",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -1431,7 +1440,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "cut_workbench_produce_lot",
         {
@@ -1450,7 +1459,7 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.apply_command(
+    created = apply_command(service, 
         experiment.id,
         "create_produce_lot",
         {
@@ -1458,7 +1467,7 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
         },
     )
     produce_lot_id = created.workspace.produce_lots[0].id
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",
         {
@@ -1467,7 +1476,7 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "cut_workbench_produce_lot",
         {
@@ -1487,7 +1496,7 @@ def test_create_produce_lot_rejects_unknown_produce_type() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Unsupported produce type"):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "create_produce_lot",
             {
@@ -1500,7 +1509,7 @@ def test_place_tool_in_rack_slot_creates_a_vial_directly_from_the_palette() -> N
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "place_tool_in_rack_slot",
         {
@@ -1519,7 +1528,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1527,7 +1536,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
             "tool_id": "sample_vial_lcms",
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -1535,7 +1544,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
             "liquid_id": "acetonitrile_extraction",
         },
     )
-    discarded = service.apply_command(
+    discarded = apply_command(service, 
         experiment.id,
         "discard_workbench_tool",
         {
@@ -1543,7 +1552,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
         },
     )
 
-    restored = service.apply_command(
+    restored = apply_command(service, 
         experiment.id,
         "restore_trashed_tool_to_workbench_slot",
         {
@@ -1563,7 +1572,7 @@ def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1572,7 +1581,7 @@ def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1591,7 +1600,7 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1599,7 +1608,7 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1608,7 +1617,7 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "remove_rack_tool_to_workbench_slot",
         {
@@ -1627,7 +1636,7 @@ def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1635,7 +1644,7 @@ def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1644,7 +1653,7 @@ def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "move_rack_tool_between_slots",
         {
@@ -1663,7 +1672,7 @@ def test_discard_rack_tool_removes_it_from_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1671,7 +1680,7 @@ def test_discard_rack_tool_removes_it_from_rack() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1680,7 +1689,7 @@ def test_discard_rack_tool_removes_it_from_rack() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "discard_rack_tool",
         {
@@ -1699,7 +1708,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1707,7 +1716,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1715,7 +1724,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
             "rack_slot_id": "rack_slot_1",
         },
     )
-    discarded = service.apply_command(
+    discarded = apply_command(service, 
         experiment.id,
         "discard_rack_tool",
         {
@@ -1723,7 +1732,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
         },
     )
 
-    restored = service.apply_command(
+    restored = apply_command(service, 
         experiment.id,
         "restore_trashed_tool_to_rack_slot",
         {
@@ -1741,7 +1750,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1750,7 +1759,7 @@ def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
         },
     )
 
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -1779,7 +1788,7 @@ def test_apply_command_raises_for_unknown_experiment() -> None:
     service = ExperimentService()
 
     with pytest.raises(KeyError):
-        service.apply_command("missing", "place_tool_on_workbench", {})
+        apply_command(service, "missing", "place_tool_on_workbench", {})
 
 
 def test_add_liquid_requires_a_placed_tool() -> None:
@@ -1787,7 +1796,7 @@ def test_add_liquid_requires_a_placed_tool() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before adding liquids."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "add_liquid_to_workbench_tool",
             {
@@ -1802,7 +1811,7 @@ def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before editing liquids."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "remove_liquid_from_workbench_tool",
             {
@@ -1811,7 +1820,7 @@ def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
             },
         )
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1821,7 +1830,7 @@ def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
     )
 
     with pytest.raises(ValueError, match="Unknown workbench liquid"):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "remove_liquid_from_workbench_tool",
             {
@@ -1836,7 +1845,7 @@ def test_move_tool_requires_a_source_tool_and_empty_target() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "move_tool_between_workbench_slots",
             {
@@ -1851,7 +1860,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it into the rack."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "place_workbench_tool_in_rack_slot",
             {
@@ -1860,7 +1869,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             },
         )
 
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1869,7 +1878,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
         },
     )
     with pytest.raises(ValueError, match="Only autosampler vials can be placed in the rack."):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "place_workbench_tool_in_rack_slot",
             {
@@ -1880,7 +1889,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
 
     service = ExperimentService()
     experiment = service.create_experiment()
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1888,7 +1897,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_workbench_tool_in_rack_slot",
         {
@@ -1896,7 +1905,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             "rack_slot_id": "rack_slot_1",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1906,7 +1915,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
     )
 
     with pytest.raises(ValueError, match="Position 1 already contains a vial"):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "place_workbench_tool_in_rack_slot",
             {
@@ -1918,7 +1927,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
     with pytest.raises(
         ValueError, match="Place a vial in Position 2 before moving it back to the bench."
     ):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "remove_rack_tool_to_workbench_slot",
             {
@@ -1929,7 +1938,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
 
     service = ExperimentService()
     experiment = service.create_experiment()
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1937,7 +1946,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             "tool_id": "sample_vial_lcms",
         },
     )
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1947,7 +1956,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
     )
 
     with pytest.raises(ValueError, match="Station 2 already contains a tool"):
-        service.apply_command(
+        apply_command(service, 
             experiment.id,
             "move_tool_between_workbench_slots",
             {
@@ -1960,7 +1969,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
 def test_update_volume_rounds_float_noise_in_audit_log() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
-    service.apply_command(
+    apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
         {
@@ -1968,7 +1977,7 @@ def test_update_volume_rounds_float_noise_in_audit_log() -> None:
             "tool_id": "centrifuge_tube_50ml",
         },
     )
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {
@@ -1978,7 +1987,7 @@ def test_update_volume_rounds_float_noise_in_audit_log() -> None:
     )
 
     liquid_id = updated.workbench.slots[0].tool.liquids[0].id
-    updated = service.apply_command(
+    updated = apply_command(service, 
         experiment.id,
         "update_workbench_liquid_volume",
         {

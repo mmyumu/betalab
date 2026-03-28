@@ -39,11 +39,7 @@ experiment_service = ExperimentService()
 
 def _run_command(experiment_id: str, command_type: str, payload: dict | None = None) -> ExperimentSchema:
     try:
-        return experiment_service.apply_command(
-            experiment_id=experiment_id,
-            command_type=command_type,
-            payload=payload or {},
-        )
+        return getattr(experiment_service, command_type)(experiment_id, payload or {})
     except ExperimentNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Experiment not found") from exc
     except (KeyError, ValueError) as exc:
