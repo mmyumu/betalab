@@ -216,6 +216,36 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
   });
 
+  it("derives the produce lot display name from the produce state on workbench surfaces", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            surfaceProduceLots: [
+              {
+                id: "produce_1",
+                cutState: "ground",
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+            tool: null,
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(screen.getByText("Apple lot 1 powder")).toBeInTheDocument();
+    expect(screen.getByText("ground")).toBeInTheDocument();
+  });
+
   it("renders direct station produce with the apple icon and contamination badge", () => {
     render(
       <PesticideWorkbenchPanel

@@ -58,6 +58,7 @@ import {
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
+import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type {
   BenchSlot,
   BenchToolDragPayload,
@@ -1856,7 +1857,7 @@ export function LabScene() {
                               }
                               title={
                                 <span className="block truncate text-sm font-semibold text-slate-900">
-                                  {lot.cutState === "ground" ? `${lot.label} powder` : lot.label}
+                                  {getProduceLotDisplayName(lot)}
                                 </span>
                               }
                               onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}

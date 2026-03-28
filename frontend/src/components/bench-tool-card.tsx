@@ -9,6 +9,7 @@ import {
   getContainerLiquidVisualState,
   getLiquidAccentPalette,
 } from "@/lib/liquid-visuals";
+import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type BenchToolCardProps = {
@@ -230,7 +231,7 @@ export function BenchToolCard({
                   }}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate">{produceLot.label}</span>
+                    <span className="truncate">{getProduceLotDisplayName(produceLot)}</span>
                     <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                       {produceLot.produceType}
                     </span>
@@ -271,7 +272,7 @@ export function BenchToolCard({
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">
-                          {produceLot.label}
+                          {getProduceLotDisplayName(produceLot)}
                         </p>
                         <p className="mt-1 truncate text-xs text-slate-500">
                           {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}

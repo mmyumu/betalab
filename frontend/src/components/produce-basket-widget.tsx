@@ -4,6 +4,7 @@ import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { InventoryWidget } from "@/components/inventory-widget";
+import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceBasketWidgetProps = {
@@ -96,7 +97,7 @@ export function ProduceBasketWidget({
                   }
                   title={
                     <span className="block truncate text-sm font-semibold text-slate-900">
-                      {lot.label}
+                      {getProduceLotDisplayName(lot)}
                     </span>
                   }
                 />

@@ -6,6 +6,7 @@ import { AppleIllustration } from "@/components/illustrations/apple-illustration
 import { BenchToolCard } from "@/components/bench-tool-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
+import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import {
   hasCompatibleDropTarget,
   readDragDescriptor,
@@ -405,7 +406,7 @@ export function WorkbenchPanel({
                                 />
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-semibold text-slate-900">
-                                    {produceLot.label}
+                                    {getProduceLotDisplayName(produceLot)}
                                   </p>
                                   <p className="mt-1 truncate text-xs text-slate-500">
                                     {formatProduceLotMetadata(produceLot)}

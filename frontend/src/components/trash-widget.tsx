@@ -4,6 +4,7 @@ import type { DragEvent } from "react";
 
 import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { InventoryWidget } from "@/components/inventory-widget";
+import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type {
   ExperimentWorkspaceWidget,
   TrashProduceLotEntry,
@@ -151,7 +152,7 @@ export function TrashWidget({
             }
             title={
               <p className="truncate text-sm font-semibold text-slate-900">
-                {trashProduceLot.produceLot.label}
+                {getProduceLotDisplayName(trashProduceLot.produceLot)}
               </p>
             }
           />
