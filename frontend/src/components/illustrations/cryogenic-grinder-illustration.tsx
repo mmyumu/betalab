@@ -1,5 +1,7 @@
 "use client";
 
+import { buildEquipmentIllustrationSurface } from "@/components/illustrations/equipment-illustration-surface";
+
 type CryogenicGrinderIllustrationProps = {
   className?: string;
   onPowerClick?: () => void;
@@ -21,6 +23,12 @@ export function CryogenicGrinderIllustration({
 }: CryogenicGrinderIllustrationProps) {
   const isRunning = status === "running";
   const isReady = status === "ready";
+  const { defs: surfaceDefs, surface } = buildEquipmentIllustrationSurface({
+    height: 340,
+    idPrefix: testId ?? "cryogenic-grinder-illustration",
+    radius: 30,
+    width: 520,
+  });
   const bodyFill = isRunning ? "#334155" : "#475569";
   const detailFill = isRunning ? "#0f172a" : "#1e293b";
   const accentFill = isRunning ? "#22c55e" : isReady ? "#f59e0b" : "#94a3b8";
@@ -77,10 +85,7 @@ export function CryogenicGrinderIllustration({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <linearGradient id="grinder-surface" x1="88" x2="432" y1="24" y2="298" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#ffffff" offset="0" />
-            <stop stopColor="#e2e8f0" offset="1" />
-          </linearGradient>
+          {surfaceDefs}
           <linearGradient id="grinder-body" x1="120" x2="404" y1="84" y2="278" gradientUnits="userSpaceOnUse">
             <stop stopColor="#f4f7fa" offset="0" />
             <stop stopColor={isRunning ? "#9aa8b4" : "#b5c1ca"} offset="1" />
@@ -95,7 +100,7 @@ export function CryogenicGrinderIllustration({
           </linearGradient>
         </defs>
 
-        <rect fill="url(#grinder-surface)" height="340" rx="30" width="520" />
+        {surface}
 
         <g className="drop-shadow-[0_18px_34px_rgba(15,23,42,0.18)]">
           <rect

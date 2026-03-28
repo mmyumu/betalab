@@ -4,6 +4,8 @@ import {
 } from "@/lib/liquid-visuals";
 import type { BenchLiquidPortion } from "@/types/workbench";
 
+import { buildEquipmentIllustrationSurface } from "@/components/illustrations/equipment-illustration-surface";
+
 type AutosamplerRackIllustrationProps = {
   className?: string;
   occupiedSlotLiquids?: Partial<Record<number, BenchLiquidPortion[]>>;
@@ -43,6 +45,12 @@ export function AutosamplerRackIllustration({
   tone = "neutral",
 }: AutosamplerRackIllustrationProps) {
   const palette = rackPalette[tone];
+  const { defs: surfaceDefs, surface } = buildEquipmentIllustrationSurface({
+    height: 360,
+    idPrefix: testId ?? "autosampler-rack-illustration",
+    radius: 36,
+    width: 560,
+  });
   const occupiedSet = new Set(
     occupiedSlots.filter((slotNumber) => Number.isInteger(slotNumber) && slotNumber >= 1),
   );
@@ -69,6 +77,7 @@ export function AutosamplerRackIllustration({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
+          {surfaceDefs}
           <linearGradient id="rack-plate" x1="120" x2="440" y1="70" y2="300" gradientUnits="userSpaceOnUse">
             <stop stopColor="#eef3f7" offset="0" />
             <stop stopColor="#c5d0d8" offset="1" />
@@ -87,7 +96,7 @@ export function AutosamplerRackIllustration({
           </linearGradient>
         </defs>
 
-        <rect fill="#f8fafc" height="360" rx="36" width="560" />
+        {surface}
         <rect
           fill="url(#rack-plate)"
           height="188"

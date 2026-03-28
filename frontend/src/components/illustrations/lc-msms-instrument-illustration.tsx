@@ -1,3 +1,5 @@
+import { buildEquipmentIllustrationSurface } from "@/components/illustrations/equipment-illustration-surface";
+
 type LcMsMsInstrumentIllustrationProps = {
   activeStage?: "lc" | "transfer" | "msms" | null;
   className?: string;
@@ -43,6 +45,12 @@ export function LcMsMsInstrumentIllustration({
   testId,
 }: LcMsMsInstrumentIllustrationProps) {
   const palette = instrumentPalette[status];
+  const { defs: surfaceDefs, surface } = buildEquipmentIllustrationSurface({
+    height: 320,
+    idPrefix: testId ?? "lc-msms-instrument-illustration",
+    radius: 36,
+    width: 720,
+  });
   const lcActive = activeStage === "lc";
   const transferActive = activeStage === "transfer";
   const msmsActive = activeStage === "msms";
@@ -61,7 +69,8 @@ export function LcMsMsInstrumentIllustration({
         viewBox="0 0 720 320"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <rect fill={palette.glow} height="320" rx="36" width="720" />
+        <defs>{surfaceDefs}</defs>
+        {surface}
         <ellipse cx="360" cy="282" fill="#cbd5e1" opacity="0.55" rx="262" ry="24" />
 
         <rect
