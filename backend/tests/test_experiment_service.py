@@ -276,6 +276,44 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     assert updated.audit_log[-1] == "Dry ice pellets adjusted to 12.346 g in Cryogenic grinder."
 
 
+def test_grinder_dry_ice_can_be_removed() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.apply_command(
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    added = service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    liquid_id = next(widget for widget in added.workspace.widgets if widget.id == "grinder").liquids[0].id
+    updated = service.apply_command(
+        experiment.id,
+        "remove_liquid_from_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_entry_id": liquid_id,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.liquids == []
+    assert updated.audit_log[-1] == "Dry ice pellets removed from Cryogenic grinder."
+
+
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

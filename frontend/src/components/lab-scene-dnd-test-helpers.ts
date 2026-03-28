@@ -1041,6 +1041,63 @@ function createGrinderProduceLotSourceCase(): DndSourceCase {
   };
 }
 
+function createGrinderLiquidSourceCase(): DndSourceCase {
+  return {
+    id: "grinder-liquid-dry-ice",
+    label: "grinder dry ice pellets",
+    sourceTestId: "grinder-liquid-workspace_liquid_1",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "grinder-dropzone",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          {},
+          {},
+          {},
+          {
+            liquids: [
+              {
+                id: "workspace_liquid_1",
+                liquidId: "dry_ice_pellets",
+                name: "Dry ice pellets",
+                volume_ml: 1000,
+                accent: "sky",
+              },
+            ],
+          },
+        ]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": { compatible: false, command: null },
+      "bench-slot-station_2": { compatible: false, command: null },
+      "grinder-dropzone": { compatible: false, command: null },
+      "rack-illustration-slot-1": { compatible: false, command: null },
+      "widget-workspace": { compatible: false, command: null },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "remove_liquid_from_workspace_widget",
+          payload: {
+            widget_id: "grinder",
+            liquid_entry_id: "workspace_liquid_1",
+          },
+        },
+      },
+    },
+  };
+}
+
 function createTrashProduceLotSourceCase(): DndSourceCase {
   return {
     id: "trash-produce-lot-apple",
@@ -1213,6 +1270,7 @@ export const dndSourceCases: DndSourceCase[] = [
   createWorkbenchProduceLotSourceCase(),
   createWorkbenchSurfaceProduceLotSourceCase(),
   createGrinderProduceLotSourceCase(),
+  createGrinderLiquidSourceCase(),
   createWorkbenchSampleLabelSourceCase(),
   createTrashProduceLotSourceCase(),
   createTrashSampleLabelSourceCase(),

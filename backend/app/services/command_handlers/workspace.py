@@ -129,6 +129,13 @@ def update_workspace_widget_liquid_volume(experiment: Experiment, payload: dict)
     )
 
 
+def remove_liquid_from_workspace_widget(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
+    liquid_entry = find_workspace_widget_liquid(widget, str(payload["liquid_entry_id"]))
+    widget.liquids = [liquid for liquid in widget.liquids if liquid.id != liquid_entry.id]
+    experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
+
+
 def advance_workspace_cryogenics(experiment: Experiment, payload: dict) -> None:
     elapsed_ms = min(max(float(payload.get("elapsed_ms", 0.0)), 0.0), 5000.0)
     if elapsed_ms <= 0:

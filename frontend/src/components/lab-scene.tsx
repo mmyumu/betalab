@@ -33,6 +33,7 @@ import {
   readSampleLabelDragPayload,
   readTrashToolDragPayload,
   readToolbarDragPayload,
+  readWorkspaceLiquidDragPayload,
   readWorkspaceWidgetDragPayload,
   toDragDescriptor,
   writeBenchToolDragPayload,
@@ -40,6 +41,7 @@ import {
   writeRackToolDragPayload,
   writeSampleLabelDragPayload,
   writeTrashToolDragPayload,
+  writeWorkspaceLiquidDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
 import {
@@ -72,6 +74,7 @@ import type {
   TrashSampleLabelEntry,
   TrashToolEntry,
   ToolbarDragPayload,
+  WorkspaceLiquidDragPayload,
 } from "@/types/workbench";
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
@@ -445,6 +448,30 @@ export function LabScene() {
       targetKind: "workspace_widget",
       unitLabel: "g",
     });
+  };
+
+  const handleGrinderLiquidDragStart = (
+    liquid: ExperimentWorkspaceWidget["liquids"][number],
+    dataTransfer: DataTransfer,
+  ) => {
+    if (isKnifeMode) {
+      return;
+    }
+
+    const allowedDropTargets: DropTargetType[] = ["trash_bin"];
+    const payload: WorkspaceLiquidDragPayload = {
+      allowedDropTargets,
+      entityKind: "liquid",
+      liquidEntryId: liquid.id,
+      liquidType: liquid.liquidId,
+      sourceId: liquid.id,
+      sourceKind: "grinder",
+      widgetId: "grinder",
+    };
+
+    writeWorkspaceLiquidDragPayload(dataTransfer, payload);
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(payload));
   };
 
   const handleConfirmQuantityDraft = () => {
@@ -884,6 +911,18 @@ export function LabScene() {
       clearDropTargets();
       void sendWorkbenchCommand("discard_rack_tool", {
         rack_slot_id: rackToolPayload.rackSlotId,
+      });
+      return;
+    }
+
+    const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(event.dataTransfer);
+    if (workspaceLiquidPayload?.sourceKind === "grinder") {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void sendWorkbenchCommand("remove_liquid_from_workspace_widget", {
+        widget_id: workspaceLiquidPayload.widgetId,
+        liquid_entry_id: workspaceLiquidPayload.liquidEntryId,
       });
       return;
     }
@@ -1816,6 +1855,12 @@ export function LabScene() {
                               contentClassName="flex-1"
                               dataTestId={`grinder-liquid-${liquid.id}`}
                               key={liquid.id}
+                              onDragEnd={isKnifeMode ? undefined : clearDropTargets}
+                              onDragStart={
+                                isKnifeMode
+                                  ? undefined
+                                  : (dataTransfer) => handleGrinderLiquidDragStart(liquid, dataTransfer)
+                              }
                               subtitle={
                                 <div className="mt-1 flex items-center justify-between gap-3">
                                   <span className="block truncate text-xs text-slate-500">

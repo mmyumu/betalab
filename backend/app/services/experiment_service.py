@@ -49,6 +49,7 @@ from app.services.command_handlers.workspace import (
     discard_workspace_widget,
     move_workbench_produce_lot_to_widget,
     move_workspace_widget,
+    remove_liquid_from_workspace_widget,
     restore_trashed_produce_lot_to_widget,
     update_workspace_widget_liquid_volume,
 )
@@ -76,6 +77,7 @@ class ExperimentService:
             "discard_workspace_widget": discard_workspace_widget,
             "add_liquid_to_workspace_widget": add_liquid_to_workspace_widget,
             "update_workspace_widget_liquid_volume": update_workspace_widget_liquid_volume,
+            "remove_liquid_from_workspace_widget": remove_liquid_from_workspace_widget,
             "advance_workspace_cryogenics": advance_workspace_cryogenics,
             "add_workspace_produce_lot_to_widget": add_workspace_produce_lot_to_widget,
             "move_workbench_produce_lot_to_widget": move_workbench_produce_lot_to_widget,

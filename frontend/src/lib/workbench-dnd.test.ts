@@ -7,11 +7,13 @@ import {
   readRackToolDragPayload,
   readSampleLabelDragPayload,
   readToolbarDragPayload,
+  readWorkspaceLiquidDragPayload,
   writeBenchToolDragPayload,
   writeProduceDragPayload,
   writeRackToolDragPayload,
   writeSampleLabelDragPayload,
   writeToolbarDragPayload,
+  writeWorkspaceLiquidDragPayload,
 } from "@/lib/workbench-dnd";
 import type { ToolbarDragPayload } from "@/types/workbench";
 
@@ -236,6 +238,33 @@ describe("workbench dnd helpers", () => {
       produceType: "apple",
       sourceId: "produce_1",
       sourceKind: "grinder",
+    });
+  });
+
+  it("marks grinder liquid drags as trash drops", () => {
+    const dataTransfer = createDataTransfer();
+
+    writeWorkspaceLiquidDragPayload(dataTransfer, {
+      allowedDropTargets: ["trash_bin"],
+      entityKind: "liquid",
+      liquidEntryId: "workspace_liquid_1",
+      liquidType: "dry_ice_pellets",
+      sourceId: "workspace_liquid_1",
+      sourceKind: "grinder",
+      widgetId: "grinder",
+    });
+    syncTypes(dataTransfer);
+
+    expect(hasCompatibleDropTarget(dataTransfer, "trash_bin")).toBe(true);
+    expect(hasCompatibleDropTarget(dataTransfer, "workbench_slot")).toBe(false);
+    expect(readWorkspaceLiquidDragPayload(dataTransfer)).toEqual({
+      allowedDropTargets: ["trash_bin"],
+      entityKind: "liquid",
+      liquidEntryId: "workspace_liquid_1",
+      liquidType: "dry_ice_pellets",
+      sourceId: "workspace_liquid_1",
+      sourceKind: "grinder",
+      widgetId: "grinder",
     });
   });
 

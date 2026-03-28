@@ -152,6 +152,15 @@ export type ProduceDragPayload = BaseDragPayload & {
   trashProduceLotId?: string;
 };
 
+export type WorkspaceLiquidDragPayload = BaseDragPayload & {
+  entityKind: "liquid";
+  liquidEntryId: string;
+  liquidType: LiquidType;
+  sourceId: string;
+  sourceKind: "grinder";
+  widgetId: "grinder";
+};
+
 export type BenchToolDragPayload = BaseDragPayload & {
   entityKind: "tool";
   sourceSlotId: string;
@@ -197,6 +206,8 @@ export type DragDescriptor =
       entityKind: "liquid";
       liquidId: string;
       liquidType: LiquidType;
+      liquidEntryId?: string;
+      widgetId?: "grinder";
     })
   | (BaseDragPayload & {
       entityKind: "workspace_widget";

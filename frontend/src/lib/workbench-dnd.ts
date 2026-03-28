@@ -8,6 +8,7 @@ import type {
   TrashToolDragPayload,
   ToolbarDragPayload,
   ToolbarItem,
+  WorkspaceLiquidDragPayload,
   WorkspaceWidgetDragPayload,
 } from "@/types/workbench";
 
@@ -16,6 +17,7 @@ export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
 export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
 export const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
 export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
+export const WORKSPACE_LIQUID_DRAG_MIME = "application/x-betalab-workspace-liquid-item";
 export const PRODUCE_DRAG_MIME = "application/x-betalab-produce-item";
 export const SAMPLE_LABEL_DRAG_MIME = "application/x-betalab-sample-label-item";
 const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
@@ -125,6 +127,20 @@ export function writeWorkspaceWidgetDragPayload(
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
     dataTransfer.setData(getDropTargetMime(targetType), payload.widgetId);
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeWorkspaceLiquidDragPayload(
+  dataTransfer: DataTransfer,
+  payload: WorkspaceLiquidDragPayload,
+) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(WORKSPACE_LIQUID_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.liquidEntryId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -497,6 +513,54 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
   return null;
 }
 
+export function readWorkspaceLiquidDragPayload(
+  dataTransfer: DataTransfer,
+): WorkspaceLiquidDragPayload | null {
+  const rawPayload =
+    dataTransfer.getData(WORKSPACE_LIQUID_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<WorkspaceLiquidDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" ||
+          targetType === "workspace_canvas" ||
+          targetType === "rack_slot" ||
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
+      ) ?? [];
+
+    if (
+      parsed.entityKind === "liquid" &&
+      typeof parsed.liquidEntryId === "string" &&
+      typeof parsed.liquidType === "string" &&
+      typeof parsed.sourceId === "string" &&
+      parsed.sourceKind === "grinder" &&
+      parsed.widgetId === "grinder" &&
+      allowedDropTargets.length > 0
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "liquid",
+        liquidEntryId: parsed.liquidEntryId,
+        liquidType: parsed.liquidType,
+        sourceId: parsed.sourceId,
+        sourceKind: "grinder",
+        widgetId: "grinder",
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function readSampleLabelDragPayload(
   dataTransfer: DataTransfer,
 ): SampleLabelDragPayload | null {
@@ -554,6 +618,7 @@ export function toDragDescriptor(
     | RackToolDragPayload
     | TrashToolDragPayload
     | WorkspaceWidgetDragPayload
+    | WorkspaceLiquidDragPayload
     | ProduceDragPayload
     | SampleLabelDragPayload,
 ): DragDescriptor {
@@ -628,6 +693,19 @@ export function toDragDescriptor(
     };
   }
 
+  if ("liquidEntryId" in payload) {
+    return {
+      allowedDropTargets: payload.allowedDropTargets,
+      entityKind: "liquid",
+      liquidEntryId: payload.liquidEntryId,
+      liquidId: payload.liquidType,
+      liquidType: payload.liquidType,
+      sourceId: payload.sourceId,
+      sourceKind: payload.sourceKind,
+      widgetId: payload.widgetId,
+    };
+  }
+
   if ("sourceSlotId" in payload || "rackSlotId" in payload || "trashToolId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
@@ -673,6 +751,11 @@ export function readDragDescriptor(dataTransfer: DataTransfer): DragDescriptor |
   const workspaceWidgetPayload = readWorkspaceWidgetDragPayload(dataTransfer);
   if (workspaceWidgetPayload) {
     return toDragDescriptor(workspaceWidgetPayload);
+  }
+
+  const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(dataTransfer);
+  if (workspaceLiquidPayload) {
+    return toDragDescriptor(workspaceLiquidPayload);
   }
 
   const producePayload = readProduceDragPayload(dataTransfer);
