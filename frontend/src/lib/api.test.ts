@@ -55,18 +55,20 @@ describe("api client", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      sendExperimentCommand("experiment_123", "place_tool_on_workbench", { slot_id: "station_1" }),
+      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+        slot_id: "station_1",
+        tool_id: "sample_vial_lcms",
+      }),
     ).resolves.toEqual(experiment);
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/experiments/experiment_123/commands",
+      "http://localhost:8000/experiments/experiment_123/workbench/slots/station_1/place-tool",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: "place_tool_on_workbench",
-          payload: { slot_id: "station_1" },
+          tool_id: "sample_vial_lcms",
         }),
       },
     );
@@ -233,9 +235,12 @@ describe("api client", () => {
       }),
     );
 
-    await expect(sendExperimentCommand("experiment_123", "place_tool_on_workbench", {})).rejects.toThrow(
-      "Failed to send experiment command",
-    );
+    await expect(
+      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+        slot_id: "station_1",
+        tool_id: "sample_vial_lcms",
+      }),
+    ).rejects.toThrow("Failed to send experiment command");
   });
 
   it("surfaces backend error detail for command execution failures", async () => {
@@ -247,9 +252,12 @@ describe("api client", () => {
       }),
     );
 
-    await expect(sendExperimentCommand("experiment_123", "place_tool_on_workbench", {})).rejects.toThrow(
-      "Experiment not found",
-    );
+    await expect(
+      sendExperimentCommand("experiment_123", "place_tool_on_workbench", {
+        slot_id: "station_1",
+        tool_id: "sample_vial_lcms",
+      }),
+    ).rejects.toThrow("Experiment not found");
   });
 
   it("throws when experiment loading fails", async () => {

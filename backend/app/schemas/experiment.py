@@ -109,49 +109,127 @@ class ExperimentSchema(BaseModel):
     audit_log: list[str]
 
 
-class ExperimentCommandEnvelope(BaseModel):
-    type: Literal[
-        "add_workbench_slot",
-        "remove_workbench_slot",
-        "place_tool_on_workbench",
-        "move_tool_between_workbench_slots",
-        "discard_workbench_tool",
-        "discard_tool_from_palette",
-        "restore_trashed_tool_to_workbench_slot",
-        "add_workspace_widget",
-        "move_workspace_widget",
-        "discard_workspace_widget",
-        "add_liquid_to_workspace_widget",
-        "update_workspace_widget_liquid_volume",
-        "remove_liquid_from_workspace_widget",
-        "complete_grinder_cycle",
-        "advance_workspace_cryogenics",
-        "add_workspace_produce_lot_to_widget",
-        "move_workbench_produce_lot_to_widget",
-        "restore_trashed_produce_lot_to_widget",
-        "create_produce_lot",
-        "discard_workspace_produce_lot",
-        "move_widget_produce_lot_to_workbench_tool",
-        "discard_widget_produce_lot",
-        "cut_workbench_produce_lot",
-        "place_tool_in_rack_slot",
-        "place_workbench_tool_in_rack_slot",
-        "move_rack_tool_between_slots",
-        "remove_rack_tool_to_workbench_slot",
-        "discard_rack_tool",
-        "restore_trashed_tool_to_rack_slot",
-        "add_liquid_to_workbench_tool",
-        "add_produce_lot_to_workbench_tool",
-        "discard_produce_lot_from_workbench_tool",
-        "move_produce_lot_between_workbench_tools",
-        "restore_trashed_produce_lot_to_workbench_tool",
-        "remove_liquid_from_workbench_tool",
-        "update_workbench_liquid_volume",
-        "apply_sample_label_to_workbench_tool",
-        "discard_sample_label_from_palette",
-        "update_workbench_tool_sample_label_text",
-        "move_sample_label_between_workbench_tools",
-        "discard_sample_label_from_workbench_tool",
-        "restore_trashed_sample_label_to_workbench_tool",
-    ]
-    payload: dict = Field(default_factory=dict)
+class LayoutPositionSchema(BaseModel):
+    anchor: str
+    offset_x: int
+    offset_y: int
+
+
+class WorkbenchToolPlacementSchema(BaseModel):
+    tool_id: str
+
+
+class WorkbenchSlotReferenceSchema(BaseModel):
+    slot_id: str
+
+
+class TargetWorkbenchSlotSchema(BaseModel):
+    target_slot_id: str
+
+
+class WorkbenchToolMoveSchema(BaseModel):
+    target_slot_id: str
+
+
+class WorkbenchToolLiquidCreateSchema(BaseModel):
+    liquid_id: str
+    volume_ml: float | None = None
+
+
+class WorkbenchToolLiquidUpdateSchema(BaseModel):
+    volume_ml: float
+
+
+class WorkbenchToolSampleLabelUpdateSchema(BaseModel):
+    sample_label_text: str
+
+
+class WorkbenchToolSampleLabelMoveSchema(BaseModel):
+    target_tool_id: str
+
+
+class WorkbenchToolProduceLotCreateSchema(BaseModel):
+    produce_lot_id: str
+
+
+class WorkbenchProduceLotMoveSchema(BaseModel):
+    source_slot_id: str
+    target_slot_id: str
+
+
+class PaletteToolDiscardSchema(BaseModel):
+    tool_id: str
+
+
+class RackToolPlacementSchema(BaseModel):
+    tool_id: str
+
+
+class RackWorkbenchPlacementSchema(BaseModel):
+    source_slot_id: str
+
+
+class RackToolMoveSchema(BaseModel):
+    target_rack_slot_id: str
+
+
+class RackToolMoveToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+
+
+class TrashToolRestoreToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+
+
+class TrashToolRestoreToRackSchema(BaseModel):
+    rack_slot_id: str
+
+
+class TrashProduceLotRestoreToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+
+
+class TrashProduceLotRestoreToWidgetSchema(BaseModel):
+    widget_id: str
+
+
+class TrashSampleLabelRestoreSchema(BaseModel):
+    target_tool_id: str
+
+
+class WorkspaceWidgetCreateSchema(LayoutPositionSchema):
+    widget_id: str
+
+
+class WorkspaceWidgetMoveSchema(LayoutPositionSchema):
+    pass
+
+
+class WorkspaceWidgetLiquidCreateSchema(BaseModel):
+    liquid_id: str
+    volume_ml: float | None = None
+
+
+class WorkspaceWidgetLiquidUpdateSchema(BaseModel):
+    volume_ml: float
+
+
+class WorkspaceProduceLotCreateSchema(BaseModel):
+    produce_type: Literal["apple"]
+
+
+class WorkspaceWidgetProduceLotCreateSchema(BaseModel):
+    produce_lot_id: str
+
+
+class WorkspaceWidgetMoveWorkbenchProduceLotSchema(BaseModel):
+    source_slot_id: str
+    produce_lot_id: str
+
+
+class WorkspaceWidgetMoveProduceLotToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+
+
+class WorkspaceAdvanceCryogenicsSchema(BaseModel):
+    elapsed_ms: float = Field(default=0.0)

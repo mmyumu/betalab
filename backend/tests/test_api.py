@@ -1,5 +1,13 @@
+from fastapi.testclient import TestClient
+
 from app.core.config import Settings, settings
 from app.main import app
+
+
+def _create_experiment(client: TestClient) -> str:
+    created = client.post("/experiments")
+    assert created.status_code == 200
+    return created.json()["id"]
 
 
 def test_settings_defaults_are_exposed() -> None:
@@ -11,8 +19,6 @@ def test_settings_defaults_are_exposed() -> None:
 
 
 def test_healthcheck_returns_ok() -> None:
-    from fastapi.testclient import TestClient
-
     with TestClient(app) as client:
         response = client.get("/health")
 
@@ -21,112 +27,19 @@ def test_healthcheck_returns_ok() -> None:
 
 
 def test_create_and_fetch_experiment_over_http() -> None:
-    from fastapi.testclient import TestClient
-
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
         fetched = client.get(f"/experiments/{experiment_id}")
 
-    assert created.status_code == 200
-    assert created.json()["workbench"]["slots"][0]["tool"] is None
-    assert created.json()["rack"]["slots"][0]["tool"] is None
-    assert created.json()["trash"]["tools"] == []
-    assert created.json()["workspace"]["widgets"][0]["id"] == "workbench"
-    assert created.json()["workspace"]["widgets"][2]["is_trashed"] is False
-    assert created.json()["workspace"]["produce_lots"] == []
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
-
-
-def test_add_liquid_to_workbench_tool_accepts_an_explicit_dosed_volume_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "centrifuge_tube_50ml",
-                },
-            },
-        )
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "liquid_id": "acetonitrile_extraction",
-                    "volume_ml": 7.5,
-                },
-            },
-        )
-
-    assert added.status_code == 200
-    assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 7.5
-
-
-def test_cut_workbench_produce_lot_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-      created = client.post("/experiments")
-      experiment_id = created.json()["id"]
-
-      produced = client.post(
-          f"/experiments/{experiment_id}/commands",
-          json={
-              "type": "create_produce_lot",
-              "payload": {
-                  "produce_type": "apple",
-              },
-          },
-      )
-      produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
-      client.post(
-          f"/experiments/{experiment_id}/commands",
-          json={
-              "type": "place_tool_on_workbench",
-              "payload": {
-                  "slot_id": "station_1",
-                  "tool_id": "cutting_board_hdpe",
-              },
-          },
-      )
-      client.post(
-          f"/experiments/{experiment_id}/commands",
-          json={
-              "type": "add_produce_lot_to_workbench_tool",
-              "payload": {
-                  "slot_id": "station_1",
-                  "produce_lot_id": produce_lot_id,
-              },
-          },
-      )
-      cut = client.post(
-          f"/experiments/{experiment_id}/commands",
-          json={
-              "type": "cut_workbench_produce_lot",
-              "payload": {
-                  "slot_id": "station_1",
-                  "produce_lot_id": produce_lot_id,
-              },
-          },
-      )
-
-    assert cut.status_code == 200
-    assert cut.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "cut"
+    assert fetched.json()["workbench"]["slots"][0]["tool"] is None
+    assert fetched.json()["rack"]["slots"][0]["tool"] is None
+    assert fetched.json()["trash"]["tools"] == []
+    assert fetched.json()["workspace"]["widgets"][0]["id"] == "workbench"
 
 
 def test_get_experiment_returns_404_for_unknown_id() -> None:
-    from fastapi.testclient import TestClient
-
     with TestClient(app) as client:
         response = client.get("/experiments/missing")
 
@@ -134,948 +47,362 @@ def test_get_experiment_returns_404_for_unknown_id() -> None:
     assert response.json() == {"detail": "Experiment not found"}
 
 
-def test_apply_command_returns_400_for_invalid_payload() -> None:
-    from fastapi.testclient import TestClient
-
+def test_workbench_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
 
-        response = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "liquid_id": "acetonitrile_extraction",
-                },
-            },
-        )
-
-    assert response.status_code == 400
-    assert response.json() == {"detail": "Place a tool on Station 1 before adding liquids."}
-
-
-def test_remove_workbench_slot_returns_400_when_station_is_not_empty() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
-        )
-
-        response = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "remove_workbench_slot",
-                "payload": {
-                    "slot_id": "station_1",
-                },
-            },
-        )
-
-    assert response.status_code == 400
-    assert response.json() == {"detail": "Station 1 must be empty before it can be removed."}
-
-
-def test_apply_command_returns_404_for_unknown_experiment() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        response = client.post(
-            "/experiments/missing/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {},
-            },
-        )
-
-    assert response.status_code == 404
-    assert response.json() == {"detail": "Experiment not found"}
-
-
-def test_apply_command_returns_422_for_unknown_command_type() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        response = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "unsupported",
-                "payload": {},
-            },
-        )
-
-    assert response.status_code == 422
-
-
-def test_pesticide_workbench_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
+        added_slot = client.post(f"/experiments/{experiment_id}/workbench/slots")
         placed = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "centrifuge_tube_50ml"},
         )
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "liquid_id": "acetonitrile_extraction",
-                },
-            },
+        tool_id = placed.json()["workbench"]["slots"][0]["tool"]["id"]
+        added_liquid = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{tool_id}/liquids",
+            json={"liquid_id": "acetonitrile_extraction", "volume_ml": 7.5},
         )
-
-    assert created.status_code == 200
-    assert placed.status_code == 200
-    assert placed.json()["workbench"]["slots"][0]["tool"]["label"] == "Autosampler vial"
-    assert added.status_code == 200
-    assert added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 2.0
-
-
-def test_sampling_bag_label_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sealed_sampling_bag",
-                },
-            },
+        liquid_id = added_liquid.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["id"]
+        updated_liquid = client.patch(
+            f"/experiments/{experiment_id}/workbench/tools/{tool_id}/liquids/{liquid_id}",
+            json={"volume_ml": 8.5},
         )
-        labeled = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "apply_sample_label_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                },
-            },
+        moved = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{tool_id}/move-to-slot",
+            json={"target_slot_id": "station_2"},
         )
-        updated = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "update_workbench_tool_sample_label_text",
-                "payload": {
-                    "slot_id": "station_1",
-                    "sample_label_text": "LOT-2026-041",
-                },
-            },
+        removed_liquid = client.delete(
+            f"/experiments/{experiment_id}/workbench/tools/{tool_id}/liquids/{liquid_id}"
         )
+        removed_slot = client.delete(f"/experiments/{experiment_id}/workbench/slots/station_3")
 
-    assert labeled.status_code == 200
-    assert labeled.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == ""
-    assert updated.status_code == 200
-    assert updated.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == "LOT-2026-041"
-
-
-def test_sampling_bag_label_can_move_through_trash_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {"slot_id": "station_1", "tool_id": "sealed_sampling_bag"},
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {"slot_id": "station_2", "tool_id": "sealed_sampling_bag"},
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "apply_sample_label_to_workbench_tool",
-                "payload": {"slot_id": "station_1"},
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "update_workbench_tool_sample_label_text",
-                "payload": {
-                    "slot_id": "station_1",
-                    "sample_label_text": "LOT-2026-041",
-                },
-            },
-        )
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_sample_label_from_workbench_tool",
-                "payload": {"slot_id": "station_1"},
-            },
-        )
-        trash_sample_label_id = discarded.json()["trash"]["sample_labels"][0]["id"]
-        restored = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "restore_trashed_sample_label_to_workbench_tool",
-                "payload": {
-                    "target_slot_id": "station_2",
-                    "trash_sample_label_id": trash_sample_label_id,
-                },
-            },
-        )
-
-    assert discarded.status_code == 200
-    assert discarded.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] is None
-    assert discarded.json()["trash"]["sample_labels"][0]["sample_label_text"] == "LOT-2026-041"
-    assert restored.status_code == 200
-    assert restored.json()["workbench"]["slots"][1]["tool"]["sample_label_text"] == "LOT-2026-041"
-    assert restored.json()["trash"]["sample_labels"] == []
-
-
-def test_sampling_bag_label_can_be_discarded_from_palette_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_sample_label_from_palette",
-                "payload": {"sample_label_id": "sampling_bag_label"},
-            },
-        )
-
-    assert discarded.status_code == 200
-    assert len(discarded.json()["trash"]["sample_labels"]) == 1
-    assert discarded.json()["trash"]["sample_labels"][0]["origin_label"] == "Palette"
-
-
-def test_workbench_slot_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workbench_slot",
-                "payload": {},
-            },
-        )
-        removed = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "remove_workbench_slot",
-                "payload": {
-                    "slot_id": "station_3",
-                },
-            },
-        )
-
-    assert added.status_code == 200
-    assert [slot["id"] for slot in added.json()["workbench"]["slots"]] == [
+    assert added_slot.status_code == 200
+    assert [slot["id"] for slot in added_slot.json()["workbench"]["slots"]] == [
         "station_1",
         "station_2",
         "station_3",
     ]
-    assert removed.status_code == 200
-    assert [slot["id"] for slot in removed.json()["workbench"]["slots"]] == [
+    assert added_liquid.status_code == 200
+    assert added_liquid.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 7.5
+    assert updated_liquid.status_code == 200
+    assert updated_liquid.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["volume_ml"] == 8.5
+    assert moved.status_code == 200
+    assert moved.json()["workbench"]["slots"][1]["tool"]["id"] == tool_id
+    assert removed_liquid.status_code == 200
+    assert removed_liquid.json()["workbench"]["slots"][1]["tool"]["liquids"] == []
+    assert removed_slot.status_code == 200
+    assert [slot["id"] for slot in removed_slot.json()["workbench"]["slots"]] == [
         "station_1",
         "station_2",
     ]
 
 
-def test_move_tool_between_workbench_slots_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
+def test_workbench_sample_label_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
 
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
+        first_bag = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "sealed_sampling_bag"},
+        )
+        second_bag = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_2/place-tool",
+            json={"tool_id": "sealed_sampling_bag"},
+        )
+        first_tool_id = first_bag.json()["workbench"]["slots"][0]["tool"]["id"]
+        second_tool_id = second_bag.json()["workbench"]["slots"][1]["tool"]["id"]
+        labeled = client.post(f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label")
+        updated = client.patch(
+            f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label",
+            json={"sample_label_text": "LOT-2026-041"},
         )
         moved = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "move_tool_between_workbench_slots",
-                "payload": {
-                    "source_slot_id": "station_1",
-                    "target_slot_id": "station_2",
-                },
-            },
+            f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label/move-to-tool",
+            json={"target_tool_id": second_tool_id},
+        )
+        discarded = client.delete(f"/experiments/{experiment_id}/workbench/tools/{second_tool_id}/sample-label")
+        trash_entry_id = discarded.json()["trash"]["sample_labels"][0]["id"]
+        restored = client.post(
+            f"/experiments/{experiment_id}/trash/sample-labels/{trash_entry_id}/restore-to-workbench-tool",
+            json={"target_tool_id": first_tool_id},
         )
 
+    assert labeled.status_code == 200
+    assert updated.status_code == 200
+    assert updated.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == "LOT-2026-041"
     assert moved.status_code == 200
-    assert moved.json()["workbench"]["slots"][0]["tool"] is None
-    assert moved.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
+    assert moved.json()["workbench"]["slots"][1]["tool"]["sample_label_text"] == "LOT-2026-041"
+    assert discarded.status_code == 200
+    assert discarded.json()["trash"]["sample_labels"][0]["sample_label_text"] == "LOT-2026-041"
+    assert restored.status_code == 200
+    assert restored.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == "LOT-2026-041"
 
 
-def test_rack_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
+def test_palette_and_rack_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
 
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
+        discarded_from_palette = client.post(
+            f"/experiments/{experiment_id}/palette/tools/discard",
+            json={"tool_id": "sealed_sampling_bag"},
         )
-        loaded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_workbench_tool_in_rack_slot",
-                "payload": {
-                    "source_slot_id": "station_1",
-                    "rack_slot_id": "rack_slot_1",
-                },
-            },
+        discarded_label = client.post(f"/experiments/{experiment_id}/palette/sample-labels/discard")
+        placed_on_bench = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "sample_vial_lcms"},
         )
-        removed = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "remove_rack_tool_to_workbench_slot",
-                "payload": {
-                    "rack_slot_id": "rack_slot_1",
-                    "target_slot_id": "station_2",
-                },
-            },
+        tool_id = placed_on_bench.json()["workbench"]["slots"][0]["tool"]["id"]
+        placed_in_rack = client.post(
+            f"/experiments/{experiment_id}/rack/slots/rack_slot_1/place-tool-from-workbench",
+            json={"source_slot_id": "station_1"},
+        )
+        moved_in_rack = client.post(
+            f"/experiments/{experiment_id}/rack/tools/{tool_id}/move-to-slot",
+            json={"target_rack_slot_id": "rack_slot_2"},
+        )
+        returned_to_bench = client.post(
+            f"/experiments/{experiment_id}/rack/tools/{tool_id}/move-to-workbench-slot",
+            json={"target_slot_id": "station_2"},
+        )
+        placed_from_palette = client.post(
+            f"/experiments/{experiment_id}/rack/slots/rack_slot_1/place-tool-from-palette",
+            json={"tool_id": "sample_vial_lcms"},
         )
 
-    assert loaded.status_code == 200
-    assert loaded.json()["workbench"]["slots"][0]["tool"] is None
-    assert loaded.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
-    assert removed.status_code == 200
-    assert removed.json()["rack"]["slots"][0]["tool"] is None
-    assert removed.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
+    assert discarded_from_palette.status_code == 200
+    assert discarded_from_palette.json()["trash"]["tools"][0]["origin_label"] == "Palette"
+    assert discarded_label.status_code == 200
+    assert len(discarded_label.json()["trash"]["sample_labels"]) == 1
+    assert placed_in_rack.status_code == 200
+    assert placed_in_rack.json()["rack"]["slots"][0]["tool"]["id"] == tool_id
+    assert moved_in_rack.status_code == 200
+    assert moved_in_rack.json()["rack"]["slots"][1]["tool"]["id"] == tool_id
+    assert returned_to_bench.status_code == 200
+    assert returned_to_bench.json()["workbench"]["slots"][1]["tool"]["id"] == tool_id
+    assert placed_from_palette.status_code == 200
+    assert placed_from_palette.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
 
 
-def test_place_tool_in_rack_slot_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
+def test_trash_tool_restore_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
 
-        loaded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_in_rack_slot",
-                "payload": {
-                    "rack_slot_id": "rack_slot_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
+        placed = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "sample_vial_lcms"},
         )
-
-    assert loaded.status_code == 200
-    assert loaded.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
-    assert loaded.json()["workbench"]["slots"][0]["tool"] is None
-
-
-def test_discard_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
-        )
-        discarded_bench_tool = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                },
-            },
-        )
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_workbench_tool_in_rack_slot",
-                "payload": {
-                    "source_slot_id": "station_1",
-                    "rack_slot_id": "rack_slot_1",
-                },
-            },
-        )
-        discarded_rack_tool = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_rack_tool",
-                "payload": {
-                    "rack_slot_id": "rack_slot_1",
-                },
-            },
-        )
-
-    assert discarded_bench_tool.status_code == 200
-    assert discarded_bench_tool.json()["workbench"]["slots"][0]["tool"] is None
-    assert discarded_bench_tool.json()["trash"]["tools"][0]["tool"]["label"] == "Autosampler vial"
-    assert discarded_rack_tool.status_code == 200
-    assert discarded_rack_tool.json()["rack"]["slots"][0]["tool"] is None
-    assert len(discarded_rack_tool.json()["trash"]["tools"]) == 2
-
-
-def test_restore_trash_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sample_vial_lcms",
-                },
-            },
-        )
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                },
-            },
-        )
-        trash_tool_id = discarded.json()["trash"]["tools"][0]["id"]
+        tool_id = placed.json()["workbench"]["slots"][0]["tool"]["id"]
+        discarded = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/discard")
+        trash_entry_id = discarded.json()["trash"]["tools"][0]["id"]
         restored_to_bench = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "restore_trashed_tool_to_workbench_slot",
-                "payload": {
-                    "trash_tool_id": trash_tool_id,
-                    "target_slot_id": "station_2",
-                },
-            },
+            f"/experiments/{experiment_id}/trash/tools/{trash_entry_id}/restore-to-workbench",
+            json={"target_slot_id": "station_2"},
         )
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_workbench_tool",
-                "payload": {
-                    "slot_id": "station_2",
-                },
-            },
-        )
-        trashed_again = client.get(f"/experiments/{experiment_id}")
-        second_trash_tool_id = trashed_again.json()["trash"]["tools"][0]["id"]
+        restored_tool_id = restored_to_bench.json()["workbench"]["slots"][1]["tool"]["id"]
+        discarded_again = client.post(f"/experiments/{experiment_id}/workbench/tools/{restored_tool_id}/discard")
+        second_entry_id = discarded_again.json()["trash"]["tools"][0]["id"]
         restored_to_rack = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "restore_trashed_tool_to_rack_slot",
-                "payload": {
-                    "trash_tool_id": second_trash_tool_id,
-                    "rack_slot_id": "rack_slot_1",
-                },
-            },
+            f"/experiments/{experiment_id}/trash/tools/{second_entry_id}/restore-to-rack",
+            json={"rack_slot_id": "rack_slot_1"},
         )
 
     assert restored_to_bench.status_code == 200
     assert restored_to_bench.json()["workbench"]["slots"][1]["tool"]["label"] == "Autosampler vial"
-    assert restored_to_bench.json()["trash"]["tools"] == []
     assert restored_to_rack.status_code == 200
     assert restored_to_rack.json()["rack"]["slots"][0]["tool"]["label"] == "Autosampler vial"
     assert restored_to_rack.json()["trash"]["tools"] == []
 
 
-def test_workspace_widget_commands_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
+def test_workspace_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
+        experiment_id = _create_experiment(client)
 
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workspace_widget",
-                "payload": {
-                    "widget_id": "rack",
-                    "anchor": "top-left",
-                    "offset_x": 480,
-                    "offset_y": 420,
-                },
-            },
+        added_widget = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
         )
-        moved = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "move_workspace_widget",
-                "payload": {
-                    "widget_id": "rack",
-                    "anchor": "top-right",
-                    "offset_x": 120,
-                    "offset_y": 460,
-                },
-            },
+        moved_widget = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/move",
+            json={"anchor": "top-left", "offset_x": 100, "offset_y": 460},
         )
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_workspace_widget",
-                "payload": {
-                    "widget_id": "rack",
-                },
-            },
-        )
-
-    assert added.status_code == 200
-    assert next(widget for widget in added.json()["workspace"]["widgets"] if widget["id"] == "rack")[
-        "is_present"
-    ] is True
-    assert next(widget for widget in added.json()["workspace"]["widgets"] if widget["id"] == "rack")[
-        "is_trashed"
-    ] is False
-    assert moved.status_code == 200
-    assert next(widget for widget in moved.json()["workspace"]["widgets"] if widget["id"] == "rack")[
-        "anchor"
-    ] == "top-right"
-    assert discarded.status_code == 200
-    assert next(
-        widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"
-    )["is_present"] is False
-    assert next(
-        widget for widget in discarded.json()["workspace"]["widgets"] if widget["id"] == "rack"
-    )["is_trashed"] is True
-
-
-def test_create_produce_lot_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
         produce_created = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "create_produce_lot",
-                "payload": {
-                    "produce_type": "apple",
-                },
-            },
+            f"/experiments/{experiment_id}/workspace/produce-lots",
+            json={"produce_type": "apple"},
         )
-
-    assert produce_created.status_code == 200
-    assert len(produce_created.json()["workspace"]["produce_lots"]) == 1
-    assert produce_created.json()["workspace"]["produce_lots"][0]["produce_type"] == "apple"
-    assert produce_created.json()["workspace"]["produce_lots"][0]["label"] == "Apple lot 1"
-    assert produce_created.json()["workspace"]["produce_lots"][0]["unit_count"] == 12
-    assert produce_created.json()["workspace"]["produce_lots"][0]["total_mass_g"] == 2450.0
-
-
-def test_add_produce_lot_to_sampling_bag_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        produce_created = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "create_produce_lot",
-                "payload": {
-                    "produce_type": "apple",
-                },
-            },
+        produce_lot_id = produce_created.json()["workspace"]["produce_lots"][0]["id"]
+        produce_loaded = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
+            json={"produce_lot_id": produce_lot_id},
         )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sealed_sampling_bag",
-                },
-            },
+        added_liquid = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
+            json={"liquid_id": "dry_ice_pellets", "volume_ml": 275.25},
         )
-        bag_loaded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_produce_lot_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
-                },
-            },
-        )
-
-    assert bag_loaded.status_code == 200
-    assert bag_loaded.json()["workspace"]["produce_lots"] == []
-    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["produce_type"] == "apple"
-    assert bag_loaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["unit_count"] == 12
-
-
-def test_discard_produce_lot_from_sampling_bag_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        produce_created = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "create_produce_lot",
-                "payload": {
-                    "produce_type": "apple",
-                },
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "sealed_sampling_bag",
-                },
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_produce_lot_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
-                },
-            },
-        )
-        bag_unloaded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_produce_lot_from_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
-                },
-            },
-        )
-
-    assert bag_unloaded.status_code == 200
-    assert bag_unloaded.json()["workbench"]["slots"][0]["tool"]["produce_lots"] == []
-    assert len(bag_unloaded.json()["trash"]["produce_lots"]) == 1
-    assert bag_unloaded.json()["trash"]["produce_lots"][0]["origin_label"] == "Sealed sampling bag"
-    assert bag_unloaded.json()["trash"]["produce_lots"][0]["produce_lot"]["label"] == "Apple lot 1"
-
-
-def test_discard_produce_lot_from_basket_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        produce_created = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "create_produce_lot",
-                "payload": {
-                    "produce_type": "apple",
-                },
-            },
-        )
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_workspace_produce_lot",
-                "payload": {
-                    "produce_lot_id": produce_created.json()["workspace"]["produce_lots"][0]["id"],
-                },
-            },
-        )
-
-    assert discarded.status_code == 200
-    assert discarded.json()["workspace"]["produce_lots"] == []
-    assert len(discarded.json()["trash"]["produce_lots"]) == 1
-
-
-def test_discard_tool_from_palette_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        discarded = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "discard_tool_from_palette",
-                "payload": {
-                    "tool_id": "sealed_sampling_bag",
-                },
-            },
-        )
-
-    assert discarded.status_code == 200
-    assert len(discarded.json()["trash"]["tools"]) == 1
-    assert discarded.json()["trash"]["tools"][0]["origin_label"] == "Palette"
-
-
-def test_remove_liquid_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "place_tool_on_workbench",
-                "payload": {
-                    "slot_id": "station_1",
-                    "tool_id": "centrifuge_tube_50ml",
-                },
-            },
-        )
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "liquid_id": "acetonitrile_extraction",
-                },
-            },
-        )
-        liquid_id = added.json()["workbench"]["slots"][0]["tool"]["liquids"][0]["id"]
-        removed = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "remove_liquid_from_workbench_tool",
-                "payload": {
-                    "slot_id": "station_1",
-                    "liquid_entry_id": liquid_id,
-                },
-            },
-        )
-
-    assert removed.status_code == 200
-    assert removed.json()["workbench"]["slots"][0]["tool"]["liquids"] == []
-
-
-def test_update_workspace_widget_liquid_volume_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "anchor": "top-right",
-                    "offset_x": 0,
-                    "offset_y": 420,
-                },
-            },
-        )
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "liquid_id": "dry_ice_pellets",
-                },
-            },
-        )
-        liquid_id = added.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
-        updated = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "update_workspace_widget_liquid_volume",
-                "payload": {
-                    "widget_id": "grinder",
-                    "liquid_entry_id": liquid_id,
-                    "volume_ml": 8.5,
-                },
-            },
-        )
-
-    assert updated.status_code == 200
-    assert updated.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 8.5
-
-
-def test_add_workspace_widget_liquid_accepts_an_explicit_dosed_mass_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "anchor": "top-right",
-                    "offset_x": 0,
-                    "offset_y": 420,
-                },
-            },
-        )
-        added = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "liquid_id": "dry_ice_pellets",
-                    "volume_ml": 275.25,
-                },
-            },
-        )
-
-    assert added.status_code == 200
-    assert added.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 275.25
-
-
-def test_advance_workspace_cryogenics_round_trip_over_http() -> None:
-    from fastapi.testclient import TestClient
-
-    with TestClient(app) as client:
-        created = client.post("/experiments")
-        experiment_id = created.json()["id"]
-
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "anchor": "top-right",
-                    "offset_x": 0,
-                    "offset_y": 420,
-                },
-            },
-        )
-        produced = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "create_produce_lot",
-                "payload": {
-                    "produce_type": "apple",
-                },
-            },
-        )
-        produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_workspace_produce_lot_to_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "produce_lot_id": produce_lot_id,
-                },
-            },
-        )
-        client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "add_liquid_to_workspace_widget",
-                "payload": {
-                    "widget_id": "grinder",
-                    "liquid_id": "dry_ice_pellets",
-                },
-            },
+        liquid_id = added_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
+        updated_liquid = client.patch(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}",
+            json={"volume_ml": 125.5},
         )
         advanced = client.post(
-            f"/experiments/{experiment_id}/commands",
-            json={
-                "type": "advance_workspace_cryogenics",
-                "payload": {
-                    "elapsed_ms": 10000,
-                },
-            },
+            f"/experiments/{experiment_id}/workspace/advance-cryogenics",
+            json={"elapsed_ms": 10000},
         )
+        removed_liquid = client.delete(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}"
+        )
+        discarded_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/discard")
 
+    assert added_widget.status_code == 200
+    assert next(widget for widget in added_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
+        "is_present"
+    ] is True
+    assert moved_widget.status_code == 200
+    assert next(widget for widget in moved_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
+        "anchor"
+    ] == "top-left"
+    assert produce_loaded.status_code == 200
+    assert produce_loaded.json()["workspace"]["produce_lots"] == []
+    assert updated_liquid.status_code == 200
+    assert updated_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 125.5
     assert advanced.status_code == 200
     assert advanced.json()["workspace"]["widgets"][5]["produce_lots"][0]["temperature_c"] < 20.0
-    assert advanced.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] < 1000.0
+    assert removed_liquid.status_code == 200
+    assert removed_liquid.json()["workspace"]["widgets"][5]["liquids"] == []
+    assert discarded_widget.status_code == 200
+    assert next(widget for widget in discarded_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
+        "is_trashed"
+    ] is True
+
+
+def test_produce_lot_routes_round_trip_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        created = client.post(
+            f"/experiments/{experiment_id}/workspace/produce-lots",
+            json={"produce_type": "apple"},
+        )
+        first_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        placed_board = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "cutting_board_hdpe"},
+        )
+        board_id = placed_board.json()["workbench"]["slots"][0]["tool"]["id"]
+        added_to_board = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{board_id}/add-produce-lot",
+            json={"produce_lot_id": first_lot_id},
+        )
+        cut = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{first_lot_id}/cut",
+            json={"slot_id": "station_1"},
+        )
+        discarded_from_board = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{first_lot_id}/discard",
+            json={"slot_id": "station_1"},
+        )
+        trash_entry_id = discarded_from_board.json()["trash"]["produce_lots"][0]["id"]
+        restored_to_board = client.post(
+            f"/experiments/{experiment_id}/trash/produce-lots/{trash_entry_id}/restore-to-workbench-tool",
+            json={"target_slot_id": "station_1"},
+        )
+        discarded_again = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{first_lot_id}/discard",
+            json={"slot_id": "station_1"},
+        )
+        second_entry_id = discarded_again.json()["trash"]["produce_lots"][0]["id"]
+        added_grinder = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+        )
+        restored_to_widget = client.post(
+            f"/experiments/{experiment_id}/trash/produce-lots/{second_entry_id}/restore-to-widget",
+            json={"widget_id": "grinder"},
+        )
+        moved_to_bench = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{first_lot_id}/move-to-workbench-tool",
+            json={"target_slot_id": "station_2"},
+        )
+        discarded_from_widget_target = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{first_lot_id}/discard",
+            json={"slot_id": "station_2"},
+        )
+        third_entry_id = discarded_from_widget_target.json()["trash"]["produce_lots"][0]["id"]
+        restored_to_widget_again = client.post(
+            f"/experiments/{experiment_id}/trash/produce-lots/{third_entry_id}/restore-to-widget",
+            json={"widget_id": "grinder"},
+        )
+        discarded_from_widget = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{first_lot_id}/discard"
+        )
+
+    assert added_to_board.status_code == 200
+    assert cut.status_code == 200
+    assert cut.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "cut"
+    assert restored_to_board.status_code == 200
+    assert restored_to_board.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == first_lot_id
+    assert added_grinder.status_code == 200
+    assert restored_to_widget.status_code == 200
+    assert restored_to_widget.json()["workspace"]["widgets"][5]["produce_lots"][0]["id"] == first_lot_id
+    assert moved_to_bench.status_code == 200
+    assert moved_to_bench.json()["workbench"]["slots"][1]["surface_produce_lots"][0]["id"] == first_lot_id
+    assert restored_to_widget_again.status_code == 200
+    assert discarded_from_widget.status_code == 200
+    assert discarded_from_widget.json()["trash"]["produce_lots"][0]["produce_lot"]["id"] == first_lot_id
+
+
+def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        created = client.post(
+            f"/experiments/{experiment_id}/workspace/produce-lots",
+            json={"produce_type": "apple"},
+        )
+        produce_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        placed_board = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "cutting_board_hdpe"},
+        )
+        board_id = placed_board.json()["workbench"]["slots"][0]["tool"]["id"]
+        client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{board_id}/add-produce-lot",
+            json={"produce_lot_id": produce_lot_id},
+        )
+        client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+        )
+        moved = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/move-workbench-produce-lot",
+            json={"source_slot_id": "station_1", "produce_lot_id": produce_lot_id},
+        )
+
+    assert moved.status_code == 200
+    assert moved.json()["workspace"]["widgets"][5]["produce_lots"][0]["id"] == produce_lot_id
+
+
+def test_new_routes_return_expected_http_errors() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        missing_experiment = client.post(
+            "/experiments/missing/workbench/slots/station_1/place-tool",
+            json={"tool_id": "sample_vial_lcms"},
+        )
+        invalid_payload = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "sample_vial_lcms"},
+        )
+        invalid_state = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/unknown/liquids",
+            json={"liquid_id": "acetonitrile_extraction"},
+        )
+        invalid_shape = client.post(
+            f"/experiments/{experiment_id}/workspace/produce-lots",
+            json={"produce_type": "pear"},
+        )
+
+    assert missing_experiment.status_code == 404
+    assert invalid_payload.status_code == 200
+    assert invalid_state.status_code == 400
+    assert invalid_state.json() == {"detail": "Unknown workbench tool"}
+    assert invalid_shape.status_code == 422
