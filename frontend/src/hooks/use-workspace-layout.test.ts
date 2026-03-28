@@ -60,6 +60,11 @@ describe("useWorkspaceLayout", () => {
     }
 
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
     const workspaceRef = {
       current: {
