@@ -454,7 +454,7 @@ export function LabScene() {
     liquid: ExperimentWorkspaceWidget["liquids"][number],
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (grinderDndDisabled) {
       return;
     }
 
@@ -622,7 +622,7 @@ export function LabScene() {
   };
 
   const handleWorkbenchProduceLotClick = (slotId: string, produceLot: ExperimentProduceLot) => {
-    if (!isKnifeMode || produceLot.cutState === "cut") {
+    if (!isKnifeMode || (produceLot.cutState ?? "whole") !== "whole") {
       return;
     }
 
@@ -781,7 +781,7 @@ export function LabScene() {
   };
 
   const handleGrinderDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (grinderDndDisabled) {
       return;
     }
     if (hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
@@ -790,7 +790,7 @@ export function LabScene() {
   };
 
   const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (grinderDndDisabled) {
       return;
     }
     if (!hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
@@ -916,7 +916,7 @@ export function LabScene() {
     }
 
     const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(event.dataTransfer);
-    if (workspaceLiquidPayload?.sourceKind === "grinder") {
+    if (workspaceLiquidPayload?.sourceKind === "grinder" && !isGrinderRunning) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
@@ -1023,16 +1023,18 @@ export function LabScene() {
   const grinderLiquids = grinderWidget?.liquids ?? [];
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
+  const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
   const pendingGrinderQuantityDraft =
     pendingQuantityDraft?.targetKind === "workspace_widget" &&
     pendingQuantityDraft.targetId === "grinder"
       ? pendingQuantityDraft
       : null;
-  const grinderCanAttempt = grinderHasProduceLot && !pendingGrinderQuantityDraft;
+  const grinderCanAttempt = grinderHasProduceLot && !grinderLotIsGround && !pendingGrinderQuantityDraft;
   const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
   const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
   const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderColdThresholdC;
   const grinderStatus = isGrinderRunning ? "running" : grinderCanAttempt ? "ready" : "idle";
+  const grinderDndDisabled = isKnifeMode || isGrinderRunning;
   const handleStartGrinder = () => {
     if (!grinderCanAttempt || isGrinderRunning) {
       return;
@@ -1065,10 +1067,20 @@ export function LabScene() {
       window.clearTimeout(grinderRunTimeoutRef.current);
     }
     grinderRunTimeoutRef.current = window.setTimeout(() => {
-      stopGrinderRun();
+      void (async () => {
+        try {
+          await sendWorkbenchCommand("complete_grinder_cycle", {
+            widget_id: "grinder",
+          });
+        } finally {
+          stopGrinderRun();
+        }
+      })();
     }, grinderRunDurationMs);
   };
-  const grinderDisplayMode = !grinderCanAttempt
+  const grinderDisplayMode = grinderLotIsGround
+    ? "complete"
+    : !grinderCanAttempt
     ? "idle"
     : isGrinderRunning
       ? "running"
@@ -1080,6 +1092,8 @@ export function LabScene() {
   const grinderDisplayLabel =
     grinderDisplayMode === "running"
       ? "RUNNING"
+      : grinderDisplayMode === "complete"
+        ? "COMPLETE"
       : grinderDisplayMode === "overload"
         ? "OVERLOAD"
         : grinderDisplayMode === "jammed"
@@ -1363,7 +1377,7 @@ export function LabScene() {
     produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (grinderDndDisabled) {
       return;
     }
     const allowedDropTargets = getProduceLotDropTargets();
@@ -1802,6 +1816,8 @@ export function LabScene() {
                                   ? "Whole fruit detected"
                                   : grinderDisplayMode === "jammed"
                                     ? "Product not cold enough"
+                                    : grinderDisplayMode === "complete"
+                                      ? "Unload ground product"
                                     : grinderDisplayMode === "ready"
                                       ? "System ready"
                                       : "Awaiting load"}
@@ -1827,23 +1843,25 @@ export function LabScene() {
                                 <div className="h-10 w-10 shrink-0">
                                   <AppleIllustration
                                     className="h-10 w-10"
-                                    variant={lot.cutState === "cut" ? "cut" : "whole"}
+                                    variant={lot.cutState === "whole" ? "whole" : "cut"}
                                   />
                                 </div>
                               }
                               subtitle={
                                 <span className="mt-1 block truncate text-xs text-slate-500">
-                                  {formatProduceLotMetadata(lot)}
+                                  {lot.cutState === "ground"
+                                    ? `Ground product • ${formatProduceLotMetadata(lot)}`
+                                    : formatProduceLotMetadata(lot)}
                                 </span>
                               }
                               title={
                                 <span className="block truncate text-sm font-semibold text-slate-900">
-                                  {lot.label}
+                                  {lot.cutState === "ground" ? `${lot.label} powder` : lot.label}
                                 </span>
                               }
-                              onDragEnd={isKnifeMode ? undefined : clearDropTargets}
+                              onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
                               onDragStart={
-                                isKnifeMode
+                                grinderDndDisabled
                                   ? undefined
                                   : (dataTransfer) => handleGrinderProduceDragStart(lot, dataTransfer)
                               }
@@ -1855,9 +1873,9 @@ export function LabScene() {
                               contentClassName="flex-1"
                               dataTestId={`grinder-liquid-${liquid.id}`}
                               key={liquid.id}
-                              onDragEnd={isKnifeMode ? undefined : clearDropTargets}
+                              onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
                               onDragStart={
-                                isKnifeMode
+                                grinderDndDisabled
                                   ? undefined
                                   : (dataTransfer) => handleGrinderLiquidDragStart(liquid, dataTransfer)
                               }

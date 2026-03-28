@@ -1423,10 +1423,36 @@ describe("LabScene", () => {
             unitCount: 12,
           },
         ],
+        liquids: [
+          {
+            id: "workspace_liquid_1",
+            liquidId: "dry_ice_pellets",
+            name: "Dry ice pellets",
+            volume_ml: 1000,
+            accent: "sky",
+          },
+        ],
       }),
     });
     vi.mocked(createExperiment).mockResolvedValue(grinderReadyExperiment);
-    vi.mocked(sendExperimentCommand).mockResolvedValue(grinderReadyExperiment);
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              cutState: "ground",
+              produceType: "apple",
+              temperatureC: 2,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+          liquids: [],
+        }),
+      }),
+    );
 
     render(<PesticideWorkbench />);
 
@@ -1445,22 +1471,40 @@ describe("LabScene", () => {
     expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("RUNNING");
     expect(screen.getByTestId("grinder-lcd-progress-bar")).toBeInTheDocument();
     expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+    expect(screen.getByTestId("grinder-produce-produce_1")).not.toHaveAttribute("draggable", "true");
+    expect(screen.getByTestId("grinder-liquid-workspace_liquid_1")).not.toHaveAttribute("draggable", "true");
     expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
       "data-status",
       "running",
     );
+    const runningDropTransfer = createDataTransfer();
+    fireEvent.dragStart(screen.getByTestId("toolbar-item-dry_ice_pellets"), {
+      dataTransfer: runningDropTransfer,
+    });
+    const runningDragOverEvent = createEvent.dragOver(screen.getByTestId("grinder-dropzone"), {
+      dataTransfer: runningDropTransfer,
+    });
+    fireEvent(screen.getByTestId("grinder-dropzone"), runningDragOverEvent);
+    fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: runningDropTransfer });
+    expect(runningDragOverEvent.defaultPrevented).toBe(false);
 
     await act(async () => {
       vi.advanceTimersByTime(2600);
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
-    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("READY");
-    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("System ready");
-    expect(screen.getByTestId("grinder-power-button")).not.toBeDisabled();
-    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
-      "data-status",
-      "ready",
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "complete_grinder_cycle",
+      { widget_id: "grinder" },
     );
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("COMPLETE");
+    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Unload ground product");
+    expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+    expect(screen.getByTestId("grinder-produce-produce_1")).toHaveTextContent("Apple lot 1 powder");
+    expect(screen.queryByText("Dry ice pellets")).not.toBeInTheDocument();
   });
 
   it("shows a thermometer for grinder produce and advances cryogenics over time", async () => {

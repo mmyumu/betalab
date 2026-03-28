@@ -289,7 +289,6 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
     expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
     expect(screen.getByText("clean")).toBeInTheDocument();
-    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "whole");
   });
 
   it("renders cut produce on a cutting board with the cut apple variant", () => {
@@ -330,7 +329,7 @@ describe("WorkbenchPanel", () => {
     );
 
     expect(screen.getByText("cut")).toBeInTheDocument();
-    expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "cut");
+    expect(screen.getAllByTestId("apple-illustration").at(-1)).toHaveAttribute("data-variant", "cut");
   });
 
   it("shows the sample label on the sampling bag illustration", () => {

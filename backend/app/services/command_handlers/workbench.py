@@ -288,7 +288,7 @@ def cut_workbench_produce_lot(experiment: Experiment, payload: dict) -> None:
 
     if slot.tool is not None and slot.tool.tool_type != "cutting_board":
         raise ValueError(f"{slot.tool.label} does not support cutting.")
-    if produce_lot.cut_state == "cut":
+    if produce_lot.cut_state != "whole":
         return
 
     produce_lot.cut_state = "cut"

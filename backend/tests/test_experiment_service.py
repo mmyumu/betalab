@@ -314,6 +314,74 @@ def test_grinder_dry_ice_can_be_removed() -> None:
     assert updated.audit_log[-1] == "Dry ice pellets removed from Cryogenic grinder."
 
 
+def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.apply_command(
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.apply_command(
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    service.apply_command(
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 1000,
+        },
+    )
+    updated = service.apply_command(
+        experiment.id,
+        "complete_grinder_cycle",
+        {
+            "widget_id": "grinder",
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.produce_lots[0].cut_state == "ground"
+    assert grinder.liquids == []
+    assert updated.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
+
+
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

@@ -136,6 +136,22 @@ def remove_liquid_from_workspace_widget(experiment: Experiment, payload: dict) -
     experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
 
 
+def complete_grinder_cycle(experiment: Experiment, payload: dict) -> None:
+    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
+    if not widget.produce_lots:
+        raise ValueError(f"{widget.label} does not contain a produce lot.")
+
+    produce_lot = widget.produce_lots[0]
+    if produce_lot.cut_state == "whole":
+        raise ValueError(f"{produce_lot.label} must be cut before grinding.")
+    if produce_lot.cut_state == "ground":
+        return
+
+    produce_lot.cut_state = "ground"
+    widget.liquids = []
+    experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
+
+
 def advance_workspace_cryogenics(experiment: Experiment, payload: dict) -> None:
     elapsed_ms = min(max(float(payload.get("elapsed_ms", 0.0)), 0.0), 5000.0)
     if elapsed_ms <= 0:

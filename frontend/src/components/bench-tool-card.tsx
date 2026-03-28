@@ -267,7 +267,7 @@ export function BenchToolCard({
                     <div className="flex items-center gap-3">
                       <AppleIllustration
                         className="h-12 w-12 shrink-0"
-                        variant={produceLot.cutState === "cut" ? "cut" : "whole"}
+                        variant={produceLot.cutState === "whole" ? "whole" : "cut"}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">
@@ -282,6 +282,8 @@ export function BenchToolCard({
                       className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                         produceLot.isContaminated
                           ? "border-rose-200 bg-rose-50 text-rose-700"
+                          : produceLot.cutState === "ground"
+                            ? "border-sky-200 bg-sky-50 text-sky-700"
                           : produceLot.cutState === "cut"
                             ? "border-amber-200 bg-amber-50 text-amber-700"
                             : "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -289,6 +291,8 @@ export function BenchToolCard({
                     >
                       {produceLot.isContaminated
                         ? "contaminated"
+                        : produceLot.cutState === "ground"
+                          ? "ground"
                         : produceLot.cutState === "cut"
                           ? "cut"
                           : "clean"}

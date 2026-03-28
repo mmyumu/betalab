@@ -124,6 +124,7 @@ class ExperimentCommandEnvelope(BaseModel):
         "add_liquid_to_workspace_widget",
         "update_workspace_widget_liquid_volume",
         "remove_liquid_from_workspace_widget",
+        "complete_grinder_cycle",
         "advance_workspace_cryogenics",
         "add_workspace_produce_lot_to_widget",
         "move_workbench_produce_lot_to_widget",
