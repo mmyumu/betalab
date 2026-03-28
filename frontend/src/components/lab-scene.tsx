@@ -78,6 +78,8 @@ const defaultStatusMessage = "Start by dragging an extraction tool onto the benc
 const defaultErrorMessage = "Unable to load lab scene";
 const ambientTemperatureC = 20;
 const cryogenicTickMs = 1000;
+const grinderRunDurationMs = 2600;
+const grinderColdThresholdC = 8;
 const widgetIds = [
   "inventory",
   "actions",
@@ -198,8 +200,29 @@ export function LabScene() {
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const [isGrinderRunning, setIsGrinderRunning] = useState(false);
+  const [grinderFeedback, setGrinderFeedback] = useState<"neutral" | "overload" | "jammed">(
+    "neutral",
+  );
+  const [grinderProgressPercent, setGrinderProgressPercent] = useState(0);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
+  const grinderRunTimeoutRef = useRef<number | null>(null);
+  const grinderProgressIntervalRef = useRef<number | null>(null);
   const isKnifeMode = activeActionId === "knife";
+
+  const stopGrinderRun = () => {
+    if (grinderRunTimeoutRef.current !== null) {
+      window.clearTimeout(grinderRunTimeoutRef.current);
+      grinderRunTimeoutRef.current = null;
+    }
+    if (grinderProgressIntervalRef.current !== null) {
+      window.clearInterval(grinderProgressIntervalRef.current);
+      grinderProgressIntervalRef.current = null;
+    }
+
+    setIsGrinderRunning(false);
+    setGrinderProgressPercent(0);
+  };
 
   useEffect(() => {
     if (state.status !== "ready") {
@@ -268,6 +291,60 @@ export function LabScene() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (grinderRunTimeoutRef.current !== null) {
+        window.clearTimeout(grinderRunTimeoutRef.current);
+      }
+      if (grinderProgressIntervalRef.current !== null) {
+        window.clearInterval(grinderProgressIntervalRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      stopGrinderRun();
+      return;
+    }
+
+    const grinder = state.experiment.workspace.widgets.find((widget) => widget.id === "grinder");
+    const hasProduceLot = (grinder?.produceLots?.length ?? 0) > 0;
+    const grinderDraftIsOpen =
+      pendingQuantityDraft?.targetKind === "workspace_widget" &&
+      pendingQuantityDraft.targetId === "grinder";
+
+    if (!hasProduceLot || grinderDraftIsOpen) {
+      stopGrinderRun();
+      setGrinderFeedback("neutral");
+    }
+  }, [pendingQuantityDraft, state]);
+
+  useEffect(() => {
+    if (isGrinderRunning) {
+      return;
+    }
+
+    const grinder = state.status === "ready"
+      ? state.experiment.workspace.widgets.find((widget) => widget.id === "grinder")
+      : null;
+    const loadedLot = grinder?.produceLots?.[0] ?? null;
+    const grinderDraftIsOpen =
+      pendingQuantityDraft?.targetKind === "workspace_widget" &&
+      pendingQuantityDraft.targetId === "grinder";
+
+    if (!loadedLot || grinderDraftIsOpen) {
+      return;
+    }
+
+    const lotIsWhole = (loadedLot.cutState ?? "whole") === "whole";
+    const lotTemperatureC = loadedLot.temperatureC ?? ambientTemperatureC;
+
+    if (!lotIsWhole && lotTemperatureC <= grinderColdThresholdC) {
+      setGrinderFeedback("neutral");
+    }
+  }, [isGrinderRunning, pendingQuantityDraft, state]);
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
@@ -884,11 +961,73 @@ export function LabScene() {
   );
   const grinderProduceLots = grinderWidget?.produceLots ?? [];
   const grinderLiquids = grinderWidget?.liquids ?? [];
+  const grinderLoadedLot = grinderProduceLots[0] ?? null;
+  const grinderHasProduceLot = grinderProduceLots.length > 0;
   const pendingGrinderQuantityDraft =
     pendingQuantityDraft?.targetKind === "workspace_widget" &&
     pendingQuantityDraft.targetId === "grinder"
       ? pendingQuantityDraft
       : null;
+  const grinderCanAttempt = grinderHasProduceLot && !pendingGrinderQuantityDraft;
+  const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
+  const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
+  const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderColdThresholdC;
+  const grinderStatus = isGrinderRunning ? "running" : grinderCanAttempt ? "ready" : "idle";
+  const handleStartGrinder = () => {
+    if (!grinderCanAttempt || isGrinderRunning) {
+      return;
+    }
+
+    if (grinderLotIsWhole) {
+      setGrinderFeedback("overload");
+      return;
+    }
+
+    if (!grinderLotIsColdEnough) {
+      setGrinderFeedback("jammed");
+      return;
+    }
+
+    setGrinderFeedback("neutral");
+    setIsGrinderRunning(true);
+    setGrinderProgressPercent(0);
+    const startedAt = Date.now();
+    if (grinderProgressIntervalRef.current !== null) {
+      window.clearInterval(grinderProgressIntervalRef.current);
+    }
+    grinderProgressIntervalRef.current = window.setInterval(() => {
+      const elapsedMs = Date.now() - startedAt;
+      setGrinderProgressPercent(
+        Math.min((elapsedMs / grinderRunDurationMs) * 100, 100),
+      );
+    }, 100);
+    if (grinderRunTimeoutRef.current !== null) {
+      window.clearTimeout(grinderRunTimeoutRef.current);
+    }
+    grinderRunTimeoutRef.current = window.setTimeout(() => {
+      stopGrinderRun();
+    }, grinderRunDurationMs);
+  };
+  const grinderDisplayMode = !grinderCanAttempt
+    ? "idle"
+    : isGrinderRunning
+      ? "running"
+      : grinderFeedback === "overload"
+        ? "overload"
+        : grinderFeedback === "jammed"
+          ? "jammed"
+          : "ready";
+  const grinderDisplayLabel =
+    grinderDisplayMode === "running"
+      ? "RUNNING"
+      : grinderDisplayMode === "overload"
+        ? "OVERLOAD"
+        : grinderDisplayMode === "jammed"
+          ? "JAMMED"
+          : grinderDisplayMode === "ready"
+            ? "READY"
+            : "STANDBY";
+
   const renderPendingBenchQuantityDraft = (slotId: string) => {
     const pendingBenchDraft =
       pendingQuantityDraft?.targetKind === "bench_slot" && pendingQuantityDraft.targetId === slotId
@@ -1509,8 +1648,61 @@ export function LabScene() {
                       <div className="space-y-4">
                         <CryogenicGrinderIllustration
                           className="mx-auto max-w-[24rem]"
+                          onPowerClick={handleStartGrinder}
+                          powerButtonDisabled={!grinderCanAttempt || isGrinderRunning}
+                          powerButtonLabel={isGrinderRunning ? "Grinder running" : "Start grinder"}
+                          powerButtonTestId="grinder-power-button"
+                          status={grinderStatus}
                           testId="cryogenic-grinder-illustration"
                         />
+                        <div
+                          className="rounded-[1rem] border border-slate-300 bg-[linear-gradient(180deg,#dce7c7,#b8c89b)] px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"
+                          data-testid="grinder-lcd-panel"
+                        >
+                          <div className="flex items-center justify-start gap-3">
+                            <p
+                              className={`font-mono text-xs font-bold uppercase tracking-[0.28em] ${
+                                grinderDisplayMode === "overload" || grinderDisplayMode === "jammed"
+                                  ? "text-red-800"
+                                  : grinderDisplayMode === "running"
+                                    ? "text-emerald-800"
+                                    : "text-slate-800"
+                              }`}
+                              data-testid="grinder-lcd-status"
+                            >
+                              {grinderDisplayLabel}
+                            </p>
+                          </div>
+                          <div className="mt-3">
+                            {grinderDisplayMode === "running" ? (
+                              <div className="space-y-2">
+                                <div className="h-3 overflow-hidden rounded-full border border-slate-500/30 bg-slate-900/10">
+                                  <div
+                                    className="h-full rounded-full bg-emerald-700 transition-[width]"
+                                    data-testid="grinder-lcd-progress-bar"
+                                    style={{ width: `${grinderProgressPercent}%` }}
+                                  />
+                                </div>
+                                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-700">
+                                  Progress {Math.round(grinderProgressPercent)}%
+                                </p>
+                              </div>
+                            ) : (
+                              <p
+                                className="font-mono text-sm font-semibold uppercase tracking-[0.2em] text-slate-800"
+                                data-testid="grinder-lcd-message"
+                              >
+                                {grinderDisplayMode === "overload"
+                                  ? "Whole fruit detected"
+                                  : grinderDisplayMode === "jammed"
+                                    ? "Product not cold enough"
+                                    : grinderDisplayMode === "ready"
+                                      ? "System ready"
+                                      : "Awaiting load"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                         <div className="space-y-2">
                           {grinderProduceLots.map((lot) => (
                             <DraggableInventoryItem
@@ -1590,13 +1782,6 @@ export function LabScene() {
                               value={pendingGrinderQuantityDraft.quantity}
                               wheelStep={100}
                             />
-                          ) : null}
-                          {grinderProduceLots.length === 0 &&
-                          grinderLiquids.length === 0 &&
-                          !pendingGrinderQuantityDraft ? (
-                            <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/75 px-4 py-4 text-sm text-slate-500">
-                              Drop an apple lot or dry ice pellets into the grinder.
-                            </div>
                           ) : null}
                         </div>
                       </div>

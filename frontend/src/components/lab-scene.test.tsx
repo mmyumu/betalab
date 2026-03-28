@@ -1321,6 +1321,148 @@ describe("LabScene", () => {
     expect(screen.queryByLabelText("Dry ice pellets mass")).not.toBeInTheDocument();
   });
 
+  it("keeps the grinder power button disabled until a produce lot is loaded", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-power-button")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("STANDBY");
+    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Awaiting load");
+    expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+  });
+
+  it("shows OVERLOAD on the grinder lcd when a whole apple lot is started", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              cutState: "whole",
+              produceType: "apple",
+              temperatureC: 2,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-power-button")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("grinder-power-button"));
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("OVERLOAD");
+    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Whole fruit detected");
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "data-status",
+      "ready",
+    );
+  });
+
+  it("shows JAMMED on the grinder lcd when the produce is not cold enough", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              cutState: "cut",
+              produceType: "apple",
+              temperatureC: 12,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-power-button")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("grinder-power-button"));
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("JAMMED");
+    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Product not cold enough");
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "data-status",
+      "ready",
+    );
+  });
+
+  it("runs a temporary grinder cycle from the power button", async () => {
+    const grinderReadyExperiment = makeWorkbenchExperiment({
+      workspaceWidgets: makeWorkspaceWithGrinderVisible({
+        produceLots: [
+          {
+            id: "produce_1",
+            label: "Apple lot 1",
+            cutState: "cut",
+            produceType: "apple",
+            temperatureC: 2,
+            totalMassG: 2450,
+            unitCount: 12,
+          },
+        ],
+      }),
+    });
+    vi.mocked(createExperiment).mockResolvedValue(grinderReadyExperiment);
+    vi.mocked(sendExperimentCommand).mockResolvedValue(grinderReadyExperiment);
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-power-button")).toBeInTheDocument();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("READY");
+      expect(screen.getByTestId("grinder-power-button")).not.toBeDisabled();
+    });
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("grinder-power-button"));
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("RUNNING");
+    expect(screen.getByTestId("grinder-lcd-progress-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "data-status",
+      "running",
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(2600);
+    });
+
+    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("READY");
+    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("System ready");
+    expect(screen.getByTestId("grinder-power-button")).not.toBeDisabled();
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "data-status",
+      "ready",
+    );
+  });
+
   it("shows a thermometer for grinder produce and advances cryogenics over time", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

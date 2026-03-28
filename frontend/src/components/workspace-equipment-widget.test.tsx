@@ -111,12 +111,27 @@ describe("workspace equipment illustrations", () => {
   });
 
   it("renders cryogenic grinder illustration", () => {
-    render(<CryogenicGrinderIllustration testId="cryogenic-grinder-illustration" />);
+    render(
+      <CryogenicGrinderIllustration
+        powerButtonLabel="Start grinder"
+        powerButtonTestId="grinder-power-button"
+        status="ready"
+        testId="cryogenic-grinder-illustration"
+      />,
+    );
 
     expect(screen.getByTestId("cryogenic-grinder-illustration")).toBeInTheDocument();
     expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
       "aria-label",
       "Cryogenic grinder illustration",
+    );
+    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+      "data-status",
+      "ready",
+    );
+    expect(screen.getByTestId("grinder-power-button")).toHaveAttribute(
+      "aria-label",
+      "Start grinder",
     );
   });
 
