@@ -2,6 +2,7 @@ import type { DragEvent, ReactNode } from "react";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
+import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
@@ -28,6 +29,7 @@ type BenchToolCardProps = {
 };
 
 const neutralToneClass = "from-slate-300 to-slate-100";
+const ambientTemperatureC = 20;
 
 function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
@@ -230,15 +232,24 @@ export function BenchToolCard({
                     onProduceLotClick?.(produceLot);
                   }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate">{getProduceLotDisplayName(produceLot)}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="truncate">{getProduceLotDisplayName(produceLot)}</span>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <TemperatureIndicator
+                        temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2">
                     <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                       {produceLot.produceType}
                     </span>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
-                  </p>
                 </div>
               ))
             ) : (
@@ -277,6 +288,11 @@ export function BenchToolCard({
                         <p className="mt-1 truncate text-xs text-slate-500">
                           {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
                         </p>
+                      </div>
+                      <div className="shrink-0">
+                        <TemperatureIndicator
+                          temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
+                        />
                       </div>
                     </div>
                     <span

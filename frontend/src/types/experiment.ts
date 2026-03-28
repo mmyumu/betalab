@@ -30,6 +30,8 @@ export type ExperimentWorkspace = {
 export type Experiment = {
   id: string;
   status: string;
+  last_simulation_at: string;
+  snapshot_version: number;
   workbench: ExperimentWorkbench;
   rack: ExperimentRack;
   trash: ExperimentTrash;

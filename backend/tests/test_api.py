@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 
+from app.api.experiments import experiment_service
 from app.core.config import Settings, settings
 from app.main import app
 
@@ -33,6 +36,8 @@ def test_create_and_fetch_experiment_over_http() -> None:
 
     assert fetched.status_code == 200
     assert fetched.json()["id"] == experiment_id
+    assert "last_simulation_at" in fetched.json()
+    assert fetched.json()["snapshot_version"] >= 1
     assert fetched.json()["workbench"]["slots"][0]["tool"] is None
     assert fetched.json()["rack"]["slots"][0]["tool"] is None
     assert fetched.json()["trash"]["tools"] == []
@@ -213,43 +218,49 @@ def test_trash_tool_restore_routes_round_trip_over_http() -> None:
 
 
 def test_workspace_routes_round_trip_over_http() -> None:
-    with TestClient(app) as client:
-        experiment_id = _create_experiment(client)
+    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=timezone.utc)
+    warmed_at = created_at + timedelta(seconds=10)
+    original_now_fn = experiment_service._now_fn
+    experiment_service._now_fn = lambda: created_at
 
-        added_widget = client.post(
-            f"/experiments/{experiment_id}/workspace/widgets",
-            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
-        )
-        moved_widget = client.post(
-            f"/experiments/{experiment_id}/workspace/widgets/grinder/move",
-            json={"anchor": "top-left", "offset_x": 100, "offset_y": 460},
-        )
-        produce_created = client.post(
-            f"/experiments/{experiment_id}/workspace/produce-lots",
-            json={"produce_type": "apple"},
-        )
-        produce_lot_id = produce_created.json()["workspace"]["produce_lots"][0]["id"]
-        produce_loaded = client.post(
-            f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
-            json={"produce_lot_id": produce_lot_id},
-        )
-        added_liquid = client.post(
-            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
-            json={"liquid_id": "dry_ice_pellets", "volume_ml": 275.25},
-        )
-        liquid_id = added_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
-        updated_liquid = client.patch(
-            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}",
-            json={"volume_ml": 125.5},
-        )
-        advanced = client.post(
-            f"/experiments/{experiment_id}/workspace/advance-cryogenics",
-            json={"elapsed_ms": 10000},
-        )
-        removed_liquid = client.delete(
-            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}"
-        )
-        discarded_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/discard")
+    try:
+        with TestClient(app) as client:
+            experiment_id = _create_experiment(client)
+
+            added_widget = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets",
+                json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+            )
+            moved_widget = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/move",
+                json={"anchor": "top-left", "offset_x": 100, "offset_y": 460},
+            )
+            produce_created = client.post(
+                f"/experiments/{experiment_id}/workspace/produce-lots",
+                json={"produce_type": "apple"},
+            )
+            produce_lot_id = produce_created.json()["workspace"]["produce_lots"][0]["id"]
+            produce_loaded = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
+                json={"produce_lot_id": produce_lot_id},
+            )
+            added_liquid = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
+                json={"liquid_id": "dry_ice_pellets", "volume_ml": 275.25},
+            )
+            liquid_id = added_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
+            updated_liquid = client.patch(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}",
+                json={"volume_ml": 125.5},
+            )
+            experiment_service._now_fn = lambda: warmed_at
+            advanced = client.get(f"/experiments/{experiment_id}")
+            removed_liquid = client.delete(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}"
+            )
+            discarded_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/discard")
+    finally:
+        experiment_service._now_fn = original_now_fn
 
     assert added_widget.status_code == 200
     assert next(widget for widget in added_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
@@ -271,6 +282,44 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert next(widget for widget in discarded_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
         "is_trashed"
     ] is True
+
+
+def test_experiment_stream_pushes_updated_snapshots() -> None:
+    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=timezone.utc)
+    warmed_at = created_at + timedelta(seconds=10)
+    original_now_fn = experiment_service._now_fn
+    experiment_service._now_fn = lambda: created_at
+
+    try:
+        with TestClient(app) as client:
+            experiment_id = _create_experiment(client)
+            client.post(
+                f"/experiments/{experiment_id}/workspace/widgets",
+                json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+            )
+            produced = client.post(
+                f"/experiments/{experiment_id}/workspace/produce-lots",
+                json={"produce_type": "apple"},
+            )
+            produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
+            client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
+                json={"produce_lot_id": produce_lot_id},
+            )
+            client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
+                json={"liquid_id": "dry_ice_pellets", "volume_ml": 500},
+            )
+            experiment_service._now_fn = lambda: warmed_at
+
+            with client.websocket_connect(f"/experiments/{experiment_id}/stream") as websocket:
+                snapshot = websocket.receive_json()
+    finally:
+        experiment_service._now_fn = original_now_fn
+
+    assert snapshot["id"] == experiment_id
+    assert snapshot["snapshot_version"] >= 1
+    assert snapshot["workspace"]["widgets"][5]["produce_lots"][0]["temperature_c"] < 20.0
 
 
 def test_produce_lot_routes_round_trip_over_http() -> None:

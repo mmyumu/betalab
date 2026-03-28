@@ -690,6 +690,89 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
     assert grinder.produce_lots[0].temperature_c <= 20.0
 
 
+def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+    cooled = apply_command(service,
+        experiment.id,
+        "advance_workspace_cryogenics",
+        {
+            "elapsed_ms": 60000,
+        },
+    )
+
+    grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
+    cooled_temperature = grinder.produce_lots[0].temperature_c
+    assert cooled_temperature < 20.0
+
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+    moved = apply_command(service,
+        experiment.id,
+        "move_widget_produce_lot_to_workbench_tool",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": grinder.produce_lots[0].id,
+            "target_slot_id": "station_1",
+        },
+    )
+    advanced = apply_command(service,
+        experiment.id,
+        "advance_workspace_cryogenics",
+        {
+            "elapsed_ms": 60000,
+        },
+    )
+
+    moved_slot = next(slot for slot in moved.workbench.slots if slot.id == "station_1")
+    advanced_slot = next(slot for slot in advanced.workbench.slots if slot.id == "station_1")
+    assert moved_slot.tool is not None
+    assert advanced_slot.tool is not None
+    assert moved_slot.tool.produce_lots[0].temperature_c == pytest.approx(cooled_temperature, abs=0.01)
+    assert advanced_slot.tool.produce_lots[0].temperature_c > moved_slot.tool.produce_lots[0].temperature_c
+    assert advanced_slot.tool.produce_lots[0].temperature_c <= 20.0
+
+
 def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

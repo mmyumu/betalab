@@ -4,6 +4,7 @@ import type { DragEvent, ReactNode } from "react";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { BenchToolCard } from "@/components/bench-tool-card";
+import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
 import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
@@ -28,6 +29,8 @@ import type {
   TrashToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
+
+const ambientTemperatureC = 20;
 
 type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
 
@@ -411,6 +414,11 @@ export function WorkbenchPanel({
                                   <p className="mt-1 truncate text-xs text-slate-500">
                                     {formatProduceLotMetadata(produceLot)}
                                   </p>
+                                </div>
+                                <div className="shrink-0">
+                                  <TemperatureIndicator
+                                    temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
+                                  />
                                 </div>
                               </div>
                               <span className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${

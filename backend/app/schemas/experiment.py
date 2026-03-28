@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -102,6 +103,8 @@ class WorkspaceSchema(BaseModel):
 class ExperimentSchema(BaseModel):
     id: str
     status: str
+    last_simulation_at: datetime
+    snapshot_version: int
     workbench: WorkbenchSchema
     rack: RackSchema
     trash: TrashSchema
@@ -229,7 +232,3 @@ class WorkspaceWidgetMoveWorkbenchProduceLotSchema(BaseModel):
 
 class WorkspaceWidgetMoveProduceLotToWorkbenchSchema(BaseModel):
     target_slot_id: str
-
-
-class WorkspaceAdvanceCryogenicsSchema(BaseModel):
-    elapsed_ms: float = Field(default=0.0)

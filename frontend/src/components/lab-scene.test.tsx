@@ -15,7 +15,13 @@ import type {
 
 vi.mock("@/lib/api", async () => await import("@/test-support/api-mock"));
 
-import { createExperiment, sendExperimentCommand } from "@/test-support/api-mock";
+import {
+  createExperiment,
+  emitExperimentSnapshot,
+  resetApiMocks,
+  sendExperimentCommand,
+  subscribeToExperimentStream,
+} from "@/test-support/api-mock";
 
 const PesticideWorkbench = LabScene;
 
@@ -179,7 +185,9 @@ function makeWorkspaceWidgets(
 function makeWorkbenchExperiment({
   auditLog = ["Experiment created", "Start by dragging an extraction tool onto the bench."],
   basketProduceLots = [],
+  lastSimulationAt = "2026-03-28T19:00:00Z",
   rackSlots = makeRackSlots(),
+  snapshotVersion = 1,
   slots = makeSlots(),
   trashProduceLots = [],
   trashSampleLabels = [],
@@ -194,7 +202,9 @@ function makeWorkbenchExperiment({
     totalMassG: number;
     unitCount: number | null;
   }[];
+  lastSimulationAt?: string;
   rackSlots?: RackSlot[];
+  snapshotVersion?: number;
   slots?: BenchSlot[];
   trashProduceLots?: TrashProduceLotEntry[];
   trashSampleLabels?: TrashSampleLabelEntry[];
@@ -204,6 +214,8 @@ function makeWorkbenchExperiment({
   return {
     id: "experiment_pesticides",
     status: "preparing",
+    last_simulation_at: lastSimulationAt,
+    snapshot_version: snapshotVersion,
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
@@ -286,7 +298,7 @@ function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceW
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.clearAllMocks();
+  resetApiMocks();
 });
 
 describe("LabScene", () => {
@@ -1504,7 +1516,7 @@ describe("LabScene", () => {
     expect(screen.queryByText("Dry ice pellets")).not.toBeInTheDocument();
   });
 
-  it("shows a thermometer for grinder produce and advances cryogenics over time", async () => {
+  it("shows a thermometer for grinder produce and updates it from the experiment stream", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
@@ -1530,31 +1542,6 @@ describe("LabScene", () => {
         }),
       }),
     );
-    vi.mocked(sendExperimentCommand).mockResolvedValue(
-      makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWithGrinderVisible({
-          produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              temperatureC: 8,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
-          ],
-          liquids: [
-            {
-              id: "workspace_liquid_1",
-              liquidId: "dry_ice_pellets",
-              name: "Dry ice pellets",
-              volume_ml: 998.4,
-              accent: "sky",
-            },
-          ],
-        }),
-      }),
-    );
 
     render(<PesticideWorkbench />);
 
@@ -1562,18 +1549,108 @@ describe("LabScene", () => {
       expect(screen.getByText("12.0 C")).toBeInTheDocument();
     });
 
-    await waitFor(
-      () => {
-        expect(sendExperimentCommand).toHaveBeenCalledWith(
-          "experiment_pesticides",
-          "advance_workspace_cryogenics",
+    await waitFor(() => {
+      expect(subscribeToExperimentStream).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        expect.objectContaining({
+          onMessage: expect.any(Function),
+        }),
+      );
+    });
+
+    act(() => {
+      emitExperimentSnapshot(
+        "experiment_pesticides",
+        makeWorkbenchExperiment({
+          snapshotVersion: 2,
+          workspaceWidgets: makeWorkspaceWithGrinderVisible({
+            produceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produceType: "apple",
+                temperatureC: 8,
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+            liquids: [
+              {
+                id: "workspace_liquid_1",
+                liquidId: "dry_ice_pellets",
+                name: "Dry ice pellets",
+                volume_ml: 998.4,
+                accent: "sky",
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("8.0 C")).toBeInTheDocument();
+    });
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("updates cold workbench produce from the experiment stream", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
           {
-            elapsed_ms: 1000,
+            tool: makeSampleBagTool({
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  temperatureC: 4.2,
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+            }),
           },
-        );
-      },
-      { timeout: 2500 },
+        ]),
+      }),
     );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4.2 C")).toBeInTheDocument();
+    });
+
+    act(() => {
+      emitExperimentSnapshot(
+        "experiment_pesticides",
+        makeWorkbenchExperiment({
+          snapshotVersion: 2,
+          slots: makeSlots([
+            {
+              tool: makeSampleBagTool({
+                produceLots: [
+                  {
+                    id: "produce_1",
+                    label: "Apple lot 1",
+                    produceType: "apple",
+                    temperatureC: 6.1,
+                    totalMassG: 2450,
+                    unitCount: 12,
+                  },
+                ],
+              }),
+            },
+          ]),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("6.1 C")).toBeInTheDocument();
+    });
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
 
   it("pauses cryogenic ticks while the grinder dosing draft is open", async () => {

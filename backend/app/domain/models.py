@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from uuid import uuid4
 
@@ -125,6 +126,8 @@ class Experiment:
     rack: Rack
     trash: Trash
     workspace: Workspace
+    last_simulation_at: datetime
+    snapshot_version: int = 0
     audit_log: list[str] = field(default_factory=list)
 
 

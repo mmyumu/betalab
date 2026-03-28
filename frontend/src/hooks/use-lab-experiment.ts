@@ -9,7 +9,6 @@ import {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
-  advanceWorkspaceCryogenics,
   applySampleLabelToWorkbenchTool,
   completeGrinderCycle,
   createExperiment,
@@ -43,6 +42,7 @@ import {
   restoreTrashedSampleLabelToWorkbenchTool,
   restoreTrashedToolToRackSlot,
   restoreTrashedToolToWorkbenchSlot,
+  subscribeToExperimentStream,
   updateWorkbenchToolSampleLabelText,
 } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
@@ -66,7 +66,6 @@ const mutationFns = {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
-  advanceWorkspaceCryogenics,
   applySampleLabelToWorkbenchTool,
   completeGrinderCycle,
   createProduceLot,
@@ -110,9 +109,20 @@ export function useLabExperiment({
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
   const hasLoadedInitialExperiment = useRef(false);
+  const latestSnapshotVersionRef = useRef(0);
 
   const getLatestStatusMessage = (experiment: Experiment) => {
     return experiment.audit_log.at(-1) ?? defaultStatusMessage;
+  };
+
+  const applyExperimentSnapshot = (experiment: Experiment) => {
+    if (experiment.snapshot_version < latestSnapshotVersionRef.current) {
+      return;
+    }
+
+    latestSnapshotVersionRef.current = experiment.snapshot_version;
+    setState({ status: "ready", experiment });
+    setStatusMessage(getLatestStatusMessage(experiment));
   };
 
   const loadExperiment = async () => {
@@ -120,8 +130,7 @@ export function useLabExperiment({
 
     try {
       const experiment = await createExperiment();
-      setState({ status: "ready", experiment });
-      setStatusMessage(getLatestStatusMessage(experiment));
+      applyExperimentSnapshot(experiment);
     } catch (error) {
       setState({
         status: "error",
@@ -138,6 +147,23 @@ export function useLabExperiment({
     hasLoadedInitialExperiment.current = true;
     void loadExperiment();
   }, []);
+
+  useEffect(() => {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    const experimentId = state.experiment.id;
+
+    return subscribeToExperimentStream(experimentId, {
+      onError: (error) => {
+        setStatusMessage(error.message);
+      },
+      onMessage: (experiment) => {
+        applyExperimentSnapshot(experiment);
+      },
+    });
+  }, [state.status, state.status === "ready" ? state.experiment.id : null]);
 
   const executeMutation = async (
     mutation: MutationFn,
@@ -164,8 +190,7 @@ export function useLabExperiment({
         updatedExperiment = await mutation(recreatedExperiment.id, payload);
       }
 
-      setState({ status: "ready", experiment: updatedExperiment });
-      setStatusMessage(getLatestStatusMessage(updatedExperiment));
+      applyExperimentSnapshot(updatedExperiment);
       options?.onSuccess?.(updatedExperiment);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Experiment mutation failed");
@@ -190,8 +215,6 @@ export function useLabExperiment({
       executeMutation(mutationFns.addWorkspaceProduceLotToWidget, payload),
     addWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.addWorkspaceWidget, payload),
-    advanceWorkspaceCryogenics: (payload: Record<string, unknown>) =>
-      executeMutation(mutationFns.advanceWorkspaceCryogenics, payload),
     applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
     completeGrinderCycle: (payload: Record<string, unknown>) =>

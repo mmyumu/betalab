@@ -1,6 +1,7 @@
+import asyncio
 from collections.abc import Callable
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from app.schemas.experiment import (
     ExperimentSchema,
@@ -23,7 +24,6 @@ from app.schemas.experiment import (
     WorkbenchToolProduceLotCreateSchema,
     WorkbenchToolSampleLabelMoveSchema,
     WorkbenchToolSampleLabelUpdateSchema,
-    WorkspaceAdvanceCryogenicsSchema,
     WorkspaceProduceLotCreateSchema,
     WorkspaceWidgetCreateSchema,
     WorkspaceWidgetLiquidCreateSchema,
@@ -37,6 +37,7 @@ from app.services.experiment_service import ExperimentNotFoundError, ExperimentS
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 experiment_service = ExperimentService()
+experiment_stream_interval_seconds = 0.25
 
 
 def _handle_service_errors(operation: Callable[[], ExperimentSchema]) -> ExperimentSchema:
@@ -55,10 +56,22 @@ def create_experiment() -> ExperimentSchema:
 
 @router.get("/{experiment_id}", response_model=ExperimentSchema)
 def get_experiment(experiment_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.get_experiment(experiment_id))
+
+
+@router.websocket("/{experiment_id}/stream")
+async def stream_experiment(experiment_id: str, websocket: WebSocket) -> None:
+    await websocket.accept()
+
     try:
-        return experiment_service.get_experiment(experiment_id)
-    except ExperimentNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Experiment not found") from exc
+        while True:
+            experiment = experiment_service.get_experiment(experiment_id)
+            await websocket.send_json(experiment.model_dump(mode="json"))
+            await asyncio.sleep(experiment_stream_interval_seconds)
+    except ExperimentNotFoundError:
+        await websocket.close(code=4404, reason="Experiment not found")
+    except WebSocketDisconnect:
+        return
 
 
 @router.post("/{experiment_id}/workbench/slots", response_model=ExperimentSchema)
@@ -559,16 +572,6 @@ def remove_liquid_from_workspace_widget(
 )
 def complete_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSchema:
     return _handle_service_errors(lambda: experiment_service.complete_grinder_cycle(experiment_id, widget_id))
-
-
-@router.post("/{experiment_id}/workspace/advance-cryogenics", response_model=ExperimentSchema)
-def advance_workspace_cryogenics(
-    experiment_id: str,
-    request: WorkspaceAdvanceCryogenicsSchema,
-) -> ExperimentSchema:
-    return _handle_service_errors(
-        lambda: experiment_service.advance_workspace_cryogenics(experiment_id, request.elapsed_ms)
-    )
 
 
 @router.post("/{experiment_id}/workspace/produce-lots", response_model=ExperimentSchema)

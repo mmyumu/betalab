@@ -279,6 +279,36 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("contaminated")).toBeInTheDocument();
   });
 
+  it("shows a thermometer for cold produce resting on a station", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: null,
+            surfaceProduceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+                temperatureC: 4.2,
+              },
+            ],
+          },
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    expect(screen.getByText("4.2 C")).toBeInTheDocument();
+  });
+
   it("renders cutting board produce with the apple icon and full-width status badge", () => {
     render(
       <PesticideWorkbenchPanel

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from app.domain.models import (
     Experiment,
     ExperimentStatus,
@@ -96,6 +98,7 @@ def build_experiment() -> Experiment:
             ],
             produce_lots=[],
         ),
+        last_simulation_at=datetime.now(timezone.utc),
         audit_log=[
             "Experiment created",
             "Start by dragging an extraction tool onto the bench.",

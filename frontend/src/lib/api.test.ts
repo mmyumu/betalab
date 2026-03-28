@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createExperiment, getExperiment, placeToolOnWorkbench } from "@/lib/api";
+import { createExperiment, getExperiment, placeToolOnWorkbench, subscribeToExperimentStream } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
 
 const makeExperiment = (): Experiment => ({
   id: "experiment_test",
   status: "preparing",
+  last_simulation_at: "2026-03-28T19:00:00Z",
+  snapshot_version: 1,
   workbench: {
     slots: [],
   },
@@ -241,6 +243,25 @@ describe("api client", () => {
         tool_id: "sample_vial_lcms",
       }),
     ).rejects.toThrow("Failed to send experiment mutation");
+  });
+
+  it("subscribes to the experiment stream over WebSocket", () => {
+    const onMessage = vi.fn();
+    const close = vi.fn();
+    const socket = {
+      close,
+      onerror: null,
+      onmessage: null,
+    };
+    const webSocketMock = vi.fn(() => socket);
+
+    vi.stubGlobal("WebSocket", webSocketMock);
+
+    const unsubscribe = subscribeToExperimentStream("experiment_123", { onMessage });
+
+    expect(webSocketMock).toHaveBeenCalledWith("ws://localhost:8000/experiments/experiment_123/stream");
+    unsubscribe();
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces backend error detail for command execution failures", async () => {

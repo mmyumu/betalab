@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from datetime import datetime, timezone
 from typing import Callable, TypeVar
 
 from app.domain.models import Experiment
@@ -105,6 +106,7 @@ class ExperimentNotFoundError(KeyError):
 class ExperimentService:
     def __init__(self) -> None:
         self._experiments: dict[str, Experiment] = {}
+        self._now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
 
     def create_experiment(self) -> ExperimentSchema:
         experiment = build_experiment()
@@ -112,13 +114,13 @@ class ExperimentService:
         return self._to_schema(experiment)
 
     def get_experiment(self, experiment_id: str) -> ExperimentSchema:
-        experiment = self._experiments.get(experiment_id)
-        if experiment is None:
-            raise ExperimentNotFoundError(experiment_id)
+        experiment = self._require_experiment(experiment_id)
+        self._advance_experiment_to_now(experiment)
         return self._to_schema(experiment)
 
     def add_workbench_slot(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
+        self._advance_experiment_to_now(experiment)
         add_workbench_slot(experiment)
         return self._to_schema(experiment)
 
@@ -499,14 +501,39 @@ class ExperimentService:
         command: CommandT,
     ) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
+        self._advance_experiment_to_now(experiment)
         handler(experiment, command)
         return self._to_schema(experiment)
 
+    def _advance_experiment_to_now(self, experiment: Experiment) -> None:
+        now = self._now_fn()
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+
+        elapsed_ms = (now - experiment.last_simulation_at).total_seconds() * 1000.0
+        if elapsed_ms <= 0:
+            experiment.last_simulation_at = now
+            return
+
+        remaining_ms = elapsed_ms
+        while remaining_ms > 0:
+            step_ms = min(remaining_ms, 5000.0)
+            advance_workspace_cryogenics(
+                experiment,
+                AdvanceWorkspaceCryogenicsCommand(elapsed_ms=step_ms),
+            )
+            remaining_ms -= step_ms
+
+        experiment.last_simulation_at = now
+
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema:
+        experiment.snapshot_version += 1
         return ExperimentSchema.model_validate(
             {
                 "id": experiment.id,
                 "status": experiment.status.value,
+                "last_simulation_at": experiment.last_simulation_at,
+                "snapshot_version": experiment.snapshot_version,
                 "workbench": asdict(experiment.workbench),
                 "rack": asdict(experiment.rack),
                 "trash": asdict(experiment.trash),

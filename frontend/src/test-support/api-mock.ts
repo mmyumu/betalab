@@ -6,6 +6,13 @@ export const createExperiment = vi.fn<() => Promise<Experiment>>();
 export const sendExperimentCommand = vi.fn<
   (experimentId: string, type: string, payload: Record<string, unknown>) => Promise<Experiment>
 >();
+const streamSubscriptions = new Map<
+  string,
+  {
+    onError?: (error: Error) => void;
+    onMessage: (experiment: Experiment) => void;
+  }
+>();
 
 function wrapCommand(type: string, buildPayload?: (payload?: Record<string, unknown>) => Record<string, unknown>) {
   return vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
@@ -30,7 +37,6 @@ export const addLiquidToWorkspaceWidget = wrapCommand("add_liquid_to_workspace_w
 export const updateWorkspaceWidgetLiquidVolume = wrapCommand("update_workspace_widget_liquid_volume");
 export const removeLiquidFromWorkspaceWidget = wrapCommand("remove_liquid_from_workspace_widget");
 export const completeGrinderCycle = wrapCommand("complete_grinder_cycle");
-export const advanceWorkspaceCryogenics = wrapCommand("advance_workspace_cryogenics");
 export const addWorkspaceProduceLotToWidget = wrapCommand("add_workspace_produce_lot_to_widget");
 export const moveWorkbenchProduceLotToWidget = wrapCommand("move_workbench_produce_lot_to_widget");
 export const restoreTrashedProduceLotToWidget = wrapCommand("restore_trashed_produce_lot_to_widget");
@@ -56,7 +62,21 @@ export const updateWorkbenchToolSampleLabelText = wrapCommand("update_workbench_
 export const moveSampleLabelBetweenWorkbenchTools = wrapCommand("move_sample_label_between_workbench_tools");
 export const discardSampleLabelFromWorkbenchTool = wrapCommand("discard_sample_label_from_workbench_tool");
 export const restoreTrashedSampleLabelToWorkbenchTool = wrapCommand("restore_trashed_sample_label_to_workbench_tool");
+export const subscribeToExperimentStream = vi.fn((experimentId: string, handlers: {
+  onError?: (error: Error) => void;
+  onMessage: (experiment: Experiment) => void;
+}) => {
+  streamSubscriptions.set(experimentId, handlers);
+  return () => {
+    streamSubscriptions.delete(experimentId);
+  };
+});
+
+export function emitExperimentSnapshot(experimentId: string, experiment: Experiment) {
+  streamSubscriptions.get(experimentId)?.onMessage(experiment);
+}
 
 export function resetApiMocks() {
   vi.clearAllMocks();
+  streamSubscriptions.clear();
 }

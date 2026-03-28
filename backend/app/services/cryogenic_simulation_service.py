@@ -53,7 +53,7 @@ class CryogenicSimulationService:
             )
             return
 
-        self._warm_widget_produce(widget, elapsed_seconds)
+        self.warm_produce_lots(widget.produce_lots, elapsed_seconds)
 
     def _cool_widget_produce(
         self,
@@ -128,8 +128,8 @@ class CryogenicSimulationService:
         if dry_ice is not None:
             dry_ice.volume_ml = round_volume(max(dry_ice.volume_ml - thermal_mass_loss_g, 0.0))
 
-    def _warm_widget_produce(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
-        for lot in widget.produce_lots:
+    def warm_produce_lots(self, produce_lots: list[ProduceLot], elapsed_seconds: float) -> None:
+        for lot in produce_lots:
             warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
             lot.temperature_c = min(
                 lot.temperature_c

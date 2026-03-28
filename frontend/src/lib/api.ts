@@ -22,6 +22,10 @@ type ApiRequest = {
 };
 
 type MutationPayload = Record<string, unknown> | undefined;
+type StreamHandlers = {
+  onError?: (error: Error) => void;
+  onMessage: (experiment: Experiment) => void;
+};
 
 async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
   try {
@@ -85,6 +89,34 @@ export async function getExperiment(experimentId: string): Promise<Experiment> {
   const experiment = normalizeExperiment((await response.json()) as Experiment);
   experimentCache.set(experiment.id, experiment);
   return experiment;
+}
+
+export function subscribeToExperimentStream(
+  experimentId: string,
+  handlers: StreamHandlers,
+): () => void {
+  const streamUrl = new URL(`${API_BASE_URL}/experiments/${experimentId}/stream`);
+  streamUrl.protocol = streamUrl.protocol === "https:" ? "wss:" : "ws:";
+  const socket = new WebSocket(streamUrl.toString());
+
+  socket.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data) as Experiment;
+      const experiment = normalizeExperiment(payload);
+      experimentCache.set(experiment.id, experiment);
+      handlers.onMessage(experiment);
+    } catch {
+      handlers.onError?.(new Error("Failed to parse experiment stream payload"));
+    }
+  };
+
+  socket.onerror = () => {
+    handlers.onError?.(new Error("Experiment stream error"));
+  };
+
+  return () => {
+    socket.close();
+  };
 }
 
 function getCachedExperiment(experimentId: string): Experiment | undefined {
@@ -279,15 +311,6 @@ export async function completeGrinderCycle(experimentId: string, payload: Mutati
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/complete-grinder-cycle`,
-  });
-}
-
-export async function advanceWorkspaceCryogenics(experimentId: string, payload: MutationPayload): Promise<Experiment> {
-  const body = requirePayload(payload);
-  return sendMutationRequest(experimentId, {
-    method: "POST",
-    path: `/experiments/${experimentId}/workspace/advance-cryogenics`,
-    body: { elapsed_ms: requireNumber(body, "elapsed_ms") },
   });
 }
 
@@ -540,6 +563,16 @@ export async function restoreTrashedSampleLabelToWorkbenchTool(experimentId: str
 function normalizeExperiment(experiment: Experiment): Experiment {
   return {
     ...experiment,
+    last_simulation_at: String(
+      (experiment as Experiment & Record<string, unknown>).last_simulation_at ??
+      (experiment as Experiment & Record<string, unknown>).lastSimulationAt ??
+      "",
+    ),
+    snapshot_version: Number(
+      (experiment as Experiment & Record<string, unknown>).snapshot_version ??
+      (experiment as Experiment & Record<string, unknown>).snapshotVersion ??
+      0,
+    ),
     workbench: {
       slots: experiment.workbench.slots.map(normalizeBenchSlot),
     },

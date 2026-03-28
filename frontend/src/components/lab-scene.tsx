@@ -60,7 +60,6 @@ import {
 } from "@/lib/lab-workflow-catalog";
 import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type {
-  BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
   DragDescriptor,
@@ -81,7 +80,6 @@ import type {
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
 const ambientTemperatureC = 20;
-const cryogenicTickMs = 1000;
 const grinderRunDurationMs = 2600;
 const grinderColdThresholdC = 8;
 const widgetIds = [
@@ -227,44 +225,6 @@ export function LabScene() {
     setIsGrinderRunning(false);
     setGrinderProgressPercent(0);
   };
-
-  useEffect(() => {
-    if (state.status !== "ready") {
-      return;
-    }
-
-    const hasActiveCryogenics = state.experiment.workspace.widgets.some((widget) => {
-      const dryIceMass =
-        widget.liquids?.find((liquid) => liquid.liquidId === "dry_ice_pellets")?.volume_ml ?? 0;
-      const hasColdProduce = (widget.produceLots ?? []).some(
-        (lot) => (lot.temperatureC ?? ambientTemperatureC) < ambientTemperatureC - 0.1,
-      );
-
-      return dryIceMass > 0 || hasColdProduce;
-    });
-
-    if (!hasActiveCryogenics) {
-      return;
-    }
-
-    if (pendingQuantityDraft) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      if (isCommandPending) {
-        return;
-      }
-
-      void experimentApi.advanceWorkspaceCryogenics( {
-        elapsed_ms: cryogenicTickMs,
-      });
-    }, cryogenicTickMs);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [isCommandPending, pendingQuantityDraft, experimentApi, state]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

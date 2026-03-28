@@ -188,6 +188,11 @@ def advance_workspace_cryogenics(
     for widget in experiment.workspace.widgets:
         cryogenic_simulation_service.advance_widget(widget, elapsed_seconds)
 
+    for slot in experiment.workbench.slots:
+        if slot.tool is not None:
+            cryogenic_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
+        cryogenic_simulation_service.warm_produce_lots(slot.surface_produce_lots, elapsed_seconds)
+
 
 def add_workspace_produce_lot_to_widget(
     experiment: Experiment,
