@@ -1773,6 +1773,13 @@ export function LabScene() {
                         <div className="space-y-2">
                           {grinderProduceLots.map((lot) => (
                             <DraggableInventoryItem
+                              badge={
+                                <div className="self-stretch flex items-center">
+                                  <TemperatureIndicator
+                                    temperatureC={lot.temperatureC ?? ambientTemperatureC}
+                                  />
+                                </div>
+                              }
                               className="rounded-[0.9rem] bg-white"
                               contentClassName="flex-1"
                               dataTestId={`grinder-produce-${lot.id}`}
@@ -1786,14 +1793,9 @@ export function LabScene() {
                                 </div>
                               }
                               subtitle={
-                                <div className="mt-1 flex items-center justify-between gap-3">
-                                  <span className="block truncate text-xs text-slate-500">
-                                    {formatProduceLotMetadata(lot)}
-                                  </span>
-                                  <TemperatureIndicator
-                                    temperatureC={lot.temperatureC ?? ambientTemperatureC}
-                                  />
-                                </div>
+                                <span className="mt-1 block truncate text-xs text-slate-500">
+                                  {formatProduceLotMetadata(lot)}
+                                </span>
                               }
                               title={
                                 <span className="block truncate text-sm font-semibold text-slate-900">
