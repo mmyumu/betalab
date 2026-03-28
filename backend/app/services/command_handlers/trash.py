@@ -1,6 +1,15 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment, TrashSampleLabelEntry, TrashToolEntry, new_id
+from app.services.commands import (
+    DiscardSampleLabelFromPaletteCommand,
+    DiscardToolFromPaletteCommand,
+    RackSlotCommand,
+    RestoreTrashedProduceLotToWorkbenchToolCommand,
+    RestoreTrashedToolToRackSlotCommand,
+    RestoreTrashedToolToWorkbenchSlotCommand,
+    WorkbenchSlotCommand,
+)
 from app.services.command_handlers.support import (
     find_rack_slot,
     find_trash_produce_lot,
@@ -10,8 +19,8 @@ from app.services.command_handlers.support import (
 from app.services.command_handlers.workbench import build_workbench_tool
 
 
-def discard_workbench_tool(experiment: Experiment, payload: dict) -> None:
-    slot = find_workbench_slot(experiment.workbench, payload["slot_id"])
+def discard_workbench_tool(experiment: Experiment, command: WorkbenchSlotCommand) -> None:
+    slot = find_workbench_slot(experiment.workbench, command.slot_id)
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before discarding it.")
 
@@ -27,8 +36,8 @@ def discard_workbench_tool(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
 
 
-def discard_tool_from_palette(experiment: Experiment, payload: dict) -> None:
-    discarded_tool = build_workbench_tool(str(payload["tool_id"]))
+def discard_tool_from_palette(experiment: Experiment, command: DiscardToolFromPaletteCommand) -> None:
+    discarded_tool = build_workbench_tool(command.tool_id)
     experiment.trash.tools.append(
         TrashToolEntry(
             id=new_id("trash_tool"),
@@ -39,7 +48,10 @@ def discard_tool_from_palette(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{discarded_tool.label} discarded from Palette.")
 
 
-def discard_sample_label_from_palette(experiment: Experiment, payload: dict) -> None:
+def discard_sample_label_from_palette(
+    experiment: Experiment,
+    command: DiscardSampleLabelFromPaletteCommand,
+) -> None:
     experiment.trash.sample_labels.append(
         TrashSampleLabelEntry(
             id=new_id("trash_sample_label"),
@@ -50,9 +62,12 @@ def discard_sample_label_from_palette(experiment: Experiment, payload: dict) -> 
     experiment.audit_log.append("Sample label discarded from Palette.")
 
 
-def restore_trashed_tool_to_workbench_slot(experiment: Experiment, payload: dict) -> None:
-    trashed_tool = find_trash_tool(experiment.trash, payload["trash_tool_id"])
-    target_slot = find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+def restore_trashed_tool_to_workbench_slot(
+    experiment: Experiment,
+    command: RestoreTrashedToolToWorkbenchSlotCommand,
+) -> None:
+    trashed_tool = find_trash_tool(experiment.trash, command.trash_tool_id)
+    target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
 
     if target_slot.tool is not None or target_slot.surface_produce_lots:
         raise ValueError(f"{target_slot.label} already contains a tool")
@@ -66,8 +81,8 @@ def restore_trashed_tool_to_workbench_slot(experiment: Experiment, payload: dict
     )
 
 
-def discard_rack_tool(experiment: Experiment, payload: dict) -> None:
-    rack_slot = find_rack_slot(experiment.rack, payload["rack_slot_id"])
+def discard_rack_tool(experiment: Experiment, command: RackSlotCommand) -> None:
+    rack_slot = find_rack_slot(experiment.rack, command.rack_slot_id)
     if rack_slot.tool is None:
         raise ValueError(f"Place a vial in {rack_slot.label} before discarding it.")
 
@@ -83,9 +98,12 @@ def discard_rack_tool(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{discarded_tool.label} discarded from {rack_slot.label}.")
 
 
-def restore_trashed_tool_to_rack_slot(experiment: Experiment, payload: dict) -> None:
-    trashed_tool = find_trash_tool(experiment.trash, payload["trash_tool_id"])
-    rack_slot = find_rack_slot(experiment.rack, payload["rack_slot_id"])
+def restore_trashed_tool_to_rack_slot(
+    experiment: Experiment,
+    command: RestoreTrashedToolToRackSlotCommand,
+) -> None:
+    trashed_tool = find_trash_tool(experiment.trash, command.trash_tool_id)
+    rack_slot = find_rack_slot(experiment.rack, command.rack_slot_id)
 
     if trashed_tool.tool.tool_type != "sample_vial":
         raise ValueError("Only autosampler vials can be restored into the rack.")
@@ -101,9 +119,12 @@ def restore_trashed_tool_to_rack_slot(experiment: Experiment, payload: dict) -> 
     )
 
 
-def restore_trashed_produce_lot_to_workbench_tool(experiment: Experiment, payload: dict) -> None:
-    trashed_produce_lot = find_trash_produce_lot(experiment.trash, payload["trash_produce_lot_id"])
-    target_slot = find_workbench_slot(experiment.workbench, payload["target_slot_id"])
+def restore_trashed_produce_lot_to_workbench_tool(
+    experiment: Experiment,
+    command: RestoreTrashedProduceLotToWorkbenchToolCommand,
+) -> None:
+    trashed_produce_lot = find_trash_produce_lot(experiment.trash, command.trash_produce_lot_id)
+    target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
     restored_target_label = _restore_produce_lot_to_slot(
         target_slot, trashed_produce_lot.produce_lot
     )

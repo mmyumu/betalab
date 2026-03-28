@@ -5,13 +5,19 @@ from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, Work
 from app.domain.workbench_catalog import get_workbench_liquid_definition
 from app.services.cryogenic_simulation_service import CryogenicSimulationService
 from app.services.commands import (
+    AddLiquidToWorkspaceWidgetCommand,
     AddWorkspaceProduceLotToWidgetCommand,
+    AdvanceWorkspaceCryogenicsCommand,
     CreateProduceLotCommand,
     DiscardWidgetProduceLotCommand,
     DiscardWorkspaceProduceLotCommand,
     MoveWorkbenchProduceLotToWidgetCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
     RestoreTrashedProduceLotToWidgetCommand,
+    UpdateWorkspaceWidgetLiquidVolumeCommand,
+    WorkspaceWidgetCommand,
+    WorkspaceWidgetLayoutCommand,
+    WorkspaceWidgetLiquidCommand,
 )
 from app.services.command_handlers.support import (
     find_trash_produce_lot,
@@ -26,21 +32,15 @@ from app.services.command_handlers.support import (
 cryogenic_simulation_service = CryogenicSimulationService()
 
 
-def _apply_widget_layout_payload(widget, payload: dict) -> None:
-    if "anchor" in payload and "offset_x" in payload and "offset_y" in payload:
-        widget.anchor = str(payload["anchor"])
-        widget.offset_x = int(payload["offset_x"])
-        widget.offset_y = int(payload["offset_y"])
-        return
-
-    widget.anchor = "top-left"
-    widget.offset_x = int(payload["x"])
-    widget.offset_y = int(payload["y"])
+def _apply_widget_layout_command(widget, command: WorkspaceWidgetLayoutCommand) -> None:
+    widget.anchor = command.anchor
+    widget.offset_x = command.offset_x
+    widget.offset_y = command.offset_y
 
 
-def add_workspace_widget(experiment: Experiment, payload: dict) -> None:
-    widget = find_workspace_widget(experiment.workspace, payload["widget_id"])
-    _apply_widget_layout_payload(widget, payload)
+def add_workspace_widget(experiment: Experiment, command: WorkspaceWidgetLayoutCommand) -> None:
+    widget = find_workspace_widget(experiment.workspace, command.widget_id)
+    _apply_widget_layout_command(widget, command)
     widget.is_trashed = False
 
     if not widget.is_present:
@@ -51,17 +51,17 @@ def add_workspace_widget(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{widget.label} repositioned in workspace.")
 
 
-def move_workspace_widget(experiment: Experiment, payload: dict) -> None:
-    widget = find_workspace_widget(experiment.workspace, payload["widget_id"])
+def move_workspace_widget(experiment: Experiment, command: WorkspaceWidgetLayoutCommand) -> None:
+    widget = find_workspace_widget(experiment.workspace, command.widget_id)
     if not widget.is_present:
         raise ValueError(f"{widget.label} must be added to the workspace before moving it.")
 
-    _apply_widget_layout_payload(widget, payload)
+    _apply_widget_layout_command(widget, command)
     experiment.audit_log.append(f"{widget.label} moved in workspace.")
 
 
-def discard_workspace_widget(experiment: Experiment, payload: dict) -> None:
-    widget = find_workspace_widget(experiment.workspace, payload["widget_id"])
+def discard_workspace_widget(experiment: Experiment, command: WorkspaceWidgetCommand) -> None:
+    widget = find_workspace_widget(experiment.workspace, command.widget_id)
     if not is_workspace_widget_discardable(widget.id):
         raise ValueError(f"{widget.label} cannot be discarded.")
     if not widget.is_present and widget.is_trashed:
@@ -96,16 +96,17 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 
 
-def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> None:
-    widget = _find_grinder_widget(experiment, payload["widget_id"])
-    liquid_definition = get_workbench_liquid_definition(str(payload["liquid_id"]))
+def add_liquid_to_workspace_widget(
+    experiment: Experiment,
+    command: AddLiquidToWorkspaceWidgetCommand,
+) -> None:
+    widget = _find_grinder_widget(experiment, command.widget_id)
+    liquid_definition = get_workbench_liquid_definition(command.liquid_id)
 
     if liquid_definition.id != "dry_ice_pellets":
         raise ValueError(f"{widget.label} only accepts dry ice pellets.")
 
-    added_mass_g = round_volume(
-        max(float(payload.get("volume_ml", liquid_definition.transfer_volume_ml)), 0.0)
-    )
+    added_mass_g = round_volume(max(float(command.volume_ml or liquid_definition.transfer_volume_ml), 0.0))
 
     existing_liquid = next(
         (liquid for liquid in widget.liquids if liquid.liquid_id == liquid_definition.id),
@@ -128,25 +129,31 @@ def add_liquid_to_workspace_widget(experiment: Experiment, payload: dict) -> Non
     experiment.audit_log.append(f"{liquid_definition.name} increased in {widget.label}.")
 
 
-def update_workspace_widget_liquid_volume(experiment: Experiment, payload: dict) -> None:
-    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
-    liquid_entry = find_workspace_widget_liquid(widget, str(payload["liquid_entry_id"]))
+def update_workspace_widget_liquid_volume(
+    experiment: Experiment,
+    command: UpdateWorkspaceWidgetLiquidVolumeCommand,
+) -> None:
+    widget = _find_grinder_widget(experiment, command.widget_id)
+    liquid_entry = find_workspace_widget_liquid(widget, command.liquid_entry_id)
 
-    liquid_entry.volume_ml = round_volume(max(float(payload["volume_ml"]), 0.0))
+    liquid_entry.volume_ml = round_volume(max(float(command.volume_ml), 0.0))
     experiment.audit_log.append(
         f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}."
     )
 
 
-def remove_liquid_from_workspace_widget(experiment: Experiment, payload: dict) -> None:
-    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
-    liquid_entry = find_workspace_widget_liquid(widget, str(payload["liquid_entry_id"]))
+def remove_liquid_from_workspace_widget(
+    experiment: Experiment,
+    command: WorkspaceWidgetLiquidCommand,
+) -> None:
+    widget = _find_grinder_widget(experiment, command.widget_id)
+    liquid_entry = find_workspace_widget_liquid(widget, command.liquid_entry_id)
     widget.liquids = [liquid for liquid in widget.liquids if liquid.id != liquid_entry.id]
     experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
 
 
-def complete_grinder_cycle(experiment: Experiment, payload: dict) -> None:
-    widget = _find_grinder_widget(experiment, str(payload["widget_id"]))
+def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand) -> None:
+    widget = _find_grinder_widget(experiment, command.widget_id)
     if not widget.produce_lots:
         raise ValueError(f"{widget.label} does not contain a produce lot.")
 
@@ -161,8 +168,11 @@ def complete_grinder_cycle(experiment: Experiment, payload: dict) -> None:
     experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
 
 
-def advance_workspace_cryogenics(experiment: Experiment, payload: dict) -> None:
-    elapsed_ms = min(max(float(payload.get("elapsed_ms", 0.0)), 0.0), 5000.0)
+def advance_workspace_cryogenics(
+    experiment: Experiment,
+    command: AdvanceWorkspaceCryogenicsCommand,
+) -> None:
+    elapsed_ms = min(max(float(command.elapsed_ms), 0.0), 5000.0)
     if elapsed_ms <= 0:
         return
 

@@ -56,13 +56,42 @@ from app.services.command_handlers.workspace import (
     update_workspace_widget_liquid_volume,
 )
 from app.services.commands import (
+    AddLiquidToWorkbenchToolCommand,
+    AddLiquidToWorkspaceWidgetCommand,
+    AddProduceLotToWorkbenchToolCommand,
     AddWorkspaceProduceLotToWidgetCommand,
+    AdvanceWorkspaceCryogenicsCommand,
+    ApplySampleLabelToWorkbenchToolCommand,
     CreateProduceLotCommand,
+    DiscardSampleLabelFromPaletteCommand,
+    DiscardToolFromPaletteCommand,
     DiscardWidgetProduceLotCommand,
     DiscardWorkspaceProduceLotCommand,
+    MoveProduceLotBetweenWorkbenchToolsCommand,
+    MoveRackToolBetweenSlotsCommand,
     MoveWorkbenchProduceLotToWidgetCommand,
+    MoveSampleLabelBetweenWorkbenchToolsCommand,
+    MoveToolBetweenWorkbenchSlotsCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
+    PlaceToolOnWorkbenchCommand,
+    PlaceWorkbenchToolInRackSlotCommand,
+    RackSlotCommand,
+    RackSlotToolCommand,
+    RemoveRackToolToWorkbenchSlotCommand,
     RestoreTrashedProduceLotToWidgetCommand,
+    RestoreTrashedProduceLotToWorkbenchToolCommand,
+    RestoreTrashedSampleLabelToWorkbenchToolCommand,
+    RestoreTrashedToolToRackSlotCommand,
+    RestoreTrashedToolToWorkbenchSlotCommand,
+    UpdateWorkbenchLiquidVolumeCommand,
+    UpdateWorkbenchToolSampleLabelTextCommand,
+    UpdateWorkspaceWidgetLiquidVolumeCommand,
+    WorkbenchLiquidCommand,
+    WorkbenchProduceLotCommand,
+    WorkbenchSlotCommand,
+    WorkspaceWidgetCommand,
+    WorkspaceWidgetLayoutCommand,
+    WorkspaceWidgetLiquidCommand,
 )
 from app.services.experiment_factory import build_experiment
 
@@ -94,100 +123,136 @@ class ExperimentService:
         return self._to_schema(experiment)
 
     def remove_workbench_slot(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        remove_workbench_slot(experiment, {"slot_id": slot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            remove_workbench_slot,
+            WorkbenchSlotCommand(slot_id=slot_id),
+        )
 
     def place_tool_on_workbench(self, experiment_id: str, slot_id: str, tool_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        place_tool_on_workbench(experiment, {"slot_id": slot_id, "tool_id": tool_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            place_tool_on_workbench,
+            PlaceToolOnWorkbenchCommand(slot_id=slot_id, tool_id=tool_id),
+        )
 
     def move_tool_between_workbench_slots(self, experiment_id: str, source_slot_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_tool_between_workbench_slots(
-            experiment,
-            {"source_slot_id": source_slot_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            move_tool_between_workbench_slots,
+            MoveToolBetweenWorkbenchSlotsCommand(
+                source_slot_id=source_slot_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_workbench_tool(experiment, {"slot_id": slot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_workbench_tool,
+            WorkbenchSlotCommand(slot_id=slot_id),
+        )
 
     def discard_tool_from_palette(self, experiment_id: str, tool_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_tool_from_palette(experiment, {"tool_id": tool_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_tool_from_palette,
+            DiscardToolFromPaletteCommand(tool_id=tool_id),
+        )
 
     def discard_sample_label_from_palette(self, experiment_id: str, sample_label_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_sample_label_from_palette(experiment, {"sample_label_id": sample_label_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_sample_label_from_palette,
+            DiscardSampleLabelFromPaletteCommand(sample_label_id=sample_label_id),
+        )
 
     def restore_trashed_tool_to_workbench_slot(self, experiment_id: str, trash_tool_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        restore_trashed_tool_to_workbench_slot(
-            experiment,
-            {"trash_tool_id": trash_tool_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_tool_to_workbench_slot,
+            RestoreTrashedToolToWorkbenchSlotCommand(
+                trash_tool_id=trash_tool_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def add_workspace_widget(self, experiment_id: str, widget_id: str, anchor: str, offset_x: int, offset_y: int) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        add_workspace_widget(
-            experiment,
-            {"widget_id": widget_id, "anchor": anchor, "offset_x": offset_x, "offset_y": offset_y},
+        return self._apply_command(
+            experiment_id,
+            add_workspace_widget,
+            WorkspaceWidgetLayoutCommand(
+                widget_id=widget_id,
+                anchor=anchor,
+                offset_x=offset_x,
+                offset_y=offset_y,
+            ),
         )
-        return self._to_schema(experiment)
 
     def move_workspace_widget(self, experiment_id: str, widget_id: str, anchor: str, offset_x: int, offset_y: int) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_workspace_widget(
-            experiment,
-            {"widget_id": widget_id, "anchor": anchor, "offset_x": offset_x, "offset_y": offset_y},
+        return self._apply_command(
+            experiment_id,
+            move_workspace_widget,
+            WorkspaceWidgetLayoutCommand(
+                widget_id=widget_id,
+                anchor=anchor,
+                offset_x=offset_x,
+                offset_y=offset_y,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_workspace_widget(self, experiment_id: str, widget_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_workspace_widget(experiment, {"widget_id": widget_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_workspace_widget,
+            WorkspaceWidgetCommand(widget_id=widget_id),
+        )
 
     def add_liquid_to_workspace_widget(self, experiment_id: str, widget_id: str, liquid_id: str, volume_ml: float | None = None) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        payload = {"widget_id": widget_id, "liquid_id": liquid_id}
-        if volume_ml is not None:
-            payload["volume_ml"] = volume_ml
-        add_liquid_to_workspace_widget(experiment, payload)
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            add_liquid_to_workspace_widget,
+            AddLiquidToWorkspaceWidgetCommand(
+                widget_id=widget_id,
+                liquid_id=liquid_id,
+                volume_ml=volume_ml,
+            ),
+        )
 
     def update_workspace_widget_liquid_volume(self, experiment_id: str, widget_id: str, liquid_entry_id: str, volume_ml: float) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        update_workspace_widget_liquid_volume(
-            experiment,
-            {"widget_id": widget_id, "liquid_entry_id": liquid_entry_id, "volume_ml": volume_ml},
+        return self._apply_command(
+            experiment_id,
+            update_workspace_widget_liquid_volume,
+            UpdateWorkspaceWidgetLiquidVolumeCommand(
+                widget_id=widget_id,
+                liquid_entry_id=liquid_entry_id,
+                volume_ml=volume_ml,
+            ),
         )
-        return self._to_schema(experiment)
 
     def remove_liquid_from_workspace_widget(self, experiment_id: str, widget_id: str, liquid_entry_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        remove_liquid_from_workspace_widget(
-            experiment,
-            {"widget_id": widget_id, "liquid_entry_id": liquid_entry_id},
+        return self._apply_command(
+            experiment_id,
+            remove_liquid_from_workspace_widget,
+            WorkspaceWidgetLiquidCommand(
+                widget_id=widget_id,
+                liquid_entry_id=liquid_entry_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def complete_grinder_cycle(self, experiment_id: str, widget_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        complete_grinder_cycle(experiment, {"widget_id": widget_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            complete_grinder_cycle,
+            WorkspaceWidgetCommand(widget_id=widget_id),
+        )
 
     def advance_workspace_cryogenics(self, experiment_id: str, elapsed_ms: float) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        advance_workspace_cryogenics(experiment, {"elapsed_ms": elapsed_ms})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            advance_workspace_cryogenics,
+            AdvanceWorkspaceCryogenicsCommand(elapsed_ms=elapsed_ms),
+        )
 
     def add_workspace_produce_lot_to_widget(self, experiment_id: str, widget_id: str, produce_lot_id: str) -> ExperimentSchema:
         return self._apply_command(
@@ -250,141 +315,176 @@ class ExperimentService:
         )
 
     def place_tool_in_rack_slot(self, experiment_id: str, rack_slot_id: str, tool_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        place_tool_in_rack_slot(experiment, {"rack_slot_id": rack_slot_id, "tool_id": tool_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            place_tool_in_rack_slot,
+            RackSlotToolCommand(rack_slot_id=rack_slot_id, tool_id=tool_id),
+        )
 
     def place_workbench_tool_in_rack_slot(self, experiment_id: str, source_slot_id: str, rack_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        place_workbench_tool_in_rack_slot(
-            experiment,
-            {"source_slot_id": source_slot_id, "rack_slot_id": rack_slot_id},
+        return self._apply_command(
+            experiment_id,
+            place_workbench_tool_in_rack_slot,
+            PlaceWorkbenchToolInRackSlotCommand(
+                source_slot_id=source_slot_id,
+                rack_slot_id=rack_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def move_rack_tool_between_slots(self, experiment_id: str, source_rack_slot_id: str, target_rack_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_rack_tool_between_slots(
-            experiment,
-            {"source_rack_slot_id": source_rack_slot_id, "target_rack_slot_id": target_rack_slot_id},
+        return self._apply_command(
+            experiment_id,
+            move_rack_tool_between_slots,
+            MoveRackToolBetweenSlotsCommand(
+                source_rack_slot_id=source_rack_slot_id,
+                target_rack_slot_id=target_rack_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def remove_rack_tool_to_workbench_slot(self, experiment_id: str, rack_slot_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        remove_rack_tool_to_workbench_slot(
-            experiment,
-            {"rack_slot_id": rack_slot_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            remove_rack_tool_to_workbench_slot,
+            RemoveRackToolToWorkbenchSlotCommand(
+                rack_slot_id=rack_slot_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_rack_tool(self, experiment_id: str, rack_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_rack_tool(experiment, {"rack_slot_id": rack_slot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_rack_tool,
+            RackSlotCommand(rack_slot_id=rack_slot_id),
+        )
 
     def restore_trashed_tool_to_rack_slot(self, experiment_id: str, trash_tool_id: str, rack_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        restore_trashed_tool_to_rack_slot(
-            experiment,
-            {"trash_tool_id": trash_tool_id, "rack_slot_id": rack_slot_id},
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_tool_to_rack_slot,
+            RestoreTrashedToolToRackSlotCommand(
+                trash_tool_id=trash_tool_id,
+                rack_slot_id=rack_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def add_liquid_to_workbench_tool(self, experiment_id: str, slot_id: str, liquid_id: str, volume_ml: float | None = None) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        payload = {"slot_id": slot_id, "liquid_id": liquid_id}
-        if volume_ml is not None:
-            payload["volume_ml"] = volume_ml
-        add_liquid_to_workbench_tool(experiment, payload)
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            add_liquid_to_workbench_tool,
+            AddLiquidToWorkbenchToolCommand(
+                slot_id=slot_id,
+                liquid_id=liquid_id,
+                volume_ml=volume_ml,
+            ),
+        )
 
     def add_produce_lot_to_workbench_tool(self, experiment_id: str, slot_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        add_produce_lot_to_workbench_tool(
-            experiment,
-            {"slot_id": slot_id, "produce_lot_id": produce_lot_id},
+        return self._apply_command(
+            experiment_id,
+            add_produce_lot_to_workbench_tool,
+            AddProduceLotToWorkbenchToolCommand(
+                slot_id=slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_produce_lot_from_workbench_tool(self, experiment_id: str, slot_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_produce_lot_from_workbench_tool(
-            experiment,
-            {"slot_id": slot_id, "produce_lot_id": produce_lot_id},
+        return self._apply_command(
+            experiment_id,
+            discard_produce_lot_from_workbench_tool,
+            WorkbenchProduceLotCommand(slot_id=slot_id, produce_lot_id=produce_lot_id),
         )
-        return self._to_schema(experiment)
 
     def cut_workbench_produce_lot(self, experiment_id: str, slot_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        cut_workbench_produce_lot(experiment, {"slot_id": slot_id, "produce_lot_id": produce_lot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            cut_workbench_produce_lot,
+            WorkbenchProduceLotCommand(slot_id=slot_id, produce_lot_id=produce_lot_id),
+        )
 
     def move_produce_lot_between_workbench_tools(self, experiment_id: str, source_slot_id: str, target_slot_id: str, produce_lot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_produce_lot_between_workbench_tools(
-            experiment,
-            {"source_slot_id": source_slot_id, "target_slot_id": target_slot_id, "produce_lot_id": produce_lot_id},
+        return self._apply_command(
+            experiment_id,
+            move_produce_lot_between_workbench_tools,
+            MoveProduceLotBetweenWorkbenchToolsCommand(
+                source_slot_id=source_slot_id,
+                target_slot_id=target_slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def restore_trashed_produce_lot_to_workbench_tool(self, experiment_id: str, trash_produce_lot_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        restore_trashed_produce_lot_to_workbench_tool(
-            experiment,
-            {"trash_produce_lot_id": trash_produce_lot_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_produce_lot_to_workbench_tool,
+            RestoreTrashedProduceLotToWorkbenchToolCommand(
+                trash_produce_lot_id=trash_produce_lot_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def remove_liquid_from_workbench_tool(self, experiment_id: str, slot_id: str, liquid_entry_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        remove_liquid_from_workbench_tool(
-            experiment,
-            {"slot_id": slot_id, "liquid_entry_id": liquid_entry_id},
+        return self._apply_command(
+            experiment_id,
+            remove_liquid_from_workbench_tool,
+            WorkbenchLiquidCommand(slot_id=slot_id, liquid_entry_id=liquid_entry_id),
         )
-        return self._to_schema(experiment)
 
     def update_workbench_liquid_volume(self, experiment_id: str, slot_id: str, liquid_entry_id: str, volume_ml: float) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        update_workbench_liquid_volume(
-            experiment,
-            {"slot_id": slot_id, "liquid_entry_id": liquid_entry_id, "volume_ml": volume_ml},
+        return self._apply_command(
+            experiment_id,
+            update_workbench_liquid_volume,
+            UpdateWorkbenchLiquidVolumeCommand(
+                slot_id=slot_id,
+                liquid_entry_id=liquid_entry_id,
+                volume_ml=volume_ml,
+            ),
         )
-        return self._to_schema(experiment)
 
     def apply_sample_label_to_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        apply_sample_label_to_workbench_tool(experiment, {"slot_id": slot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            apply_sample_label_to_workbench_tool,
+            ApplySampleLabelToWorkbenchToolCommand(slot_id=slot_id),
+        )
 
     def update_workbench_tool_sample_label_text(self, experiment_id: str, slot_id: str, sample_label_text: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        update_workbench_tool_sample_label_text(
-            experiment,
-            {"slot_id": slot_id, "sample_label_text": sample_label_text},
+        return self._apply_command(
+            experiment_id,
+            update_workbench_tool_sample_label_text,
+            UpdateWorkbenchToolSampleLabelTextCommand(
+                slot_id=slot_id,
+                sample_label_text=sample_label_text,
+            ),
         )
-        return self._to_schema(experiment)
 
     def move_sample_label_between_workbench_tools(self, experiment_id: str, source_slot_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        move_sample_label_between_workbench_tools(
-            experiment,
-            {"source_slot_id": source_slot_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            move_sample_label_between_workbench_tools,
+            MoveSampleLabelBetweenWorkbenchToolsCommand(
+                source_slot_id=source_slot_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def discard_sample_label_from_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        discard_sample_label_from_workbench_tool(experiment, {"slot_id": slot_id})
-        return self._to_schema(experiment)
+        return self._apply_command(
+            experiment_id,
+            discard_sample_label_from_workbench_tool,
+            WorkbenchSlotCommand(slot_id=slot_id),
+        )
 
     def restore_trashed_sample_label_to_workbench_tool(self, experiment_id: str, trash_sample_label_id: str, target_slot_id: str) -> ExperimentSchema:
-        experiment = self._require_experiment(experiment_id)
-        restore_trashed_sample_label_to_workbench_tool(
-            experiment,
-            {"trash_sample_label_id": trash_sample_label_id, "target_slot_id": target_slot_id},
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_sample_label_to_workbench_tool,
+            RestoreTrashedSampleLabelToWorkbenchToolCommand(
+                trash_sample_label_id=trash_sample_label_id,
+                target_slot_id=target_slot_id,
+            ),
         )
-        return self._to_schema(experiment)
 
     def _require_experiment(self, experiment_id: str) -> Experiment:
         experiment = self._experiments.get(experiment_id)
