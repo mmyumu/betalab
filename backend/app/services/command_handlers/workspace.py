@@ -236,7 +236,7 @@ def advance_workspace_cryogenics(
                 widget.grinder_run_duration_ms = 0.0
                 widget.grinder_run_remaining_ms = 0.0
                 widget.grinder_fault = "motor_jammed"
-                experiment.audit_log.append(f"{loaded_lot.label} jammed {widget.label} motor.")
+                _discard_jammed_grinder_contents(experiment, widget, loaded_lot)
                 continue
 
             if loaded_lot is not None and loaded_lot.temperature_c >= cryogenic_simulation_service.grinder_start_threshold_c:
@@ -362,6 +362,18 @@ def _find_grinder_widget(experiment: Experiment, widget_id: str):
     if widget.id != "grinder" or widget.widget_type != "cryogenic_grinder":
         raise ValueError(f"{widget.label} does not accept grinder contents.")
     return widget
+
+
+def _discard_jammed_grinder_contents(
+    experiment: Experiment,
+    widget,
+    produce_lot: ProduceLot,
+) -> None:
+    produce_lot.cut_state = "waste"
+    produce_lot.grind_quality_label = "waste"
+    produce_lot.homogeneity_score = 0.0
+    widget.liquids = []
+    experiment.audit_log.append(f"{produce_lot.label} jammed {widget.label} motor and became waste.")
 
 
 def _remove_widget_produce_lot(widget, produce_lot_id: str) -> ProduceLot:

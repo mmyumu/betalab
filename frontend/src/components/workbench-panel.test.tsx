@@ -194,6 +194,7 @@ describe("WorkbenchPanel", () => {
                 {
                   id: "produce_1",
                   label: "Apple lot 1",
+                  cutState: "cut",
                   produceType: "apple",
                   totalMassG: 2450,
                   unitCount: 12,
@@ -212,6 +213,11 @@ describe("WorkbenchPanel", () => {
         .getByTestId("bench-slot-station_1")
         .querySelector("[data-kind='sample_bag']"),
     ).toHaveAttribute("data-produce-lot-count", "1");
+    expect(
+      screen
+        .getByTestId("bench-slot-station_1")
+        .querySelector("[data-kind='sample_bag']"),
+    ).toHaveAttribute("data-primary-produce-cut-state", "cut");
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
     expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
   });

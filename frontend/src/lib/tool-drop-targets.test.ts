@@ -29,6 +29,7 @@ describe("tool drop targets", () => {
     ]);
   });
 
+
   it("routes dry ice pellets to the grinder while regular liquids stay on bench tools", () => {
     expect(getLiquidDropTargets("dry_ice_pellets")).toEqual(["grinder_widget"]);
     expect(getLiquidDropTargets("acetonitrile")).toEqual(["workbench_slot"]);

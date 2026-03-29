@@ -13,6 +13,8 @@ export function ProduceLotStatusBadge({
 }: ProduceLotStatusBadgeProps) {
   const statusLabel = produceLot.isContaminated
     ? "contaminated"
+    : produceLot.cutState === "waste"
+      ? "waste"
     : produceLot.cutState === "ground"
       ? "ground"
       : produceLot.cutState === "cut"
@@ -20,6 +22,8 @@ export function ProduceLotStatusBadge({
         : "clean";
   const toneClassName = produceLot.isContaminated
     ? "border-rose-200 bg-rose-50 text-rose-700"
+    : produceLot.cutState === "waste"
+      ? "border-slate-300 bg-slate-100 text-slate-600"
     : produceLot.cutState === "ground"
       ? "border-sky-200 bg-sky-50 text-sky-700"
       : produceLot.cutState === "cut"

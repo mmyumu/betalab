@@ -218,13 +218,7 @@ export function BenchToolCard({
                   className="bg-slate-50"
                   dataTestId={`bench-produce-lot-${produceLot.id}`}
                   draggable={Boolean(onProduceLotDragStart)}
-                  footerBadge={
-                    <div className="mt-1">
-                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                        {produceLot.produceType}
-                      </span>
-                    </div>
-                  }
+                  footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
                   metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
                   onClick={() => {

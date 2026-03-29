@@ -61,6 +61,11 @@ export function ProduceLotCard({
               variant={produceLot.cutState === "whole" ? "whole" : "cut"}
             />
             <div className="min-w-0 flex-1">
+              {produceLot.cutState === "waste" ? (
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                  Jammed
+                </p>
+              ) : null}
               <p className="text-xs leading-[1.05rem] text-slate-500" title={metadata}>
                 {metadata}
               </p>

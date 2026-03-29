@@ -392,7 +392,10 @@ function SampleBagIcon({
             opacity={index === 0 ? 0.9 : 0.76}
             transform={index === 0 ? "translate(23 36) scale(0.42)" : "translate(38 42) scale(0.34)"}
           >
-            <AppleLotGlyph shadowOpacity={0.04} />
+            <AppleLotGlyph
+              shadowOpacity={0.04}
+              variant={produceLot.cutState === "whole" ? "whole" : "cut"}
+            />
           </g>
         );
       })}
@@ -544,6 +547,7 @@ export function LabAssetIcon({
       className={className}
       data-fill-segments={displaySegments.length}
       data-kind={kind}
+      data-primary-produce-cut-state={produceLots[0]?.cutState ?? ""}
       data-produce-lot-count={produceLots.length}
       data-sample-label-text={sampleLabelText ?? ""}
       data-tone={tone}

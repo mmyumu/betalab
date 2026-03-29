@@ -949,6 +949,7 @@ export function LabScene() {
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
   const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
+  const grinderLotIsWaste = (grinderLoadedLot?.cutState ?? "whole") === "waste";
   const grinderFault = grinderWidget?.grinderFault ?? null;
   const grinderRunRemainingMs = grinderWidget?.grinderRunRemainingMs ?? 0;
   const grinderRunDurationMs = grinderWidget?.grinderRunDurationMs ?? 0;
@@ -962,7 +963,8 @@ export function LabScene() {
     pendingQuantityDraft.targetId === "grinder"
       ? pendingQuantityDraft
       : null;
-  const grinderCanAttempt = grinderHasProduceLot && !grinderLotIsGround && !pendingGrinderQuantityDraft;
+  const grinderCanAttempt =
+    grinderHasProduceLot && !grinderLotIsGround && !grinderLotIsWaste && !pendingGrinderQuantityDraft;
   const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
   const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
   const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
@@ -1789,8 +1791,10 @@ export function LabScene() {
                                 >
                                   {grinderDisplayMode === "overload"
                                     ? "Whole fruit detected"
-                                    : grinderDisplayMode === "jammed"
-                                      ? "Product not cold enough"
+                                  : grinderDisplayMode === "jammed"
+                                      ? grinderLotIsWaste
+                                        ? "Discard jammed waste"
+                                        : "Product not cold enough"
                                       : grinderDisplayMode === "warning"
                                         ? "High torque detected"
                                       : grinderDisplayMode === "complete"
@@ -1821,7 +1825,9 @@ export function LabScene() {
                               metadata={
                                 lot.cutState === "ground"
                                   ? `Ground product • ${formatProduceLotMetadata(lot)}`
-                                  : formatProduceLotMetadata(lot)
+                                  : lot.cutState === "waste"
+                                    ? `Jammed waste • ${formatProduceLotMetadata(lot)}`
+                                    : formatProduceLotMetadata(lot)
                               }
                               onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
                               onDragStart={

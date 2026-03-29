@@ -49,7 +49,7 @@ export type ExperimentWorkspaceWidgetId =
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
-export type ProduceCutState = "whole" | "cut" | "ground";
+export type ProduceCutState = "whole" | "cut" | "ground" | "waste";
 export type DragEntityKind =
   | "tool"
   | "liquid"
