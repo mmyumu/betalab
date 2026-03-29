@@ -1546,7 +1546,7 @@ describe("LabScene", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByText("12.0 C")).toBeInTheDocument();
+      expect(screen.getByText("12.0°C")).toBeInTheDocument();
     });
 
     await waitFor(() => {
@@ -1589,7 +1589,7 @@ describe("LabScene", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("8.0 C")).toBeInTheDocument();
+      expect(screen.getByText("8.0°C")).toBeInTheDocument();
     });
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });
@@ -1619,7 +1619,7 @@ describe("LabScene", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByText("4.2 C")).toBeInTheDocument();
+      expect(screen.getByText("4.2°C")).toBeInTheDocument();
     });
 
     act(() => {
@@ -1648,7 +1648,7 @@ describe("LabScene", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("6.1 C")).toBeInTheDocument();
+      expect(screen.getByText("6.1°C")).toBeInTheDocument();
     });
     expect(sendExperimentCommand).not.toHaveBeenCalled();
   });

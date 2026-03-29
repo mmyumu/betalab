@@ -1,8 +1,7 @@
 import type { DragEvent, ReactNode } from "react";
 
-import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
-import { TemperatureIndicator } from "@/components/temperature-indicator";
+import { ProduceLotCard } from "@/components/produce-lot-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
@@ -10,7 +9,6 @@ import {
   getContainerLiquidVisualState,
   getLiquidAccentPalette,
 } from "@/lib/liquid-visuals";
-import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type BenchToolCardProps = {
@@ -29,8 +27,6 @@ type BenchToolCardProps = {
 };
 
 const neutralToneClass = "from-slate-300 to-slate-100";
-const ambientTemperatureC = 20;
-
 function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
 }
@@ -217,40 +213,29 @@ export function BenchToolCard({
           {isSampleBag ? (
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
-                <div
-                  key={produceLot.id}
-                  className={`rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-700 ${
-                    onProduceLotDragStart ? dragAffordanceClassName : ""
-                  }`}
-                  data-testid={`bench-produce-lot-${produceLot.id}`}
+                <ProduceLotCard
+                  className="bg-slate-50"
+                  dataTestId={`bench-produce-lot-${produceLot.id}`}
                   draggable={Boolean(onProduceLotDragStart)}
+                  footerBadge={
+                    <div className="mt-2">
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+                        {produceLot.produceType}
+                      </span>
+                    </div>
+                  }
+                  key={produceLot.id}
+                  metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  onClick={() => {
+                    onProduceLotClick?.(produceLot);
+                  }}
                   onDragEnd={onProduceLotDragEnd}
                   onDragStart={(event) => {
                     onProduceLotDragStart?.(produceLot, event);
                   }}
-                  onClick={() => {
-                    onProduceLotClick?.(produceLot);
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="truncate">{getProduceLotDisplayName(produceLot)}</span>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
-                      </p>
-                    </div>
-                    <div className="shrink-0">
-                      <TemperatureIndicator
-                        temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
-                      {produceLot.produceType}
-                    </span>
-                  </div>
-                </div>
+                  produceLot={produceLot}
+                  variant="compact"
+                />
               ))
             ) : (
               <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
@@ -260,41 +245,10 @@ export function BenchToolCard({
           ) : isProduceSurface ? (
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
-                <div
-                  key={produceLot.id}
-                  className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 ${
-                    onProduceLotDragStart ? dragAffordanceClassName : ""
-                  }`}
-                  data-testid={`bench-produce-lot-${produceLot.id}`}
+                <ProduceLotCard
+                  dataTestId={`bench-produce-lot-${produceLot.id}`}
                   draggable={Boolean(onProduceLotDragStart)}
-                  onDragEnd={onProduceLotDragEnd}
-                  onDragStart={(event) => {
-                    onProduceLotDragStart?.(produceLot, event);
-                  }}
-                  onClick={() => {
-                    onProduceLotClick?.(produceLot);
-                  }}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <AppleIllustration
-                        className="h-12 w-12 shrink-0"
-                        variant={produceLot.cutState === "whole" ? "whole" : "cut"}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {getProduceLotDisplayName(produceLot)}
-                        </p>
-                        <p className="mt-1 truncate text-xs text-slate-500">
-                          {formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
-                        </p>
-                      </div>
-                      <div className="shrink-0">
-                        <TemperatureIndicator
-                          temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
-                        />
-                      </div>
-                    </div>
+                  footerBadge={
                     <span
                       className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                         produceLot.isContaminated
@@ -314,8 +268,19 @@ export function BenchToolCard({
                           ? "cut"
                           : "clean"}
                     </span>
-                  </div>
-                </div>
+                  }
+                  key={produceLot.id}
+                  metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  onClick={() => {
+                    onProduceLotClick?.(produceLot);
+                  }}
+                  onDragEnd={onProduceLotDragEnd}
+                  onDragStart={(event) => {
+                    onProduceLotDragStart?.(produceLot, event);
+                  }}
+                  produceLot={produceLot}
+                  variant="compact"
+                />
               ))
             ) : (
               <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">

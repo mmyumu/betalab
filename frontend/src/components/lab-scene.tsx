@@ -5,14 +5,13 @@ import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
-import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { QuantitySelectionCard } from "@/components/quantity-selection-card";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
+import { ProduceLotCard } from "@/components/produce-lot-card";
 import { RackWidget } from "@/components/rack-widget";
-import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { TrashWidget } from "@/components/trash-widget";
 import { WorkbenchPanel } from "@/components/workbench-panel";
 import { ToolbarPanel } from "@/components/toolbar-panel";
@@ -58,7 +57,6 @@ import {
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
-import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type {
   BenchToolDragPayload,
   BenchToolInstance,
@@ -1788,44 +1786,24 @@ export function LabScene() {
                         </div>
                         <div className="space-y-2">
                           {grinderProduceLots.map((lot) => (
-                            <DraggableInventoryItem
-                              badge={
-                                <div className="self-stretch flex items-center">
-                                  <TemperatureIndicator
-                                    temperatureC={lot.temperatureC ?? ambientTemperatureC}
-                                  />
-                                </div>
-                              }
+                            <ProduceLotCard
                               className="rounded-[0.9rem] bg-white"
-                              contentClassName="flex-1"
                               dataTestId={`grinder-produce-${lot.id}`}
+                              draggable={!grinderDndDisabled}
                               key={lot.id}
-                              leading={
-                                <div className="h-10 w-10 shrink-0">
-                                  <AppleIllustration
-                                    className="h-10 w-10"
-                                    variant={lot.cutState === "whole" ? "whole" : "cut"}
-                                  />
-                                </div>
-                              }
-                              subtitle={
-                                <span className="mt-1 block truncate text-xs text-slate-500">
-                                  {lot.cutState === "ground"
-                                    ? `Ground product • ${formatProduceLotMetadata(lot)}`
-                                    : formatProduceLotMetadata(lot)}
-                                </span>
-                              }
-                              title={
-                                <span className="block truncate text-sm font-semibold text-slate-900">
-                                  {getProduceLotDisplayName(lot)}
-                                </span>
+                              metadata={
+                                lot.cutState === "ground"
+                                  ? `Ground product • ${formatProduceLotMetadata(lot)}`
+                                  : formatProduceLotMetadata(lot)
                               }
                               onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
                               onDragStart={
                                 grinderDndDisabled
                                   ? undefined
-                                  : (dataTransfer) => handleGrinderProduceDragStart(lot, dataTransfer)
+                                  : (event) => handleGrinderProduceDragStart(lot, event.dataTransfer)
                               }
+                              produceLot={lot}
+                              variant="expanded"
                             />
                           ))}
                           {grinderLiquids.map((liquid) => (

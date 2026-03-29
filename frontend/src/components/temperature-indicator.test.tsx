@@ -25,6 +25,6 @@ describe("TemperatureIndicator", () => {
 
     expect(screen.getByText("-20.0°C")).toBeInTheDocument();
     expect(screen.queryByText("Cooling fast")).not.toBeInTheDocument();
-    expect(screen.getByTitle("Cooling fast • -20.0 C")).toBeInTheDocument();
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Cooling fast • -20.0 C");
   });
 });

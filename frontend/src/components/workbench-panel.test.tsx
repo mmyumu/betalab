@@ -306,7 +306,7 @@ describe("WorkbenchPanel", () => {
       />,
     );
 
-    expect(screen.getByText("4.2 C")).toBeInTheDocument();
+    expect(screen.getByText("4.2°C")).toBeInTheDocument();
   });
 
   it("renders cutting board produce with the apple icon and full-width status badge", () => {

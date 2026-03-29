@@ -2,12 +2,10 @@
 
 import type { DragEvent, ReactNode } from "react";
 
-import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { BenchToolCard } from "@/components/bench-tool-card";
-import { TemperatureIndicator } from "@/components/temperature-indicator";
+import { ProduceLotCard } from "@/components/produce-lot-card";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
-import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import {
   hasCompatibleDropTarget,
   readDragDescriptor,
@@ -29,8 +27,6 @@ import type {
   TrashToolDragPayload,
   ToolbarDragPayload,
 } from "@/types/workbench";
-
-const ambientTemperatureC = 20;
 
 type ToolDropPayload = BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload;
 
@@ -381,46 +377,11 @@ export function WorkbenchPanel({
                       </div>
                       <div className="mt-3 space-y-2">
                         {surfaceProduceLots.map((produceLot) => (
-                          <div
-                            key={produceLot.id}
-                            className={`rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700 shadow-sm ${
-                                !dndDisabled && onProduceLotDragStart ? dragAffordanceClassName : ""
-                              }`}
-                              data-testid={`bench-surface-produce-lot-${produceLot.id}`}
-                              draggable={!dndDisabled && Boolean(onProduceLotDragStart)}
-                            onDragEnd={() => {
-                              onBenchToolDragEnd?.();
-                            }}
-                              onDragStart={(event) => {
-                                if (dndDisabled) {
-                                  return;
-                                }
-                                onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
-                              }}
-                            onClick={() => {
-                              onProduceLotClick?.(slot.id, produceLot);
-                            }}
-                          >
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                <AppleIllustration
-                                  className="h-12 w-12 shrink-0"
-                                  variant={produceLot.cutState === "whole" ? "whole" : "cut"}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-semibold text-slate-900">
-                                    {getProduceLotDisplayName(produceLot)}
-                                  </p>
-                                  <p className="mt-1 truncate text-xs text-slate-500">
-                                    {formatProduceLotMetadata(produceLot)}
-                                  </p>
-                                </div>
-                                <div className="shrink-0">
-                                  <TemperatureIndicator
-                                    temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
-                                  />
-                                </div>
-                              </div>
+                          <ProduceLotCard
+                            className="shadow-sm"
+                            dataTestId={`bench-surface-produce-lot-${produceLot.id}`}
+                            draggable={!dndDisabled && Boolean(onProduceLotDragStart)}
+                            footerBadge={
                               <span className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                                 produceLot.isContaminated
                                   ? "border-rose-200 bg-rose-50 text-rose-700"
@@ -438,8 +399,24 @@ export function WorkbenchPanel({
                                     ? "cut"
                                     : "clean"}
                               </span>
-                            </div>
-                          </div>
+                            }
+                            key={produceLot.id}
+                            metadata={formatProduceLotMetadata(produceLot)}
+                            onClick={() => {
+                              onProduceLotClick?.(slot.id, produceLot);
+                            }}
+                            onDragEnd={() => {
+                              onBenchToolDragEnd?.();
+                            }}
+                            onDragStart={(event) => {
+                              if (dndDisabled) {
+                                return;
+                              }
+                              onProduceLotDragStart?.(slot.id, produceLot, event.dataTransfer);
+                            }}
+                            produceLot={produceLot}
+                            variant="compact"
+                          />
                         ))}
                       </div>
                     </div>
