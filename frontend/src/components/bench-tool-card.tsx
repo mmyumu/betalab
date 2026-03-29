@@ -2,6 +2,7 @@ import type { DragEvent, ReactNode } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { ProduceLotCard } from "@/components/produce-lot-card";
+import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce } from "@/lib/entity-rules";
 import {
@@ -218,7 +219,7 @@ export function BenchToolCard({
                   dataTestId={`bench-produce-lot-${produceLot.id}`}
                   draggable={Boolean(onProduceLotDragStart)}
                   footerBadge={
-                    <div className="mt-2">
+                    <div className="mt-1">
                       <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                         {produceLot.produceType}
                       </span>
@@ -248,27 +249,7 @@ export function BenchToolCard({
                 <ProduceLotCard
                   dataTestId={`bench-produce-lot-${produceLot.id}`}
                   draggable={Boolean(onProduceLotDragStart)}
-                  footerBadge={
-                    <span
-                      className={`inline-flex w-full justify-center rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                        produceLot.isContaminated
-                          ? "border-rose-200 bg-rose-50 text-rose-700"
-                          : produceLot.cutState === "ground"
-                            ? "border-sky-200 bg-sky-50 text-sky-700"
-                          : produceLot.cutState === "cut"
-                            ? "border-amber-200 bg-amber-50 text-amber-700"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      }`}
-                    >
-                      {produceLot.isContaminated
-                        ? "contaminated"
-                        : produceLot.cutState === "ground"
-                          ? "ground"
-                        : produceLot.cutState === "cut"
-                          ? "cut"
-                          : "clean"}
-                    </span>
-                  }
+                  footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
                   metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
                   onClick={() => {

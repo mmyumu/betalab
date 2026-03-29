@@ -38,7 +38,7 @@ export function ProduceLotCard({
   const displayName = getProduceLotDisplayName(produceLot);
   const cardClassName =
     variant === "compact"
-      ? "rounded-[1rem] border border-slate-200 bg-white px-3 py-3 text-xs font-medium text-slate-700"
+      ? "rounded-[1rem] border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
       : "flex items-center justify-between gap-3 rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-2";
 
   return (
@@ -51,17 +51,17 @@ export function ProduceLotCard({
       onDragStart={onDragStart}
     >
       {variant === "compact" ? (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-slate-900" title={displayName}>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold leading-4 text-slate-900" title={displayName}>
             {displayName}
           </p>
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-2">
             <AppleIllustration
-              className="h-12 w-12 shrink-0"
+              className="h-10 w-10 shrink-0"
               variant={produceLot.cutState === "whole" ? "whole" : "cut"}
             />
             <div className="min-w-0 flex-1">
-              <p className="text-xs leading-5 text-slate-500" title={metadata}>
+              <p className="text-xs leading-[1.05rem] text-slate-500" title={metadata}>
                 {metadata}
               </p>
             </div>
