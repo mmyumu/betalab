@@ -175,7 +175,7 @@ def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand)
         raise ValueError(f"{produce_lot.label} must be cut before grinding.")
     if produce_lot.cut_state == "ground":
         raise ValueError(f"{produce_lot.label} is already ground.")
-    if produce_lot.temperature_c > 8.0:
+    if produce_lot.temperature_c > cryogenic_simulation_service.grinder_start_threshold_c:
         raise ValueError(f"{produce_lot.label} is not cold enough for cryogenic grinding.")
     if widget.grinder_run_remaining_ms > 0:
         return
@@ -183,6 +183,7 @@ def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand)
     cycle_duration_ms = cryogenic_simulation_service.grinder_cycle_duration_seconds * 1000.0
     widget.grinder_run_duration_ms = cycle_duration_ms
     widget.grinder_run_remaining_ms = cycle_duration_ms
+    widget.grinder_fault = None
     experiment.audit_log.append(f"{produce_lot.label} grinding started in {widget.label}.")
 
 
@@ -200,6 +201,7 @@ def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetComma
     produce_lot.cut_state = "ground"
     widget.grinder_run_duration_ms = 0.0
     widget.grinder_run_remaining_ms = 0.0
+    widget.grinder_fault = None
     experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
 
 
@@ -221,6 +223,19 @@ def advance_workspace_cryogenics(
                 max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0)
             )
             remaining_seconds -= grinding_seconds
+
+            loaded_lot = widget.produce_lots[0] if widget.produce_lots else None
+            if loaded_lot is not None and loaded_lot.temperature_c >= cryogenic_simulation_service.grinder_jam_threshold_c:
+                widget.grinder_run_duration_ms = 0.0
+                widget.grinder_run_remaining_ms = 0.0
+                widget.grinder_fault = "motor_jammed"
+                experiment.audit_log.append(f"{loaded_lot.label} jammed {widget.label} motor.")
+                continue
+
+            if loaded_lot is not None and loaded_lot.temperature_c >= cryogenic_simulation_service.grinder_start_threshold_c:
+                widget.grinder_fault = "high_torque"
+            elif widget.grinder_fault == "high_torque":
+                widget.grinder_fault = None
 
             if widget.grinder_run_remaining_ms <= 0:
                 complete_grinder_cycle(experiment, WorkspaceWidgetCommand(widget_id=widget.id))

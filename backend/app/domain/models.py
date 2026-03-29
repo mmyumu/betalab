@@ -98,6 +98,7 @@ class WorkspaceWidget:
     is_trashed: bool
     grinder_run_duration_ms: float = 0.0
     grinder_run_remaining_ms: float = 0.0
+    grinder_fault: str | None = None
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 

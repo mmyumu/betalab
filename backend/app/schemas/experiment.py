@@ -93,6 +93,7 @@ class WorkspaceWidgetSchema(BaseModel):
     is_trashed: bool
     grinder_run_duration_ms: float = 0.0
     grinder_run_remaining_ms: float = 0.0
+    grinder_fault: str | None = None
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
 

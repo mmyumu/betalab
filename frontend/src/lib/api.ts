@@ -766,6 +766,12 @@ function normalizeWorkspaceWidget(
     anchor: String(widget.anchor ?? "top-left") as WidgetAnchor,
     grinderRunDurationMs: Number(widget.grinderRunDurationMs ?? widget.grinder_run_duration_ms ?? 0),
     grinderRunRemainingMs: Number(widget.grinderRunRemainingMs ?? widget.grinder_run_remaining_ms ?? 0),
+    grinderFault:
+      widget.grinderFault !== undefined
+        ? String(widget.grinderFault)
+        : widget.grinder_fault !== undefined && widget.grinder_fault !== null
+          ? String(widget.grinder_fault)
+          : null,
     offsetX: Number(widget.offsetX ?? widget.offset_x ?? legacyX),
     offsetY: Number(widget.offsetY ?? widget.offset_y ?? legacyY),
     x: legacyX,

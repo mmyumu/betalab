@@ -78,7 +78,9 @@ import type {
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
 const ambientTemperatureC = 20;
-const grinderColdThresholdC = 8;
+const grinderOptimalThresholdC = -40;
+const grinderStartThresholdC = -20;
+const grinderJamThresholdC = -10;
 const widgetIds = [
   "inventory",
   "actions",
@@ -267,7 +269,7 @@ export function LabScene() {
     const lotIsWhole = (loadedLot.cutState ?? "whole") === "whole";
     const lotTemperatureC = loadedLot.temperatureC ?? ambientTemperatureC;
 
-    if (!lotIsWhole && lotTemperatureC <= grinderColdThresholdC) {
+    if (!lotIsWhole && lotTemperatureC <= grinderStartThresholdC) {
       setGrinderFeedback("neutral");
     }
   }, [pendingQuantityDraft, state]);
@@ -947,6 +949,7 @@ export function LabScene() {
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
   const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
+  const grinderFault = grinderWidget?.grinderFault ?? null;
   const grinderRunRemainingMs = grinderWidget?.grinderRunRemainingMs ?? 0;
   const grinderRunDurationMs = grinderWidget?.grinderRunDurationMs ?? 0;
   const isGrinderRunning = grinderRunRemainingMs > 0;
@@ -962,8 +965,15 @@ export function LabScene() {
   const grinderCanAttempt = grinderHasProduceLot && !grinderLotIsGround && !pendingGrinderQuantityDraft;
   const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
   const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
-  const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderColdThresholdC;
-  const grinderStatus = isGrinderRunning ? "running" : grinderCanAttempt ? "ready" : "idle";
+  const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
+  const grinderLotIsInHighTorqueZone =
+    grinderLotTemperatureC > grinderStartThresholdC && grinderLotTemperatureC < grinderJamThresholdC;
+  const grinderStatus =
+    isGrinderRunning && grinderFault !== "motor_jammed"
+      ? "running"
+      : grinderCanAttempt
+        ? "ready"
+        : "idle";
   const grinderDndDisabled = isKnifeMode || isGrinderRunning;
   const handleStartGrinder = () => {
     if (!grinderCanAttempt || isGrinderRunning || isCommandPending) {
@@ -987,9 +997,13 @@ export function LabScene() {
   };
   const grinderDisplayMode = grinderLotIsGround
     ? "complete"
+    : grinderFault === "motor_jammed"
+      ? "jammed"
     : !grinderCanAttempt
     ? "idle"
-    : isGrinderRunning
+    : isGrinderRunning && grinderLotIsInHighTorqueZone
+      ? "warning"
+      : isGrinderRunning
       ? "running"
       : grinderFeedback === "overload"
         ? "overload"
@@ -1001,6 +1015,8 @@ export function LabScene() {
       ? "RUNNING"
       : grinderDisplayMode === "complete"
         ? "COMPLETE"
+      : grinderDisplayMode === "warning"
+        ? "WARNING"
       : grinderDisplayMode === "overload"
         ? "OVERLOAD"
         : grinderDisplayMode === "jammed"
@@ -1011,6 +1027,8 @@ export function LabScene() {
   const grinderInfoLine1 =
     grinderDisplayMode === "running"
       ? `Progress ${Math.round(grinderProgressPercent)}%`
+      : grinderDisplayMode === "warning"
+        ? `Torque high`
       : grinderDisplayMode === "ready"
         ? "RPM 00000"
         : grinderDisplayMode === "complete"
@@ -1021,10 +1039,16 @@ export function LabScene() {
               ? "RPM 00000"
               : "RPM 00000";
   const grinderInfoLine1Right =
-    grinderDisplayMode === "running" ? "RPM 10000" : grinderDisplayMode === "ready" ? "Cycle 30s" : "";
+    grinderDisplayMode === "running" || grinderDisplayMode === "warning"
+      ? "RPM 10000"
+      : grinderDisplayMode === "ready"
+        ? "Cycle 30s"
+        : "";
   const grinderInfoLine2 =
     grinderDisplayMode === "running"
       ? "Load nominal"
+      : grinderDisplayMode === "warning"
+        ? "Jam risk"
       : grinderDisplayMode === "ready"
         ? "Load ready"
         : grinderDisplayMode === "complete"
@@ -1037,8 +1061,12 @@ export function LabScene() {
   const grinderInfoLine2Right =
     grinderDisplayMode === "running"
       ? "Cryo mode"
+      : grinderDisplayMode === "warning"
+        ? "Pre-cool now"
       : grinderDisplayMode === "ready"
-        ? "Cryo armed"
+        ? grinderLotTemperatureC <= grinderOptimalThresholdC
+          ? "Optimal"
+          : "Cryo armed"
         : grinderDisplayMode === "complete"
           ? "Unload lot"
           : grinderDisplayMode === "overload"
@@ -1731,6 +1759,8 @@ export function LabScene() {
                               className={`font-mono text-xs font-bold uppercase tracking-[0.28em] ${
                                 grinderDisplayMode === "overload" || grinderDisplayMode === "jammed"
                                   ? "text-red-800"
+                                  : grinderDisplayMode === "warning"
+                                    ? "text-amber-800"
                                   : grinderDisplayMode === "running"
                                     ? "text-emerald-800"
                                     : "text-slate-800"
@@ -1742,10 +1772,12 @@ export function LabScene() {
                           </div>
                           <div className="mt-3 min-h-[4.8rem]">
                             <div className="grid min-h-[4.8rem] grid-rows-[auto_auto_auto] gap-1">
-                              {grinderDisplayMode === "running" ? (
+                              {grinderDisplayMode === "running" || grinderDisplayMode === "warning" ? (
                                 <div className="h-3 overflow-hidden rounded-full border border-slate-500/30 bg-slate-900/10">
                                   <div
-                                    className="h-full rounded-full bg-emerald-700 transition-[width]"
+                                    className={`h-full rounded-full transition-[width] ${
+                                      grinderDisplayMode === "warning" ? "bg-amber-700" : "bg-emerald-700"
+                                    }`}
                                     data-testid="grinder-lcd-progress-bar"
                                     style={{ width: `${grinderProgressPercent}%` }}
                                   />
@@ -1759,6 +1791,8 @@ export function LabScene() {
                                     ? "Whole fruit detected"
                                     : grinderDisplayMode === "jammed"
                                       ? "Product not cold enough"
+                                      : grinderDisplayMode === "warning"
+                                        ? "High torque detected"
                                       : grinderDisplayMode === "complete"
                                         ? "Unload ground product"
                                         : grinderDisplayMode === "ready"

@@ -8,6 +8,9 @@ from app.services.command_handlers.support import round_volume
 
 class CryogenicSimulationService:
     grinder_cycle_duration_seconds = 30.0
+    grinder_optimal_temperature_c = -40.0
+    grinder_start_threshold_c = -20.0
+    grinder_jam_threshold_c = -10.0
     ambient_temperature_c = 20.0
     dry_ice_temperature_c = -78.5
     dry_ice_latent_heat_kj_per_kg = 571.0

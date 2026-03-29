@@ -727,6 +727,73 @@ def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
     assert started.audit_log[-1] == "Apple lot 1 grinding started in Cryogenic grinder."
 
 
+def test_start_grinder_cycle_rejects_produce_above_minus_twenty_c() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -15.0
+
+    with pytest.raises(ValueError, match="not cold enough"):
+        apply_command(service,
+            experiment.id,
+            "start_grinder_cycle",
+            {
+                "widget_id": "grinder",
+            },
+        )
+
+
 def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_completion() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -820,6 +887,91 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
     assert finished_grinder.grinder_run_duration_ms == 0.0
     assert finished_grinder.grinder_run_remaining_ms == 0.0
     assert finished.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
+
+
+def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 10,
+        },
+    )
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -20.0
+
+    apply_command(service,
+        experiment.id,
+        "start_grinder_cycle",
+        {
+            "widget_id": "grinder",
+        },
+    )
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=30)
+    jammed = service.get_experiment(experiment.id)
+
+    grinder = next(widget for widget in jammed.workspace.widgets if widget.id == "grinder")
+    assert grinder.grinder_fault == "motor_jammed"
+    assert grinder.grinder_run_duration_ms == 0.0
+    assert grinder.grinder_run_remaining_ms == 0.0
+    assert grinder.produce_lots[0].cut_state == "cut"
+    assert grinder.produce_lots[0].temperature_c >= -10.0
+    assert jammed.audit_log[-1] == "Apple lot 1 jammed Cryogenic grinder motor."
 
 
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
@@ -962,15 +1114,6 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
 
     grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
     cooled_temperature = grinder.produce_lots[0].temperature_c
-    apply_command(service, 
-        experiment.id,
-        "update_workspace_widget_liquid_volume",
-        {
-            "widget_id": "grinder",
-            "liquid_entry_id": grinder.liquids[0].id,
-            "volume_ml": 0,
-        },
-    )
     rewarmed = apply_command(service, 
         experiment.id,
         "advance_workspace_cryogenics",
@@ -1116,7 +1259,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
             },
         )
         grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-        if grinder.liquids[0].volume_ml == 0.0:
+        if grinder.liquids == []:
             exhausted_temperature = grinder.produce_lots[0].temperature_c
             break
 

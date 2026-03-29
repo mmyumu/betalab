@@ -1429,7 +1429,7 @@ describe("LabScene", () => {
             label: "Apple lot 1",
             cutState: "cut",
             produceType: "apple",
-            temperatureC: 2,
+            temperatureC: -45,
             totalMassG: 2450,
             unitCount: 12,
           },
@@ -1672,6 +1672,76 @@ describe("LabScene", () => {
       expect(screen.getByText("8.0°C")).toBeInTheDocument();
     });
     expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("shows WARNING while a running grinder enters the high-torque temperature band", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          grinderRunDurationMs: 30000,
+          grinderRunRemainingMs: 10000,
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              cutState: "cut",
+              produceType: "apple",
+              temperatureC: -15,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 40,
+              accent: "sky",
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("WARNING");
+      expect(screen.getByTestId("grinder-lcd-rpm")).toHaveTextContent("RPM 10000");
+      expect(screen.getByTestId("grinder-lcd-load")).toHaveTextContent("Pre-cool now");
+    });
+  });
+
+  it("shows JAMMED when the backend reports a grinder motor jam", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          grinderFault: "motor_jammed",
+          grinderRunDurationMs: 0,
+          grinderRunRemainingMs: 0,
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              cutState: "cut",
+              produceType: "apple",
+              temperatureC: -8,
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("JAMMED");
+      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Product not cold enough");
+      expect(screen.getByTestId("grinder-lcd-load")).toHaveTextContent("Pre-cool");
+    });
   });
 
   it("updates cold workbench produce from the experiment stream", async () => {

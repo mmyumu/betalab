@@ -290,6 +290,7 @@ export type ExperimentWorkspaceWidget = {
   offsetY: number;
   grinderRunDurationMs?: number;
   grinderRunRemainingMs?: number;
+  grinderFault?: string | null;
   x?: number;
   y?: number;
   isPresent: boolean;
