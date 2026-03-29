@@ -30,23 +30,26 @@ export function TemperatureIndicator({ temperatureC }: TemperatureIndicatorProps
     1,
   );
   const { label, toneClassName } = getCryogenicStatus(temperatureC);
+  const formattedTemperature = `${temperatureC.toFixed(1)}°C`;
+  const tooltipLabel = `${label} • ${temperatureC.toFixed(1)} C`;
 
   return (
-    <div className="flex items-center gap-2 rounded-[0.9rem] border border-sky-100 bg-sky-50/80 px-2 py-1.5">
-      <div className="relative flex h-10 w-4 items-end rounded-full border border-slate-300 bg-white p-[2px]">
+    <div
+      aria-label={tooltipLabel}
+      className="inline-flex items-center gap-0 rounded-[0.75rem] border border-sky-100 bg-sky-50/80 px-1 py-1"
+      title={tooltipLabel}
+    >
+      <div className="relative flex h-8 w-3 items-end rounded-full border border-slate-300 bg-white p-[2px]">
         <div
           className="w-full rounded-full bg-[linear-gradient(180deg,#f59e0b_0%,#22d3ee_45%,#0284c7_100%)] transition-[height] duration-700"
           data-testid="temperature-indicator-fill"
           style={{ height: `${Math.max(normalizedFill * 100, 10)}%` }}
         />
-        <span className="absolute -bottom-1 left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full border border-slate-300 bg-sky-500" />
+        <span className="absolute -bottom-1 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-slate-300 bg-sky-500" />
       </div>
-      <div className="min-w-0">
-        <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${toneClassName}`}>
-          {label}
-        </p>
-        <p className="text-xs font-semibold text-slate-900">{temperatureC.toFixed(1)} C</p>
-      </div>
+      <p className={`-ml-2.5 w-[2.9rem] text-[10px] font-semibold tabular-nums text-right ${toneClassName}`}>
+        {formattedTemperature}
+      </p>
     </div>
   );
 }

@@ -19,4 +19,12 @@ describe("TemperatureIndicator", () => {
     expect(warmHeight).toBeGreaterThan(90);
     expect(coldHeight).toBeLessThan(60);
   });
+
+  it("keeps the status label in the tooltip instead of inline text", () => {
+    render(<TemperatureIndicator temperatureC={-20} />);
+
+    expect(screen.getByText("-20.0°C")).toBeInTheDocument();
+    expect(screen.queryByText("Cooling fast")).not.toBeInTheDocument();
+    expect(screen.getByTitle("Cooling fast • -20.0 C")).toBeInTheDocument();
+  });
 });
