@@ -37,6 +37,7 @@ export const addLiquidToWorkspaceWidget = wrapCommand("add_liquid_to_workspace_w
 export const updateWorkspaceWidgetLiquidVolume = wrapCommand("update_workspace_widget_liquid_volume");
 export const removeLiquidFromWorkspaceWidget = wrapCommand("remove_liquid_from_workspace_widget");
 export const completeGrinderCycle = wrapCommand("complete_grinder_cycle");
+export const startGrinderCycle = wrapCommand("start_grinder_cycle");
 export const addWorkspaceProduceLotToWidget = wrapCommand("add_workspace_produce_lot_to_widget");
 export const moveWorkbenchProduceLotToWidget = wrapCommand("move_workbench_produce_lot_to_widget");
 export const restoreTrashedProduceLotToWidget = wrapCommand("restore_trashed_produce_lot_to_widget");

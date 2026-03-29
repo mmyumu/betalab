@@ -165,6 +165,27 @@ def remove_liquid_from_workspace_widget(
     experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
 
 
+def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand) -> None:
+    widget = _find_grinder_widget(experiment, command.widget_id)
+    if not widget.produce_lots:
+        raise ValueError(f"{widget.label} does not contain a produce lot.")
+
+    produce_lot = widget.produce_lots[0]
+    if produce_lot.cut_state == "whole":
+        raise ValueError(f"{produce_lot.label} must be cut before grinding.")
+    if produce_lot.cut_state == "ground":
+        raise ValueError(f"{produce_lot.label} is already ground.")
+    if produce_lot.temperature_c > 8.0:
+        raise ValueError(f"{produce_lot.label} is not cold enough for cryogenic grinding.")
+    if widget.grinder_run_remaining_ms > 0:
+        return
+
+    cycle_duration_ms = cryogenic_simulation_service.grinder_cycle_duration_seconds * 1000.0
+    widget.grinder_run_duration_ms = cycle_duration_ms
+    widget.grinder_run_remaining_ms = cycle_duration_ms
+    experiment.audit_log.append(f"{produce_lot.label} grinding started in {widget.label}.")
+
+
 def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand) -> None:
     widget = _find_grinder_widget(experiment, command.widget_id)
     if not widget.produce_lots:
@@ -177,7 +198,8 @@ def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetComma
         return
 
     produce_lot.cut_state = "ground"
-    widget.liquids = []
+    widget.grinder_run_duration_ms = 0.0
+    widget.grinder_run_remaining_ms = 0.0
     experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
 
 
@@ -191,7 +213,20 @@ def advance_workspace_cryogenics(
 
     elapsed_seconds = elapsed_ms / 1000.0
     for widget in experiment.workspace.widgets:
-        cryogenic_simulation_service.advance_widget(widget, elapsed_seconds)
+        remaining_seconds = elapsed_seconds
+        if widget.grinder_run_remaining_ms > 0:
+            grinding_seconds = min(remaining_seconds, widget.grinder_run_remaining_ms / 1000.0)
+            cryogenic_simulation_service.advance_grinding_widget(widget, grinding_seconds)
+            widget.grinder_run_remaining_ms = round_volume(
+                max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0)
+            )
+            remaining_seconds -= grinding_seconds
+
+            if widget.grinder_run_remaining_ms <= 0:
+                complete_grinder_cycle(experiment, WorkspaceWidgetCommand(widget_id=widget.id))
+
+        if remaining_seconds > 0:
+            cryogenic_simulation_service.advance_widget(widget, remaining_seconds)
 
     for slot in experiment.workbench.slots:
         if slot.tool is not None:

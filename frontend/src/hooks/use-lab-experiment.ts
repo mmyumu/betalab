@@ -43,6 +43,7 @@ import {
   restoreTrashedToolToRackSlot,
   restoreTrashedToolToWorkbenchSlot,
   subscribeToExperimentStream,
+  startGrinderCycle,
   updateWorkbenchToolSampleLabelText,
 } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
@@ -98,6 +99,7 @@ const mutationFns = {
   restoreTrashedSampleLabelToWorkbenchTool,
   restoreTrashedToolToRackSlot,
   restoreTrashedToolToWorkbenchSlot,
+  startGrinderCycle,
   updateWorkbenchToolSampleLabelText,
 } satisfies Record<string, MutationFn>;
 
@@ -219,6 +221,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
     completeGrinderCycle: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.completeGrinderCycle, payload),
+    startGrinderCycle: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.startGrinderCycle, payload),
     createProduceLot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.createProduceLot, payload),
     cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>

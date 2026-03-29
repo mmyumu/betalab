@@ -288,6 +288,8 @@ export type ExperimentWorkspaceWidget = {
   anchor: WidgetAnchor;
   offsetX: number;
   offsetY: number;
+  grinderRunDurationMs?: number;
+  grinderRunRemainingMs?: number;
   x?: number;
   y?: number;
   isPresent: boolean;

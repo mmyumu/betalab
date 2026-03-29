@@ -46,6 +46,7 @@ from app.services.command_handlers.workspace import (
     advance_workspace_cryogenics,
     create_produce_lot,
     complete_grinder_cycle,
+    start_grinder_cycle,
     discard_widget_produce_lot,
     discard_workspace_produce_lot,
     move_widget_produce_lot_to_workbench_tool,
@@ -246,6 +247,13 @@ class ExperimentService:
         return self._apply_command(
             experiment_id,
             complete_grinder_cycle,
+            WorkspaceWidgetCommand(widget_id=widget_id),
+        )
+
+    def start_grinder_cycle(self, experiment_id: str, widget_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            start_grinder_cycle,
             WorkspaceWidgetCommand(widget_id=widget_id),
         )
 

@@ -379,6 +379,14 @@ export async function completeGrinderCycle(experimentId: string, payload: Mutati
   });
 }
 
+export async function startGrinderCycle(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/start-grinder-cycle`,
+  });
+}
+
 export async function addWorkspaceProduceLotToWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -756,6 +764,8 @@ function normalizeWorkspaceWidget(
     widgetType: String(widget.widgetType ?? widget.widget_type) as ExperimentWorkspaceWidget["widgetType"],
     label: String(widget.label),
     anchor: String(widget.anchor ?? "top-left") as WidgetAnchor,
+    grinderRunDurationMs: Number(widget.grinderRunDurationMs ?? widget.grinder_run_duration_ms ?? 0),
+    grinderRunRemainingMs: Number(widget.grinderRunRemainingMs ?? widget.grinder_run_remaining_ms ?? 0),
     offsetX: Number(widget.offsetX ?? widget.offset_x ?? legacyX),
     offsetY: Number(widget.offsetY ?? widget.offset_y ?? legacyY),
     x: legacyX,

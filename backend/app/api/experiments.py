@@ -574,6 +574,14 @@ def complete_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSche
     return _handle_service_errors(lambda: experiment_service.complete_grinder_cycle(experiment_id, widget_id))
 
 
+@router.post(
+    "/{experiment_id}/workspace/widgets/{widget_id}/start-grinder-cycle",
+    response_model=ExperimentSchema,
+)
+def start_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.start_grinder_cycle(experiment_id, widget_id))
+
+
 @router.post("/{experiment_id}/workspace/produce-lots", response_model=ExperimentSchema)
 def create_produce_lot(
     experiment_id: str,

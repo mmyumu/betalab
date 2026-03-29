@@ -7,6 +7,7 @@ from app.services.command_handlers.support import round_volume
 
 
 class CryogenicSimulationService:
+    grinder_cycle_duration_seconds = 30.0
     ambient_temperature_c = 20.0
     dry_ice_temperature_c = -78.5
     dry_ice_latent_heat_kj_per_kg = 571.0
@@ -20,6 +21,9 @@ class CryogenicSimulationService:
     heat_transfer_ua_kj_per_s_c = 1.5
     warming_rate_per_second = 0.014
     ambient_sublimation_g_per_second = 0.04
+    grinding_friction_heating_c_per_second = 0.4
+    grinding_sublimation_boost = 15.0
+    grinding_buffer_absorption_ratio = 0.2
 
     def advance_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
         total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)
@@ -56,6 +60,44 @@ class CryogenicSimulationService:
             return
 
         self.warm_produce_lots(widget.produce_lots, elapsed_seconds)
+
+    def advance_grinding_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
+        total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)
+        if total_produce_mass_g <= 0:
+            self._sublimate_dry_ice(widget, elapsed_seconds, boost=self.grinding_sublimation_boost)
+            return
+
+        dry_ice = next(
+            (liquid for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets"),
+            None,
+        )
+        dry_ice_mass_g = dry_ice.volume_ml if dry_ice is not None else 0.0
+        buffer_factor = min(dry_ice_mass_g / max(total_produce_mass_g * 0.08, 1.0), 1.0)
+        absorbed_heat_ratio = self.grinding_buffer_absorption_ratio * buffer_factor
+        base_heat_gain_c = self.grinding_friction_heating_c_per_second * elapsed_seconds
+        effective_heat_gain_c = base_heat_gain_c * (1.0 - absorbed_heat_ratio)
+
+        for lot in widget.produce_lots:
+            lot.temperature_c += effective_heat_gain_c
+
+        absorbed_heat_kj = 0.0
+        for lot in widget.produce_lots:
+            thermal_mass_kg = max(lot.total_mass_g, 0.0) / 1000.0
+            if thermal_mass_kg <= 0:
+                continue
+            absorbed_heat_kj += (
+                thermal_mass_kg
+                * self.thawed_apple_specific_heat_kj_per_kg_c
+                * base_heat_gain_c
+                * absorbed_heat_ratio
+            )
+
+        self._sublimate_dry_ice(
+            widget,
+            elapsed_seconds,
+            boost=self.grinding_sublimation_boost,
+            extra_mass_loss_g=(absorbed_heat_kj / self.dry_ice_latent_heat_kj_per_kg) * 1000.0,
+        )
 
     def _cool_widget_produce(
         self,
@@ -145,6 +187,28 @@ class CryogenicSimulationService:
 
     def _remove_empty_liquids(self, widget: WorkspaceWidget) -> None:
         widget.liquids = [liquid for liquid in widget.liquids if liquid.volume_ml > 0]
+
+    def _sublimate_dry_ice(
+        self,
+        widget: WorkspaceWidget,
+        elapsed_seconds: float,
+        *,
+        boost: float = 1.0,
+        extra_mass_loss_g: float = 0.0,
+    ) -> None:
+        dry_ice = next((liquid for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets"), None)
+        if dry_ice is None:
+            return
+
+        dry_ice.volume_ml = round_volume(
+            max(
+                dry_ice.volume_ml
+                - (self._calculate_ambient_sublimation_mass_loss(elapsed_seconds) * boost)
+                - extra_mass_loss_g,
+                0.0,
+            )
+        )
+        self._remove_empty_liquids(widget)
 
     def _get_effective_specific_heat(self, temperature_c: float) -> float:
         if temperature_c >= self.freeze_start_temperature_c:

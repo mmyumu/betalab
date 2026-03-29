@@ -59,6 +59,7 @@ def apply_command(
             payload["widget_id"],
             payload["liquid_entry_id"],
         ),
+        "start_grinder_cycle": lambda: service.start_grinder_cycle(experiment_id, payload["widget_id"]),
         "complete_grinder_cycle": lambda: service.complete_grinder_cycle(experiment_id, payload["widget_id"]),
         "advance_workspace_cryogenics": lambda: service.advance_workspace_cryogenics(
             experiment_id, payload["elapsed_ms"]
@@ -634,8 +635,191 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
     assert grinder.produce_lots[0].cut_state == "ground"
-    assert grinder.liquids == []
     assert updated.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
+
+
+def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    cooled = apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+    grinder_before = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
+    apply_command(service,
+        experiment.id,
+        "update_workspace_widget_liquid_volume",
+        {
+            "widget_id": "grinder",
+            "liquid_entry_id": grinder_before.liquids[0].id,
+            "volume_ml": 400,
+        },
+    )
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -75.0
+
+    started = apply_command(service,
+        experiment.id,
+        "start_grinder_cycle",
+        {
+            "widget_id": "grinder",
+        },
+    )
+
+    grinder = next(widget for widget in started.workspace.widgets if widget.id == "grinder")
+    assert grinder.grinder_run_duration_ms == 30000.0
+    assert grinder.grinder_run_remaining_ms == 30000.0
+    assert started.audit_log[-1] == "Apple lot 1 grinding started in Cryogenic grinder."
+
+
+def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_completion() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    cooled = apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 400,
+        },
+    )
+    grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -75.0
+
+    apply_command(service,
+        experiment.id,
+        "start_grinder_cycle",
+        {
+            "widget_id": "grinder",
+        },
+    )
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=15)
+    mid_cycle = service.get_experiment(experiment.id)
+
+    mid_grinder = next(widget for widget in mid_cycle.workspace.widgets if widget.id == "grinder")
+    assert mid_grinder.produce_lots[0].temperature_c > -75.0
+    assert mid_grinder.produce_lots[0].temperature_c < -69.0
+    assert mid_grinder.liquids[0].volume_ml < 391.0
+    assert 14999.0 < mid_grinder.grinder_run_remaining_ms <= 15000.0
+
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=15)
+    finished = service.get_experiment(experiment.id)
+
+    finished_grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
+    assert finished_grinder.produce_lots[0].cut_state == "ground"
+    assert -66.0 < finished_grinder.produce_lots[0].temperature_c < -64.0
+    assert finished_grinder.liquids[0].volume_ml < 382.0
+    assert finished_grinder.grinder_run_duration_ms == 0.0
+    assert finished_grinder.grinder_run_remaining_ms == 0.0
+    assert finished.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
 
 
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:

@@ -1418,9 +1418,11 @@ describe("LabScene", () => {
     );
   });
 
-  it("runs a temporary grinder cycle from the power button", async () => {
+  it("starts a backend-authoritative grinder cycle from the power button", async () => {
     const grinderReadyExperiment = makeWorkbenchExperiment({
       workspaceWidgets: makeWorkspaceWithGrinderVisible({
+        grinderRunDurationMs: 0,
+        grinderRunRemainingMs: 0,
         produceLots: [
           {
             id: "produce_1",
@@ -1447,18 +1449,28 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
+          grinderRunDurationMs: 30000,
+          grinderRunRemainingMs: 30000,
           produceLots: [
             {
               id: "produce_1",
               label: "Apple lot 1",
-              cutState: "ground",
+              cutState: "cut",
               produceType: "apple",
-              temperatureC: 2,
+              temperatureC: -75,
               totalMassG: 2450,
               unitCount: 12,
             },
           ],
-          liquids: [],
+          liquids: [
+            {
+              id: "workspace_liquid_1",
+              liquidId: "dry_ice_pellets",
+              name: "Dry ice pellets",
+              volume_ml: 400,
+              accent: "sky",
+            },
+          ],
         }),
       }),
     );
@@ -1474,18 +1486,63 @@ describe("LabScene", () => {
       expect(screen.getByTestId("grinder-power-button")).not.toBeDisabled();
     });
 
-    vi.useFakeTimers();
     fireEvent.click(screen.getByTestId("grinder-power-button"));
 
-    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("RUNNING");
-    expect(screen.getByTestId("grinder-lcd-progress-bar")).toBeInTheDocument();
-    expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
-    expect(screen.getByTestId("grinder-produce-produce_1")).not.toHaveAttribute("draggable", "true");
-    expect(screen.getByTestId("grinder-liquid-workspace_liquid_1")).not.toHaveAttribute("draggable", "true");
-    expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
-      "data-status",
-      "running",
-    );
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "start_grinder_cycle",
+        { widget_id: "grinder" },
+      );
+    });
+
+    act(() => {
+      emitExperimentSnapshot(
+        "experiment_pesticides",
+        makeWorkbenchExperiment({
+          snapshotVersion: 2,
+          workspaceWidgets: makeWorkspaceWithGrinderVisible({
+            grinderRunDurationMs: 30000,
+            grinderRunRemainingMs: 15000,
+            produceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                cutState: "cut",
+                produceType: "apple",
+                temperatureC: -69.2,
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+            liquids: [
+              {
+                id: "workspace_liquid_1",
+                liquidId: "dry_ice_pellets",
+                name: "Dry ice pellets",
+                volume_ml: 390.4,
+                accent: "sky",
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("RUNNING");
+      expect(screen.getByTestId("grinder-lcd-progress-bar")).toBeInTheDocument();
+      expect(screen.getByTestId("grinder-lcd-rpm")).toHaveTextContent("RPM 10000");
+      expect(screen.getByTestId("grinder-lcd-load")).toHaveTextContent("Cryo mode");
+      expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+      expect(screen.getByTestId("grinder-produce-produce_1")).not.toHaveAttribute("draggable", "true");
+      expect(screen.getByTestId("grinder-liquid-workspace_liquid_1")).not.toHaveAttribute("draggable", "true");
+      expect(screen.getByTestId("cryogenic-grinder-illustration")).toHaveAttribute(
+        "data-status",
+        "running",
+      );
+    });
+
     const runningDropTransfer = createDataTransfer();
     fireEvent.dragStart(screen.getByTestId("toolbar-item-dry_ice_pellets"), {
       dataTransfer: runningDropTransfer,
@@ -1497,23 +1554,46 @@ describe("LabScene", () => {
     fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: runningDropTransfer });
     expect(runningDragOverEvent.defaultPrevented).toBe(false);
 
-    await act(async () => {
-      vi.advanceTimersByTime(2600);
-      await Promise.resolve();
-      await Promise.resolve();
+    act(() => {
+      emitExperimentSnapshot(
+        "experiment_pesticides",
+        makeWorkbenchExperiment({
+          snapshotVersion: 3,
+          workspaceWidgets: makeWorkspaceWithGrinderVisible({
+            grinderRunDurationMs: 0,
+            grinderRunRemainingMs: 0,
+            produceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                cutState: "ground",
+                produceType: "apple",
+                temperatureC: -65.1,
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+            liquids: [
+              {
+                id: "workspace_liquid_1",
+                liquidId: "dry_ice_pellets",
+                name: "Dry ice pellets",
+                volume_ml: 381.7,
+                accent: "sky",
+              },
+            ],
+          }),
+        }),
+      );
     });
 
-    expect(sendExperimentCommand).toHaveBeenCalledWith(
-      "experiment_pesticides",
-      "complete_grinder_cycle",
-      { widget_id: "grinder" },
-    );
-
-    expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("COMPLETE");
-    expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Unload ground product");
-    expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
-    expect(screen.getByTestId("grinder-produce-produce_1")).toHaveTextContent("Apple lot 1 powder");
-    expect(screen.queryByText("Dry ice pellets")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("COMPLETE");
+      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Unload ground product");
+      expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
+      expect(screen.getByTestId("grinder-produce-produce_1")).toHaveTextContent("Apple lot 1 powder");
+    });
+    expect(screen.getByText("Dry ice pellets")).toBeInTheDocument();
   });
 
   it("shows a thermometer for grinder produce and updates it from the experiment stream", async () => {
