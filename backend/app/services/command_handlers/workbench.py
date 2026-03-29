@@ -419,6 +419,13 @@ def update_workbench_liquid_volume(
     )
     max_allowed_volume = round_volume(max(slot.tool.capacity_ml - occupied_by_others, 0.0))
     liquid_entry.volume_ml = round_volume(min(requested_volume, max_allowed_volume))
+    if liquid_entry.volume_ml <= 0:
+        slot.tool.liquids = [
+            liquid for liquid in slot.tool.liquids if liquid.id != command.liquid_entry_id
+        ]
+        experiment.audit_log.append(f"{liquid_entry.name} removed from {slot.tool.label}.")
+        return
+
     experiment.audit_log.append(
         f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {slot.tool.label}."
     )

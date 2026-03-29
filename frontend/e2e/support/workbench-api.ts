@@ -187,9 +187,11 @@ function makeExperiment(): Experiment {
   return {
     audit_log: [...defaultAuditLog],
     id: "experiment_pesticides",
+    last_simulation_at: "2026-03-29T00:00:00Z",
     rack: { slots: makeRackSlots() },
+    snapshot_version: 1,
     status: "preparing",
-    trash: { produceLots: [], tools: [] },
+    trash: { produceLots: [], sampleLabels: [], tools: [] },
     workbench: { slots: makeSlots() },
     workspace: { produceLots: [], widgets: makeWorkspaceWidgets() },
   };
@@ -199,6 +201,7 @@ function appendAudit(experiment: Experiment, message: string) {
   return {
     ...experiment,
     audit_log: [...experiment.audit_log, message],
+    snapshot_version: experiment.snapshot_version + 1,
   };
 }
 
@@ -232,6 +235,14 @@ function requireTrashTool(experiment: Experiment, trashToolId: string) {
 
 function nextTrashToolId(experiment: Experiment) {
   return `trash_tool_${experiment.trash.tools.length + 1}`;
+}
+
+function requireWorkbenchSlotByToolId(experiment: Experiment, toolId: string) {
+  const slot = experiment.workbench.slots.find((candidate) => candidate.tool?.id === toolId);
+  if (!slot) {
+    throw new Error(`Unknown workbench tool: ${toolId}`);
+  }
+  return slot;
 }
 
 function applyCommand(
@@ -326,6 +337,15 @@ async function fulfillJson(route: Route, status: number, body: unknown) {
   });
 }
 
+function parseJsonBody(route: Route): Record<string, unknown> {
+  const body = route.request().postDataJSON();
+  if (body && typeof body === "object") {
+    return body as Record<string, unknown>;
+  }
+
+  return {};
+}
+
 export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
   let experiment = makeExperiment();
   const commands: CommandRecord[] = [];
@@ -340,16 +360,84 @@ export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
     await fulfillJson(route, 200, experiment);
   });
 
-  await page.route("**/experiments/*/commands", async (route) => {
-    if (route.request().method() !== "POST") {
+  await page.route("**/experiments/**", async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const url = new URL(request.url());
+    const path = url.pathname;
+
+    if (method === "GET" && path === `/experiments/${experiment.id}`) {
+      await fulfillJson(route, 200, experiment);
+      return;
+    }
+
+    if (path.endsWith("/stream")) {
+      await route.fulfill({ body: "Not Found", status: 404 });
+      return;
+    }
+
+    let command: CommandRecord | null = null;
+
+    if (method === "POST" && path === `/experiments/${experiment.id}/workbench/slots`) {
+      command = { payload: {}, type: "add_workbench_slot" };
+    } else if (method === "DELETE" && path.match(new RegExp(`/experiments/${experiment.id}/workbench/slots/[^/]+$`))) {
+      command = {
+        payload: { slot_id: decodeURIComponent(path.split("/").at(-1) ?? "") },
+        type: "remove_workbench_slot",
+      };
+    } else if (method === "POST" && path.match(new RegExp(`/experiments/${experiment.id}/workbench/slots/[^/]+/place-tool$`))) {
+      const body = parseJsonBody(route);
+      command = {
+        payload: {
+          slot_id: decodeURIComponent(path.split("/").at(-2) ?? ""),
+          tool_id: String(body.tool_id),
+        },
+        type: "place_tool_on_workbench",
+      };
+    } else if (method === "POST" && path === `/experiments/${experiment.id}/workspace/widgets`) {
+      const body = parseJsonBody(route);
+      command = {
+        payload: {
+          widget_id: String(body.widget_id),
+          x: Number(body.offset_x),
+          y: Number(body.offset_y),
+        },
+        type: "add_workspace_widget",
+      };
+    } else if (method === "POST" && path.match(new RegExp(`/experiments/${experiment.id}/rack/slots/[^/]+/place-tool-from-workbench$`))) {
+      const body = parseJsonBody(route);
+      command = {
+        payload: {
+          rack_slot_id: decodeURIComponent(path.split("/").at(-2) ?? ""),
+          source_slot_id: String(body.source_slot_id),
+        },
+        type: "place_workbench_tool_in_rack_slot",
+      };
+    } else if (method === "POST" && path.match(new RegExp(`/experiments/${experiment.id}/workbench/tools/[^/]+/discard$`))) {
+      const toolId = decodeURIComponent(path.split("/").at(-2) ?? "");
+      const slot = requireWorkbenchSlotByToolId(experiment, toolId);
+      command = {
+        payload: { slot_id: slot.id },
+        type: "discard_workbench_tool",
+      };
+    } else if (method === "POST" && path.match(new RegExp(`/experiments/${experiment.id}/trash/tools/[^/]+/restore-to-workbench$`))) {
+      const body = parseJsonBody(route);
+      command = {
+        payload: {
+          target_slot_id: String(body.target_slot_id),
+          trash_tool_id: decodeURIComponent(path.split("/").at(-2) ?? ""),
+        },
+        type: "restore_trashed_tool_to_workbench_slot",
+      };
+    }
+
+    if (!command) {
       await route.fallback();
       return;
     }
 
-    const request = route.request();
-    const body = request.postDataJSON() as CommandRecord;
-    commands.push(body);
-    experiment = applyCommand(experiment, body.type, body.payload);
+    commands.push(command);
+    experiment = applyCommand(experiment, command.type, command.payload);
     await fulfillJson(route, 200, experiment);
   });
 

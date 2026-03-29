@@ -43,6 +43,7 @@ class CryogenicSimulationService:
                         0.0,
                     )
                 )
+                self._remove_empty_liquids(widget)
                 return
 
             dry_ice.volume_ml = round_volume(
@@ -51,6 +52,7 @@ class CryogenicSimulationService:
                     0.0,
                 )
             )
+            self._remove_empty_liquids(widget)
             return
 
         self.warm_produce_lots(widget.produce_lots, elapsed_seconds)
@@ -127,6 +129,7 @@ class CryogenicSimulationService:
         dry_ice = next((liquid for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets"), None)
         if dry_ice is not None:
             dry_ice.volume_ml = round_volume(max(dry_ice.volume_ml - thermal_mass_loss_g, 0.0))
+            self._remove_empty_liquids(widget)
 
     def warm_produce_lots(self, produce_lots: list[ProduceLot], elapsed_seconds: float) -> None:
         for lot in produce_lots:
@@ -139,6 +142,9 @@ class CryogenicSimulationService:
 
     def _calculate_ambient_sublimation_mass_loss(self, elapsed_seconds: float) -> float:
         return self.ambient_sublimation_g_per_second * elapsed_seconds
+
+    def _remove_empty_liquids(self, widget: WorkspaceWidget) -> None:
+        widget.liquids = [liquid for liquid in widget.liquids if liquid.volume_ml > 0]
 
     def _get_effective_specific_heat(self, temperature_c: float) -> float:
         if temperature_c >= self.freeze_start_temperature_c:

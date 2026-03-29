@@ -1,4 +1,5 @@
 import pytest
+from datetime import timedelta
 
 from app.services.experiment_service import ExperimentService
 
@@ -315,6 +316,44 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
     assert slot.tool.produce_lots == []
 
 
+def test_workbench_liquid_is_removed_when_volume_is_updated_to_zero() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+    added = apply_command(service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+
+    liquid_id = added.workbench.slots[0].tool.liquids[0].id
+    updated = apply_command(service,
+        experiment.id,
+        "update_workbench_liquid_volume",
+        {
+            "slot_id": "station_1",
+            "liquid_entry_id": liquid_id,
+            "volume_ml": 0,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.liquids == []
+    assert updated.audit_log[-1] == "Acetonitrile removed from 50 mL centrifuge tube."
+
+
 def test_place_cutting_board_on_workbench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -422,6 +461,45 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
     assert updated.audit_log[-1] == "Dry ice pellets adjusted to 12.346 g in Cryogenic grinder."
 
 
+def test_grinder_dry_ice_is_removed_when_volume_is_updated_to_zero() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    added = apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+        },
+    )
+
+    liquid_id = next(widget for widget in added.workspace.widgets if widget.id == "grinder").liquids[0].id
+    updated = apply_command(service,
+        experiment.id,
+        "update_workspace_widget_liquid_volume",
+        {
+            "widget_id": "grinder",
+            "liquid_entry_id": liquid_id,
+            "volume_ml": 0,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.liquids == []
+    assert updated.audit_log[-1] == "Dry ice pellets removed from Cryogenic grinder."
+
+
 def test_grinder_dry_ice_can_be_removed() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -458,6 +536,38 @@ def test_grinder_dry_ice_can_be_removed() -> None:
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
     assert grinder.liquids == []
     assert updated.audit_log[-1] == "Dry ice pellets removed from Cryogenic grinder."
+
+
+def test_grinder_dry_ice_disappears_after_sublimation_reaches_zero() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 0.01,
+        },
+    )
+
+    experiment_state = service._experiments[experiment.id]
+    experiment_state.last_simulation_at -= timedelta(seconds=1)
+
+    updated = service.get_experiment(experiment.id)
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.liquids == []
 
 
 def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> None:

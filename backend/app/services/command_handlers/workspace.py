@@ -145,6 +145,11 @@ def update_workspace_widget_liquid_volume(
     liquid_entry = find_workspace_widget_liquid(widget, command.liquid_entry_id)
 
     liquid_entry.volume_ml = round_volume(max(float(command.volume_ml), 0.0))
+    if liquid_entry.volume_ml <= 0:
+        widget.liquids = [liquid for liquid in widget.liquids if liquid.id != command.liquid_entry_id]
+        experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
+        return
+
     experiment.audit_log.append(
         f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}."
     )
