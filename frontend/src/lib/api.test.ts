@@ -264,6 +264,45 @@ describe("api client", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it("reconnects the experiment stream after an unexpected socket close", () => {
+    vi.useFakeTimers();
+
+    const sockets: Array<{
+      close: ReturnType<typeof vi.fn>;
+      onclose: null | (() => void);
+      onerror: null | (() => void);
+      onmessage: null | ((event: { data: string }) => void);
+      onopen: null | (() => void);
+      readyState: number;
+    }> = [];
+    const webSocketMock = vi.fn(() => {
+      const socket = {
+        close: vi.fn(),
+        onclose: null,
+        onerror: null,
+        onmessage: null,
+        onopen: null,
+        readyState: 1,
+      };
+      sockets.push(socket);
+      return socket;
+    });
+
+    vi.stubGlobal("WebSocket", webSocketMock);
+
+    const unsubscribe = subscribeToExperimentStream("experiment_123", { onMessage: vi.fn() });
+
+    expect(webSocketMock).toHaveBeenCalledTimes(1);
+
+    sockets[0]?.onclose?.();
+
+    vi.advanceTimersByTime(1000);
+
+    expect(webSocketMock).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+  });
+
   it("surfaces backend error detail for command execution failures", async () => {
     vi.stubGlobal(
       "fetch",

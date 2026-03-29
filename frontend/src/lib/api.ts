@@ -97,25 +97,90 @@ export function subscribeToExperimentStream(
 ): () => void {
   const streamUrl = new URL(`${API_BASE_URL}/experiments/${experimentId}/stream`);
   streamUrl.protocol = streamUrl.protocol === "https:" ? "wss:" : "ws:";
-  const socket = new WebSocket(streamUrl.toString());
 
-  socket.onmessage = (event) => {
-    try {
-      const payload = JSON.parse(event.data) as Experiment;
-      const experiment = normalizeExperiment(payload);
-      experimentCache.set(experiment.id, experiment);
-      handlers.onMessage(experiment);
-    } catch {
-      handlers.onError?.(new Error("Failed to parse experiment stream payload"));
+  let activeSocket: WebSocket | null = null;
+  let reconnectTimeoutId: number | null = null;
+  let isDisposed = false;
+
+  const clearReconnectTimeout = () => {
+    if (reconnectTimeoutId !== null) {
+      window.clearTimeout(reconnectTimeoutId);
+      reconnectTimeoutId = null;
     }
   };
 
-  socket.onerror = () => {
-    handlers.onError?.(new Error("Experiment stream error"));
+  const scheduleReconnect = () => {
+    if (isDisposed || reconnectTimeoutId !== null) {
+      return;
+    }
+
+    reconnectTimeoutId = window.setTimeout(() => {
+      reconnectTimeoutId = null;
+      connect();
+    }, 1000);
   };
 
+  const connect = () => {
+    if (isDisposed) {
+      return;
+    }
+
+    if (activeSocket && activeSocket.readyState !== WebSocket.CLOSED) {
+      return;
+    }
+
+    const socket = new WebSocket(streamUrl.toString());
+    activeSocket = socket;
+
+    socket.onopen = () => {
+      clearReconnectTimeout();
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as Experiment;
+        const experiment = normalizeExperiment(payload);
+        experimentCache.set(experiment.id, experiment);
+        handlers.onMessage(experiment);
+      } catch {
+        handlers.onError?.(new Error("Failed to parse experiment stream payload"));
+      }
+    };
+
+    socket.onerror = () => {
+      // Browser WebSocket errors are intentionally opaque; rely on close + reconnect.
+    };
+
+    socket.onclose = () => {
+      if (activeSocket === socket) {
+        activeSocket = null;
+      }
+      scheduleReconnect();
+    };
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      clearReconnectTimeout();
+      connect();
+    }
+  };
+
+  const handleOnline = () => {
+    clearReconnectTimeout();
+    connect();
+  };
+
+  connect();
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("online", handleOnline);
+
   return () => {
-    socket.close();
+    isDisposed = true;
+    clearReconnectTimeout();
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("online", handleOnline);
+    activeSocket?.close();
   };
 }
 
