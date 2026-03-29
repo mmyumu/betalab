@@ -635,6 +635,8 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
     assert grinder.produce_lots[0].cut_state == "ground"
+    assert grinder.produce_lots[0].homogeneity_score is None
+    assert grinder.produce_lots[0].grind_quality_label is None
     assert updated.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
 
 
@@ -883,10 +885,97 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
     finished_grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
     assert finished_grinder.produce_lots[0].cut_state == "ground"
     assert -66.0 < finished_grinder.produce_lots[0].temperature_c < -64.0
+    assert finished_grinder.produce_lots[0].grind_quality_label == "powder_fine"
+    assert finished_grinder.produce_lots[0].homogeneity_score is not None
+    assert finished_grinder.produce_lots[0].homogeneity_score > 0.9
     assert finished_grinder.liquids[0].volume_ml < 382.0
     assert finished_grinder.grinder_run_duration_ms == 0.0
     assert finished_grinder.grinder_run_remaining_ms == 0.0
     assert finished.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
+
+
+def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "anchor": "top-right",
+            "offset_x": 0,
+            "offset_y": 420,
+        },
+    )
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "cutting_board_hdpe",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "cut_workbench_produce_lot",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "move_workbench_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "source_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_liquid_to_workspace_widget",
+        {
+            "widget_id": "grinder",
+            "liquid_id": "dry_ice_pellets",
+            "volume_ml": 400,
+        },
+    )
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -30.0
+
+    apply_command(service,
+        experiment.id,
+        "start_grinder_cycle",
+        {
+            "widget_id": "grinder",
+        },
+    )
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=30)
+    finished = service.get_experiment(experiment.id)
+
+    grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
+    produce_lot = grinder.produce_lots[0]
+    assert produce_lot.cut_state == "ground"
+    assert produce_lot.grind_quality_label == "coarse"
+    assert produce_lot.homogeneity_score is not None
+    assert 0.25 < produce_lot.homogeneity_score < 0.4
 
 
 def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> None:
@@ -970,6 +1059,8 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
     assert grinder.grinder_run_duration_ms == 0.0
     assert grinder.grinder_run_remaining_ms == 0.0
     assert grinder.produce_lots[0].cut_state == "cut"
+    assert grinder.produce_lots[0].homogeneity_score is None
+    assert grinder.produce_lots[0].grind_quality_label is None
     assert grinder.produce_lots[0].temperature_c >= -10.0
     assert jammed.audit_log[-1] == "Apple lot 1 jammed Cryogenic grinder motor."
 

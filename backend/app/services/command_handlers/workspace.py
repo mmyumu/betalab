@@ -180,6 +180,10 @@ def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand)
     if widget.grinder_run_remaining_ms > 0:
         return
 
+    produce_lot.grind_quality_label = None
+    produce_lot.homogeneity_score = None
+    produce_lot.grinding_elapsed_seconds = 0.0
+    produce_lot.grinding_temperature_integral = 0.0
     cycle_duration_ms = cryogenic_simulation_service.grinder_cycle_duration_seconds * 1000.0
     widget.grinder_run_duration_ms = cycle_duration_ms
     widget.grinder_run_remaining_ms = cycle_duration_ms
@@ -198,7 +202,10 @@ def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetComma
     if produce_lot.cut_state == "ground":
         return
 
+    homogeneity_score, grind_quality_label = cryogenic_simulation_service.score_grind_result(produce_lot)
     produce_lot.cut_state = "ground"
+    produce_lot.homogeneity_score = homogeneity_score
+    produce_lot.grind_quality_label = grind_quality_label
     widget.grinder_run_duration_ms = 0.0
     widget.grinder_run_remaining_ms = 0.0
     widget.grinder_fault = None

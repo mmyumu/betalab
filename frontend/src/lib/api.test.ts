@@ -177,6 +177,8 @@ describe("api client", () => {
               produce_type: "apple",
               total_mass_g: 2450.0,
               unit_count: 12,
+              grind_quality_label: "powder_fine",
+              homogeneity_score: 0.94,
             },
           ],
           widgets: [
@@ -216,6 +218,8 @@ describe("api client", () => {
     expect(experiment.workspace.produceLots[0]?.label).toBe("Apple lot 1");
     expect(experiment.workspace.produceLots[0]?.unitCount).toBe(12);
     expect(experiment.workspace.produceLots[0]?.totalMassG).toBe(2450);
+    expect(experiment.workspace.produceLots[0]?.grindQualityLabel).toBe("powder_fine");
+    expect(experiment.workspace.produceLots[0]?.homogeneityScore).toBe(0.94);
   });
 
   it("throws when experiment creation fails", async () => {

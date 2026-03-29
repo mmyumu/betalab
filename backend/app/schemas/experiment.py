@@ -22,6 +22,8 @@ class ProduceLotSchema(BaseModel):
     is_contaminated: bool = False
     cut_state: str = "whole"
     temperature_c: float = 20.0
+    grind_quality_label: str | None = None
+    homogeneity_score: float | None = None
 
 
 class WorkbenchToolSchema(BaseModel):

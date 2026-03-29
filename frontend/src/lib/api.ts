@@ -793,6 +793,18 @@ function normalizeProduceLot(lot: ExperimentProduceLot & Record<string, unknown>
 
   return {
     cutState: String(lot.cutState ?? lot.cut_state ?? "whole") as ExperimentProduceLot["cutState"],
+    grindQualityLabel:
+      lot.grindQualityLabel !== undefined
+        ? String(lot.grindQualityLabel)
+        : lot.grind_quality_label !== undefined && lot.grind_quality_label !== null
+          ? String(lot.grind_quality_label)
+          : null,
+    homogeneityScore:
+      lot.homogeneityScore !== undefined
+        ? Number(lot.homogeneityScore)
+        : lot.homogeneity_score !== undefined && lot.homogeneity_score !== null
+          ? Number(lot.homogeneity_score)
+          : null,
     id: String(lot.id),
     isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
     label: String(lot.label),

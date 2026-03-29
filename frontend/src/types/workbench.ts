@@ -301,6 +301,8 @@ export type ExperimentWorkspaceWidget = {
 
 export type ExperimentProduceLot = {
   cutState?: ProduceCutState;
+  grindQualityLabel?: string | null;
+  homogeneityScore?: number | null;
   id: string;
   isContaminated?: boolean;
   label: string;

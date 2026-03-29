@@ -27,6 +27,9 @@ class CryogenicSimulationService:
     grinding_friction_heating_c_per_second = 0.4
     grinding_sublimation_boost = 15.0
     grinding_buffer_absorption_ratio = 0.2
+    fine_powder_temperature_c = -60.0
+    granular_temperature_c = -40.0
+    poor_grind_temperature_c = -20.0
 
     def advance_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
         total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)
@@ -81,7 +84,11 @@ class CryogenicSimulationService:
         effective_heat_gain_c = base_heat_gain_c * (1.0 - absorbed_heat_ratio)
 
         for lot in widget.produce_lots:
+            previous_temperature_c = lot.temperature_c
             lot.temperature_c += effective_heat_gain_c
+            average_step_temperature_c = (previous_temperature_c + lot.temperature_c) / 2.0
+            lot.grinding_temperature_integral += average_step_temperature_c * elapsed_seconds
+            lot.grinding_elapsed_seconds += elapsed_seconds
 
         absorbed_heat_kj = 0.0
         for lot in widget.produce_lots:
@@ -101,6 +108,65 @@ class CryogenicSimulationService:
             boost=self.grinding_sublimation_boost,
             extra_mass_loss_g=(absorbed_heat_kj / self.dry_ice_latent_heat_kj_per_kg) * 1000.0,
         )
+
+    def score_grind_result(self, lot: ProduceLot) -> tuple[float | None, str | None]:
+        if lot.grinding_elapsed_seconds <= 0:
+            return None, None
+
+        average_temperature_c = lot.grinding_temperature_integral / lot.grinding_elapsed_seconds
+        if average_temperature_c <= -75.0:
+            return 0.97, "powder_fine"
+        if average_temperature_c <= self.fine_powder_temperature_c:
+            return (
+                self._interpolate_score(average_temperature_c, -75.0, self.fine_powder_temperature_c, 0.97, 0.85),
+                "powder_fine",
+            )
+        if average_temperature_c <= self.granular_temperature_c:
+            return (
+                self._interpolate_score(
+                    average_temperature_c,
+                    self.fine_powder_temperature_c,
+                    self.granular_temperature_c,
+                    0.85,
+                    0.55,
+                ),
+                "granular",
+            )
+        if average_temperature_c <= self.poor_grind_temperature_c:
+            return (
+                self._interpolate_score(
+                    average_temperature_c,
+                    self.granular_temperature_c,
+                    self.poor_grind_temperature_c,
+                    0.55,
+                    0.2,
+                ),
+                "coarse",
+            )
+        return (
+            self._interpolate_score(
+                average_temperature_c,
+                self.poor_grind_temperature_c,
+                self.grinder_jam_threshold_c,
+                0.2,
+                0.05,
+            ),
+            "pasty",
+        )
+
+    def _interpolate_score(
+        self,
+        value: float,
+        min_value: float,
+        max_value: float,
+        min_score: float,
+        max_score: float,
+    ) -> float:
+        if max_value <= min_value:
+            return round(min_score, 3)
+
+        ratio = min(max((value - min_value) / (max_value - min_value), 0.0), 1.0)
+        return round(min_score + ((max_score - min_score) * ratio), 3)
 
     def _cool_widget_produce(
         self,
