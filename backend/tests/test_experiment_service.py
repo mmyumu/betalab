@@ -192,9 +192,9 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert experiment.workspace.widgets[3].is_present is False
     assert experiment.workspace.widgets[4].is_present is True
     assert experiment.workspace.widgets[5].is_present is False
-    assert experiment.workspace.widgets[1].anchor == "top-right"
-    assert experiment.workspace.widgets[1].offset_x == 0
-    assert experiment.workspace.widgets[1].offset_y == 126
+    assert experiment.workspace.widgets[1].anchor == "top-left"
+    assert experiment.workspace.widgets[1].offset_x == 1276
+    assert experiment.workspace.widgets[1].offset_y == 24
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.workspace.produce_lots == []
     assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
