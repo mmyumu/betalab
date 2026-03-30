@@ -2,15 +2,52 @@ import type { SVGProps } from "react";
 
 type AppleIllustrationProps = SVGProps<SVGSVGElement> & {
   testId?: string;
-  variant?: "whole" | "cut";
+  variant?: "whole" | "cut" | "ground";
 };
 
 type AppleClusterProps = {
   shadowOpacity?: number;
-  variant?: "whole" | "cut";
+  variant?: "whole" | "cut" | "ground";
 };
 
 export function AppleLotGlyph({ shadowOpacity = 0.08, variant = "whole" }: AppleClusterProps) {
+  if (variant === "ground") {
+    return (
+      <>
+        <ellipse cx="48" cy="80" fill="#0f172a" fillOpacity={shadowOpacity} rx="24" ry="5.5" />
+        <path
+          d="M24 69C27 60 35 54 46 54C56 54 64 59 68 66C72 72 69 78 60 80H34C26 79 22 75 24 69Z"
+          fill="url(#apple-powder-mound)"
+          stroke="#92400e"
+          strokeLinejoin="round"
+          strokeWidth="3.2"
+        />
+        <path
+          d="M31 66C35 62 41 60 47 60C55 60 61 64 63 69"
+          opacity="0.35"
+          stroke="#fef3c7"
+          strokeLinecap="round"
+          strokeWidth="2.4"
+        />
+        <path
+          d="M32 73C37 70 43 69 49 69C55 69 60 71 63 74"
+          opacity="0.4"
+          stroke="#fef3c7"
+          strokeLinecap="round"
+          strokeWidth="2.1"
+        />
+        <circle cx="34" cy="60" fill="#dc2626" opacity="0.9" r="1.8" />
+        <circle cx="40" cy="56" fill="#ef4444" opacity="0.88" r="1.5" />
+        <circle cx="51" cy="57" fill="#f87171" opacity="0.85" r="1.4" />
+        <circle cx="59" cy="62" fill="#dc2626" opacity="0.82" r="1.7" />
+        <circle cx="66" cy="70" fill="#ef4444" opacity="0.75" r="1.4" />
+        <circle cx="29" cy="76" fill="#f59e0b" opacity="0.45" r="1.1" />
+        <circle cx="37" cy="78" fill="#fde68a" opacity="0.5" r="0.9" />
+        <circle cx="55" cy="77" fill="#fde68a" opacity="0.45" r="0.9" />
+      </>
+    );
+  }
+
   if (variant === "cut") {
     return (
       <>
@@ -159,8 +196,6 @@ export function AppleIllustration({
   variant = "whole",
   ...props
 }: AppleIllustrationProps) {
-  const isCut = variant === "cut";
-
   return (
     <svg
       aria-label="Apple lot illustration"
@@ -173,7 +208,7 @@ export function AppleIllustration({
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <AppleLotGlyph variant={isCut ? "cut" : "whole"} />
+      <AppleLotGlyph variant={variant} />
       <defs>
         <linearGradient id="apple-lot-body-left" x1="52" x2="52" y1="32" y2="80">
           <stop stopColor="#fb7185" />
@@ -190,6 +225,11 @@ export function AppleIllustration({
         <linearGradient id="apple-cut-body" x1="43" x2="43" y1="29" y2="71">
           <stop stopColor="#fb7185" />
           <stop offset="1" stopColor="#dc2626" />
+        </linearGradient>
+        <linearGradient id="apple-powder-mound" x1="46" x2="46" y1="54" y2="80">
+          <stop stopColor="#fca5a5" />
+          <stop offset="0.48" stopColor="#ef4444" />
+          <stop offset="1" stopColor="#b91c1c" />
         </linearGradient>
       </defs>
     </svg>

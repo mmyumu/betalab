@@ -387,7 +387,7 @@ describe("LabScene", () => {
     );
   });
 
-  it("lets the user drag widgets around the workspace", async () => {
+  it("keeps inventory and actions panels in sticky sidebars outside the workspace", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
     render(<PesticideWorkbench />);
@@ -398,16 +398,12 @@ describe("LabScene", () => {
     });
 
     const inventoryWidget = screen.getByTestId("widget-inventory");
+    const actionsWidget = screen.getByTestId("widget-actions");
 
-    expect(inventoryWidget).toHaveStyle({ left: "0px", top: "0px" });
-
-    fireEvent.mouseDown(screen.getByText("Inventory"), { button: 0, clientX: 24, clientY: 16 });
-    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 164, clientY: 156 }));
-    window.dispatchEvent(new MouseEvent("mouseup"));
-
-    await waitFor(() => {
-      expect(inventoryWidget).toHaveStyle({ left: "140px", top: "140px" });
-    });
+    expect(inventoryWidget).toHaveClass("xl:sticky");
+    expect(inventoryWidget).toHaveClass("xl:top-6");
+    expect(actionsWidget).toHaveClass("xl:sticky");
+    expect(actionsWidget).toHaveClass("xl:top-6");
   });
 
   it("shows the backend error state and retries experiment creation", async () => {

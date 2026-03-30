@@ -23,6 +23,14 @@ type ProduceLotCardProps = {
 
 const ambientTemperatureC = 20;
 
+function getProduceIllustrationVariant(produceLot: ExperimentProduceLot) {
+  if (produceLot.cutState === "ground") {
+    return "ground";
+  }
+
+  return produceLot.cutState === "whole" ? "whole" : "cut";
+}
+
 export function ProduceLotCard({
   className = "",
   dataTestId,
@@ -58,7 +66,7 @@ export function ProduceLotCard({
           <div className="flex items-start gap-2">
             <AppleIllustration
               className="h-10 w-10 shrink-0"
-              variant={produceLot.cutState === "whole" ? "whole" : "cut"}
+              variant={getProduceIllustrationVariant(produceLot)}
             />
             <div className="min-w-0 flex-1">
               {produceLot.cutState === "waste" ? (
@@ -84,7 +92,7 @@ export function ProduceLotCard({
             <div className="h-10 w-10 shrink-0">
               <AppleIllustration
                 className="h-10 w-10"
-                variant={produceLot.cutState === "whole" ? "whole" : "cut"}
+                variant={getProduceIllustrationVariant(produceLot)}
               />
             </div>
             <div className="min-w-0">

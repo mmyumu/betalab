@@ -394,7 +394,13 @@ function SampleBagIcon({
           >
             <AppleLotGlyph
               shadowOpacity={0.04}
-              variant={produceLot.cutState === "whole" ? "whole" : "cut"}
+              variant={
+                produceLot.cutState === "ground"
+                  ? "ground"
+                  : produceLot.cutState === "whole"
+                    ? "whole"
+                    : "cut"
+              }
             />
           </g>
         );

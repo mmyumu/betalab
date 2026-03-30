@@ -82,8 +82,6 @@ const grinderOptimalThresholdC = -40;
 const grinderStartThresholdC = -20;
 const grinderJamThresholdC = -10;
 const widgetIds = [
-  "inventory",
-  "actions",
   "workbench",
   "trash",
   "rack",
@@ -98,8 +96,6 @@ const workspaceEquipmentItemToWidgetId = {
   produce_basket_widget: "basket",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
-  inventory: false,
-  actions: false,
   workbench: false,
   trash: false,
   rack: true,
@@ -112,24 +108,6 @@ type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
-  inventory: {
-    anchor: "top-left",
-    x: 0,
-    y: 0,
-    offsetX: 0,
-    offsetY: 0,
-    width: 202,
-    fallbackHeight: 720,
-  },
-  actions: {
-    anchor: "top-right",
-    x: 1490,
-    y: 0,
-    offsetX: 0,
-    offsetY: 0,
-    width: 92,
-    fallbackHeight: 104,
-  },
   workbench: { x: 234, y: 0, width: 1228, fallbackHeight: 860 },
   trash: { x: 1490, y: 126, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 500, fallbackHeight: 392 },
@@ -559,14 +537,10 @@ export function LabScene() {
 
   const liveWidgetIds: WidgetId[] =
     state.status === "ready"
-      ? [
-          "inventory",
-          "actions",
-          ...state.experiment.workspace.widgets
-            .filter((widget) => widget.isPresent)
-            .map((widget) => widget.id),
-        ]
-      : ["inventory", "actions"];
+      ? state.experiment.workspace.widgets
+          .filter((widget) => widget.isPresent)
+          .map((widget) => widget.id)
+      : [];
 
   const {
     activeWidgetId,
@@ -577,7 +551,7 @@ export function LabScene() {
     widgetOrder,
     workspaceHeight,
   } = useWorkspaceLayout<WidgetId>({
-    fixedWidgetIds: ["inventory", "actions"],
+    fixedWidgetIds: [],
     getIsWidgetTrashable: (widgetId) => widgetTrashability[widgetId],
     initialLayout: widgetFrameSpecs,
     initialOrder: [...widgetIds],
@@ -1546,31 +1520,51 @@ export function LabScene() {
           </h1>
         </header>
 
-        <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
-          <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Custom layout
-              </p>
-              <p className="min-w-0 truncate text-sm text-slate-600">
-                {isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
-              </p>
-            </div>
+        <div className="mt-6 grid gap-4 xl:grid-cols-[202px_minmax(0,1fr)_92px] xl:items-start xl:gap-6">
+          <div
+            className="xl:sticky xl:top-6 xl:self-start"
+            data-testid="widget-inventory"
+          >
+            <ToolbarPanel
+              categories={labWorkflowCategories}
+              dragDisabled={isKnifeMode}
+              onItemDragEnd={clearDropTargets}
+              onItemDragStart={(item, allowedDropTargets) => {
+                if (isKnifeMode) {
+                  return;
+                }
+                const payload = createToolbarDragPayload(item);
+                showDropTargets(allowedDropTargets);
+                setActiveDragItem(toDragDescriptor(payload));
+              }}
+            />
           </div>
 
-          <div
-            className={`relative mt-4 overflow-hidden rounded-[2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)] transition-colors ${
-              isDropTargetHighlighted("workspace_canvas")
-                ? "border-sky-300/90 ring-2 ring-sky-200/80"
-                : "border-slate-300/80"
-            }`}
-            data-drop-highlighted={isDropTargetHighlighted("workspace_canvas") ? "true" : "false"}
-            data-testid="widget-workspace"
-            onDragOverCapture={handleWorkspaceDragOver}
-            onDropCapture={handleWorkspaceDrop}
-            ref={workspaceRef}
-            style={{ cursor: workspaceCursor, minHeight: workspaceHeight }}
-          >
+          <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
+            <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Custom layout
+                </p>
+                <p className="min-w-0 truncate text-sm text-slate-600">
+                  {isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={`relative mt-4 overflow-hidden rounded-[2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)] transition-colors ${
+                isDropTargetHighlighted("workspace_canvas")
+                  ? "border-sky-300/90 ring-2 ring-sky-200/80"
+                  : "border-slate-300/80"
+              }`}
+              data-drop-highlighted={isDropTargetHighlighted("workspace_canvas") ? "true" : "false"}
+              data-testid="widget-workspace"
+              onDragOverCapture={handleWorkspaceDragOver}
+              onDropCapture={handleWorkspaceDrop}
+              ref={workspaceRef}
+              style={{ cursor: workspaceCursor, minHeight: workspaceHeight }}
+            >
             <div
               className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]"
               data-testid="workspace-drop-surface-grid"
@@ -1579,58 +1573,6 @@ export function LabScene() {
               className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_26%)]"
               data-testid="workspace-drop-surface-glow"
             />
-
-            <FloatingWidget
-              id="inventory"
-              isActive={activeWidgetId === "inventory"}
-              label="Inventory Widget"
-              onDragStart={(widgetId, event) => {
-                if (isKnifeMode) {
-                  return;
-                }
-                handleWidgetDragStart(widgetId, event);
-              }}
-              onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.inventory}
-              zIndex={10 + widgetOrder.indexOf("inventory")}
-            >
-              <ToolbarPanel
-                categories={labWorkflowCategories}
-                dragDisabled={isKnifeMode}
-                onItemDragEnd={clearDropTargets}
-                onItemDragStart={(item, allowedDropTargets) => {
-                  if (isKnifeMode) {
-                    return;
-                  }
-                  const payload = createToolbarDragPayload(item);
-                  showDropTargets(allowedDropTargets);
-                  setActiveDragItem(toDragDescriptor(payload));
-                }}
-              />
-            </FloatingWidget>
-
-            <FloatingWidget
-              id="actions"
-              isActive={activeWidgetId === "actions"}
-              label="Actions Widget"
-              onDragStart={(widgetId, event) => {
-                if (isKnifeMode) {
-                  return;
-                }
-                handleWidgetDragStart(widgetId, event);
-              }}
-              onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.actions}
-              zIndex={10 + widgetOrder.indexOf("actions")}
-            >
-              <ActionBarPanel
-                activeActionId={activeActionId}
-                onToggleAction={(actionId) => {
-                  clearDropTargets();
-                  setActiveActionId((current) => (current === actionId ? null : actionId));
-                }}
-              />
-            </FloatingWidget>
 
             <FloatingWidget
               id="trash"
@@ -1939,8 +1881,22 @@ export function LabScene() {
                 onToolbarItemDrop={handleToolbarItemDrop}
               />
             </FloatingWidget>
+            </div>
+          </section>
+
+          <div
+            className="xl:sticky xl:top-6 xl:self-start"
+            data-testid="widget-actions"
+          >
+            <ActionBarPanel
+              activeActionId={activeActionId}
+              onToggleAction={(actionId) => {
+                clearDropTargets();
+                setActiveActionId((current) => (current === actionId ? null : actionId));
+              }}
+            />
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
