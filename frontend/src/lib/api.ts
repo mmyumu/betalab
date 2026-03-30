@@ -809,6 +809,7 @@ function normalizeProduceLot(lot: ExperimentProduceLot & Record<string, unknown>
     isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
     label: String(lot.label),
     produceType: String(lot.produceType ?? lot.produce_type) as ExperimentProduceLot["produceType"],
+    residualCo2MassG: Number(lot.residualCo2MassG ?? lot.residual_co2_mass_g ?? 0),
     temperatureC: Number(lot.temperatureC ?? lot.temperature_c ?? 20),
     totalMassG: Number(lot.totalMassG ?? lot.total_mass_g),
     unitCount:

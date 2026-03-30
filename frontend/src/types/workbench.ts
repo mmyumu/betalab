@@ -307,6 +307,7 @@ export type ExperimentProduceLot = {
   isContaminated?: boolean;
   label: string;
   produceType: ProduceLotType;
+  residualCo2MassG?: number;
   temperatureC?: number;
   totalMassG: number;
   unitCount: number | null;

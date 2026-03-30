@@ -884,11 +884,12 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
 
     finished_grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
     assert finished_grinder.produce_lots[0].cut_state == "ground"
+    assert finished_grinder.produce_lots[0].residual_co2_mass_g > 0
     assert -66.0 < finished_grinder.produce_lots[0].temperature_c < -64.0
     assert finished_grinder.produce_lots[0].grind_quality_label == "powder_fine"
     assert finished_grinder.produce_lots[0].homogeneity_score is not None
     assert finished_grinder.produce_lots[0].homogeneity_score > 0.9
-    assert finished_grinder.liquids[0].volume_ml < 382.0
+    assert finished_grinder.liquids == []
     assert finished_grinder.grinder_run_duration_ms == 0.0
     assert finished_grinder.grinder_run_remaining_ms == 0.0
     assert finished.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
@@ -1882,6 +1883,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
             "produce_lot_id": produce_lot_id,
         },
     )
+    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].residual_co2_mass_g = 18.0
     apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
@@ -1907,7 +1909,60 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     assert grinder.produce_lots == []
     assert station_1.tool is not None
     assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
+    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
     assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Sealed sampling bag."
+
+
+def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "sealed_sampling_bag",
+        },
+    )
+
+    experiment_state = service._experiments[experiment.id]
+    grinder = experiment_state.workspace.widgets[-1]
+    grinder.produce_lots[0].cut_state = "ground"
+    grinder.produce_lots[0].residual_co2_mass_g = 2.0
+
+    apply_command(service,
+        experiment.id,
+        "move_widget_produce_lot_to_workbench_tool",
+        {
+            "widget_id": "grinder",
+            "target_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    experiment_state.last_simulation_at -= timedelta(seconds=30)
+    updated = service.get_experiment(experiment.id)
+    station_1 = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+
+    assert station_1.tool is not None
+    assert station_1.tool.produce_lots[0].residual_co2_mass_g < 2.0
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:

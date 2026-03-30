@@ -203,12 +203,15 @@ def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetComma
         return
 
     homogeneity_score, grind_quality_label = cryogenic_simulation_service.score_grind_result(produce_lot)
+    residual_dry_ice_mass_g = sum(liquid.volume_ml for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets")
     produce_lot.cut_state = "ground"
     produce_lot.homogeneity_score = homogeneity_score
     produce_lot.grind_quality_label = grind_quality_label
+    produce_lot.residual_co2_mass_g = round_volume(max(residual_dry_ice_mass_g, 0.0))
     widget.grinder_run_duration_ms = 0.0
     widget.grinder_run_remaining_ms = 0.0
     widget.grinder_fault = None
+    widget.liquids = [liquid for liquid in widget.liquids if liquid.liquid_id != "dry_ice_pellets"]
     experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
 
 

@@ -1564,18 +1564,10 @@ describe("LabScene", () => {
                 label: "Apple lot 1",
                 cutState: "ground",
                 produceType: "apple",
+                residualCo2MassG: 381.7,
                 temperatureC: -65.1,
                 totalMassG: 2450,
                 unitCount: 12,
-              },
-            ],
-            liquids: [
-              {
-                id: "workspace_liquid_1",
-                liquidId: "dry_ice_pellets",
-                name: "Dry ice pellets",
-                volume_ml: 381.7,
-                accent: "sky",
               },
             ],
           }),
@@ -1584,12 +1576,13 @@ describe("LabScene", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("COMPLETE");
-      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Unload ground product");
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("DEGASSING");
+      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Wait for smoke to clear");
       expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
       expect(screen.getByTestId("grinder-produce-produce_1")).toHaveTextContent("Apple lot 1 powder");
+      expect(screen.getByText("Degassing")).toBeInTheDocument();
     });
-    expect(screen.getByText("Dry ice pellets")).toBeInTheDocument();
+    expect(screen.queryByText("Dry ice pellets")).not.toBeInTheDocument();
   });
 
   it("shows a thermometer for grinder produce and updates it from the experiment stream", async () => {
@@ -1797,6 +1790,38 @@ describe("LabScene", () => {
       expect(screen.getByText("6.1°C")).toBeInTheDocument();
     });
     expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("keeps showing a degassing indicator after ground produce leaves the grinder", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  cutState: "ground",
+                  produceType: "apple",
+                  residualCo2MassG: 42.5,
+                  temperatureC: -58.1,
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Degassing")).toBeInTheDocument();
+      expect(screen.getByTestId("bench-produce-lot-produce_1")).toHaveAttribute("data-degassing", "true");
+    });
   });
 
   it("pauses cryogenic ticks while the grinder dosing draft is open", async () => {

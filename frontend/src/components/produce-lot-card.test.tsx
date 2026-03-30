@@ -25,4 +25,27 @@ describe("ProduceLotCard", () => {
     expect(screen.getByText("Jammed")).toBeInTheDocument();
     expect(screen.getByText("Jammed waste • 12 units • 2450 g")).toBeInTheDocument();
   });
+
+  it("shows a degassing indicator when residual CO2 remains in the lot", () => {
+    render(
+      <ProduceLotCard
+        dataTestId="produce-lot-card"
+        metadata="12 units • 2450 g"
+        produceLot={{
+          id: "produce_1",
+          label: "Apple lot 1",
+          produceType: "apple",
+          totalMassG: 2450,
+          unitCount: 12,
+          cutState: "ground",
+          residualCo2MassG: 24.6,
+          temperatureC: -62.4,
+        }}
+        variant="compact"
+      />,
+    );
+
+    expect(screen.getByText("Degassing")).toBeInTheDocument();
+    expect(screen.getByTestId("produce-lot-card")).toHaveAttribute("data-degassing", "true");
+  });
 });

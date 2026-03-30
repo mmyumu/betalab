@@ -115,6 +115,7 @@ class ProduceLot:
     temperature_c: float = 20.0
     grind_quality_label: str | None = None
     homogeneity_score: float | None = None
+    residual_co2_mass_g: float = 0.0
     grinding_elapsed_seconds: float = 0.0
     grinding_temperature_integral: float = 0.0
 

@@ -24,6 +24,7 @@ class CryogenicSimulationService:
     heat_transfer_ua_kj_per_s_c = 1.5
     warming_rate_per_second = 0.014
     ambient_sublimation_g_per_second = 0.04
+    residual_degassing_g_per_second = 12.0
     grinding_friction_heating_c_per_second = 0.4
     grinding_sublimation_boost = 15.0
     grinding_buffer_absorption_ratio = 0.2
@@ -249,6 +250,9 @@ class CryogenicSimulationService:
                 lot.temperature_c
                 + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
                 self.ambient_temperature_c,
+            )
+            lot.residual_co2_mass_g = round_volume(
+                max(lot.residual_co2_mass_g - (self.residual_degassing_g_per_second * elapsed_seconds), 0.0)
             )
 
     def _calculate_ambient_sublimation_mass_loss(self, elapsed_seconds: float) -> float:
