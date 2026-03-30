@@ -14,36 +14,37 @@ export function AppleLotGlyph({ shadowOpacity = 0.08, variant = "whole" }: Apple
   if (variant === "ground") {
     return (
       <>
-        <ellipse cx="48" cy="80" fill="#0f172a" fillOpacity={shadowOpacity} rx="24" ry="5.5" />
+        <ellipse cx="48" cy="80.5" fill="#0f172a" fillOpacity={shadowOpacity} rx="25" ry="5.2" />
         <path
-          d="M24 69C27 60 35 54 46 54C56 54 64 59 68 66C72 72 69 78 60 80H34C26 79 22 75 24 69Z"
+          d="M23 78L28 71L34 64L41 58L47 53L53 58L59 64L65 71L71 78L62 80H32L23 78Z"
           fill="url(#apple-powder-mound)"
           stroke="#92400e"
+          strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="3.2"
         />
         <path
-          d="M31 66C35 62 41 60 47 60C55 60 61 64 63 69"
+          d="M33 68L39 62L47 58L55 63L60 69"
           opacity="0.35"
           stroke="#fef3c7"
           strokeLinecap="round"
           strokeWidth="2.4"
         />
         <path
-          d="M32 73C37 70 43 69 49 69C55 69 60 71 63 74"
+          d="M31 74C36 72 41 71 47 71C54 71 59 72 65 75"
           opacity="0.4"
           stroke="#fef3c7"
           strokeLinecap="round"
           strokeWidth="2.1"
         />
-        <circle cx="34" cy="60" fill="#dc2626" opacity="0.9" r="1.8" />
-        <circle cx="40" cy="56" fill="#ef4444" opacity="0.88" r="1.5" />
-        <circle cx="51" cy="57" fill="#f87171" opacity="0.85" r="1.4" />
-        <circle cx="59" cy="62" fill="#dc2626" opacity="0.82" r="1.7" />
-        <circle cx="66" cy="70" fill="#ef4444" opacity="0.75" r="1.4" />
-        <circle cx="29" cy="76" fill="#f59e0b" opacity="0.45" r="1.1" />
-        <circle cx="37" cy="78" fill="#fde68a" opacity="0.5" r="0.9" />
-        <circle cx="55" cy="77" fill="#fde68a" opacity="0.45" r="0.9" />
+        <circle cx="35" cy="64" fill="#dc2626" opacity="0.9" r="1.8" />
+        <circle cx="42" cy="58" fill="#ef4444" opacity="0.88" r="1.5" />
+        <circle cx="49" cy="55" fill="#f87171" opacity="0.82" r="1.3" />
+        <circle cx="57" cy="61" fill="#dc2626" opacity="0.82" r="1.7" />
+        <circle cx="64" cy="70" fill="#ef4444" opacity="0.75" r="1.4" />
+        <circle cx="28" cy="76" fill="#f59e0b" opacity="0.45" r="1.1" />
+        <circle cx="38" cy="77" fill="#fde68a" opacity="0.5" r="0.9" />
+        <circle cx="56" cy="76" fill="#fde68a" opacity="0.45" r="0.9" />
       </>
     );
   }
