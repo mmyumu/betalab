@@ -141,4 +141,134 @@ describe("useWorkspaceLayout", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("ignores stale external widget sync after a local drop until the backend confirms the new anchor", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const onMoveWidget = vi.fn();
+    const workspaceRef = {
+      current: {
+        getBoundingClientRect: () => ({
+          left: 0,
+          top: 0,
+          width: 1600,
+          height: 1100,
+        }),
+      } as HTMLDivElement,
+    };
+
+    const initialLayout: Record<"rack" | "trash", WidgetLayout> = {
+      rack: {
+        anchor: "top-left",
+        fallbackHeight: 392,
+        offsetX: 234,
+        offsetY: 886,
+        width: 548,
+        x: 234,
+        y: 886,
+      },
+      trash: {
+        anchor: "top-right",
+        fallbackHeight: 214,
+        offsetX: 0,
+        offsetY: 126,
+        width: 164,
+        x: 1436,
+        y: 126,
+      },
+    };
+
+    const { result, rerender } = renderHook(
+      ({
+        syncKey,
+        widgets,
+      }: {
+        syncKey: string | null;
+        widgets: Array<{
+          anchor?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+          id: "rack" | "trash";
+          offsetX?: number;
+          offsetY?: number;
+          x?: number;
+          y?: number;
+        }>;
+      }) =>
+        useWorkspaceLayout({
+          fixedWidgetIds: [],
+          getIsWidgetTrashable: () => false,
+          initialLayout,
+          initialOrder: ["rack", "trash"],
+          onDiscardWidget: vi.fn(),
+          onMoveWidget,
+          presentWidgetIds: ["rack", "trash"],
+          syncKey,
+          trashWidgetId: "trash",
+          widgets,
+          workspaceRef,
+        }),
+      {
+        initialProps: {
+          syncKey: "initial",
+          widgets: [
+            { id: "rack", anchor: "top-left", offsetX: 234, offsetY: 886 },
+            { id: "trash", anchor: "top-right", offsetX: 0, offsetY: 126 },
+          ],
+        },
+      },
+    );
+
+    act(() => {
+      result.current.handleWidgetDragStart("rack", {
+        button: 0,
+        clientX: 300,
+        clientY: 930,
+        preventDefault: vi.fn(),
+      } as unknown as ReactMouseEvent<HTMLDivElement>);
+    });
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent("mousemove", { clientX: 300, clientY: 980 }));
+    });
+
+    expect(result.current.widgetLayout.rack.y).toBe(708);
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent("mouseup", { clientX: 300, clientY: 980 }));
+    });
+
+    expect(onMoveWidget).toHaveBeenCalledWith("rack", {
+      anchor: "top-left",
+      offsetX: 234,
+      offsetY: 708,
+    });
+
+    act(() => {
+      rerender({
+        syncKey: "stale-server-position",
+        widgets: [
+          { id: "rack", anchor: "top-left", offsetX: 234, offsetY: 886 },
+          { id: "trash", anchor: "top-right", offsetX: 0, offsetY: 126 },
+        ],
+      });
+    });
+
+    expect(result.current.widgetLayout.rack.y).toBe(708);
+
+    act(() => {
+      rerender({
+        syncKey: "confirmed-server-position",
+        widgets: [
+          { id: "rack", anchor: "top-left", offsetX: 234, offsetY: 708 },
+          { id: "trash", anchor: "top-right", offsetX: 0, offsetY: 126 },
+        ],
+      });
+    });
+
+    expect(result.current.widgetLayout.rack.y).toBe(708);
+    vi.unstubAllGlobals();
+  });
 });

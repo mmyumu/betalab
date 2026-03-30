@@ -207,6 +207,9 @@ export function useWorkspaceLayout<WidgetId extends string>({
     x: number;
     y: number;
   } | null>(null);
+  const pendingAnchorSyncRef = useRef<
+    Partial<Record<WidgetId, AnchoredWidgetLayout>>
+  >({});
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -324,6 +327,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
     setWidgetLayout((current) => {
       const nextLayout = { ...current };
       let hasChanged = false;
+      const draggedWidgetId = dragStateRef.current?.widgetId ?? null;
 
       (Object.keys(initialLayout) as WidgetId[]).forEach((widgetId) => {
         if (!(widgetId in nextLayout)) {
@@ -334,6 +338,25 @@ export function useWorkspaceLayout<WidgetId extends string>({
 
       widgetsRef.current.forEach((widget) => {
         const currentLayout = nextLayout[widget.id];
+        const pendingAnchorSync = pendingAnchorSyncRef.current[widget.id];
+        const widgetMatchesPendingAnchor =
+          pendingAnchorSync &&
+          widget.anchor === pendingAnchorSync.anchor &&
+          widget.offsetX === pendingAnchorSync.offsetX &&
+          widget.offsetY === pendingAnchorSync.offsetY;
+
+        if (widget.id === draggedWidgetId) {
+          return;
+        }
+
+        if (pendingAnchorSync && !widgetMatchesPendingAnchor) {
+          return;
+        }
+
+        if (widgetMatchesPendingAnchor) {
+          delete pendingAnchorSyncRef.current[widget.id];
+        }
+
         const widgetHeight = widgetHeightsRef.current[widget.id] ?? currentLayout.fallbackHeight;
         const resolvedPosition =
           widget.anchor && widget.offsetX !== undefined && widget.offsetY !== undefined
@@ -512,6 +535,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
     };
 
     const handleMouseUp = (upEvent: MouseEvent) => {
+      const finalPendingDragPosition = pendingDragPositionRef.current;
+
       if (dragAnimationFrameRef.current !== null) {
         window.cancelAnimationFrame(dragAnimationFrameRef.current);
         dragAnimationFrameRef.current = null;
@@ -541,7 +566,25 @@ export function useWorkspaceLayout<WidgetId extends string>({
       dragCleanupRef.current = null;
 
       if (draggedWidgetId) {
-        const nextLayout = widgetLayoutRef.current[draggedWidgetId];
+        const currentDraggedLayout = widgetLayoutRef.current[draggedWidgetId];
+        const finalPosition =
+          finalPendingDragPosition?.widgetId === draggedWidgetId
+            ? {
+                x: finalPendingDragPosition.x,
+                y: finalPendingDragPosition.y,
+              }
+            : {
+                x: currentDraggedLayout.x,
+                y: currentDraggedLayout.y,
+              };
+        const nextLayout =
+          finalPosition.x === currentDraggedLayout.x && finalPosition.y === currentDraggedLayout.y
+            ? currentDraggedLayout
+            : {
+                ...currentDraggedLayout,
+                x: finalPosition.x,
+                y: finalPosition.y,
+              };
 
         if (shouldTrashWidget) {
           onDiscardWidget(draggedWidgetId);
@@ -553,8 +596,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
 
         const anchoredLayout = inferAnchoredLayout(
           {
-            x: nextLayout.x,
-            y: nextLayout.y,
+            x: finalPosition.x,
+            y: finalPosition.y,
           },
           { height: widgetHeight, width: nextLayout.width },
           workspaceSize,
@@ -563,6 +606,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
         setWidgetLayout((current) => {
           const currentDraggedLayout = current[draggedWidgetId];
           if (
+            currentDraggedLayout.x === finalPosition.x &&
+            currentDraggedLayout.y === finalPosition.y &&
             currentDraggedLayout.anchor === anchoredLayout.anchor &&
             currentDraggedLayout.offsetX === anchoredLayout.offsetX &&
             currentDraggedLayout.offsetY === anchoredLayout.offsetY
@@ -574,6 +619,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
             ...current,
             [draggedWidgetId]: {
               ...currentDraggedLayout,
+              x: finalPosition.x,
+              y: finalPosition.y,
               anchor: anchoredLayout.anchor,
               offsetX: anchoredLayout.offsetX,
               offsetY: anchoredLayout.offsetY,
@@ -585,6 +632,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
           return;
         }
 
+        pendingAnchorSyncRef.current[draggedWidgetId] = anchoredLayout;
         onMoveWidget(draggedWidgetId, anchoredLayout);
       }
     };
