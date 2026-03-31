@@ -245,7 +245,7 @@ export function WorkbenchPanel({
         <div className="absolute inset-x-5 bottom-5 top-16 rounded-[2rem] bg-[linear-gradient(180deg,rgba(120,53,15,0)_0%,rgba(146,64,14,0.08)_30%,rgba(120,53,15,0.16)_100%)]" />
         <div className="absolute inset-x-8 bottom-7 h-4 rounded-full bg-amber-900/10 blur-md" />
 
-        <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {slots.map((slot) => {
             const tool = slot.tool;
             const surfaceProduceLots = slot.surfaceProduceLots ?? [];

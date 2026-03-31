@@ -108,7 +108,7 @@ type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
-  workbench: { x: 24, y: 24, width: 1228, fallbackHeight: 860 },
+  workbench: { x: 24, y: 24, width: 1105, fallbackHeight: 860 },
   trash: { x: 1276, y: 24, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 500, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
