@@ -12,7 +12,11 @@ def create_debug_produce_lot_on_workbench(
     experiment: Experiment,
     command: CreateDebugProduceLotOnWorkbenchCommand,
 ) -> None:
-    produce_lot = _build_debug_produce_lot(command.preset_id)
+    produce_lot = _build_debug_produce_lot(
+        command.preset_id,
+        temperature_c=command.temperature_c,
+        residual_co2_mass_g=command.residual_co2_mass_g,
+    )
     target = WorkbenchProduceLotTarget(slot_id=command.target_slot_id)
     target.validate(experiment)
     placement = target.place(experiment, produce_lot)
@@ -25,7 +29,11 @@ def create_debug_produce_lot_to_widget(
     experiment: Experiment,
     command: CreateDebugProduceLotToWidgetCommand,
 ) -> None:
-    produce_lot = _build_debug_produce_lot(command.preset_id)
+    produce_lot = _build_debug_produce_lot(
+        command.preset_id,
+        temperature_c=command.temperature_c,
+        residual_co2_mass_g=command.residual_co2_mass_g,
+    )
     target = GrinderProduceLotTarget(widget_id=command.widget_id)
     target.validate(experiment)
     placement = target.place(experiment, produce_lot)
@@ -34,7 +42,12 @@ def create_debug_produce_lot_to_widget(
     )
 
 
-def _build_debug_produce_lot(preset_id: str) -> ProduceLot:
+def _build_debug_produce_lot(
+    preset_id: str,
+    *,
+    temperature_c: float | None = None,
+    residual_co2_mass_g: float | None = None,
+) -> ProduceLot:
     if preset_id == "apple_powder_residual_co2":
         return ProduceLot(
             id=new_id("produce"),
@@ -43,10 +56,12 @@ def _build_debug_produce_lot(preset_id: str) -> ProduceLot:
             total_mass_g=850.0,
             unit_count=None,
             cut_state="ground",
-            temperature_c=-62.0,
+            temperature_c=temperature_c if temperature_c is not None else -62.0,
             grind_quality_label="powder_fine",
             homogeneity_score=0.96,
-            residual_co2_mass_g=18.0,
+            residual_co2_mass_g=(
+                residual_co2_mass_g if residual_co2_mass_g is not None else 18.0
+            ),
         )
 
     raise ValueError("Unknown debug produce preset")

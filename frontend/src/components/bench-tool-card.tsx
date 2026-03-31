@@ -211,7 +211,9 @@ export function BenchToolCard({
         )}
 
         <div className="space-y-0.5">
-          {isSampleBag ? (
+          {pendingContent ? (
+            pendingContent
+          ) : isSampleBag ? (
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
                 <ProduceLotCard
@@ -262,8 +264,6 @@ export function BenchToolCard({
                 Drop produce lot here
               </span>
             )
-          ) : pendingContent ? (
-            pendingContent
           ) : tool.liquids.length > 0 ? (
             tool.liquids.map((liquid) => (
               <div

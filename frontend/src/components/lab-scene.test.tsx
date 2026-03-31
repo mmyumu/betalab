@@ -472,10 +472,21 @@ describe("LabScene", () => {
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: transfer });
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(await screen.findByLabelText("Debug powder temperature")).toHaveValue(-62);
+    expect(screen.getByLabelText("Debug powder residual CO2")).toHaveValue(18);
+    fireEvent.change(screen.getByLabelText("Debug powder residual CO2"), {
+      target: { value: "19" },
+    });
+    fireEvent.click(screen.getByText("Spawn"));
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "create_debug_produce_lot_on_workbench",
-      { preset_id: "apple_powder_residual_co2", target_slot_id: "station_1" },
+      {
+        preset_id: "apple_powder_residual_co2",
+        residual_co2_mass_g: 19,
+        target_slot_id: "station_1",
+        temperature_c: -62,
+      },
     );
   });
 
@@ -1352,8 +1363,9 @@ describe("LabScene", () => {
     });
     fireEvent.drop(screen.getByTestId("grinder-dropzone"), { dataTransfer: transfer });
 
-    fireEvent.click(screen.getByLabelText("Increase Dry ice draft mass"));
-    fireEvent.click(screen.getByLabelText("Increase Dry ice draft mass"));
+    fireEvent.change(screen.getByLabelText("Dry ice draft mass"), {
+      target: { value: "1200" },
+    });
     fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {
@@ -3155,11 +3167,9 @@ describe("LabScene", () => {
       dataTransfer: liquidTransfer,
     });
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: liquidTransfer });
-    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
-    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
-    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
-    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
-    fireEvent.click(screen.getByLabelText("Decrease Acetonitrile draft volume"));
+    fireEvent.change(screen.getByLabelText("Acetonitrile draft volume"), {
+      target: { value: "5" },
+    });
     fireEvent.click(screen.getByText("Add"));
 
     await waitFor(() => {

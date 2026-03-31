@@ -191,12 +191,16 @@ class CreateProduceLotCommand:
 class CreateDebugProduceLotOnWorkbenchCommand:
     preset_id: str
     target_slot_id: str
+    temperature_c: float | None = None
+    residual_co2_mass_g: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class CreateDebugProduceLotToWidgetCommand:
     preset_id: str
     widget_id: str
+    temperature_c: float | None = None
+    residual_co2_mass_g: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -283,6 +283,8 @@ def create_debug_produce_lot_on_workbench(
             experiment_id,
             preset_id,
             request.target_slot_id,
+            request.temperature_c,
+            request.residual_co2_mass_g,
         )
     )
 
@@ -301,6 +303,8 @@ def create_debug_produce_lot_to_widget(
             experiment_id,
             preset_id,
             request.widget_id,
+            request.temperature_c,
+            request.residual_co2_mass_g,
         )
     )
 

@@ -78,10 +78,18 @@ def apply_command(
         ),
         "create_produce_lot": lambda: service.create_produce_lot(experiment_id, payload["produce_type"]),
         "create_debug_produce_lot_on_workbench": lambda: service.create_debug_produce_lot_on_workbench(
-            experiment_id, payload["preset_id"], payload["target_slot_id"]
+            experiment_id,
+            payload["preset_id"],
+            payload["target_slot_id"],
+            payload.get("temperature_c"),
+            payload.get("residual_co2_mass_g"),
         ),
         "create_debug_produce_lot_to_widget": lambda: service.create_debug_produce_lot_to_widget(
-            experiment_id, payload["preset_id"], payload["widget_id"]
+            experiment_id,
+            payload["preset_id"],
+            payload["widget_id"],
+            payload.get("temperature_c"),
+            payload.get("residual_co2_mass_g"),
         ),
         "discard_workspace_produce_lot": lambda: service.discard_workspace_produce_lot(
             experiment_id, payload["produce_lot_id"]
@@ -2090,6 +2098,8 @@ def test_create_debug_powder_preset_on_workbench() -> None:
         "create_debug_produce_lot_on_workbench",
         {
             "preset_id": "apple_powder_residual_co2",
+            "residual_co2_mass_g": 24.0,
+            "temperature_c": -70.0,
             "target_slot_id": "station_1",
         },
     )
@@ -2097,8 +2107,8 @@ def test_create_debug_powder_preset_on_workbench() -> None:
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.produce_lots[0].cut_state == "ground"
-    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
-    assert slot.tool.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(24.0, abs=0.01)
+    assert slot.tool.produce_lots[0].temperature_c == pytest.approx(-70.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned on Wide-neck HDPE jar."
 
 

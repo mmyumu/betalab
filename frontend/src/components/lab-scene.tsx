@@ -7,7 +7,7 @@ import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
-import { QuantitySelectionCard } from "@/components/quantity-selection-card";
+import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
 import { ProduceLotCard } from "@/components/produce-lot-card";
@@ -166,20 +166,51 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
   return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
 }
 
+function buildDebugProduceDraftFields(): DropDraftField[] {
+  return [
+    {
+      ariaLabel: "Debug powder temperature",
+      id: "temperature_c",
+      inputStep: 1,
+      label: "Temperature",
+      minValue: -120,
+      stepAmount: 5,
+      unitLabel: "C",
+      value: -62,
+      wheelStep: 5,
+    },
+    {
+      ariaLabel: "Debug powder residual CO2",
+      id: "residual_co2_mass_g",
+      inputStep: 0.1,
+      label: "Residual CO2",
+      stepAmount: 1,
+      unitLabel: "g",
+      value: 18,
+      wheelStep: 1,
+    },
+  ];
+}
+
 export function LabScene() {
   const experimentApi = useLabExperiment({
     defaultErrorMessage,
     defaultStatusMessage,
   });
   const { state, statusMessage, isCommandPending, loadExperiment } = experimentApi;
-  const [pendingQuantityDraft, setPendingQuantityDraft] = useState<{
-    itemId: string;
-    name: string;
-    quantity: number;
-    stepAmount: number;
+  const [pendingDropDraft, setPendingDropDraft] = useState<{
+    commandType:
+      | "add_liquid_to_workbench_tool"
+      | "add_liquid_to_workspace_widget"
+      | "create_debug_produce_lot_on_workbench"
+      | "create_debug_produce_lot_to_widget";
+    confirmLabel?: string;
+    fields: DropDraftField[];
+    itemId?: string;
+    presetId?: string;
     targetId: string;
     targetKind: "bench_slot" | "workspace_widget";
-    unitLabel: "g" | "mL";
+    title: string;
   } | null>(null);
   const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
   const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
@@ -230,13 +261,13 @@ export function LabScene() {
     const grinder = state.experiment.workspace.widgets.find((widget) => widget.id === "grinder");
     const hasProduceLot = (grinder?.produceLots?.length ?? 0) > 0;
     const grinderDraftIsOpen =
-      pendingQuantityDraft?.targetKind === "workspace_widget" &&
-      pendingQuantityDraft.targetId === "grinder";
+      pendingDropDraft?.targetKind === "workspace_widget" &&
+      pendingDropDraft.targetId === "grinder";
 
     if (!hasProduceLot || grinderDraftIsOpen) {
       setGrinderFeedback("neutral");
     }
-  }, [pendingQuantityDraft, state]);
+  }, [pendingDropDraft, state]);
 
   useEffect(() => {
     const grinder = state.status === "ready"
@@ -244,8 +275,8 @@ export function LabScene() {
       : null;
     const loadedLot = grinder?.produceLots?.[0] ?? null;
     const grinderDraftIsOpen =
-      pendingQuantityDraft?.targetKind === "workspace_widget" &&
-      pendingQuantityDraft.targetId === "grinder";
+      pendingDropDraft?.targetKind === "workspace_widget" &&
+      pendingDropDraft.targetId === "grinder";
 
     if (!loadedLot || grinderDraftIsOpen) {
       return;
@@ -257,7 +288,7 @@ export function LabScene() {
     if (!lotIsWhole && lotTemperatureC <= grinderStartThresholdC) {
       setGrinderFeedback("neutral");
     }
-  }, [pendingQuantityDraft, state]);
+  }, [pendingDropDraft, state]);
 
   const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
     setActiveDropTargets([...dropTargets]);
@@ -288,14 +319,24 @@ export function LabScene() {
 
     clearDropTargets();
     const liquidDefinition = labLiquidCatalog[payload.itemId];
-    setPendingQuantityDraft({
+    setPendingDropDraft({
+      commandType: "add_liquid_to_workbench_tool",
+      fields: [
+        {
+          ariaLabel: `${liquidDefinition?.name ?? "Liquid"} draft volume`,
+          id: "volume_ml",
+          inputStep: 0.1,
+          label: "Volume",
+          stepAmount: 1,
+          unitLabel: "mL",
+          value: liquidDefinition?.transfer_volume_ml ?? 0,
+          wheelStep: 1,
+        },
+      ],
       itemId: payload.itemId,
-      name: liquidDefinition?.name ?? "Liquid",
-      quantity: liquidDefinition?.transfer_volume_ml ?? 0,
-      stepAmount: 1,
       targetId: slotId,
       targetKind: "bench_slot",
-      unitLabel: "mL",
+      title: `Dose ${liquidDefinition?.name ?? "Liquid"}`,
     });
   };
 
@@ -349,14 +390,24 @@ export function LabScene() {
 
   const handleOpenGrinderLiquidDraft = (liquidId: "dry_ice_pellets") => {
     const liquidDefinition = labLiquidCatalog[liquidId];
-    setPendingQuantityDraft({
+    setPendingDropDraft({
+      commandType: "add_liquid_to_workspace_widget",
+      fields: [
+        {
+          ariaLabel: "Dry ice draft mass",
+          id: "volume_ml",
+          inputStep: 1,
+          label: "Mass",
+          stepAmount: 100,
+          unitLabel: "g",
+          value: liquidDefinition?.transfer_volume_ml ?? 1000,
+          wheelStep: 100,
+        },
+      ],
       itemId: liquidId,
-      name: liquidDefinition?.name ?? "Dry ice pellets",
-      quantity: liquidDefinition?.transfer_volume_ml ?? 1000,
-      stepAmount: 100,
       targetId: "grinder",
       targetKind: "workspace_widget",
-      unitLabel: "g",
+      title: `Dose ${liquidDefinition?.name ?? "Dry ice pellets"}`,
     });
   };
 
@@ -384,27 +435,75 @@ export function LabScene() {
     setActiveDragItem(toDragDescriptor(payload));
   };
 
-  const handleConfirmQuantityDraft = () => {
-    if (!pendingQuantityDraft) {
+  const handleUpdateDropDraftField = (fieldId: string, value: number) => {
+    setPendingDropDraft((current) =>
+      current
+        ? {
+            ...current,
+            fields: current.fields.map((field) =>
+              field.id === fieldId
+                ? { ...field, value: Math.max(value, field.minValue ?? 0) }
+                : field,
+            ),
+          }
+        : current,
+    );
+  };
+
+  const handleConfirmDropDraft = () => {
+    if (!pendingDropDraft) {
       return;
     }
 
-    if (pendingQuantityDraft.targetKind === "workspace_widget") {
+    const getFieldValue = (fieldId: string) =>
+      pendingDropDraft.fields.find((field) => field.id === fieldId)?.value ?? 0;
+
+    if (pendingDropDraft.commandType === "add_liquid_to_workspace_widget") {
       void experimentApi.addLiquidToWorkspaceWidget( {
-        widget_id: pendingQuantityDraft.targetId,
-        liquid_id: pendingQuantityDraft.itemId,
-        volume_ml: pendingQuantityDraft.quantity,
+        widget_id: pendingDropDraft.targetId,
+        liquid_id: pendingDropDraft.itemId ?? "dry_ice_pellets",
+        volume_ml: getFieldValue("volume_ml"),
       });
-      setPendingQuantityDraft(null);
+      setPendingDropDraft(null);
       return;
     }
 
-    void experimentApi.addLiquidToWorkbenchTool( {
-      slot_id: pendingQuantityDraft.targetId,
-      liquid_id: pendingQuantityDraft.itemId,
-      volume_ml: pendingQuantityDraft.quantity,
-    });
-    setPendingQuantityDraft(null);
+    if (pendingDropDraft.commandType === "add_liquid_to_workbench_tool") {
+      void experimentApi.addLiquidToWorkbenchTool( {
+        slot_id: pendingDropDraft.targetId,
+        liquid_id: pendingDropDraft.itemId ?? "",
+        volume_ml: getFieldValue("volume_ml"),
+      });
+      setPendingDropDraft(null);
+      return;
+    }
+
+    if (
+      pendingDropDraft.commandType === "create_debug_produce_lot_to_widget" &&
+      pendingDropDraft.presetId
+    ) {
+      void experimentApi.createDebugProduceLotToWidget({
+        preset_id: pendingDropDraft.presetId,
+        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
+        temperature_c: getFieldValue("temperature_c"),
+        widget_id: pendingDropDraft.targetId,
+      });
+      setPendingDropDraft(null);
+      return;
+    }
+
+    if (
+      pendingDropDraft.commandType === "create_debug_produce_lot_on_workbench" &&
+      pendingDropDraft.presetId
+    ) {
+      void experimentApi.createDebugProduceLotOnWorkbench({
+        preset_id: pendingDropDraft.presetId,
+        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
+        target_slot_id: pendingDropDraft.targetId,
+        temperature_c: getFieldValue("temperature_c"),
+      });
+      setPendingDropDraft(null);
+    }
   };
 
   const handleAddWorkbenchSlot = () => {
@@ -493,9 +592,14 @@ export function LabScene() {
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
     if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
-      void experimentApi.createDebugProduceLotOnWorkbench({
-        preset_id: payload.debugProducePresetId,
-        target_slot_id: targetSlotId,
+      setPendingDropDraft({
+        commandType: "create_debug_produce_lot_on_workbench",
+        confirmLabel: "Spawn",
+        fields: buildDebugProduceDraftFields(),
+        presetId: payload.debugProducePresetId,
+        targetId: targetSlotId,
+        targetKind: "bench_slot",
+        title: "Configure Apple powder",
       });
       clearDropTargets();
       return;
@@ -732,9 +836,14 @@ export function LabScene() {
     clearDropTargets();
 
     if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
-      void experimentApi.createDebugProduceLotToWidget({
-        preset_id: producePayload.debugProducePresetId,
-        widget_id: "grinder",
+      setPendingDropDraft({
+        commandType: "create_debug_produce_lot_to_widget",
+        confirmLabel: "Spawn",
+        fields: buildDebugProduceDraftFields(),
+        presetId: producePayload.debugProducePresetId,
+        targetId: "grinder",
+        targetKind: "workspace_widget",
+        title: "Configure Apple powder",
       });
       return;
     }
@@ -956,13 +1065,13 @@ export function LabScene() {
     grinderRunDurationMs > 0
       ? Math.max(0, Math.min(((grinderRunDurationMs - grinderRunRemainingMs) / grinderRunDurationMs) * 100, 100))
       : 0;
-  const pendingGrinderQuantityDraft =
-    pendingQuantityDraft?.targetKind === "workspace_widget" &&
-    pendingQuantityDraft.targetId === "grinder"
-      ? pendingQuantityDraft
+  const pendingGrinderDropDraft =
+    pendingDropDraft?.targetKind === "workspace_widget" &&
+    pendingDropDraft.targetId === "grinder"
+      ? pendingDropDraft
       : null;
   const grinderCanAttempt =
-    grinderHasProduceLot && !grinderLotIsGround && !grinderLotIsWaste && !pendingGrinderQuantityDraft;
+    grinderHasProduceLot && !grinderLotIsGround && !grinderLotIsWaste && !pendingGrinderDropDraft;
   const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
   const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
   const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
@@ -1077,10 +1186,10 @@ export function LabScene() {
                 ? "Cycle ready"
                 : "No sample";
 
-  const renderPendingBenchQuantityDraft = (slotId: string) => {
+  const renderPendingBenchDropDraft = (slotId: string) => {
     const pendingBenchDraft =
-      pendingQuantityDraft?.targetKind === "bench_slot" && pendingQuantityDraft.targetId === slotId
-        ? pendingQuantityDraft
+      pendingDropDraft?.targetKind === "bench_slot" && pendingDropDraft.targetId === slotId
+        ? pendingDropDraft
         : null;
 
     if (!pendingBenchDraft) {
@@ -1088,28 +1197,15 @@ export function LabScene() {
     }
 
     return (
-      <QuantitySelectionCard
-        ariaLabel={`${pendingBenchDraft.name} draft volume`}
-        inputStep={0.1}
+      <DropDraftCard
+        confirmLabel={pendingBenchDraft.confirmLabel}
+        fields={pendingBenchDraft.fields}
         onCancel={() => {
-          setPendingQuantityDraft(null);
+          setPendingDropDraft(null);
         }}
-        onChange={(value) => {
-          setPendingQuantityDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  quantity: Math.max(value, 0),
-                }
-              : current,
-          );
-        }}
-        onConfirm={handleConfirmQuantityDraft}
-        stepAmount={pendingBenchDraft.stepAmount}
-        title={`Dose ${pendingBenchDraft.name}`}
-        unitLabel={pendingBenchDraft.unitLabel}
-        value={pendingBenchDraft.quantity}
-        wheelStep={1}
+        onChangeField={handleUpdateDropDraftField}
+        onConfirm={handleConfirmDropDraft}
+        title={pendingBenchDraft.title}
       />
     );
   };
@@ -1873,29 +1969,16 @@ export function LabScene() {
                               }
                             />
                           ))}
-                          {pendingGrinderQuantityDraft ? (
-                            <QuantitySelectionCard
-                              ariaLabel="Dry ice draft mass"
-                              inputStep={1}
+                          {pendingGrinderDropDraft ? (
+                            <DropDraftCard
+                              confirmLabel={pendingGrinderDropDraft.confirmLabel}
+                              fields={pendingGrinderDropDraft.fields}
                               onCancel={() => {
-                                setPendingQuantityDraft(null);
+                                setPendingDropDraft(null);
                               }}
-                              onChange={(value) => {
-                                setPendingQuantityDraft((current) =>
-                                  current
-                                    ? {
-                                        ...current,
-                                        quantity: Math.max(value, 0),
-                                      }
-                                    : current,
-                                );
-                              }}
-                              onConfirm={handleConfirmQuantityDraft}
-                              stepAmount={pendingGrinderQuantityDraft.stepAmount}
-                              title={`Dose ${pendingGrinderQuantityDraft.name}`}
-                              unitLabel={pendingGrinderQuantityDraft.unitLabel}
-                              value={pendingGrinderQuantityDraft.quantity}
-                              wheelStep={100}
+                              onChangeField={handleUpdateDropDraftField}
+                              onConfirm={handleConfirmDropDraft}
+                              title={pendingGrinderDropDraft.title}
                             />
                           ) : null}
                         </div>
@@ -1938,7 +2021,7 @@ export function LabScene() {
                 onSampleLabelDragEnd={clearDropTargets}
                 onSampleLabelDragStart={handleWorkbenchSampleLabelDragStart}
                 onSampleLabelTextChange={handleSampleLabelTextChange}
-                renderPendingContent={(slot) => renderPendingBenchQuantityDraft(slot.id)}
+                renderPendingContent={(slot) => renderPendingBenchDropDraft(slot.id)}
                 slots={slots}
                 statusMessage={statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
