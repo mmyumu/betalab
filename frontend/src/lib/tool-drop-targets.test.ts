@@ -19,6 +19,7 @@ describe("tool drop targets", () => {
     expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin"]);
     expect(getToolDropTargets("cutting_board")).toEqual(["workbench_slot", "trash_bin"]);
     expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot", "trash_bin"]);
+    expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin"]);
   });
 
   it("keeps produce lot compatibility independent from origin and includes the grinder", () => {

@@ -70,6 +70,14 @@ WORKBENCH_TOOLS = {
         tool_type="sample_bag",
         capacity_ml=500.0,
     ),
+    "hdpe_storage_jar_2l": WorkbenchToolDefinition(
+        id="hdpe_storage_jar_2l",
+        name="Wide-neck HDPE jar",
+        subtitle="Bulk powder storage",
+        accent="sky",
+        tool_type="storage_jar",
+        capacity_ml=2000.0,
+    ),
 }
 
 

@@ -5,6 +5,7 @@ import { AppleIllustration } from "@/components/illustrations/apple-illustration
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { ItemCountBadge } from "@/components/item-count-badge";
+import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 
@@ -167,5 +168,20 @@ describe("workspace equipment illustrations", () => {
     expect(screen.getByTestId("item-count-badge")).toHaveTextContent("7");
     expect(screen.getByTestId("item-count-badge")).toHaveClass("rounded-full");
     expect(screen.getByTestId("item-count-badge")).toHaveClass("bg-slate-900");
+  });
+
+  it("renders the HDPE storage jar icon on bench assets", () => {
+    render(
+      <LabAssetIcon
+        accent="sky"
+        className="h-22 w-16"
+        kind="storage_jar"
+        produceLots={[]}
+        tone="neutral"
+      />,
+    );
+
+    expect(screen.getByLabelText("storage jar")).toBeInTheDocument();
+    expect(screen.getByLabelText("storage jar").parentElement).toHaveAttribute("data-kind", "storage_jar");
   });
 });

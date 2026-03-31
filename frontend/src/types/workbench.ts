@@ -23,7 +23,8 @@ export type ToolType =
   | "centrifuge_tube"
   | "cleanup_tube"
   | "cutting_board"
-  | "sample_bag";
+  | "sample_bag"
+  | "storage_jar";
 
 export type LiquidType =
   | "ultrapure_water"

@@ -439,6 +439,58 @@ function SampleBagIcon({
   );
 }
 
+function StorageJarIcon({
+  glow,
+  label,
+  produceLots,
+  stroke,
+}: {
+  glow: string;
+  label: string;
+  produceLots: ExperimentProduceLot[];
+  stroke: string;
+}) {
+  const isLoaded = produceLots.length > 0;
+  const visibleProduceLots = produceLots.slice(0, 2);
+
+  return (
+    <VesselFrame glow={glow} label={label} stroke={stroke}>
+      <rect fill="#334155" height="16" rx="5" stroke="none" width="40" x="24" y="16" />
+      <rect fill="#475569" height="8" rx="3" stroke="none" width="46" x="21" y="22" />
+      <path d="M22 30H66V88C66 97 59 104 50 104H38C29 104 22 97 22 88V30Z" />
+      <path d="M30 42H58" opacity="0.35" />
+      <path d="M30 52H58" opacity="0.28" />
+      {isLoaded ? (
+        <>
+          <path d="M26 58C31 52 38 49 44 50C50 51 57 51 62 48V83C62 91 54 97 44 99C34 97 26 91 26 83V58Z" fill="#e2e8f0" opacity="0.82" stroke="none" />
+          {visibleProduceLots.map((produceLot, index) => (
+            <g
+              key={produceLot.id}
+              opacity={index === 0 ? 0.72 : 0.58}
+              transform={index === 0 ? "translate(22 46) scale(0.42)" : "translate(39 53) scale(0.29)"}
+            >
+              <AppleLotGlyph
+                shadowOpacity={0.03}
+                variant={
+                  produceLot.cutState === "ground"
+                    ? "ground"
+                    : produceLot.cutState === "whole"
+                      ? "whole"
+                      : "cut"
+                }
+              />
+            </g>
+          ))}
+        </>
+      ) : (
+        <path d="M28 58H60V86C60 92 55 96 50 96H38C33 96 28 92 28 86V58Z" fill="#f8fafc" opacity="0.6" stroke="none" />
+      )}
+      <path d="M26 34H62" opacity="0.45" />
+      <path d="M24 30H64" />
+    </VesselFrame>
+  );
+}
+
 export function LabAssetIcon({
   accent,
   className,
@@ -526,6 +578,16 @@ export function LabAssetIcon({
           label={label}
           produceLots={produceLots}
           sampleLabelText={sampleLabelText}
+          stroke={palette.stroke}
+        />
+      );
+      break;
+    case "storage_jar":
+      icon = (
+        <StorageJarIcon
+          glow={palette.glow}
+          label={label}
+          produceLots={produceLots}
           stroke={palette.stroke}
         />
       );
