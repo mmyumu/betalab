@@ -23,7 +23,6 @@ import {
   type WidgetLayout,
   useWorkspaceLayout,
 } from "@/hooks/use-workspace-layout";
-import { isProduceLotDegassing } from "@/lib/produce-lot-display";
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
@@ -924,7 +923,6 @@ export function LabScene() {
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
   const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
-  const grinderLotIsDegassing = grinderLoadedLot ? isProduceLotDegassing(grinderLoadedLot) : false;
   const grinderLotIsWaste = (grinderLoadedLot?.cutState ?? "whole") === "waste";
   const grinderFault = grinderWidget?.grinderFault ?? null;
   const grinderRunRemainingMs = grinderWidget?.grinderRunRemainingMs ?? 0;
@@ -974,9 +972,7 @@ export function LabScene() {
     });
   };
   const grinderDisplayMode = grinderLotIsGround
-    ? grinderLotIsDegassing
-      ? "degassing"
-      : "complete"
+    ? "complete"
     : grinderFault === "motor_jammed"
       ? "jammed"
     : !grinderCanAttempt
@@ -993,8 +989,6 @@ export function LabScene() {
   const grinderDisplayLabel =
     grinderDisplayMode === "running"
       ? "RUNNING"
-      : grinderDisplayMode === "degassing"
-        ? "DEGASSING"
       : grinderDisplayMode === "complete"
         ? "COMPLETE"
       : grinderDisplayMode === "warning"
@@ -1009,8 +1003,6 @@ export function LabScene() {
   const grinderInfoLine1 =
     grinderDisplayMode === "running"
       ? `Progress ${Math.round(grinderProgressPercent)}%`
-      : grinderDisplayMode === "degassing"
-        ? "Smoke visible"
       : grinderDisplayMode === "warning"
         ? `Torque high`
       : grinderDisplayMode === "ready"
@@ -1025,16 +1017,12 @@ export function LabScene() {
   const grinderInfoLine1Right =
     grinderDisplayMode === "running" || grinderDisplayMode === "warning"
       ? "RPM 10000"
-      : grinderDisplayMode === "degassing"
-        ? "Mass unstable"
       : grinderDisplayMode === "ready"
         ? "Cycle 30s"
         : "";
   const grinderInfoLine2 =
     grinderDisplayMode === "running"
       ? "Load nominal"
-      : grinderDisplayMode === "degassing"
-        ? "Residual CO2"
       : grinderDisplayMode === "warning"
         ? "Jam risk"
       : grinderDisplayMode === "ready"
@@ -1049,8 +1037,6 @@ export function LabScene() {
   const grinderInfoLine2Right =
     grinderDisplayMode === "running"
       ? "Cryo mode"
-      : grinderDisplayMode === "degassing"
-        ? "Wait to weigh"
       : grinderDisplayMode === "warning"
         ? "Pre-cool now"
       : grinderDisplayMode === "ready"
@@ -1751,8 +1737,6 @@ export function LabScene() {
                                       ? grinderLotIsWaste
                                         ? "Discard jammed waste"
                                         : "Product not cold enough"
-                                      : grinderDisplayMode === "degassing"
-                                        ? "Wait for smoke to clear"
                                       : grinderDisplayMode === "warning"
                                         ? "High torque detected"
                                       : grinderDisplayMode === "complete"

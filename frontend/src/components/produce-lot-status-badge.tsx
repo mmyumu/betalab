@@ -1,6 +1,5 @@
 "use client";
 
-import { isProduceLotDegassing } from "@/lib/produce-lot-display";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceLotStatusBadgeProps = {
@@ -12,9 +11,7 @@ export function ProduceLotStatusBadge({
   className = "",
   produceLot,
 }: ProduceLotStatusBadgeProps) {
-  const statusLabel = isProduceLotDegassing(produceLot)
-    ? "degassing"
-    : produceLot.isContaminated
+  const statusLabel = produceLot.isContaminated
     ? "contaminated"
     : produceLot.cutState === "waste"
       ? "waste"
@@ -23,9 +20,7 @@ export function ProduceLotStatusBadge({
       : produceLot.cutState === "cut"
         ? "cut"
         : "clean";
-  const toneClassName = isProduceLotDegassing(produceLot)
-    ? "border-sky-200 bg-sky-50 text-sky-700"
-    : produceLot.isContaminated
+  const toneClassName = produceLot.isContaminated
     ? "border-rose-200 bg-rose-50 text-rose-700"
     : produceLot.cutState === "waste"
       ? "border-slate-300 bg-slate-100 text-slate-600"

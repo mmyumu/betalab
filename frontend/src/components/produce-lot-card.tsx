@@ -2,14 +2,11 @@
 
 import type { DragEvent, ReactNode } from "react";
 
+import { DegassingIndicator } from "@/components/degassing-indicator";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import {
-  getProduceLotDegassingIntensity,
-  getProduceLotDisplayName,
-  isProduceLotDegassing,
-} from "@/lib/produce-lot-display";
+import { getProduceLotDisplayName, isProduceLotDegassing } from "@/lib/produce-lot-display";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceLotCardProps = {
@@ -49,13 +46,7 @@ export function ProduceLotCard({
 }: ProduceLotCardProps) {
   const displayName = getProduceLotDisplayName(produceLot);
   const isDegassing = isProduceLotDegassing(produceLot);
-  const degassingIntensity = getProduceLotDegassingIntensity(produceLot);
-  const degassingToneClassName =
-    degassingIntensity === "heavy"
-      ? "border-slate-300 bg-slate-100 text-slate-700"
-      : degassingIntensity === "medium"
-        ? "border-sky-200 bg-sky-50 text-sky-700"
-        : "border-cyan-200 bg-cyan-50 text-cyan-700";
+  const degassingProgress = Math.min((produceLot.residualCo2MassG ?? 0) / Math.max(produceLot.totalMassG * 0.12, 1), 1);
   const cardClassName =
     variant === "compact"
       ? "rounded-[1rem] border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
@@ -82,13 +73,6 @@ export function ProduceLotCard({
               variant={getProduceIllustrationVariant(produceLot)}
             />
             <div className="min-w-0 flex-1">
-              {isDegassing ? (
-                <p
-                  className={`mb-0.5 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] ${degassingToneClassName}`}
-                >
-                  Degassing
-                </p>
-              ) : null}
               {produceLot.cutState === "waste" ? (
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                   Jammed
@@ -98,7 +82,8 @@ export function ProduceLotCard({
                 {metadata}
               </p>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 flex items-center gap-1">
+              {isDegassing ? <DegassingIndicator progress={degassingProgress} /> : null}
               <TemperatureIndicator
                 temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
               />
@@ -116,13 +101,6 @@ export function ProduceLotCard({
               />
             </div>
             <div className="min-w-0">
-              {isDegassing ? (
-                <span
-                  className={`mb-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] ${degassingToneClassName}`}
-                >
-                  Degassing
-                </span>
-              ) : null}
               <span className="block truncate text-sm font-semibold text-slate-900" title={displayName}>
                 {displayName}
               </span>
@@ -131,7 +109,8 @@ export function ProduceLotCard({
               </span>
             </div>
           </div>
-          <div className="self-stretch flex items-center">
+          <div className="self-stretch flex items-center gap-1">
+            {isDegassing ? <DegassingIndicator progress={degassingProgress} /> : null}
             <TemperatureIndicator
               temperatureC={produceLot.temperatureC ?? ambientTemperatureC}
             />

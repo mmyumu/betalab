@@ -1,19 +1,63 @@
 import type { SVGProps } from "react";
 
 type AppleIllustrationProps = SVGProps<SVGSVGElement> & {
+  smokeIntensity?: "none" | "light" | "medium" | "heavy";
   testId?: string;
   variant?: "whole" | "cut" | "ground";
 };
 
 type AppleClusterProps = {
+  smokeIntensity?: "none" | "light" | "medium" | "heavy";
   shadowOpacity?: number;
   variant?: "whole" | "cut" | "ground";
 };
 
-export function AppleLotGlyph({ shadowOpacity = 0.08, variant = "whole" }: AppleClusterProps) {
+function PowderSmoke({ smokeIntensity }: { smokeIntensity: "none" | "light" | "medium" | "heavy" }) {
+  if (smokeIntensity === "none") {
+    return null;
+  }
+
+  const opacity =
+    smokeIntensity === "heavy"
+      ? 0.95
+      : smokeIntensity === "medium"
+        ? 0.74
+        : 0.52;
+  const scale = smokeIntensity === "heavy" ? 1.08 : smokeIntensity === "medium" ? 1 : 0.92;
+
+  return (
+    <g opacity={opacity} transform={`translate(${48 - (48 * scale)} ${50 - (50 * scale)}) scale(${scale})`}>
+      <path
+        d="M29 54C24 48 26 41 33 39C33 33 38 30 43 32C46 27 53 27 56 32C62 31 66 35 66 41C71 43 72 48 69 53"
+        fill="url(#apple-powder-smoke)"
+      />
+      <path
+        d="M36 47C33 43 34 38 39 37C40 32 45 31 48 34C52 30 58 32 59 37C64 38 65 43 62 47"
+        fill="url(#apple-powder-smoke-core)"
+      />
+      <path
+        d="M44 39C43 36 45 34 48 34C50 31 54 31 56 34C59 34 61 37 60 40"
+        fill="none"
+        opacity="0.6"
+        stroke="#ffffff"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+      <circle cx="33" cy="50" fill="#ffffff" opacity="0.32" r="2.6" />
+      <circle cx="61" cy="50" fill="#e0f2fe" opacity="0.38" r="2.2" />
+    </g>
+  );
+}
+
+export function AppleLotGlyph({
+  shadowOpacity = 0.08,
+  smokeIntensity = "none",
+  variant = "whole",
+}: AppleClusterProps) {
   if (variant === "ground") {
     return (
       <>
+        <PowderSmoke smokeIntensity={smokeIntensity} />
         <ellipse cx="48" cy="80.5" fill="#0f172a" fillOpacity={shadowOpacity} rx="25" ry="5.2" />
         <path
           d="M23 78L28 71L34 64L41 58L47 53L53 58L59 64L65 71L71 78L62 80H32L23 78Z"
@@ -193,6 +237,7 @@ export function AppleLotGlyph({ shadowOpacity = 0.08, variant = "whole" }: Apple
 
 export function AppleIllustration({
   className,
+  smokeIntensity = "none",
   testId = "apple-illustration",
   variant = "whole",
   ...props
@@ -202,6 +247,7 @@ export function AppleIllustration({
       aria-label="Apple lot illustration"
       className={className}
       data-apple-count="3"
+      data-smoke-intensity={smokeIntensity}
       data-variant={variant}
       data-testid={testId}
       fill="none"
@@ -209,7 +255,7 @@ export function AppleIllustration({
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <AppleLotGlyph variant={variant} />
+      <AppleLotGlyph smokeIntensity={smokeIntensity} variant={variant} />
       <defs>
         <linearGradient id="apple-lot-body-left" x1="52" x2="52" y1="32" y2="80">
           <stop stopColor="#fb7185" />
@@ -232,6 +278,16 @@ export function AppleIllustration({
           <stop offset="0.48" stopColor="#ef4444" />
           <stop offset="1" stopColor="#b91c1c" />
         </linearGradient>
+        <radialGradient id="apple-powder-smoke" cx="0" cy="0" gradientTransform="translate(47 43) rotate(90) scale(14 24)" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="0.52" stopColor="#e0f2fe" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#e2e8f0" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="apple-powder-smoke-core" cx="0" cy="0" gradientTransform="translate(48 41) rotate(90) scale(10 17)" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity="0.88" />
+          <stop offset="0.6" stopColor="#f8fafc" stopOpacity="0.4" />
+          <stop offset="1" stopColor="#e2e8f0" stopOpacity="0" />
+        </radialGradient>
       </defs>
     </svg>
   );

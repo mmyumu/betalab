@@ -1576,11 +1576,14 @@ describe("LabScene", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("DEGASSING");
-      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Wait for smoke to clear");
+      expect(screen.getByTestId("grinder-lcd-status")).toHaveTextContent("COMPLETE");
+      expect(screen.getByTestId("grinder-lcd-message")).toHaveTextContent("Unload ground product");
       expect(screen.getByTestId("grinder-power-button")).toBeDisabled();
       expect(screen.getByTestId("grinder-produce-produce_1")).toHaveTextContent("Apple lot 1 powder");
-      expect(screen.getByText("Degassing")).toBeInTheDocument();
+    });
+    expect(within(screen.getByTestId("grinder-produce-produce_1")).getByTestId("degassing-indicator")).toBeInTheDocument();
+    expect(within(screen.getByTestId("grinder-produce-produce_1")).getByTestId("degassing-indicator-fill")).toHaveStyle({
+      height: "100%",
     });
     expect(screen.queryByText("Dry ice pellets")).not.toBeInTheDocument();
   });
@@ -1819,9 +1822,9 @@ describe("LabScene", () => {
     render(<PesticideWorkbench />);
 
     await waitFor(() => {
-      expect(screen.getByText("Degassing")).toBeInTheDocument();
       expect(screen.getByTestId("bench-produce-lot-produce_1")).toHaveAttribute("data-degassing", "true");
     });
+    expect(within(screen.getByTestId("bench-produce-lot-produce_1")).getByTestId("degassing-indicator")).toBeInTheDocument();
   });
 
   it("pauses cryogenic ticks while the grinder dosing draft is open", async () => {

@@ -45,7 +45,8 @@ describe("ProduceLotCard", () => {
       />,
     );
 
-    expect(screen.getByText("Degassing")).toBeInTheDocument();
     expect(screen.getByTestId("produce-lot-card")).toHaveAttribute("data-degassing", "true");
+    expect(screen.getByTestId("degassing-indicator")).toBeInTheDocument();
+    expect(screen.getByTestId("degassing-indicator-fill")).toHaveStyle({ height: "10%" });
   });
 });

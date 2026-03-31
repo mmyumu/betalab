@@ -149,6 +149,18 @@ describe("workspace equipment illustrations", () => {
     expect(screen.getByTestId("apple-powder-illustration")).toHaveAttribute("data-variant", "ground");
   });
 
+  it("renders smoke intensity on the ground illustration", () => {
+    render(
+      <AppleIllustration
+        smokeIntensity="medium"
+        testId="apple-smoke-illustration"
+        variant="ground"
+      />,
+    );
+
+    expect(screen.getByTestId("apple-smoke-illustration")).toHaveAttribute("data-smoke-intensity", "medium");
+  });
+
   it("renders a reusable item count badge", () => {
     render(<ItemCountBadge count={7} testId="item-count-badge" />);
 
