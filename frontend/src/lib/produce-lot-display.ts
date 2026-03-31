@@ -1,7 +1,11 @@
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 export function getProduceLotDisplayName(produceLot: ExperimentProduceLot) {
-  return produceLot.cutState === "ground" ? `${produceLot.label} powder` : produceLot.label;
+  if (produceLot.cutState !== "ground") {
+    return produceLot.label;
+  }
+
+  return /\bpowder\b/i.test(produceLot.label) ? produceLot.label : `${produceLot.label} powder`;
 }
 
 export function isProduceLotDegassing(produceLot: ExperimentProduceLot) {

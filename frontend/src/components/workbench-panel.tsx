@@ -80,7 +80,7 @@ type WorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onSampleLabelTextChange?: (slotId: string, sampleLabelText: string) => void;
-  renderPendingContent?: (slot: BenchSlot, tool: BenchToolInstance) => ReactNode;
+  renderPendingContent?: (slot: BenchSlot, tool: BenchToolInstance | null) => ReactNode;
   slots: BenchSlot[];
   statusMessage: string;
   onToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
@@ -248,6 +248,7 @@ export function WorkbenchPanel({
         <div className="relative grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {slots.map((slot) => {
             const tool = slot.tool;
+            const pendingContent = renderPendingContent?.(slot, tool) ?? null;
             const surfaceProduceLots = slot.surfaceProduceLots ?? [];
             const highlightsWorkbenchDrop = isBenchSlotHighlighted?.(slot) ?? false;
             const canAcceptWorkbenchDragOver = (event: DragEvent<HTMLElement>) => {
@@ -365,9 +366,11 @@ export function WorkbenchPanel({
                               onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
                             }
                       }
-                      pendingContent={renderPendingContent?.(slot, tool)}
+                      pendingContent={pendingContent}
                       tool={tool}
                     />
+                  ) : pendingContent ? (
+                    <div className="flex min-h-56 flex-col justify-center p-1">{pendingContent}</div>
                   ) : surfaceProduceLots.length > 0 ? (
                     <div className="flex min-h-56 flex-col justify-between p-1">
                       <div>

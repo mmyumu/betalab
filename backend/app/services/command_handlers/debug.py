@@ -14,6 +14,7 @@ def create_debug_produce_lot_on_workbench(
 ) -> None:
     produce_lot = _build_debug_produce_lot(
         command.preset_id,
+        total_mass_g=command.total_mass_g,
         temperature_c=command.temperature_c,
         residual_co2_mass_g=command.residual_co2_mass_g,
     )
@@ -31,6 +32,7 @@ def create_debug_produce_lot_to_widget(
 ) -> None:
     produce_lot = _build_debug_produce_lot(
         command.preset_id,
+        total_mass_g=command.total_mass_g,
         temperature_c=command.temperature_c,
         residual_co2_mass_g=command.residual_co2_mass_g,
     )
@@ -45,6 +47,7 @@ def create_debug_produce_lot_to_widget(
 def _build_debug_produce_lot(
     preset_id: str,
     *,
+    total_mass_g: float | None = None,
     temperature_c: float | None = None,
     residual_co2_mass_g: float | None = None,
 ) -> ProduceLot:
@@ -53,7 +56,7 @@ def _build_debug_produce_lot(
             id=new_id("produce"),
             label="Apple powder lot",
             produce_type="apple",
-            total_mass_g=850.0,
+            total_mass_g=total_mass_g if total_mass_g is not None else 2450.0,
             unit_count=None,
             cut_state="ground",
             temperature_c=temperature_c if temperature_c is not None else -62.0,

@@ -434,7 +434,12 @@ export async function createDebugProduceLotOnWorkbench(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/debug/produce-presets/${requireString(body, "preset_id")}/spawn-on-workbench`,
-    body: { target_slot_id: requireString(body, "target_slot_id") },
+    body: {
+      target_slot_id: requireString(body, "target_slot_id"),
+      ...optionalNumberBody(body, "total_mass_g"),
+      ...optionalNumberBody(body, "temperature_c"),
+      ...optionalNumberBody(body, "residual_co2_mass_g"),
+    },
   });
 }
 
@@ -446,7 +451,12 @@ export async function createDebugProduceLotToWidget(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/debug/produce-presets/${requireString(body, "preset_id")}/spawn-on-widget`,
-    body: { widget_id: requireString(body, "widget_id") },
+    body: {
+      widget_id: requireString(body, "widget_id"),
+      ...optionalNumberBody(body, "total_mass_g"),
+      ...optionalNumberBody(body, "temperature_c"),
+      ...optionalNumberBody(body, "residual_co2_mass_g"),
+    },
   });
 }
 

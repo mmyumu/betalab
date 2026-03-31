@@ -81,6 +81,7 @@ def apply_command(
             experiment_id,
             payload["preset_id"],
             payload["target_slot_id"],
+            payload.get("total_mass_g"),
             payload.get("temperature_c"),
             payload.get("residual_co2_mass_g"),
         ),
@@ -88,6 +89,7 @@ def apply_command(
             experiment_id,
             payload["preset_id"],
             payload["widget_id"],
+            payload.get("total_mass_g"),
             payload.get("temperature_c"),
             payload.get("residual_co2_mass_g"),
         ),
@@ -2098,6 +2100,7 @@ def test_create_debug_powder_preset_on_workbench() -> None:
         "create_debug_produce_lot_on_workbench",
         {
             "preset_id": "apple_powder_residual_co2",
+            "total_mass_g": 2450.0,
             "residual_co2_mass_g": 24.0,
             "temperature_c": -70.0,
             "target_slot_id": "station_1",
@@ -2107,6 +2110,7 @@ def test_create_debug_powder_preset_on_workbench() -> None:
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.produce_lots[0].cut_state == "ground"
+    assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
     assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(24.0, abs=0.01)
     assert slot.tool.produce_lots[0].temperature_c == pytest.approx(-70.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned on Wide-neck HDPE jar."
@@ -2127,6 +2131,7 @@ def test_create_debug_powder_preset_in_grinder() -> None:
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
     assert grinder.produce_lots[0].cut_state == "ground"
+    assert grinder.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
     assert grinder.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
     assert grinder.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Cryogenic grinder."

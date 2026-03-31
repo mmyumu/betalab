@@ -6,7 +6,11 @@ import { DegassingIndicator } from "@/components/degassing-indicator";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { TemperatureIndicator } from "@/components/temperature-indicator";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { getProduceLotDisplayName, isProduceLotDegassing } from "@/lib/produce-lot-display";
+import {
+  getProduceLotDegassingIntensity,
+  getProduceLotDisplayName,
+  isProduceLotDegassing,
+} from "@/lib/produce-lot-display";
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceLotCardProps = {
@@ -46,6 +50,7 @@ export function ProduceLotCard({
 }: ProduceLotCardProps) {
   const displayName = getProduceLotDisplayName(produceLot);
   const isDegassing = isProduceLotDegassing(produceLot);
+  const smokeIntensity = getProduceLotDegassingIntensity(produceLot);
   const degassingProgress = Math.min((produceLot.residualCo2MassG ?? 0) / Math.max(produceLot.totalMassG * 0.12, 1), 1);
   const cardClassName =
     variant === "compact"
@@ -70,6 +75,7 @@ export function ProduceLotCard({
           <div className="flex items-start gap-2">
             <AppleIllustration
               className="h-10 w-10 shrink-0"
+              smokeIntensity={smokeIntensity}
               variant={getProduceIllustrationVariant(produceLot)}
             />
             <div className="min-w-0 flex-1">
@@ -97,6 +103,7 @@ export function ProduceLotCard({
             <div className="h-10 w-10 shrink-0">
               <AppleIllustration
                 className="h-10 w-10"
+                smokeIntensity={smokeIntensity}
                 variant={getProduceIllustrationVariant(produceLot)}
               />
             </div>

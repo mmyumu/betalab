@@ -1,13 +1,12 @@
 "use client";
 
-import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
-import { AppleIllustration } from "@/components/illustrations/apple-illustration";
-import type { DebugProducePresetId } from "@/types/workbench";
+import { ProduceLotCard } from "@/components/produce-lot-card";
+import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
+import type { DebugProducePresetId, ExperimentProduceLot } from "@/types/workbench";
 
 export type DebugProducePreset = {
   id: DebugProducePresetId;
-  label: string;
-  subtitle: string;
+  produceLot: ExperimentProduceLot;
 };
 
 type DebugProducePaletteProps = {
@@ -30,20 +29,21 @@ export function DebugProducePalette({
       </div>
       <div className="space-y-3 px-4 py-4">
         {presets.map((preset) => (
-          <DraggableInventoryItem
+          <ProduceLotCard
             className="rounded-[1rem] border-amber-200 bg-[linear-gradient(180deg,#fffdf5,#fff7e8)]"
-            contentClassName="flex-1"
             dataTestId={`debug-palette-preset-${preset.id}`}
+            draggable={Boolean(onPresetDragStart)}
+            footerBadge={<ProduceLotStatusBadge produceLot={preset.produceLot} />}
             key={preset.id}
-            leading={<AppleIllustration className="h-10 w-10 shrink-0" />}
+            metadata="850 g"
             onDragEnd={onItemDragEnd}
             onDragStart={
               onPresetDragStart
-                ? (dataTransfer) => onPresetDragStart(preset, dataTransfer)
+                ? (event) => onPresetDragStart(preset, event.dataTransfer)
                 : undefined
             }
-            subtitle={<span className="block text-xs text-slate-500">{preset.subtitle}</span>}
-            title={<span className="block truncate text-sm font-semibold text-slate-900">{preset.label}</span>}
+            produceLot={preset.produceLot}
+            variant="compact"
           />
         ))}
       </div>

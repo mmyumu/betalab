@@ -191,6 +191,7 @@ class CreateProduceLotCommand:
 class CreateDebugProduceLotOnWorkbenchCommand:
     preset_id: str
     target_slot_id: str
+    total_mass_g: float | None = None
     temperature_c: float | None = None
     residual_co2_mass_g: float | None = None
 
@@ -199,6 +200,7 @@ class CreateDebugProduceLotOnWorkbenchCommand:
 class CreateDebugProduceLotToWidgetCommand:
     preset_id: str
     widget_id: str
+    total_mass_g: float | None = None
     temperature_c: float | None = None
     residual_co2_mass_g: float | None = None
 

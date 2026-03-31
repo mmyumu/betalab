@@ -629,6 +629,9 @@ export function toDragDescriptor(
   if ("produceLotId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
+      ...(payload.sourceKind === "debug_palette" && payload.debugProducePresetId
+        ? { debugProducePresetId: payload.debugProducePresetId }
+        : {}),
       entityKind: "produce",
       produceLotId: payload.produceLotId,
       produceType: payload.produceType,

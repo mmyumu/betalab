@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createExperiment, getExperiment, placeToolOnWorkbench, subscribeToExperimentStream } from "@/lib/api";
+import {
+  createDebugProduceLotOnWorkbench,
+  createDebugProduceLotToWidget,
+  createExperiment,
+  getExperiment,
+  placeToolOnWorkbench,
+  subscribeToExperimentStream,
+} from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
 
 const makeExperiment = (): Experiment => ({
@@ -71,6 +78,78 @@ describe("api client", () => {
         },
         body: JSON.stringify({
           tool_id: "sample_vial_lcms",
+        }),
+      },
+    );
+  });
+
+  it("sends debug produce overrides when spawning on the workbench", async () => {
+    const experiment = makeExperiment();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => experiment,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createDebugProduceLotOnWorkbench("experiment_123", {
+        preset_id: "apple_powder_residual_co2",
+        total_mass_g: 2450,
+        residual_co2_mass_g: 24,
+        target_slot_id: "station_1",
+        temperature_c: -70,
+      }),
+    ).resolves.toEqual(experiment);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/experiments/experiment_123/debug/produce-presets/apple_powder_residual_co2/spawn-on-workbench",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          target_slot_id: "station_1",
+          total_mass_g: 2450,
+          temperature_c: -70,
+          residual_co2_mass_g: 24,
+        }),
+      },
+    );
+  });
+
+  it("sends debug produce overrides when spawning on a widget", async () => {
+    const experiment = makeExperiment();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => experiment,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createDebugProduceLotToWidget("experiment_123", {
+        preset_id: "apple_powder_residual_co2",
+        total_mass_g: 2450,
+        residual_co2_mass_g: 12,
+        temperature_c: -55,
+        widget_id: "grinder",
+      }),
+    ).resolves.toEqual(experiment);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/experiments/experiment_123/debug/produce-presets/apple_powder_residual_co2/spawn-on-widget",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          widget_id: "grinder",
+          total_mass_g: 2450,
+          temperature_c: -55,
+          residual_co2_mass_g: 12,
         }),
       },
     );

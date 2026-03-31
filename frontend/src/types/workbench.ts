@@ -234,6 +234,7 @@ export type DragDescriptor =
     })
   | (BaseDragPayload & {
       entityKind: "produce";
+      debugProducePresetId?: DebugProducePresetId;
       produceLotId: string;
       produceType: ProduceLotType;
       sourceSlotId?: string;

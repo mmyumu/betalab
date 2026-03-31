@@ -440,7 +440,7 @@ describe("LabScene", () => {
                   id: "produce_debug_1",
                   label: "Apple powder lot",
                   produceType: "apple",
-                  totalMassG: 850,
+                  totalMassG: 2450,
                   unitCount: null,
                   cutState: "ground",
                   residualCo2MassG: 18,
@@ -460,8 +460,10 @@ describe("LabScene", () => {
     });
 
     const preset = screen.getByTestId("debug-palette-preset-apple_powder_residual_co2");
-    expect(preset).toHaveTextContent("Apple powder");
-    expect(preset).toHaveTextContent("Ground apple powder with residual CO2");
+    expect(preset).toHaveTextContent("Apple powder lot");
+    expect(
+      within(preset).getByTestId("apple-illustration"),
+    ).toHaveAttribute("data-variant", "ground");
 
     const transfer = createDataTransfer();
     fireEvent.dragStart(preset, { dataTransfer: transfer });
@@ -472,10 +474,14 @@ describe("LabScene", () => {
     fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: transfer });
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(await screen.findByLabelText("Debug powder mass")).toHaveValue(2450);
     expect(await screen.findByLabelText("Debug powder temperature")).toHaveValue(-62);
     expect(screen.getByLabelText("Debug powder residual CO2")).toHaveValue(18);
     fireEvent.change(screen.getByLabelText("Debug powder residual CO2"), {
       target: { value: "19" },
+    });
+    fireEvent.change(screen.getByLabelText("Debug powder mass"), {
+      target: { value: "3000" },
     });
     fireEvent.click(screen.getByText("Spawn"));
     expect(sendExperimentCommand).toHaveBeenCalledWith(
@@ -485,9 +491,31 @@ describe("LabScene", () => {
         preset_id: "apple_powder_residual_co2",
         residual_co2_mass_g: 19,
         target_slot_id: "station_1",
+        total_mass_g: 3000,
         temperature_c: -62,
       },
     );
+  });
+
+  it("shows the debug produce draft when dropped onto an empty station surface", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-debug-inventory")).toBeInTheDocument();
+    });
+
+    const preset = screen.getByTestId("debug-palette-preset-apple_powder_residual_co2");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(preset, { dataTransfer: transfer });
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: transfer });
+
+    expect(await screen.findByLabelText("Debug powder mass")).toHaveValue(2450);
+    expect(screen.getByLabelText("Debug powder temperature")).toHaveValue(-62);
+    expect(screen.getByLabelText("Debug powder residual CO2")).toHaveValue(18);
   });
 
   it("shows the backend error state and retries experiment creation", async () => {

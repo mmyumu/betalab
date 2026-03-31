@@ -58,6 +58,7 @@ import {
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
 import type {
+  BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
   DragDescriptor,
@@ -119,8 +120,18 @@ const rackSlotCount = 12;
 const debugProducePresets: DebugProducePreset[] = [
   {
     id: "apple_powder_residual_co2",
-    label: "Apple powder",
-    subtitle: "Ground apple powder with residual CO2 for cryogenic debug flows.",
+    produceLot: {
+      id: "debug_preview_apple_powder_residual_co2",
+      label: "Apple powder lot",
+      produceType: "apple",
+      totalMassG: 2450,
+      unitCount: null,
+      cutState: "ground",
+      residualCo2MassG: 18,
+      temperatureC: -62,
+      grindQualityLabel: "powder_fine",
+      homogeneityScore: 0.96,
+    },
   },
 ];
 const rackIllustrationViewBox = { height: 290, width: 480 };
@@ -168,6 +179,17 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
 
 function buildDebugProduceDraftFields(): DropDraftField[] {
   return [
+    {
+      ariaLabel: "Debug powder mass",
+      id: "total_mass_g",
+      inputStep: 10,
+      label: "Mass",
+      minValue: 1,
+      stepAmount: 50,
+      unitLabel: "g",
+      value: 2450,
+      wheelStep: 50,
+    },
     {
       ariaLabel: "Debug powder temperature",
       id: "temperature_c",
@@ -486,6 +508,7 @@ export function LabScene() {
         preset_id: pendingDropDraft.presetId,
         residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
         temperature_c: getFieldValue("temperature_c"),
+        total_mass_g: getFieldValue("total_mass_g"),
         widget_id: pendingDropDraft.targetId,
       });
       setPendingDropDraft(null);
@@ -501,6 +524,7 @@ export function LabScene() {
         residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
         target_slot_id: pendingDropDraft.targetId,
         temperature_c: getFieldValue("temperature_c"),
+        total_mass_g: getFieldValue("total_mass_g"),
       });
       setPendingDropDraft(null);
     }
@@ -1458,7 +1482,7 @@ export function LabScene() {
       debugProducePresetId: preset.id,
       entityKind: "produce",
       produceLotId: preset.id,
-      produceType: "apple",
+      produceType: preset.produceLot.produceType,
       sourceId: preset.id,
       sourceKind: "debug_palette",
     });
@@ -1468,7 +1492,7 @@ export function LabScene() {
       debugProducePresetId: preset.id,
       entityKind: "produce",
       produceLotId: preset.id,
-      produceType: "apple",
+      produceType: preset.produceLot.produceType,
       sourceId: preset.id,
       sourceKind: "debug_palette",
     });

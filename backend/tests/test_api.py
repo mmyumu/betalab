@@ -148,12 +148,13 @@ def test_debug_produce_preset_route_spawns_powder_on_workbench() -> None:
 
         spawned = client.post(
             f"/experiments/{experiment_id}/debug/produce-presets/apple_powder_residual_co2/spawn-on-workbench",
-            json={"target_slot_id": "station_1"},
+            json={"target_slot_id": "station_1", "total_mass_g": 2450.0},
         )
 
     assert spawned.status_code == 200
     tool = spawned.json()["workbench"]["slots"][0]["tool"]
     assert tool["produce_lots"][0]["cut_state"] == "ground"
+    assert tool["produce_lots"][0]["total_mass_g"] == 2450.0
     assert tool["produce_lots"][0]["residual_co2_mass_g"] == 18.0
     assert tool["produce_lots"][0]["temperature_c"] == -62.0
 

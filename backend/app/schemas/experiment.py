@@ -231,12 +231,14 @@ class WorkspaceProduceLotCreateSchema(BaseModel):
 
 class DebugProducePresetSpawnToWorkbenchSchema(BaseModel):
     target_slot_id: str
+    total_mass_g: float | None = None
     temperature_c: float | None = None
     residual_co2_mass_g: float | None = None
 
 
 class DebugProducePresetSpawnToWidgetSchema(BaseModel):
     widget_id: str
+    total_mass_g: float | None = None
     temperature_c: float | None = None
     residual_co2_mass_g: float | None = None
 

@@ -312,6 +312,7 @@ class ExperimentService:
         experiment_id: str,
         preset_id: str,
         target_slot_id: str,
+        total_mass_g: float | None = None,
         temperature_c: float | None = None,
         residual_co2_mass_g: float | None = None,
     ) -> ExperimentSchema:
@@ -320,6 +321,7 @@ class ExperimentService:
             create_debug_produce_lot_on_workbench,
             CreateDebugProduceLotOnWorkbenchCommand(
                 preset_id=preset_id,
+                total_mass_g=total_mass_g,
                 residual_co2_mass_g=residual_co2_mass_g,
                 temperature_c=temperature_c,
                 target_slot_id=target_slot_id,
@@ -331,6 +333,7 @@ class ExperimentService:
         experiment_id: str,
         preset_id: str,
         widget_id: str,
+        total_mass_g: float | None = None,
         temperature_c: float | None = None,
         residual_co2_mass_g: float | None = None,
     ) -> ExperimentSchema:
@@ -339,6 +342,7 @@ class ExperimentService:
             create_debug_produce_lot_to_widget,
             CreateDebugProduceLotToWidgetCommand(
                 preset_id=preset_id,
+                total_mass_g=total_mass_g,
                 residual_co2_mass_g=residual_co2_mass_g,
                 temperature_c=temperature_c,
                 widget_id=widget_id,
