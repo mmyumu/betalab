@@ -12,6 +12,8 @@ import {
   applySampleLabelToWorkbenchTool,
   completeGrinderCycle,
   createExperiment,
+  createDebugProduceLotOnWorkbench,
+  createDebugProduceLotToWidget,
   createProduceLot,
   cutWorkbenchProduceLot,
   discardProduceLotFromWorkbenchTool,
@@ -70,6 +72,8 @@ const mutationFns = {
   applySampleLabelToWorkbenchTool,
   completeGrinderCycle,
   createProduceLot,
+  createDebugProduceLotOnWorkbench,
+  createDebugProduceLotToWidget,
   cutWorkbenchProduceLot,
   discardProduceLotFromWorkbenchTool,
   discardRackTool,
@@ -225,6 +229,10 @@ export function useLabExperiment({
       executeMutation(mutationFns.startGrinderCycle, payload),
     createProduceLot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.createProduceLot, payload),
+    createDebugProduceLotOnWorkbench: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.createDebugProduceLotOnWorkbench, payload),
+    createDebugProduceLotToWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.createDebugProduceLotToWidget, payload),
     cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
     discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>

@@ -490,6 +490,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
       typeof parsed.produceType === "string" &&
       typeof parsed.sourceId === "string" &&
       (parsed.sourceKind === "basket" ||
+        (parsed.sourceKind === "debug_palette" && typeof parsed.debugProducePresetId === "string") ||
         parsed.sourceKind === "grinder" ||
         (parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashProduceLotId === "string")) &&
@@ -502,6 +503,9 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
         produceType: parsed.produceType,
         sourceId: parsed.sourceId,
         sourceKind: parsed.sourceKind,
+        ...(parsed.sourceKind === "debug_palette"
+          ? { debugProducePresetId: parsed.debugProducePresetId }
+          : {}),
         ...(parsed.sourceKind === "workbench" ? { sourceSlotId: parsed.sourceSlotId } : {}),
         ...(parsed.sourceKind === "trash" ? { trashProduceLotId: parsed.trashProduceLotId } : {}),
       };

@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from math import exp
 
-from app.domain.models import ProduceLot, WorkspaceWidget
+from app.domain.models import ProduceLot, WorkbenchTool, WorkspaceWidget
 from app.services.command_handlers.support import round_volume
+
+
+@dataclass(frozen=True, slots=True)
+class ContainerClosureRisk:
+    should_pop: bool
+    residual_co2_mass_g: float
 
 
 class CryogenicSimulationService:
@@ -31,6 +38,15 @@ class CryogenicSimulationService:
     fine_powder_temperature_c = -60.0
     granular_temperature_c = -40.0
     poor_grind_temperature_c = -20.0
+
+    def check_explosion_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
+        residual_co2_mass_g = round_volume(
+            sum(max(lot.residual_co2_mass_g, 0.0) for lot in tool.produce_lots)
+        )
+        return ContainerClosureRisk(
+            should_pop=residual_co2_mass_g > 0.0,
+            residual_co2_mass_g=residual_co2_mass_g,
+        )
 
     def advance_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
         total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)

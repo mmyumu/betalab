@@ -426,6 +426,30 @@ export async function createProduceLot(experimentId: string, payload: MutationPa
   });
 }
 
+export async function createDebugProduceLotOnWorkbench(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/debug/produce-presets/${requireString(body, "preset_id")}/spawn-on-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function createDebugProduceLotToWidget(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/debug/produce-presets/${requireString(body, "preset_id")}/spawn-on-widget`,
+    body: { widget_id: requireString(body, "widget_id") },
+  });
+}
+
 export async function discardWorkspaceProduceLot(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {

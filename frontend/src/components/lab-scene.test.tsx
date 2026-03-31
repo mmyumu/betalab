@@ -298,6 +298,7 @@ function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceW
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   resetApiMocks();
 });
 
@@ -404,6 +405,78 @@ describe("LabScene", () => {
     expect(inventoryWidget).toHaveClass("xl:top-6");
     expect(actionsWidget).toHaveClass("xl:sticky");
     expect(actionsWidget).toHaveClass("xl:top-6");
+  });
+
+  it("shows a separate debug produce palette and spawns its preset on drop", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              produceLots: [],
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              produceLots: [
+                {
+                  id: "produce_debug_1",
+                  label: "Apple powder lot",
+                  produceType: "apple",
+                  totalMassG: 850,
+                  unitCount: null,
+                  cutState: "ground",
+                  residualCo2MassG: 18,
+                  temperatureC: -62,
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-debug-inventory")).toBeInTheDocument();
+    });
+
+    const preset = screen.getByTestId("debug-palette-preset-apple_powder_residual_co2");
+    expect(preset).toHaveTextContent("Apple powder");
+    expect(preset).toHaveTextContent("Ground apple powder with residual CO2");
+
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(preset, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(screen.getByTestId("bench-slot-station_1"), {
+      dataTransfer: transfer,
+    });
+    fireEvent(screen.getByTestId("bench-slot-station_1"), dragOverEvent);
+    fireEvent.drop(screen.getByTestId("bench-slot-station_1"), { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "create_debug_produce_lot_on_workbench",
+      { preset_id: "apple_powder_residual_co2", target_slot_id: "station_1" },
+    );
   });
 
   it("shows the backend error state and retries experiment creation", async () => {

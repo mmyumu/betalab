@@ -77,6 +77,12 @@ def apply_command(
             experiment_id, payload["trash_produce_lot_id"], payload["widget_id"]
         ),
         "create_produce_lot": lambda: service.create_produce_lot(experiment_id, payload["produce_type"]),
+        "create_debug_produce_lot_on_workbench": lambda: service.create_debug_produce_lot_on_workbench(
+            experiment_id, payload["preset_id"], payload["target_slot_id"]
+        ),
+        "create_debug_produce_lot_to_widget": lambda: service.create_debug_produce_lot_to_widget(
+            experiment_id, payload["preset_id"], payload["widget_id"]
+        ),
         "discard_workspace_produce_lot": lambda: service.discard_workspace_produce_lot(
             experiment_id, payload["produce_lot_id"]
         ),
@@ -138,6 +144,7 @@ def apply_command(
         "update_workbench_tool_sample_label_text": lambda: service.update_workbench_tool_sample_label_text(
             experiment_id, payload["slot_id"], payload["sample_label_text"]
         ),
+        "close_workbench_tool": lambda: service.close_workbench_tool(experiment_id, payload["slot_id"]),
         "move_sample_label_between_workbench_tools": lambda: service.move_sample_label_between_workbench_tools(
             experiment_id, payload["source_slot_id"], payload["target_slot_id"]
         ),
@@ -1963,6 +1970,156 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
 
     assert station_1.tool is not None
     assert station_1.tool.produce_lots[0].residual_co2_mass_g < 2.0
+
+
+def test_close_storage_jar_with_residual_co2_causes_projection_loss() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_lot.cut_state = "ground"
+    stored_lot.residual_co2_mass_g = 18.0
+    stored_lot.total_mass_g = 1000.0
+
+    updated = apply_command(service,
+        experiment.id,
+        "close_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.is_sealed is False
+    assert slot.tool.closure_fault == "pressure_pop"
+    assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(800.0, abs=0.01)
+    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(14.4, abs=0.01)
+    assert updated.audit_log[-1] == (
+        "Wide-neck HDPE jar popped open on Station 1 after premature sealing; 20% of Apple lot 1 was lost."
+    )
+
+
+def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+
+    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_lot.cut_state = "ground"
+    stored_lot.residual_co2_mass_g = 0.0
+
+    sealed = apply_command(service,
+        experiment.id,
+        "close_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    sealed_slot = next(slot for slot in sealed.workbench.slots if slot.id == "station_1")
+    assert sealed_slot.tool is not None
+    assert sealed_slot.tool.is_sealed is True
+    assert sealed_slot.tool.closure_fault is None
+    assert sealed.audit_log[-1] == "Wide-neck HDPE jar sealed on Station 1."
+
+
+def test_create_debug_powder_preset_on_workbench() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+
+    updated = apply_command(service,
+        experiment.id,
+        "create_debug_produce_lot_on_workbench",
+        {
+            "preset_id": "apple_powder_residual_co2",
+            "target_slot_id": "station_1",
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.produce_lots[0].cut_state == "ground"
+    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert slot.tool.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned on Wide-neck HDPE jar."
+
+
+def test_create_debug_powder_preset_in_grinder() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(service,
+        experiment.id,
+        "create_debug_produce_lot_to_widget",
+        {
+            "preset_id": "apple_powder_residual_co2",
+            "widget_id": "grinder",
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert grinder.produce_lots[0].cut_state == "ground"
+    assert grinder.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert grinder.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Cryogenic grinder."
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:

@@ -35,6 +35,8 @@ class WorkbenchToolSchema(BaseModel):
     accent: str
     tool_type: str
     capacity_ml: float
+    is_sealed: bool = False
+    closure_fault: str | None = None
     sample_label_text: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
@@ -225,6 +227,14 @@ class WorkspaceWidgetLiquidUpdateSchema(BaseModel):
 
 class WorkspaceProduceLotCreateSchema(BaseModel):
     produce_type: Literal["apple"]
+
+
+class DebugProducePresetSpawnToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+
+
+class DebugProducePresetSpawnToWidgetSchema(BaseModel):
+    widget_id: str
 
 
 class WorkspaceWidgetProduceLotCreateSchema(BaseModel):

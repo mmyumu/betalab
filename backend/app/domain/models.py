@@ -28,6 +28,8 @@ class WorkbenchTool:
     accent: str
     tool_type: str
     capacity_ml: float
+    is_sealed: bool = False
+    closure_fault: str | None = None
     sample_label_text: str | None = None
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)

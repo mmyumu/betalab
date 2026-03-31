@@ -6,8 +6,8 @@ import type { DragEvent } from "react";
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
+import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
 import { QuantitySelectionCard } from "@/components/quantity-selection-card";
-import { InventoryWidget } from "@/components/inventory-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
 import { ProduceLotCard } from "@/components/produce-lot-card";
@@ -116,6 +116,13 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   grinder: { x: 980, y: 886, width: 430, fallbackHeight: 340 },
 };
 const rackSlotCount = 12;
+const debugProducePresets: DebugProducePreset[] = [
+  {
+    id: "apple_powder_residual_co2",
+    label: "Apple powder",
+    subtitle: "Ground apple powder with residual CO2 for cryogenic debug flows.",
+  },
+];
 const rackIllustrationViewBox = { height: 290, width: 480 };
 const rackIllustrationBase = { x: 142, y: 91 };
 const rackIllustrationGap = { x: 61, y: 49 };
@@ -485,6 +492,15 @@ export function LabScene() {
   };
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
+    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
+      void experimentApi.createDebugProduceLotOnWorkbench({
+        preset_id: payload.debugProducePresetId,
+        target_slot_id: targetSlotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
     if (payload.sourceKind === "basket") {
       void experimentApi.addProduceLotToWorkbenchTool( {
         slot_id: targetSlotId,
@@ -714,6 +730,14 @@ export function LabScene() {
 
     event.preventDefault();
     clearDropTargets();
+
+    if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
+      void experimentApi.createDebugProduceLotToWidget({
+        preset_id: producePayload.debugProducePresetId,
+        widget_id: "grinder",
+      });
+      return;
+    }
 
     if (producePayload.sourceKind === "basket") {
       void experimentApi.addWorkspaceProduceLotToWidget( {
@@ -1324,6 +1348,36 @@ export function LabScene() {
     });
   };
 
+  const handleDebugProducePresetDragStart = (
+    preset: DebugProducePreset,
+    dataTransfer: DataTransfer,
+  ) => {
+    if (isKnifeMode) {
+      return;
+    }
+    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "grinder_widget"];
+
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets,
+      debugProducePresetId: preset.id,
+      entityKind: "produce",
+      produceLotId: preset.id,
+      produceType: "apple",
+      sourceId: preset.id,
+      sourceKind: "debug_palette",
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      debugProducePresetId: preset.id,
+      entityKind: "produce",
+      produceLotId: preset.id,
+      produceType: "apple",
+      sourceId: preset.id,
+      sourceKind: "debug_palette",
+    });
+  };
+
   const handleGrinderProduceDragStart = (
     produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
@@ -1501,6 +1555,7 @@ export function LabScene() {
     trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
+  const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const handleCreateAppleLot = () => {
     void experimentApi.createProduceLot( {
       produce_type: "apple",
@@ -1521,23 +1576,31 @@ export function LabScene() {
         </header>
 
         <div className="mt-6 grid gap-4 xl:grid-cols-[202px_minmax(0,1fr)_92px] xl:items-start xl:gap-6">
-          <div
-            className="xl:sticky xl:top-6 xl:self-start"
-            data-testid="widget-inventory"
-          >
-            <ToolbarPanel
-              categories={labWorkflowCategories}
-              dragDisabled={isKnifeMode}
-              onItemDragEnd={clearDropTargets}
-              onItemDragStart={(item, allowedDropTargets) => {
-                if (isKnifeMode) {
-                  return;
-                }
-                const payload = createToolbarDragPayload(item);
-                showDropTargets(allowedDropTargets);
-                setActiveDragItem(toDragDescriptor(payload));
-              }}
-            />
+          <div className="space-y-4 xl:sticky xl:top-6 xl:self-start" data-testid="widget-inventory">
+            <div>
+              <ToolbarPanel
+                categories={labWorkflowCategories}
+                dragDisabled={isKnifeMode}
+                onItemDragEnd={clearDropTargets}
+                onItemDragStart={(item, allowedDropTargets) => {
+                  if (isKnifeMode) {
+                    return;
+                  }
+                  const payload = createToolbarDragPayload(item);
+                  showDropTargets(allowedDropTargets);
+                  setActiveDragItem(toDragDescriptor(payload));
+                }}
+              />
+            </div>
+            {debugInventoryEnabled ? (
+              <div data-testid="widget-debug-inventory">
+                <DebugProducePalette
+                  onItemDragEnd={clearDropTargets}
+                  onPresetDragStart={handleDebugProducePresetDragStart}
+                  presets={debugProducePresets}
+                />
+              </div>
+            ) : null}
           </div>
 
           <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">

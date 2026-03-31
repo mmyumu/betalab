@@ -45,6 +45,11 @@ class UpdateWorkbenchToolSampleLabelTextCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class CloseWorkbenchToolCommand:
+    slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class MoveSampleLabelBetweenWorkbenchToolsCommand:
     source_slot_id: str
     target_slot_id: str
@@ -180,6 +185,18 @@ class AdvanceWorkspaceCryogenicsCommand:
 @dataclass(frozen=True, slots=True)
 class CreateProduceLotCommand:
     produce_type: str
+
+
+@dataclass(frozen=True, slots=True)
+class CreateDebugProduceLotOnWorkbenchCommand:
+    preset_id: str
+    target_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class CreateDebugProduceLotToWidgetCommand:
+    preset_id: str
+    widget_id: str
 
 
 @dataclass(frozen=True, slots=True)

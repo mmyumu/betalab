@@ -57,7 +57,16 @@ export type DragEntityKind =
   | "workspace_widget"
   | "produce"
   | "sample_label";
-export type DragSourceKind = "palette" | "workbench" | "rack" | "trash" | "basket" | "grinder";
+export type DragSourceKind =
+  | "palette"
+  | "debug_palette"
+  | "workbench"
+  | "rack"
+  | "trash"
+  | "basket"
+  | "grinder";
+
+export type DebugProducePresetId = "apple_powder_residual_co2";
 
 export type ToolCatalogItem = ToolbarBaseItem & {
   itemType: "tool";
@@ -144,11 +153,12 @@ export type SampleLabelDragPayload = BaseDragPayload & {
 };
 
 export type ProduceDragPayload = BaseDragPayload & {
+  debugProducePresetId?: DebugProducePresetId;
   entityKind: "produce";
   produceLotId: string;
   produceType: ProduceLotType;
   sourceId: string;
-  sourceKind: "basket" | "workbench" | "trash" | "grinder";
+  sourceKind: "basket" | "workbench" | "trash" | "grinder" | "debug_palette";
   sourceSlotId?: string;
   trashProduceLotId?: string;
 };

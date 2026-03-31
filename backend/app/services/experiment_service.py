@@ -21,11 +21,16 @@ from app.services.command_handlers.trash import (
     restore_trashed_tool_to_rack_slot,
     restore_trashed_tool_to_workbench_slot,
 )
+from app.services.command_handlers.debug import (
+    create_debug_produce_lot_on_workbench,
+    create_debug_produce_lot_to_widget,
+)
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
     apply_sample_label_to_workbench_tool,
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
+    close_workbench_tool,
     discard_sample_label_from_workbench_tool,
     discard_produce_lot_from_workbench_tool,
     cut_workbench_produce_lot,
@@ -64,6 +69,9 @@ from app.services.commands import (
     AddWorkspaceProduceLotToWidgetCommand,
     AdvanceWorkspaceCryogenicsCommand,
     ApplySampleLabelToWorkbenchToolCommand,
+    CloseWorkbenchToolCommand,
+    CreateDebugProduceLotOnWorkbenchCommand,
+    CreateDebugProduceLotToWidgetCommand,
     CreateProduceLotCommand,
     DiscardSampleLabelFromPaletteCommand,
     DiscardToolFromPaletteCommand,
@@ -299,6 +307,36 @@ class ExperimentService:
             CreateProduceLotCommand(produce_type=produce_type),
         )
 
+    def create_debug_produce_lot_on_workbench(
+        self,
+        experiment_id: str,
+        preset_id: str,
+        target_slot_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            create_debug_produce_lot_on_workbench,
+            CreateDebugProduceLotOnWorkbenchCommand(
+                preset_id=preset_id,
+                target_slot_id=target_slot_id,
+            ),
+        )
+
+    def create_debug_produce_lot_to_widget(
+        self,
+        experiment_id: str,
+        preset_id: str,
+        widget_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            create_debug_produce_lot_to_widget,
+            CreateDebugProduceLotToWidgetCommand(
+                preset_id=preset_id,
+                widget_id=widget_id,
+            ),
+        )
+
     def discard_workspace_produce_lot(self, experiment_id: str, produce_lot_id: str) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
@@ -457,6 +495,13 @@ class ExperimentService:
             experiment_id,
             apply_sample_label_to_workbench_tool,
             ApplySampleLabelToWorkbenchToolCommand(slot_id=slot_id),
+        )
+
+    def close_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            close_workbench_tool,
+            CloseWorkbenchToolCommand(slot_id=slot_id),
         )
 
     def update_workbench_tool_sample_label_text(self, experiment_id: str, slot_id: str, sample_label_text: str) -> ExperimentSchema:

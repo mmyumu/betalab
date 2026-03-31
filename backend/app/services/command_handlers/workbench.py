@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.rules import can_tool_accept_liquids
+from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed
 from app.domain.models import (
     Experiment,
     TrashProduceLotEntry,
@@ -15,6 +15,7 @@ from app.services.commands import (
     AddLiquidToWorkbenchToolCommand,
     AddProduceLotToWorkbenchToolCommand,
     ApplySampleLabelToWorkbenchToolCommand,
+    CloseWorkbenchToolCommand,
     MoveProduceLotBetweenWorkbenchToolsCommand,
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
@@ -26,6 +27,7 @@ from app.services.commands import (
     WorkbenchProduceLotCommand,
     WorkbenchSlotCommand,
 )
+from app.services.cryogenic_simulation_service import CryogenicSimulationService
 from app.services.produce_lot_transfer import (
     ProduceLotTransferService,
     WorkbenchProduceLotSource,
@@ -40,6 +42,7 @@ from app.services.command_handlers.support import (
 )
 
 produce_lot_transfer_service = ProduceLotTransferService()
+cryogenic_simulation_service = CryogenicSimulationService()
 
 
 def place_tool_on_workbench(experiment: Experiment, command: PlaceToolOnWorkbenchCommand) -> None:
@@ -187,6 +190,31 @@ def apply_sample_label_to_workbench_tool(
 
     slot.tool.sample_label_text = ""
     experiment.audit_log.append(f"Sample label applied to {slot.tool.label} on {slot.label}.")
+
+
+def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolCommand) -> None:
+    slot = find_workbench_slot(experiment.workbench, command.slot_id)
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before sealing it.")
+    if not can_tool_be_sealed(slot.tool.tool_type):
+        raise ValueError(f"{slot.tool.label} cannot be sealed.")
+
+    risk = cryogenic_simulation_service.check_explosion_risk(slot.tool)
+    if risk.should_pop:
+        for produce_lot in slot.tool.produce_lots:
+            produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))
+            produce_lot.residual_co2_mass_g = round_volume(max(produce_lot.residual_co2_mass_g * 0.8, 0.0))
+
+        slot.tool.is_sealed = False
+        slot.tool.closure_fault = "pressure_pop"
+        experiment.audit_log.append(
+            f"{slot.tool.label} popped open on {slot.label} after premature sealing; 20% of {slot.tool.produce_lots[0].label} was lost."
+        )
+        return
+
+    slot.tool.is_sealed = True
+    slot.tool.closure_fault = None
+    experiment.audit_log.append(f"{slot.tool.label} sealed on {slot.label}.")
 
 
 def update_workbench_tool_sample_label_text(
@@ -452,6 +480,8 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         accent=tool_definition.accent,
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
+        is_sealed=False,
+        closure_fault=None,
         sample_label_text=None,
         produce_lots=[],
     )

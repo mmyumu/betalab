@@ -4,6 +4,8 @@ from collections.abc import Callable
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from app.schemas.experiment import (
+    DebugProducePresetSpawnToWidgetSchema,
+    DebugProducePresetSpawnToWorkbenchSchema,
     ExperimentSchema,
     PaletteToolDiscardSchema,
     RackToolMoveSchema,
@@ -184,6 +186,16 @@ def apply_sample_label_to_workbench_tool(experiment_id: str, tool_id: str) -> Ex
     )
 
 
+@router.post("/{experiment_id}/workbench/tools/{tool_id}/close", response_model=ExperimentSchema)
+def close_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.close_workbench_tool(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+        )
+    )
+
+
 @router.patch("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
 def update_workbench_tool_sample_label_text(
     experiment_id: str,
@@ -253,6 +265,42 @@ def add_produce_lot_to_workbench_slot(
             experiment_id,
             slot_id,
             request.produce_lot_id,
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/debug/produce-presets/{preset_id}/spawn-on-workbench",
+    response_model=ExperimentSchema,
+)
+def create_debug_produce_lot_on_workbench(
+    experiment_id: str,
+    preset_id: str,
+    request: DebugProducePresetSpawnToWorkbenchSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.create_debug_produce_lot_on_workbench(
+            experiment_id,
+            preset_id,
+            request.target_slot_id,
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/debug/produce-presets/{preset_id}/spawn-on-widget",
+    response_model=ExperimentSchema,
+)
+def create_debug_produce_lot_to_widget(
+    experiment_id: str,
+    preset_id: str,
+    request: DebugProducePresetSpawnToWidgetSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.create_debug_produce_lot_to_widget(
+            experiment_id,
+            preset_id,
+            request.widget_id,
         )
     )
 
