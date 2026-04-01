@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from app.domain.models import Experiment, ProduceLot
-from app.domain.rules import can_tool_accept_produce
+from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.command_handlers.support import (
     find_trash_produce_lot,
     find_workbench_slot,
@@ -163,6 +163,9 @@ class WorkbenchProduceLotTarget:
                 raise ValueError(f"{slot.tool.label} does not accept produce.")
         elif slot.tool.tool_type not in self.allowed_tool_types:
             raise ValueError(f"{slot.tool.label} does not accept produce.")
+
+        if not can_tool_receive_contents(slot.tool.tool_type, slot.tool.is_sealed):
+            raise ValueError(f"Open {slot.tool.label} before adding produce.")
 
         if slot.tool.produce_lots:
             raise ValueError(f"{slot.tool.label} already contains a produce lot.")

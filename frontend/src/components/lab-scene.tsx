@@ -46,6 +46,7 @@ import {
 import {
   canToolAcceptLiquids,
   canToolAcceptProduce,
+  canToolReceiveContents,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,
@@ -1658,12 +1659,20 @@ export function LabScene() {
     }
 
     if (activeDragItem.entityKind === "liquid") {
-      return slot.tool !== null && canToolAcceptLiquids(slot.tool.toolType);
+      return (
+        slot.tool !== null &&
+        canToolAcceptLiquids(slot.tool.toolType) &&
+        canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed)
+      );
     }
 
     if (activeDragItem.entityKind === "produce") {
       if (slot.tool !== null) {
-        return canToolAcceptProduce(slot.tool.toolType) && (slot.tool.produceLots?.length ?? 0) === 0;
+        return (
+          canToolAcceptProduce(slot.tool.toolType) &&
+          canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed) &&
+          (slot.tool.produceLots?.length ?? 0) === 0
+        );
       }
 
       return (slot.surfaceProduceLots?.length ?? 0) === 0;

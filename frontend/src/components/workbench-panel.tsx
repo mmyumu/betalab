@@ -6,7 +6,7 @@ import { BenchToolCard } from "@/components/bench-tool-card";
 import { ProduceLotCard } from "@/components/produce-lot-card";
 import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { canToolAcceptLiquids, canToolAcceptProduce } from "@/lib/entity-rules";
+import { canToolAcceptLiquids, canToolAcceptProduce, canToolReceiveContents } from "@/lib/entity-rules";
 import {
   hasCompatibleDropTarget,
   readDragDescriptor,
@@ -140,12 +140,20 @@ export function WorkbenchPanel({
     }
 
     if (descriptor.entityKind === "liquid") {
-      return slot.tool !== null && canToolAcceptLiquids(slot.tool.toolType);
+      return (
+        slot.tool !== null &&
+        canToolAcceptLiquids(slot.tool.toolType) &&
+        canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed)
+      );
     }
 
     if (descriptor.entityKind === "produce") {
       if (slot.tool !== null) {
-        return canToolAcceptProduce(slot.tool.toolType) && (slot.tool.produceLots?.length ?? 0) === 0;
+        return (
+          canToolAcceptProduce(slot.tool.toolType) &&
+          canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed) &&
+          (slot.tool.produceLots?.length ?? 0) === 0
+        );
       }
 
       return (slot.surfaceProduceLots?.length ?? 0) === 0;

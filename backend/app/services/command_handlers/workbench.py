@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed
+from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
 from app.domain.models import (
     Experiment,
     TrashProduceLotEntry,
@@ -108,6 +108,8 @@ def add_liquid_to_workbench_tool(
         raise ValueError(f"Place a tool on {slot.label} before adding liquids.")
     if not can_tool_accept_liquids(slot.tool.tool_type):
         raise ValueError(f"{slot.tool.label} does not accept liquids.")
+    if not can_tool_receive_contents(slot.tool.tool_type, slot.tool.is_sealed):
+        raise ValueError(f"Open {slot.tool.label} before adding liquids.")
 
     liquid_definition = get_workbench_liquid_definition(command.liquid_id)
     current_volume = round_volume(sum(liquid.volume_ml for liquid in slot.tool.liquids))

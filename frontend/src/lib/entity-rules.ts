@@ -33,6 +33,10 @@ export function canToolBeSealed(toolType: ToolType): boolean {
   );
 }
 
+export function canToolReceiveContents(toolType: ToolType, isSealed = false): boolean {
+  return !canToolBeSealed(toolType) || !isSealed;
+}
+
 export function getProduceLotDropTargets(): DropTargetType[] {
   return ["workbench_slot", "grinder_widget", "trash_bin"];
 }

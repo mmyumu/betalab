@@ -2,6 +2,7 @@ export {
   getLiquidDropTargets,
   canToolAcceptLiquids,
   canToolAcceptProduce,
+  canToolReceiveContents,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,

@@ -2082,6 +2082,82 @@ def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
     assert sealed.audit_log[-1] == "Wide-neck HDPE jar sealed on Station 1."
 
 
+def test_add_liquid_to_sealed_centrifuge_tube_fails() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "close_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Open 50 mL centrifuge tube before adding liquids."):
+        apply_command(
+            service,
+            experiment.id,
+            "add_liquid_to_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "liquid_id": "acetonitrile_extraction",
+            },
+        )
+
+
+def test_add_produce_to_sealed_storage_jar_fails() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(
+        service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "close_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    with pytest.raises(ValueError, match="Open Wide-neck HDPE jar before adding produce."):
+        apply_command(
+            service,
+            experiment.id,
+            "add_produce_lot_to_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "produce_lot_id": created.workspace.produce_lots[0].id,
+            },
+        )
+
+
 def test_create_debug_powder_preset_on_workbench() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

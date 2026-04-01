@@ -806,7 +806,7 @@ describe("WorkbenchPanel", () => {
     );
   });
 
-  it("accepts produce drags only on stations containing a sealed sampling bag", () => {
+  it("accepts produce drags only on stations containing an open sampling bag", () => {
     const onProduceDrop = vi.fn();
     const dataTransfer = createDataTransfer();
     writeProduceDragPayload(dataTransfer, {
@@ -837,6 +837,7 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
+              isSealed: false,
               produceLots: [],
               liquids: [],
             },
@@ -894,6 +895,56 @@ describe("WorkbenchPanel", () => {
               accent: "amber",
               toolType: "centrifuge_tube",
               capacity_ml: 50,
+              produceLots: [],
+              liquids: [],
+            },
+          },
+          slots[1],
+        ]}
+        statusMessage="Ready."
+      />,
+    );
+
+    const station = screen.getByTestId("bench-slot-station_1");
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(false);
+    expect(onProduceDrop).not.toHaveBeenCalled();
+  });
+
+  it("rejects produce drags on sealed produce containers", () => {
+    const onProduceDrop = vi.fn();
+    const dataTransfer = createDataTransfer();
+    writeProduceDragPayload(dataTransfer, {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "produce",
+      produceLotId: "produce_1",
+      produceType: "apple",
+      sourceId: "produce_1",
+      sourceKind: "basket",
+    });
+    syncTypes(dataTransfer);
+
+    render(
+      <PesticideWorkbenchPanel
+        onProduceDrop={onProduceDrop}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_bag",
+              toolId: "sealed_sampling_bag",
+              label: "Sealed sampling bag",
+              subtitle: "Field collection",
+              accent: "emerald",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              isSealed: true,
               produceLots: [],
               liquids: [],
             },
