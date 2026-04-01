@@ -1,5 +1,5 @@
-import { LabScene } from "@/components/lab-scene";
+import { ExperimentsHome } from "@/components/experiments-home";
 
 export default function HomePage() {
-  return <LabScene />;
+  return <ExperimentsHome />;
 }

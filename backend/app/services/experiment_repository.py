@@ -24,13 +24,17 @@ from app.domain.models import (
     Workspace,
     WorkspaceWidget,
 )
-from app.schemas.experiment import ExperimentSchema
+from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
 
 
 class ExperimentRepository(Protocol):
     def save(self, experiment: Experiment) -> None: ...
 
     def load(self, experiment_id: str) -> Experiment | None: ...
+
+    def list(self) -> list[ExperimentListEntrySchema]: ...
+
+    def delete(self, experiment_id: str) -> bool: ...
 
 
 class InMemoryExperimentRepository:
@@ -39,6 +43,12 @@ class InMemoryExperimentRepository:
 
     def load(self, experiment_id: str) -> Experiment | None:
         return None
+
+    def list(self) -> list[ExperimentListEntrySchema]:
+        return []
+
+    def delete(self, experiment_id: str) -> bool:
+        return False
 
 
 class SqliteExperimentRepository:
@@ -82,6 +92,41 @@ class SqliteExperimentRepository:
 
         payload = json.loads(row[0])
         return _deserialize_experiment(payload)
+
+    def list(self) -> list[ExperimentListEntrySchema]:
+        with sqlite3.connect(self._db_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT id, updated_at, snapshot_version, payload
+                FROM experiments
+                ORDER BY updated_at DESC, id DESC
+                """
+            ).fetchall()
+
+        entries: list[ExperimentListEntrySchema] = []
+        for experiment_id, updated_at, snapshot_version, payload_json in rows:
+            payload = json.loads(payload_json)
+            schema = ExperimentSchema.model_validate(payload)
+            entries.append(
+                ExperimentListEntrySchema(
+                    id=experiment_id,
+                    status=schema.status,
+                    last_simulation_at=schema.last_simulation_at,
+                    snapshot_version=snapshot_version,
+                    updated_at=datetime.fromisoformat(updated_at),
+                    last_audit_entry=schema.audit_log[-1] if schema.audit_log else None,
+                )
+            )
+        return entries
+
+    def delete(self, experiment_id: str) -> bool:
+        with sqlite3.connect(self._db_path) as connection:
+            cursor = connection.execute(
+                "DELETE FROM experiments WHERE id = ?",
+                (experiment_id,),
+            )
+            connection.commit()
+        return cursor.rowcount > 0
 
     def _ensure_parent_directory(self) -> None:
         Path(self._db_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)

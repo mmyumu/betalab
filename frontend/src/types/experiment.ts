@@ -38,3 +38,12 @@ export type Experiment = {
   workspace: ExperimentWorkspace;
   audit_log: string[];
 };
+
+export type ExperimentListEntry = {
+  id: string;
+  status: string;
+  last_simulation_at: string;
+  snapshot_version: number;
+  updated_at: string;
+  last_audit_entry: string | null;
+};

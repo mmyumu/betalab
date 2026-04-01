@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from app.schemas.experiment import (
     DebugProducePresetSpawnToWidgetSchema,
     DebugProducePresetSpawnToWorkbenchSchema,
+    ExperimentListEntrySchema,
     ExperimentSchema,
     PaletteToolDiscardSchema,
     RackToolMoveSchema,
@@ -58,6 +59,19 @@ def _handle_service_errors(operation: Callable[[], ExperimentSchema]) -> Experim
 @router.post("", response_model=ExperimentSchema)
 def create_experiment() -> ExperimentSchema:
     return experiment_service.create_experiment()
+
+
+@router.get("", response_model=list[ExperimentListEntrySchema])
+def list_experiments() -> list[ExperimentListEntrySchema]:
+    return experiment_service.list_experiments()
+
+
+@router.delete("/{experiment_id}", status_code=204)
+def delete_experiment(experiment_id: str) -> None:
+    try:
+        experiment_service.delete_experiment(experiment_id)
+    except ExperimentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Experiment not found") from exc
 
 
 @router.get("/{experiment_id}", response_model=ExperimentSchema)

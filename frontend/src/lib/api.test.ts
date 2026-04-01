@@ -5,12 +5,14 @@ import {
   createDebugProduceLotOnWorkbench,
   createDebugProduceLotToWidget,
   createExperiment,
+  deleteExperiment,
   getExperiment,
+  listExperiments,
   openWorkbenchTool,
   placeToolOnWorkbench,
   subscribeToExperimentStream,
 } from "@/lib/api";
-import type { Experiment } from "@/types/experiment";
+import type { Experiment, ExperimentListEntry } from "@/types/experiment";
 
 const makeExperiment = (): Experiment => ({
   id: "experiment_test",
@@ -53,6 +55,49 @@ describe("api client", () => {
     await expect(createExperiment()).resolves.toEqual(experiment);
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/experiments", {
       method: "POST",
+    });
+  });
+
+  it("lists saved experiments", async () => {
+    const experiments: ExperimentListEntry[] = [
+      {
+        id: "experiment_2",
+        status: "preparing",
+        last_simulation_at: "2026-04-01T10:00:00Z",
+        snapshot_version: 4,
+        updated_at: "2026-04-01T10:03:00Z",
+        last_audit_entry: "Wide-neck HDPE jar sealed on Station 1.",
+      },
+      {
+        id: "experiment_1",
+        status: "preparing",
+        last_simulation_at: "2026-04-01T09:00:00Z",
+        snapshot_version: 2,
+        updated_at: "2026-04-01T09:01:00Z",
+        last_audit_entry: null,
+      },
+    ];
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => experiments,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listExperiments()).resolves.toEqual(experiments);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/experiments");
+  });
+
+  it("deletes a saved experiment", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(deleteExperiment("experiment_123")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/experiments/experiment_123", {
+      method: "DELETE",
     });
   });
 

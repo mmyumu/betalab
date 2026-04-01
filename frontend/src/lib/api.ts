@@ -1,4 +1,4 @@
-import type { Experiment } from "@/types/experiment";
+import type { Experiment, ExperimentListEntry } from "@/types/experiment";
 import type {
   BenchLiquidPortion,
   BenchSlot,
@@ -89,6 +89,37 @@ export async function getExperiment(experimentId: string): Promise<Experiment> {
   const experiment = normalizeExperiment((await response.json()) as Experiment);
   experimentCache.set(experiment.id, experiment);
   return experiment;
+}
+
+export async function listExperiments(): Promise<ExperimentListEntry[]> {
+  const response = await fetch(`${API_BASE_URL}/experiments`);
+
+  if (!response.ok) {
+    throw await buildApiError(response, "Failed to fetch experiments");
+  }
+
+  const payload = (await response.json()) as ExperimentListEntry[];
+  return payload.map((entry) => ({
+    ...entry,
+    last_simulation_at: String(entry.last_simulation_at),
+    updated_at: String(entry.updated_at),
+    last_audit_entry:
+      entry.last_audit_entry === null || entry.last_audit_entry === undefined
+        ? null
+        : String(entry.last_audit_entry),
+  }));
+}
+
+export async function deleteExperiment(experimentId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw await buildApiError(response, "Failed to delete experiment");
+  }
+
+  experimentCache.delete(experimentId);
 }
 
 export function subscribeToExperimentStream(

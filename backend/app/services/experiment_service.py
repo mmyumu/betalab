@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Callable, TypeVar
 
 from app.domain.models import Experiment
-from app.schemas.experiment import ExperimentSchema
+from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
 from app.services.experiment_repository import ExperimentRepository, InMemoryExperimentRepository
 from app.services.command_handlers.rack import (
     move_rack_tool_between_slots,
@@ -125,6 +125,15 @@ class ExperimentService:
         experiment = build_experiment()
         self._experiments[experiment.id] = experiment
         return self._persist_and_to_schema(experiment)
+
+    def list_experiments(self) -> list[ExperimentListEntrySchema]:
+        return self._repository.list()
+
+    def delete_experiment(self, experiment_id: str) -> None:
+        self._experiments.pop(experiment_id, None)
+        deleted = self._repository.delete(experiment_id)
+        if not deleted:
+            raise ExperimentNotFoundError(experiment_id)
 
     def get_experiment(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)

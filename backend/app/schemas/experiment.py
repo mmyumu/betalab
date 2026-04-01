@@ -122,6 +122,15 @@ class ExperimentSchema(BaseModel):
     audit_log: list[str]
 
 
+class ExperimentListEntrySchema(BaseModel):
+    id: str
+    status: str
+    last_simulation_at: datetime
+    snapshot_version: int
+    updated_at: datetime
+    last_audit_entry: str | None = None
+
+
 class LayoutPositionSchema(BaseModel):
     anchor: str
     offset_x: int

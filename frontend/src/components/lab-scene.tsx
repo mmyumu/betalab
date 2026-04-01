@@ -215,10 +215,15 @@ function buildDebugProduceDraftFields(): DropDraftField[] {
   ];
 }
 
-export function LabScene() {
+type LabSceneProps = {
+  experimentId?: string;
+};
+
+export function LabScene({ experimentId }: LabSceneProps = {}) {
   const experimentApi = useLabExperiment({
     defaultErrorMessage,
     defaultStatusMessage,
+    experimentId,
   });
   const { state, statusMessage, isCommandPending, loadExperiment } = experimentApi;
   const [pendingDropDraft, setPendingDropDraft] = useState<{

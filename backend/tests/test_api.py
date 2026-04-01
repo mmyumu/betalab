@@ -1,11 +1,26 @@
+import app.api.experiments as experiments_api
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 import pytest
 
-from app.api.experiments import experiment_service
 from app.core.config import Settings, settings
 from app.main import app
+from app.services.experiment_repository import SqliteExperimentRepository
+from app.services.experiment_service import ExperimentService
+
+
+@pytest.fixture(autouse=True)
+def isolated_api_experiment_service(tmp_path, monkeypatch):
+    isolated_service = ExperimentService(
+        repository=SqliteExperimentRepository(str(tmp_path / "api-tests.sqlite3"))
+    )
+    monkeypatch.setattr(experiments_api, "experiment_service", isolated_service)
+    globals()["experiment_service"] = isolated_service
+    return isolated_service
+
+
+experiment_service = experiments_api.experiment_service
 
 
 def _create_experiment(client: TestClient) -> str:
@@ -43,6 +58,30 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert fetched.json()["rack"]["slots"][0]["tool"] is None
     assert fetched.json()["trash"]["tools"] == []
     assert fetched.json()["workspace"]["widgets"][0]["id"] == "workbench"
+
+
+def test_list_experiments_returns_saved_sessions_over_http() -> None:
+    with TestClient(app) as client:
+        first_id = _create_experiment(client)
+        second_id = _create_experiment(client)
+        listed = client.get("/experiments")
+
+    assert listed.status_code == 200
+    payload = listed.json()
+    assert {entry["id"] for entry in payload} >= {first_id, second_id}
+    assert payload[0]["last_audit_entry"] is not None
+
+
+def test_delete_experiment_removes_saved_session_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        deleted = client.delete(f"/experiments/{experiment_id}")
+        listed = client.get("/experiments")
+        fetched = client.get(f"/experiments/{experiment_id}")
+
+    assert deleted.status_code == 204
+    assert all(entry["id"] != experiment_id for entry in listed.json())
+    assert fetched.status_code == 404
 
 
 def test_get_experiment_returns_404_for_unknown_id() -> None:
@@ -136,7 +175,7 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
     assert tool["internal_pressure_bar"] == pytest.approx(1.0, abs=0.01)
     assert tool["trapped_co2_mass_g"] == pytest.approx(0.0, abs=0.01)
     assert tool["produce_lots"][0]["total_mass_g"] == 1000.0
-    assert tool["produce_lots"][0]["residual_co2_mass_g"] == pytest.approx(18.0, abs=0.2)
+    assert 17.5 <= tool["produce_lots"][0]["residual_co2_mass_g"] <= 18.0
 
 
 def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:

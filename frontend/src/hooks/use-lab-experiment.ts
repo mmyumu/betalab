@@ -13,6 +13,7 @@ import {
   closeWorkbenchTool,
   completeGrinderCycle,
   createExperiment,
+  getExperiment,
   createDebugProduceLotOnWorkbench,
   createDebugProduceLotToWidget,
   createProduceLot,
@@ -60,6 +61,7 @@ type LabExperimentState =
 type UseLabExperimentOptions = {
   defaultErrorMessage: string;
   defaultStatusMessage: string;
+  experimentId?: string;
 };
 
 type MutationFn = (experimentId: string, payload?: Record<string, unknown>) => Promise<Experiment>;
@@ -114,6 +116,7 @@ const mutationFns = {
 export function useLabExperiment({
   defaultErrorMessage,
   defaultStatusMessage,
+  experimentId,
 }: UseLabExperimentOptions) {
   const [state, setState] = useState<LabExperimentState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
@@ -139,7 +142,9 @@ export function useLabExperiment({
     setState({ status: "loading" });
 
     try {
-      const experiment = await createExperiment();
+      const experiment = experimentId
+        ? await getExperiment(experimentId)
+        : await createExperiment();
       applyExperimentSnapshot(experiment);
     } catch (error) {
       setState({
@@ -196,6 +201,9 @@ export function useLabExperiment({
           throw error;
         }
 
+        if (experimentId) {
+          throw error;
+        }
         const recreatedExperiment = await createExperiment();
         updatedExperiment = await mutation(recreatedExperiment.id, payload);
       }
