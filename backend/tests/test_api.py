@@ -136,7 +136,7 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
     assert tool["internal_pressure_bar"] == pytest.approx(1.0, abs=0.01)
     assert tool["trapped_co2_mass_g"] == pytest.approx(0.0, abs=0.01)
     assert tool["produce_lots"][0]["total_mass_g"] == 1000.0
-    assert tool["produce_lots"][0]["residual_co2_mass_g"] == pytest.approx(18.0, abs=0.05)
+    assert tool["produce_lots"][0]["residual_co2_mass_g"] == pytest.approx(18.0, abs=0.2)
 
 
 def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:

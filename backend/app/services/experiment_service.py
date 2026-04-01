@@ -6,6 +6,7 @@ from typing import Callable, TypeVar
 
 from app.domain.models import Experiment
 from app.schemas.experiment import ExperimentSchema
+from app.services.experiment_repository import ExperimentRepository, InMemoryExperimentRepository
 from app.services.command_handlers.rack import (
     move_rack_tool_between_slots,
     place_tool_in_rack_slot,
@@ -115,25 +116,26 @@ class ExperimentNotFoundError(KeyError):
 
 
 class ExperimentService:
-    def __init__(self) -> None:
+    def __init__(self, repository: ExperimentRepository | None = None) -> None:
         self._experiments: dict[str, Experiment] = {}
+        self._repository = repository or InMemoryExperimentRepository()
         self._now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
 
     def create_experiment(self) -> ExperimentSchema:
         experiment = build_experiment()
         self._experiments[experiment.id] = experiment
-        return self._to_schema(experiment)
+        return self._persist_and_to_schema(experiment)
 
     def get_experiment(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
         self._advance_experiment_to_now(experiment)
-        return self._to_schema(experiment)
+        return self._persist_and_to_schema(experiment)
 
     def add_workbench_slot(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
         self._advance_experiment_to_now(experiment)
         add_workbench_slot(experiment)
-        return self._to_schema(experiment)
+        return self._persist_and_to_schema(experiment)
 
     def remove_workbench_slot(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
         return self._apply_command(
@@ -565,6 +567,10 @@ class ExperimentService:
     def _require_experiment(self, experiment_id: str) -> Experiment:
         experiment = self._experiments.get(experiment_id)
         if experiment is None:
+            experiment = self._repository.load(experiment_id)
+            if experiment is not None:
+                self._experiments[experiment_id] = experiment
+        if experiment is None:
             raise ExperimentNotFoundError(experiment_id)
         return experiment
 
@@ -577,7 +583,7 @@ class ExperimentService:
         experiment = self._require_experiment(experiment_id)
         self._advance_experiment_to_now(experiment)
         handler(experiment, command)
-        return self._to_schema(experiment)
+        return self._persist_and_to_schema(experiment)
 
     def _advance_experiment_to_now(self, experiment: Experiment) -> None:
         now = self._now_fn()
@@ -615,3 +621,8 @@ class ExperimentService:
                 "audit_log": experiment.audit_log,
             }
         )
+
+    def _persist_and_to_schema(self, experiment: Experiment) -> ExperimentSchema:
+        schema = self._to_schema(experiment)
+        self._repository.save(experiment)
+        return schema

@@ -35,10 +35,14 @@ from app.schemas.experiment import (
     WorkspaceWidgetMoveWorkbenchProduceLotSchema,
     WorkspaceWidgetProduceLotCreateSchema,
 )
+from app.core.config import settings
+from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentNotFoundError, ExperimentService
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
-experiment_service = ExperimentService()
+experiment_service = ExperimentService(
+    repository=SqliteExperimentRepository(settings.experiments_db_path)
+)
 experiment_stream_interval_seconds = 0.25
 
 

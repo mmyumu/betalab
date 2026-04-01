@@ -1,6 +1,7 @@
 import pytest
 from datetime import timedelta
 
+from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentService
 
 
@@ -2359,6 +2360,31 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
     slot = next(slot for slot in vented.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.18, abs=0.001)
+
+
+def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> None:
+    repository = SqliteExperimentRepository(str(tmp_path / "experiments.sqlite3"))
+    first_service = ExperimentService(repository=repository)
+
+    experiment = first_service.create_experiment()
+    updated = apply_command(
+        first_service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+
+    second_service = ExperimentService(repository=repository)
+    reloaded = second_service.get_experiment(experiment.id)
+
+    slot = next(slot for slot in reloaded.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.tool_id == "hdpe_storage_jar_2l"
+    assert reloaded.id == updated.id
+    assert reloaded.snapshot_version > updated.snapshot_version
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
