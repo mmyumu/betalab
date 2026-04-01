@@ -28,7 +28,7 @@ from app.services.commands import (
     WorkbenchProduceLotCommand,
     WorkbenchSlotCommand,
 )
-from app.services.cryogenic_simulation_service import CryogenicSimulationService
+from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.produce_lot_transfer import (
     ProduceLotTransferService,
     WorkbenchProduceLotSource,
@@ -43,7 +43,7 @@ from app.services.command_handlers.support import (
 )
 
 produce_lot_transfer_service = ProduceLotTransferService()
-cryogenic_simulation_service = CryogenicSimulationService()
+physical_simulation_service = PhysicalSimulationService()
 
 
 def place_tool_on_workbench(experiment: Experiment, command: PlaceToolOnWorkbenchCommand) -> None:
@@ -202,7 +202,7 @@ def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolComm
     if not can_tool_be_sealed(slot.tool.tool_type):
         raise ValueError(f"{slot.tool.label} cannot be sealed.")
 
-    risk = cryogenic_simulation_service.check_explosion_risk(slot.tool)
+    risk = physical_simulation_service.check_explosion_risk(slot.tool)
     if risk.should_pop:
         for produce_lot in slot.tool.produce_lots:
             produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))

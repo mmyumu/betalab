@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.domain.rules import is_workspace_widget_discardable
 from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, WorkbenchLiquid, new_id
 from app.domain.workbench_catalog import get_workbench_liquid_definition
-from app.services.cryogenic_simulation_service import CryogenicSimulationService
+from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.commands import (
     AddLiquidToWorkspaceWidgetCommand,
     AddWorkspaceProduceLotToWidgetCommand,
@@ -36,7 +36,7 @@ from app.services.command_handlers.support import (
     round_volume,
 )
 
-cryogenic_simulation_service = CryogenicSimulationService()
+physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
 
 
@@ -175,7 +175,7 @@ def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand)
         raise ValueError(f"{produce_lot.label} must be cut before grinding.")
     if produce_lot.cut_state == "ground":
         raise ValueError(f"{produce_lot.label} is already ground.")
-    if produce_lot.temperature_c > cryogenic_simulation_service.grinder_start_threshold_c:
+    if produce_lot.temperature_c > physical_simulation_service.grinder_start_threshold_c:
         raise ValueError(f"{produce_lot.label} is not cold enough for cryogenic grinding.")
     if widget.grinder_run_remaining_ms > 0:
         return
@@ -184,7 +184,7 @@ def start_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetCommand)
     produce_lot.homogeneity_score = None
     produce_lot.grinding_elapsed_seconds = 0.0
     produce_lot.grinding_temperature_integral = 0.0
-    cycle_duration_ms = cryogenic_simulation_service.grinder_cycle_duration_seconds * 1000.0
+    cycle_duration_ms = physical_simulation_service.grinder_cycle_duration_seconds * 1000.0
     widget.grinder_run_duration_ms = cycle_duration_ms
     widget.grinder_run_remaining_ms = cycle_duration_ms
     widget.grinder_fault = None
@@ -202,7 +202,7 @@ def complete_grinder_cycle(experiment: Experiment, command: WorkspaceWidgetComma
     if produce_lot.cut_state == "ground":
         return
 
-    homogeneity_score, grind_quality_label = cryogenic_simulation_service.score_grind_result(produce_lot)
+    homogeneity_score, grind_quality_label = physical_simulation_service.score_grind_result(produce_lot)
     residual_dry_ice_mass_g = sum(liquid.volume_ml for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets")
     produce_lot.cut_state = "ground"
     produce_lot.homogeneity_score = homogeneity_score
@@ -228,21 +228,21 @@ def advance_workspace_cryogenics(
         remaining_seconds = elapsed_seconds
         if widget.grinder_run_remaining_ms > 0:
             grinding_seconds = min(remaining_seconds, widget.grinder_run_remaining_ms / 1000.0)
-            cryogenic_simulation_service.advance_grinding_widget(widget, grinding_seconds)
+            physical_simulation_service.advance_grinding_widget(widget, grinding_seconds)
             widget.grinder_run_remaining_ms = round_volume(
                 max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0)
             )
             remaining_seconds -= grinding_seconds
 
             loaded_lot = widget.produce_lots[0] if widget.produce_lots else None
-            if loaded_lot is not None and loaded_lot.temperature_c >= cryogenic_simulation_service.grinder_jam_threshold_c:
+            if loaded_lot is not None and loaded_lot.temperature_c >= physical_simulation_service.grinder_jam_threshold_c:
                 widget.grinder_run_duration_ms = 0.0
                 widget.grinder_run_remaining_ms = 0.0
                 widget.grinder_fault = "motor_jammed"
                 _discard_jammed_grinder_contents(experiment, widget, loaded_lot)
                 continue
 
-            if loaded_lot is not None and loaded_lot.temperature_c >= cryogenic_simulation_service.grinder_start_threshold_c:
+            if loaded_lot is not None and loaded_lot.temperature_c >= physical_simulation_service.grinder_start_threshold_c:
                 widget.grinder_fault = "high_torque"
             elif widget.grinder_fault == "high_torque":
                 widget.grinder_fault = None
@@ -251,12 +251,12 @@ def advance_workspace_cryogenics(
                 complete_grinder_cycle(experiment, WorkspaceWidgetCommand(widget_id=widget.id))
 
         if remaining_seconds > 0:
-            cryogenic_simulation_service.advance_widget(widget, remaining_seconds)
+            physical_simulation_service.advance_widget(widget, remaining_seconds)
 
     for slot in experiment.workbench.slots:
         if slot.tool is not None:
-            cryogenic_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
-        cryogenic_simulation_service.warm_produce_lots(slot.surface_produce_lots, elapsed_seconds)
+            physical_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
+        physical_simulation_service.warm_produce_lots(slot.surface_produce_lots, elapsed_seconds)
 
 
 def add_workspace_produce_lot_to_widget(
