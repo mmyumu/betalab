@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 
@@ -1713,6 +1714,15 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
       <div className="mx-auto w-full">
+        <nav aria-label="Breadcrumb" className="mb-3">
+          <Link
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
+            href="/"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Experiments</span>
+          </Link>
+        </nav>
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur xl:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
             Betalab

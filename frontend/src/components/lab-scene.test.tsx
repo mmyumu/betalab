@@ -407,6 +407,17 @@ describe("LabScene", () => {
     expect(actionsWidget).toHaveClass("xl:top-6");
   });
 
+  it("renders a breadcrumb link back to the experiments home", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    expect(await screen.findByRole("link", { name: "Experiments" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+  });
+
   it("shows a separate debug produce palette and spawns its preset on drop", async () => {
     vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
     vi.mocked(createExperiment).mockResolvedValue(

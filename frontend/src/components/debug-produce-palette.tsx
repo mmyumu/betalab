@@ -35,7 +35,7 @@ export function DebugProducePalette({
             draggable={Boolean(onPresetDragStart)}
             footerBadge={<ProduceLotStatusBadge produceLot={preset.produceLot} />}
             key={preset.id}
-            metadata="850 g"
+            metadata=""
             onDragEnd={onItemDragEnd}
             onDragStart={
               onPresetDragStart
