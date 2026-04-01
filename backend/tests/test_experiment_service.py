@@ -2058,6 +2058,7 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
+    stored_lot.homogeneity_score = 0.96
 
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(minutes=2)
@@ -2071,6 +2072,7 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g < 1000.0
     assert slot.tool.produce_lots[0].residual_co2_mass_g < 18.0
+    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.25, abs=0.001)
     assert updated.audit_log[-1].startswith("Wide-neck HDPE jar popped open on Station 1 at ")
 
 
@@ -2306,6 +2308,7 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
+    stored_lot.homogeneity_score = 0.96
 
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
@@ -2319,7 +2322,43 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g < 1000.0
+    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.55, abs=0.001)
     assert updated.audit_log[-1].startswith("Wide-neck HDPE jar vented at ")
+
+
+def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_1", "tool_id": "hdpe_storage_jar_2l"},
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
+    )
+
+    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_lot.cut_state = "ground"
+    stored_lot.residual_co2_mass_g = 18.0
+    stored_lot.total_mass_g = 1000.0
+    stored_lot.homogeneity_score = 0.18
+
+    apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
+    service.get_experiment(experiment.id)
+    vented = service.open_workbench_tool(experiment.id, "station_1")
+
+    slot = next(slot for slot in vented.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.18, abs=0.001)
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:

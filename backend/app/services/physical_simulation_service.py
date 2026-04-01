@@ -50,6 +50,8 @@ class PhysicalSimulationService:
     co2_molar_mass_g_per_mol = 44.01
     gas_constant_j_per_mol_k = 8.314
     atmospheric_pressure_bar = 1.0
+    pressure_pop_homogeneity_cap = 0.25
+    pressure_vent_homogeneity_cap = 0.55
 
     def check_explosion_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
         return self._check_container_pressure_risk(tool)
@@ -80,6 +82,10 @@ class PhysicalSimulationService:
             previous_mass_g = produce_lot.total_mass_g
             produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))
             produce_lot.residual_co2_mass_g = round_volume(max(produce_lot.residual_co2_mass_g * 0.8, 0.0))
+            self._degrade_pressure_exposed_homogeneity(
+                produce_lot,
+                self.pressure_pop_homogeneity_cap,
+            )
             lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
 
         pressure_bar = tool.internal_pressure_bar
@@ -115,6 +121,10 @@ class PhysicalSimulationService:
 
             previous_mass_g = produce_lot.total_mass_g
             produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * (1.0 - loss_ratio), 0.0))
+            self._degrade_pressure_exposed_homogeneity(
+                produce_lot,
+                self.pressure_vent_homogeneity_cap,
+            )
             lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
 
         self._reset_container_pressure(tool)
@@ -469,6 +479,18 @@ class PhysicalSimulationService:
         if tool_type == "centrifuge_tube":
             return 2.8
         return 5.0
+
+    def _degrade_pressure_exposed_homogeneity(
+        self,
+        produce_lot: ProduceLot,
+        cap: float,
+    ) -> None:
+        if produce_lot.cut_state != "ground":
+            return
+        if produce_lot.homogeneity_score is None:
+            produce_lot.homogeneity_score = round(cap, 3)
+            return
+        produce_lot.homogeneity_score = round(min(produce_lot.homogeneity_score, cap), 3)
 
     def _reset_container_pressure(self, tool: WorkbenchTool) -> None:
         tool.internal_pressure_bar = self.atmospheric_pressure_bar
