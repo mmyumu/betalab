@@ -37,6 +37,8 @@ class WorkbenchToolSchema(BaseModel):
     capacity_ml: float
     is_sealed: bool = False
     closure_fault: str | None = None
+    internal_pressure_bar: float = 1.0
+    trapped_co2_mass_g: float = 0.0
     sample_label_text: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]

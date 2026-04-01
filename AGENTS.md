@@ -36,6 +36,17 @@ Frontend:
 
 Use TypeScript for frontend code and Python 3.11+ for backend code. Prefer 2-space indentation in frontend files and 4 spaces in Python. Use `snake_case` for Python modules/functions, `PascalCase` for React components, and `kebab-case` for component filenames (for example `flask-card.tsx`). Keep domain logic out of React components; put workflow orchestration in `backend/app/services/`, domain concepts in `backend/app/domain/`, and API contracts in `backend/app/schemas/`.
 
+### Physical Simulation Architecture
+
+- Treat time-based lab physics as a single backend subsystem rooted in `PhysicalSimulationService`.
+- `PhysicalSimulationService` is the public simulation façade. Keep specialized logic as internal blocks or helpers such as cryogenics, container pressure, evaporation, or thermal transfer instead of creating parallel top-level services too early.
+- The authoritative simulation clock is `ExperimentService._advance_experiment_to_now()`.
+- Time-based physical consequences must advance from ticks triggered by `_advance_experiment_to_now()`, which currently runs continuously while a websocket client is connected and catches up elapsed time on the next read if no client was connected.
+- Action handlers such as `close_workbench_tool` or `open_workbench_tool` may change the configuration state of entities, but they should not hardcode delayed physical outcomes that belong to the ticked simulation.
+- In practice: `close` should mark a container sealed, and pressure buildup / bulging / pop should be computed by simulation ticks, not decided immediately inside the close handler.
+- Persist intermediate physical state on domain entities when needed. Example: a sealed container may carry `internal_pressure_bar` and `trapped_co2_mass_g` so the next tick or open action can continue from the current physical state.
+- When adding a new physical phenomenon, prefer extending `PhysicalSimulationService` and the tick path before adding ad hoc event-only checks in command handlers.
+
 ### Reusable UI Primitives
 
 - When the same visual pattern appears in multiple widgets or panels, extract it into a shared component instead of copying Tailwind class strings.

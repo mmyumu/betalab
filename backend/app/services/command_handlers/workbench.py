@@ -202,21 +202,9 @@ def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolComm
     if not can_tool_be_sealed(slot.tool.tool_type):
         raise ValueError(f"{slot.tool.label} cannot be sealed.")
 
-    risk = physical_simulation_service.check_explosion_risk(slot.tool)
-    if risk.should_pop:
-        for produce_lot in slot.tool.produce_lots:
-            produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))
-            produce_lot.residual_co2_mass_g = round_volume(max(produce_lot.residual_co2_mass_g * 0.8, 0.0))
-
-        slot.tool.is_sealed = False
-        slot.tool.closure_fault = "pressure_pop"
-        experiment.audit_log.append(
-            f"{slot.tool.label} popped open on {slot.label} after premature sealing; 20% of {slot.tool.produce_lots[0].label} was lost."
-        )
-        return
-
     slot.tool.is_sealed = True
     slot.tool.closure_fault = None
+    slot.tool.internal_pressure_bar = max(slot.tool.internal_pressure_bar, 1.0)
     experiment.audit_log.append(f"{slot.tool.label} sealed on {slot.label}.")
 
 
@@ -227,8 +215,15 @@ def open_workbench_tool(experiment: Experiment, command: OpenWorkbenchToolComman
     if not can_tool_be_sealed(slot.tool.tool_type):
         raise ValueError(f"{slot.tool.label} cannot be opened.")
 
+    vent_event = physical_simulation_service.vent_opened_tool(slot.tool)
     slot.tool.is_sealed = False
     slot.tool.closure_fault = None
+    if vent_event is not None and vent_event.lost_mass_g > 0:
+        experiment.audit_log.append(
+            f"{slot.tool.label} vented at {format_volume(vent_event.pressure_bar)} bar on {slot.label}; {format_volume(vent_event.lost_mass_g)} g of powder was lost."
+        )
+        return
+
     experiment.audit_log.append(f"{slot.tool.label} opened on {slot.label}.")
 
 

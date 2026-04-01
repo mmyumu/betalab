@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.rules import is_workspace_widget_discardable
+from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
 from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, WorkbenchLiquid, new_id
 from app.domain.workbench_catalog import get_workbench_liquid_definition
 from app.services.physical_simulation_service import PhysicalSimulationService
@@ -255,7 +255,20 @@ def advance_workspace_cryogenics(
 
     for slot in experiment.workbench.slots:
         if slot.tool is not None:
-            physical_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
+            if slot.tool.is_sealed and can_tool_be_sealed(slot.tool.tool_type):
+                pressure_event = physical_simulation_service.advance_sealed_tool(
+                    slot.tool,
+                    elapsed_seconds,
+                )
+                if pressure_event is not None and pressure_event.fault == "pressure_pop":
+                    first_lot_label = (
+                        slot.tool.produce_lots[0].label if slot.tool.produce_lots else "the sample"
+                    )
+                    experiment.audit_log.append(
+                        f"{slot.tool.label} popped open on {slot.label} at {format_volume(pressure_event.pressure_bar)} bar; {format_volume(pressure_event.lost_mass_g)} g of {first_lot_label} was lost."
+                    )
+            else:
+                physical_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
         physical_simulation_service.warm_produce_lots(slot.surface_produce_lots, elapsed_seconds)
 
 

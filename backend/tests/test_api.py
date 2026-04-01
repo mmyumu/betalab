@@ -131,10 +131,51 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
 
     assert closed.status_code == 200
     tool = closed.json()["workbench"]["slots"][0]["tool"]
+    assert tool["is_sealed"] is True
+    assert tool["closure_fault"] is None
+    assert tool["internal_pressure_bar"] == pytest.approx(1.0, abs=0.01)
+    assert tool["trapped_co2_mass_g"] == pytest.approx(0.0, abs=0.01)
+    assert tool["produce_lots"][0]["total_mass_g"] == 1000.0
+    assert tool["produce_lots"][0]["residual_co2_mass_g"] == pytest.approx(18.0, abs=0.05)
+
+
+def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        created = client.post(
+            f"/experiments/{experiment_id}/workspace/produce-lots",
+            json={"produce_type": "apple"},
+        )
+        produce_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        placed = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "hdpe_storage_jar_2l"},
+        )
+        tool_id = placed.json()["workbench"]["slots"][0]["tool"]["id"]
+        client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{tool_id}/add-produce-lot",
+            json={"produce_lot_id": produce_lot_id},
+        )
+
+        experiment_state = experiment_service._experiments[experiment_id]
+        stored_lot = experiment_state.workbench.slots[0].tool.produce_lots[0]
+        stored_lot.cut_state = "ground"
+        stored_lot.total_mass_g = 1000.0
+        stored_lot.residual_co2_mass_g = 18.0
+
+        closed = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/close")
+        assert closed.status_code == 200
+
+        experiment_state.last_simulation_at = experiment_state.last_simulation_at - timedelta(
+            minutes=2
+        )
+        snapshot = client.get(f"/experiments/{experiment_id}")
+
+    assert snapshot.status_code == 200
+    tool = snapshot.json()["workbench"]["slots"][0]["tool"]
     assert tool["is_sealed"] is False
     assert tool["closure_fault"] == "pressure_pop"
-    assert tool["produce_lots"][0]["total_mass_g"] == 800.0
-    assert tool["produce_lots"][0]["residual_co2_mass_g"] == pytest.approx(14.4, abs=0.05)
+    assert tool["internal_pressure_bar"] == pytest.approx(1.0, abs=0.01)
 
 
 def test_debug_produce_preset_route_spawns_powder_on_workbench() -> None:

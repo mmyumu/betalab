@@ -13,6 +13,14 @@ class ContainerClosureRisk:
     residual_co2_mass_g: float
 
 
+@dataclass(frozen=True, slots=True)
+class ContainerPressureEvent:
+    fault: str
+    pressure_bar: float
+    lost_mass_g: float
+    vented_co2_mass_g: float
+
+
 class PhysicalSimulationService:
     grinder_cycle_duration_seconds = 30.0
     grinder_optimal_temperature_c = -40.0
@@ -31,12 +39,17 @@ class PhysicalSimulationService:
     warming_rate_per_second = 0.014
     ambient_sublimation_g_per_second = 0.04
     residual_degassing_g_per_second = 12.0
+    sealed_pressure_degassing_g_per_second = 0.03
     grinding_friction_heating_c_per_second = 0.4
     grinding_sublimation_boost = 15.0
     grinding_buffer_absorption_ratio = 0.2
     fine_powder_temperature_c = -60.0
     granular_temperature_c = -40.0
     poor_grind_temperature_c = -20.0
+    minimum_container_headspace_ml = 100.0
+    co2_molar_mass_g_per_mol = 44.01
+    gas_constant_j_per_mol_k = 8.314
+    atmospheric_pressure_bar = 1.0
 
     def check_explosion_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
         return self._check_container_pressure_risk(tool)
@@ -46,6 +59,71 @@ class PhysicalSimulationService:
 
     def advance_grinding_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
         self._advance_grinding_cryogenics(widget, elapsed_seconds)
+
+    def advance_sealed_tool(
+        self,
+        tool: WorkbenchTool,
+        elapsed_seconds: float,
+    ) -> ContainerPressureEvent | None:
+        if not tool.is_sealed:
+            self._reset_container_pressure(tool)
+            return None
+
+        self._warm_sealed_tool_produce(tool, elapsed_seconds)
+        tool.internal_pressure_bar = self._calculate_container_pressure_bar(tool)
+        risk = self._check_container_pressure_risk(tool)
+        if not risk.should_pop:
+            return None
+
+        lost_mass_g = 0.0
+        for produce_lot in tool.produce_lots:
+            previous_mass_g = produce_lot.total_mass_g
+            produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))
+            produce_lot.residual_co2_mass_g = round_volume(max(produce_lot.residual_co2_mass_g * 0.8, 0.0))
+            lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
+
+        pressure_bar = tool.internal_pressure_bar
+        vented_co2_mass_g = tool.trapped_co2_mass_g
+        tool.is_sealed = False
+        tool.closure_fault = "pressure_pop"
+        self._reset_container_pressure(tool)
+        return ContainerPressureEvent(
+            fault="pressure_pop",
+            pressure_bar=pressure_bar,
+            lost_mass_g=round_volume(lost_mass_g),
+            vented_co2_mass_g=round_volume(vented_co2_mass_g),
+        )
+
+    def vent_opened_tool(self, tool: WorkbenchTool) -> ContainerPressureEvent | None:
+        pressure_bar = max(tool.internal_pressure_bar, self.atmospheric_pressure_bar)
+        trapped_co2_mass_g = round_volume(max(tool.trapped_co2_mass_g, 0.0))
+        if pressure_bar <= 1.05 and trapped_co2_mass_g <= 0:
+            self._reset_container_pressure(tool)
+            return None
+
+        lost_mass_g = 0.0
+        overpressure_bar = max(pressure_bar - self.atmospheric_pressure_bar, 0.0)
+        for produce_lot in tool.produce_lots:
+            if produce_lot.cut_state == "ground":
+                loss_ratio = min(overpressure_bar * 0.05, 0.4)
+            elif produce_lot.cut_state == "cut":
+                loss_ratio = min(overpressure_bar * 0.02, 0.2)
+            else:
+                loss_ratio = 0.0
+            if loss_ratio <= 0:
+                continue
+
+            previous_mass_g = produce_lot.total_mass_g
+            produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * (1.0 - loss_ratio), 0.0))
+            lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
+
+        self._reset_container_pressure(tool)
+        return ContainerPressureEvent(
+            fault="pressure_vent",
+            pressure_bar=pressure_bar,
+            lost_mass_g=round_volume(lost_mass_g),
+            vented_co2_mass_g=trapped_co2_mass_g,
+        )
 
     def score_grind_result(self, lot: ProduceLot) -> tuple[float | None, str | None]:
         if lot.grinding_elapsed_seconds <= 0:
@@ -100,26 +178,13 @@ class PhysicalSimulationService:
 
     def warm_produce_lots(self, produce_lots: list[ProduceLot], elapsed_seconds: float) -> None:
         for lot in produce_lots:
-            warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
-            lot.temperature_c = min(
-                lot.temperature_c
-                + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
-                self.ambient_temperature_c,
-            )
-            lot.residual_co2_mass_g = round_volume(
-                max(
-                    lot.residual_co2_mass_g
-                    - (self.residual_degassing_g_per_second * elapsed_seconds),
-                    0.0,
-                )
-            )
+            self._warm_open_produce_lot(lot, elapsed_seconds)
 
     def _check_container_pressure_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
-        residual_co2_mass_g = round_volume(
-            sum(max(lot.residual_co2_mass_g, 0.0) for lot in tool.produce_lots)
-        )
+        residual_co2_mass_g = round_volume(sum(max(lot.residual_co2_mass_g, 0.0) for lot in tool.produce_lots))
+        should_pop = tool.internal_pressure_bar >= self._get_container_pop_threshold_bar(tool.tool_type)
         return ContainerClosureRisk(
-            should_pop=residual_co2_mass_g > 0.0,
+            should_pop=should_pop,
             residual_co2_mass_g=residual_co2_mass_g,
         )
 
@@ -309,6 +374,105 @@ class PhysicalSimulationService:
 
     def _calculate_ambient_sublimation_mass_loss(self, elapsed_seconds: float) -> float:
         return self.ambient_sublimation_g_per_second * elapsed_seconds
+
+    def _warm_open_produce_lot(self, lot: ProduceLot, elapsed_seconds: float) -> None:
+        warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
+        lot.temperature_c = min(
+            lot.temperature_c
+            + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
+            self.ambient_temperature_c,
+        )
+        lot.residual_co2_mass_g = round_volume(
+            max(
+                lot.residual_co2_mass_g
+                - (self.residual_degassing_g_per_second * elapsed_seconds),
+                0.0,
+            )
+        )
+
+    def _warm_sealed_tool_produce(self, tool: WorkbenchTool, elapsed_seconds: float) -> None:
+        for lot in tool.produce_lots:
+            warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
+            lot.temperature_c = min(
+                lot.temperature_c
+                + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
+                self.ambient_temperature_c,
+            )
+
+            degassing_rate_g_per_second = self._get_sealed_degassing_rate(lot.temperature_c)
+            trapped_mass_g = min(
+                max(lot.residual_co2_mass_g, 0.0),
+                degassing_rate_g_per_second * elapsed_seconds,
+            )
+            if trapped_mass_g <= 0:
+                continue
+
+            lot.residual_co2_mass_g = round_volume(max(lot.residual_co2_mass_g - trapped_mass_g, 0.0))
+            tool.trapped_co2_mass_g = round_volume(tool.trapped_co2_mass_g + trapped_mass_g)
+
+    def _get_sealed_degassing_rate(self, temperature_c: float) -> float:
+        if temperature_c <= -70.0:
+            return self.sealed_pressure_degassing_g_per_second * 0.35
+        if temperature_c <= -40.0:
+            return self.sealed_pressure_degassing_g_per_second * 0.7
+        if temperature_c <= 0.0:
+            return self.sealed_pressure_degassing_g_per_second
+        return self.sealed_pressure_degassing_g_per_second * 1.5
+
+    def _calculate_container_pressure_bar(self, tool: WorkbenchTool) -> float:
+        trapped_co2_mass_g = max(tool.trapped_co2_mass_g, 0.0)
+        if trapped_co2_mass_g <= 0:
+            return self.atmospheric_pressure_bar
+
+        gas_moles = trapped_co2_mass_g / self.co2_molar_mass_g_per_mol
+        mean_temperature_c = (
+            sum(lot.temperature_c for lot in tool.produce_lots) / len(tool.produce_lots)
+            if tool.produce_lots
+            else self.ambient_temperature_c
+        )
+        temperature_k = max(mean_temperature_c + 273.15, 1.0)
+        free_volume_m3 = self._get_free_container_volume_ml(tool) / 1_000_000.0
+        pressure_pa = (gas_moles * self.gas_constant_j_per_mol_k * temperature_k) / max(
+            free_volume_m3,
+            1e-9,
+        )
+        return round_volume(pressure_pa / 100000.0)
+
+    def _get_free_container_volume_ml(self, tool: WorkbenchTool) -> float:
+        occupied_volume_ml = sum(self._estimate_lot_occupied_volume_ml(lot) for lot in tool.produce_lots)
+        liquid_volume_ml = sum(max(liquid.volume_ml, 0.0) for liquid in tool.liquids)
+        return max(
+            tool.capacity_ml - occupied_volume_ml - liquid_volume_ml,
+            self.minimum_container_headspace_ml,
+        )
+
+    def _estimate_lot_occupied_volume_ml(self, lot: ProduceLot) -> float:
+        density_g_per_ml = self._get_apparent_density_g_per_ml(lot)
+        return max(lot.total_mass_g, 0.0) / max(density_g_per_ml, 1e-6)
+
+    def _get_apparent_density_g_per_ml(self, lot: ProduceLot) -> float:
+        if lot.cut_state == "ground":
+            return 0.5
+        if lot.cut_state == "cut":
+            return 0.72
+        return 0.85
+
+    def _get_container_pop_threshold_bar(self, tool_type: str) -> float:
+        if tool_type == "storage_jar":
+            return 5.0
+        if tool_type == "sample_bag":
+            return 1.4
+        if tool_type == "sample_vial":
+            return 3.5
+        if tool_type == "cleanup_tube":
+            return 2.4
+        if tool_type == "centrifuge_tube":
+            return 2.8
+        return 5.0
+
+    def _reset_container_pressure(self, tool: WorkbenchTool) -> None:
+        tool.internal_pressure_bar = self.atmospheric_pressure_bar
+        tool.trapped_co2_mass_g = 0.0
 
     def _remove_empty_liquids(self, widget: WorkspaceWidget) -> None:
         widget.liquids = [liquid for liquid in widget.liquids if liquid.volume_ml > 0]

@@ -1982,7 +1982,7 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
     assert station_1.tool.produce_lots[0].residual_co2_mass_g < 2.0
 
 
-def test_close_storage_jar_with_residual_co2_causes_projection_loss() -> None:
+def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
@@ -2026,13 +2026,52 @@ def test_close_storage_jar_with_residual_co2_causes_projection_loss() -> None:
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
+    assert slot.tool.is_sealed is True
+    assert slot.tool.closure_fault is None
+    assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
+    assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
+    assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(1000.0, abs=0.01)
+    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert updated.audit_log[-1] == "Wide-neck HDPE jar sealed on Station 1."
+
+
+def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_1", "tool_id": "hdpe_storage_jar_2l"},
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
+    )
+
+    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_lot.cut_state = "ground"
+    stored_lot.residual_co2_mass_g = 18.0
+    stored_lot.total_mass_g = 1000.0
+
+    apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
+    service._experiments[experiment.id].last_simulation_at -= timedelta(minutes=2)
+    updated = service.get_experiment(experiment.id)
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
     assert slot.tool.is_sealed is False
     assert slot.tool.closure_fault == "pressure_pop"
-    assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(800.0, abs=0.01)
-    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(14.4, abs=0.01)
-    assert updated.audit_log[-1] == (
-        "Wide-neck HDPE jar popped open on Station 1 after premature sealing; 20% of Apple lot 1 was lost."
-    )
+    assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
+    assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
+    assert slot.tool.produce_lots[0].total_mass_g < 1000.0
+    assert slot.tool.produce_lots[0].residual_co2_mass_g < 18.0
+    assert updated.audit_log[-1].startswith("Wide-neck HDPE jar popped open on Station 1 at ")
 
 
 def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
@@ -2242,6 +2281,45 @@ def test_open_workbench_tool_unseals_a_jar() -> None:
     assert slot.tool.is_sealed is False
     assert slot.tool.closure_fault is None
     assert updated.audit_log[-1] == "Wide-neck HDPE jar opened on Station 1."
+
+
+def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
+    produce_lot_id = created.workspace.produce_lots[0].id
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {"slot_id": "station_1", "tool_id": "hdpe_storage_jar_2l"},
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
+    )
+
+    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_lot.cut_state = "ground"
+    stored_lot.residual_co2_mass_g = 18.0
+    stored_lot.total_mass_g = 1000.0
+
+    apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
+    service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
+    service.get_experiment(experiment.id)
+    updated = service.open_workbench_tool(experiment.id, "station_1")
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.is_sealed is False
+    assert slot.tool.closure_fault is None
+    assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
+    assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
+    assert slot.tool.produce_lots[0].total_mass_g < 1000.0
+    assert updated.audit_log[-1].startswith("Wide-neck HDPE jar vented at ")
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
