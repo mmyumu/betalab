@@ -17,13 +17,17 @@ import type {
 type LabAssetIconProps = {
   accent: ToolbarAccent;
   className?: string;
+  closureFault?: string | null;
   fillRatio?: number;
   fillSegments?: Array<{ accent: ToolbarAccent; ratio: number }>;
+  isSealed?: boolean;
   kind: ToolType | LiquidType;
   produceLots?: ExperimentProduceLot[];
   sampleLabelText?: string | null;
   tone?: "accent" | "neutral";
 };
+
+type SealVisualState = "open" | "sealed" | "popped";
 
 const clampRatio = (value: number | undefined) => {
   if (value === undefined) {
@@ -96,25 +100,40 @@ function VolumetricFlaskIcon({
 }
 
 function CentrifugeTubeIcon({
+  closureFault,
   fillRatio,
   glow,
+  isSealed = false,
   label,
   liquidDefs,
   liquidFill,
   stroke,
 }: {
+  closureFault?: string | null;
   fillRatio: number;
   glow: string;
+  isSealed?: boolean;
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
   stroke: string;
 }) {
   const liquidTop = 86 - fillRatio * 38;
+  const sealVisualState: SealVisualState =
+    closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
   return (
     <VesselFrame defs={liquidDefs} glow={glow} label={label} stroke={stroke}>
-      <rect fill="#fff" height="12" rx="5" stroke={stroke} width="34" x="27" y="16" />
+      {sealVisualState === "open" ? (
+        <rect fill="#fff" height="12" rx="5" stroke={stroke} transform="rotate(-18 44 22)" width="34" x="27" y="16" />
+      ) : sealVisualState === "popped" ? (
+        <>
+          <rect fill="#fff" height="12" rx="5" stroke="#e11d48" transform="rotate(14 47 20)" width="34" x="30" y="14" />
+          <path d="M59 18L67 14" stroke="#e11d48" />
+        </>
+      ) : (
+        <rect fill="#fff" height="12" rx="5" stroke={stroke} width="34" x="27" y="16" />
+      )}
       <path d="M29 28H59V80C59 85 57 90 53 94L47 102C45 104 43 104 41 102L35 94C31 90 29 85 29 80V28Z" />
       <path
         d={`M33 ${liquidTop}H55V80C55 83 54 86 52 89L46 97C45 98 43 98 42 97L36 89C34 86 33 83 33 80V${liquidTop}Z`}
@@ -127,25 +146,40 @@ function CentrifugeTubeIcon({
 }
 
 function CleanupTubeIcon({
+  closureFault,
   fillRatio,
   glow,
+  isSealed = false,
   label,
   liquidDefs,
   liquidFill,
   stroke,
 }: {
+  closureFault?: string | null;
   fillRatio: number;
   glow: string;
+  isSealed?: boolean;
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
   stroke: string;
 }) {
   const liquidTop = 84 - fillRatio * 34;
+  const sealVisualState: SealVisualState =
+    closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
   return (
     <VesselFrame defs={liquidDefs} glow={glow} label={label} stroke={stroke}>
-      <rect fill="#fff" height="11" rx="4" stroke={stroke} width="30" x="29" y="18" />
+      {sealVisualState === "open" ? (
+        <rect fill="#fff" height="11" rx="4" stroke={stroke} transform="rotate(-16 44 23.5)" width="30" x="29" y="18" />
+      ) : sealVisualState === "popped" ? (
+        <>
+          <rect fill="#fff" height="11" rx="4" stroke="#e11d48" transform="rotate(12 47 22)" width="30" x="32" y="16" />
+          <path d="M57 21L64 17" stroke="#e11d48" />
+        </>
+      ) : (
+        <rect fill="#fff" height="11" rx="4" stroke={stroke} width="30" x="29" y="18" />
+      )}
       <path d="M31 29H57V84C57 93 51 100 44 104C37 100 31 93 31 84V29Z" />
       <path
         d={`M35 ${liquidTop}H53V82C53 87 50 92 44 96C38 92 35 87 35 82V${liquidTop}Z`}
@@ -158,25 +192,40 @@ function CleanupTubeIcon({
 }
 
 function SampleVialIcon({
+  closureFault,
   fillRatio,
   glow,
+  isSealed = false,
   label,
   liquidDefs,
   liquidFill,
   stroke,
 }: {
+  closureFault?: string | null;
   fillRatio: number;
   glow: string;
+  isSealed?: boolean;
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
   stroke: string;
 }) {
   const liquidTop = 86 - fillRatio * 30;
+  const sealVisualState: SealVisualState =
+    closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
   return (
     <VesselFrame defs={liquidDefs} glow={glow} label={label} stroke={stroke}>
-      <rect fill="#1e293b" height="18" rx="4" stroke="none" width="34" x="27" y="16" />
+      {sealVisualState === "open" ? (
+        <rect fill="#1e293b" height="18" rx="4" stroke="none" transform="rotate(-16 44 25)" width="34" x="27" y="16" />
+      ) : sealVisualState === "popped" ? (
+        <>
+          <rect fill="#1e293b" height="18" rx="4" stroke="none" transform="rotate(14 49 22)" width="34" x="32" y="13" />
+          <path d="M59 20L67 15" stroke="#e11d48" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+        </>
+      ) : (
+        <rect fill="#1e293b" height="18" rx="4" stroke="none" width="34" x="27" y="16" />
+      )}
       <path d="M30 34H58V92C58 99 52 104 44 104C36 104 30 99 30 92V34Z" />
       <path
         d={`M34 ${liquidTop}H54V90C54 95 50 99 44 99C38 99 34 95 34 90V${liquidTop}Z`}
@@ -335,19 +384,25 @@ function ReagentBottleIcon({
 }
 
 function SampleBagIcon({
+  closureFault,
   glow,
+  isSealed = false,
   label,
   produceLots,
   sampleLabelText,
   stroke,
 }: {
+  closureFault?: string | null;
   glow: string;
+  isSealed?: boolean;
   label: string;
   produceLots: ExperimentProduceLot[];
   sampleLabelText?: string | null;
   stroke: string;
 }) {
   const isLoaded = produceLots.length > 0;
+  const sealVisualState: SealVisualState =
+    closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
   const visibleProduceLots = produceLots.slice(0, 2);
   const normalizedLabelText = sampleLabelText?.trim() ?? "";
   const displayLabelText =
@@ -357,7 +412,20 @@ function SampleBagIcon({
 
   return (
     <VesselFrame glow={glow} label={label} stroke={stroke}>
-      <path d={isLoaded ? "M20 22H68" : "M28 22H60"} />
+      {sealVisualState === "open" ? (
+        <g>
+          <path d={isLoaded ? "M20 24H58" : "M28 24H54"} />
+          <path d={isLoaded ? "M60 20L69 26" : "M56 20L64 26"} opacity="0.7" />
+        </g>
+      ) : sealVisualState === "popped" ? (
+        <g>
+          <path d={isLoaded ? "M20 22H66" : "M28 22H58"} />
+          <path d={isLoaded ? "M61 16L70 20" : "M55 16L63 20"} stroke="#e11d48" />
+          <path d={isLoaded ? "M63 24L70 18" : "M57 24L63 18"} stroke="#e11d48" />
+        </g>
+      ) : (
+        <path d={isLoaded ? "M20 22H68" : "M28 22H60"} />
+      )}
       <path
         d={
           isLoaded
@@ -434,29 +502,54 @@ function SampleBagIcon({
           </text>
         </g>
       ) : null}
-      <path d={isLoaded ? "M24 28H64" : "M30 28H58"} />
+      <path
+        d={isLoaded ? "M24 28H64" : "M30 28H58"}
+        stroke={sealVisualState === "popped" ? "#e11d48" : undefined}
+      />
     </VesselFrame>
   );
 }
 
 function StorageJarIcon({
+  closureFault,
   glow,
+  isSealed = false,
   label,
   produceLots,
   stroke,
 }: {
+  closureFault?: string | null;
   glow: string;
+  isSealed?: boolean;
   label: string;
   produceLots: ExperimentProduceLot[];
   stroke: string;
 }) {
   const isLoaded = produceLots.length > 0;
+  const sealVisualState: SealVisualState =
+    closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
   const visibleProduceLots = produceLots.slice(0, 2);
 
   return (
     <VesselFrame glow={glow} label={label} stroke={stroke}>
-      <rect fill="#334155" height="16" rx="5" stroke="none" width="40" x="24" y="16" />
-      <rect fill="#475569" height="8" rx="3" stroke="none" width="46" x="21" y="22" />
+      {sealVisualState === "open" ? (
+        <>
+          <rect fill="#334155" height="16" rx="5" stroke="none" transform="rotate(-16 46 22)" width="40" x="26" y="12" />
+          <rect fill="#475569" height="8" rx="3" stroke="none" transform="rotate(-16 44 26)" width="46" x="23" y="18" />
+        </>
+      ) : sealVisualState === "popped" ? (
+        <>
+          <rect fill="#334155" height="16" rx="5" stroke="none" transform="rotate(12 46 20)" width="40" x="28" y="10" />
+          <rect fill="#475569" height="8" rx="3" stroke="none" transform="rotate(12 44 24)" width="46" x="25" y="16" />
+          <path d="M66 24L72 18" stroke="#e11d48" />
+          <path d="M64 14L72 16" stroke="#e11d48" />
+        </>
+      ) : (
+        <>
+          <rect fill="#334155" height="16" rx="5" stroke="none" width="40" x="24" y="16" />
+          <rect fill="#475569" height="8" rx="3" stroke="none" width="46" x="21" y="22" />
+        </>
+      )}
       <path d="M22 30H66V88C66 97 59 104 50 104H38C29 104 22 97 22 88V30Z" />
       <path d="M30 42H58" opacity="0.35" />
       <path d="M30 52H58" opacity="0.28" />
@@ -486,7 +579,7 @@ function StorageJarIcon({
         <path d="M28 58H60V86C60 92 55 96 50 96H38C33 96 28 92 28 86V58Z" fill="#f8fafc" opacity="0.6" stroke="none" />
       )}
       <path d="M26 34H62" opacity="0.45" />
-      <path d="M24 30H64" />
+      <path d="M24 30H64" stroke={sealVisualState === "popped" ? "#e11d48" : undefined} />
     </VesselFrame>
   );
 }
@@ -494,8 +587,10 @@ function StorageJarIcon({
 export function LabAssetIcon({
   accent,
   className,
+  closureFault,
   fillRatio,
   fillSegments,
+  isSealed = false,
   kind,
   produceLots = [],
   sampleLabelText,
@@ -557,13 +652,13 @@ export function LabAssetIcon({
       icon = <VolumetricFlaskIcon {...sharedProps} />;
       break;
     case "centrifuge_tube":
-      icon = <CentrifugeTubeIcon {...sharedProps} />;
+      icon = <CentrifugeTubeIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
       break;
     case "cleanup_tube":
-      icon = <CleanupTubeIcon {...sharedProps} />;
+      icon = <CleanupTubeIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
       break;
     case "sample_vial":
-      icon = <SampleVialIcon {...sharedProps} />;
+      icon = <SampleVialIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
       break;
     case "beaker":
       icon = <BeakerIcon {...sharedProps} />;
@@ -574,7 +669,9 @@ export function LabAssetIcon({
     case "sample_bag":
       icon = (
         <SampleBagIcon
+          closureFault={closureFault}
           glow={palette.glow}
+          isSealed={isSealed}
           label={label}
           produceLots={produceLots}
           sampleLabelText={sampleLabelText}
@@ -585,7 +682,9 @@ export function LabAssetIcon({
     case "storage_jar":
       icon = (
         <StorageJarIcon
+          closureFault={closureFault}
           glow={palette.glow}
+          isSealed={isSealed}
           label={label}
           produceLots={produceLots}
           stroke={palette.stroke}
@@ -615,9 +714,11 @@ export function LabAssetIcon({
       className={className}
       data-fill-segments={displaySegments.length}
       data-kind={kind}
+      data-closure-fault={closureFault ?? ""}
       data-primary-produce-cut-state={produceLots[0]?.cutState ?? ""}
       data-produce-lot-count={produceLots.length}
       data-sample-label-text={sampleLabelText ?? ""}
+      data-seal-state={closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open"}
       data-tone={tone}
     >
       {icon}

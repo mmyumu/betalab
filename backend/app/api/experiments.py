@@ -196,6 +196,16 @@ def close_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     )
 
 
+@router.post("/{experiment_id}/workbench/tools/{tool_id}/open", response_model=ExperimentSchema)
+def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.open_workbench_tool(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+        )
+    )
+
+
 @router.patch("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
 def update_workbench_tool_sample_label_text(
     experiment_id: str,

@@ -23,6 +23,16 @@ export function canToolAcceptProduce(toolType: ToolType): boolean {
   return toolType === "sample_bag" || toolType === "cutting_board" || toolType === "storage_jar";
 }
 
+export function canToolBeSealed(toolType: ToolType): boolean {
+  return (
+    toolType === "sample_bag" ||
+    toolType === "storage_jar" ||
+    toolType === "centrifuge_tube" ||
+    toolType === "cleanup_tube" ||
+    toolType === "sample_vial"
+  );
+}
+
 export function getProduceLotDropTargets(): DropTargetType[] {
   return ["workbench_slot", "grinder_widget", "trash_bin"];
 }

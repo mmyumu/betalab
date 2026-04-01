@@ -4,7 +4,7 @@ import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { ProduceLotCard } from "@/components/produce-lot-card";
 import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { canToolAcceptProduce } from "@/lib/entity-rules";
+import { canToolAcceptProduce, canToolBeSealed } from "@/lib/entity-rules";
 import {
   buildCssLinearGradient,
   getContainerLiquidVisualState,
@@ -22,6 +22,7 @@ type BenchToolCardProps = {
   onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
   onSampleLabelTextChange?: (sampleLabelText: string) => void;
+  onToggleSeal?: () => void;
   onSampleLabelDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onSampleLabelDragStart?: (event: DragEvent<HTMLElement>) => void;
   tool: BenchToolInstance;
@@ -57,6 +58,7 @@ export function BenchToolCard({
   onProduceLotDragStart,
   onRemoveLiquid,
   onSampleLabelTextChange,
+  onToggleSeal,
   onSampleLabelDragEnd,
   onSampleLabelDragStart,
   tool,
@@ -76,7 +78,17 @@ export function BenchToolCard({
     : undefined;
   const isSampleBag = tool.toolType === "sample_bag";
   const isProduceSurface = canToolAcceptProduce(tool.toolType);
+  const isSealable = canToolBeSealed(tool.toolType);
+  const isSealed = tool.isSealed ?? false;
   const hasSampleLabel = isSampleBag && tool.sampleLabelText !== null && tool.sampleLabelText !== undefined;
+  const sealStateLabel =
+    tool.closureFault === "pressure_pop" ? "Popped" : isSealed ? "Sealed" : "Open";
+  const sealStateToneClass =
+    tool.closureFault === "pressure_pop"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : isSealed
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : "border-slate-200 bg-slate-100 text-slate-600";
 
   return (
     <article
@@ -90,13 +102,37 @@ export function BenchToolCard({
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}
         >
-          <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
+            {isSealable ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${sealStateToneClass}`.trim()}
+                >
+                  {sealStateLabel}
+                </span>
+                <button
+                  aria-label={`${isSealed ? "Open" : "Close"} ${tool.label}`}
+                  className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  draggable={false}
+                  onClick={() => {
+                    onToggleSeal?.();
+                  }}
+                  type="button"
+                >
+                  {isSealed ? "Open" : "Close"}
+                </button>
+              </div>
+            ) : null}
+          </div>
           <div className="mt-1.5 flex min-w-0 items-start gap-2.5">
             <LabAssetIcon
               accent={tool.accent}
               className="h-22 w-16 shrink-0"
+              closureFault={tool.closureFault}
               fillRatio={fillRatio}
               fillSegments={liquidSegments}
+              isSealed={tool.isSealed}
               kind={tool.toolType}
               produceLots={produceLots}
               sampleLabelText={tool.sampleLabelText}

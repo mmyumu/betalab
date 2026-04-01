@@ -159,6 +159,26 @@ def test_debug_produce_preset_route_spawns_powder_on_workbench() -> None:
     assert tool["produce_lots"][0]["temperature_c"] == -62.0
 
 
+def test_open_workbench_tool_route_unseals_a_jar() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        placed = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "hdpe_storage_jar_2l"},
+        )
+        assert placed.status_code == 200
+        tool_id = placed.json()["workbench"]["slots"][0]["tool"]["id"]
+        closed = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/close")
+        assert closed.status_code == 200
+
+        opened = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/open")
+
+    assert opened.status_code == 200
+    tool = opened.json()["workbench"]["slots"][0]["tool"]
+    assert tool["is_sealed"] is False
+    assert tool["closure_fault"] is None
+
+
 def test_workbench_sample_label_routes_round_trip_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)

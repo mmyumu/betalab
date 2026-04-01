@@ -632,6 +632,22 @@ export async function applySampleLabelToWorkbenchTool(experimentId: string, payl
   });
 }
 
+export async function closeWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/close`,
+  });
+}
+
+export async function openWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/open`,
+  });
+}
+
 export async function updateWorkbenchToolSampleLabelText(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -727,6 +743,15 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     accent: tool.accent,
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
+    isSealed: Boolean(tool.isSealed ?? tool.is_sealed ?? false),
+    closureFault:
+      tool.closureFault !== undefined
+        ? tool.closureFault === null
+          ? null
+          : String(tool.closureFault)
+        : tool.closure_fault !== undefined && tool.closure_fault !== null
+          ? String(tool.closure_fault)
+          : null,
     sampleLabelText:
       tool.sampleLabelText !== undefined
         ? (tool.sampleLabelText as string | null)

@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  closeWorkbenchTool,
   createDebugProduceLotOnWorkbench,
   createDebugProduceLotToWidget,
   createExperiment,
   getExperiment,
+  openWorkbenchTool,
   placeToolOnWorkbench,
   subscribeToExperimentStream,
 } from "@/lib/api";
@@ -79,6 +81,150 @@ describe("api client", () => {
         body: JSON.stringify({
           tool_id: "sample_vial_lcms",
         }),
+      },
+    );
+  });
+
+  it("closes a sealable workbench tool via its dedicated endpoint", async () => {
+    const initialExperiment = {
+      ...makeExperiment(),
+      id: "experiment_123",
+      workbench: {
+        slots: [
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_1",
+              tool_id: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              accent: "amber",
+              tool_type: "storage_jar",
+              capacity_ml: 2000,
+              is_sealed: false,
+              closure_fault: null,
+              produce_lots: [],
+              liquids: [],
+            },
+          },
+        ],
+      },
+    } satisfies Experiment;
+    const closedExperiment = {
+      ...initialExperiment,
+      workbench: {
+        slots: [
+          {
+            ...initialExperiment.workbench.slots[0],
+            tool: {
+              ...initialExperiment.workbench.slots[0].tool!,
+              is_sealed: true,
+            },
+          },
+        ],
+      },
+    } satisfies Experiment;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialExperiment,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => closedExperiment,
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getExperiment("experiment_123");
+    await expect(closeWorkbenchTool("experiment_123", { slot_id: "station_1" })).resolves.toMatchObject({
+      workbench: { slots: [{ tool: { isSealed: true } }] },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/experiments/experiment_123/workbench/tools/bench_tool_1/close",
+      {
+        method: "POST",
+      },
+    );
+  });
+
+  it("opens a sealable workbench tool via its dedicated endpoint", async () => {
+    const initialExperiment = {
+      ...makeExperiment(),
+      id: "experiment_123",
+      workbench: {
+        slots: [
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_1",
+              tool_id: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              accent: "amber",
+              tool_type: "storage_jar",
+              capacity_ml: 2000,
+              is_sealed: true,
+              closure_fault: null,
+              produce_lots: [],
+              liquids: [],
+            },
+          },
+        ],
+      },
+    } satisfies Experiment;
+    const openedExperiment = {
+      ...initialExperiment,
+      workbench: {
+        slots: [
+          {
+            ...initialExperiment.workbench.slots[0],
+            tool: {
+              ...initialExperiment.workbench.slots[0].tool!,
+              is_sealed: false,
+            },
+          },
+        ],
+      },
+    } satisfies Experiment;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialExperiment,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => openedExperiment,
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getExperiment("experiment_123");
+    await expect(openWorkbenchTool("experiment_123", { slot_id: "station_1" })).resolves.toMatchObject({
+      id: "experiment_123",
+      workbench: {
+        slots: [
+          {
+            id: "station_1",
+            tool: {
+              id: "bench_tool_1",
+              isSealed: false,
+              closureFault: null,
+              toolId: "hdpe_storage_jar_2l",
+              toolType: "storage_jar",
+            },
+          },
+        ],
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/experiments/experiment_123/workbench/tools/bench_tool_1/open",
+      {
+        method: "POST",
       },
     );
   });

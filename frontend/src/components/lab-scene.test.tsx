@@ -497,6 +497,104 @@ describe("LabScene", () => {
     );
   });
 
+  it("closes a sealable jar from the workbench card", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: false,
+              produceLots: [],
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: true,
+              produceLots: [],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Close Wide-neck HDPE jar" }));
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "close_workbench_tool",
+      {
+        slot_id: "station_1",
+      },
+    );
+  });
+
+  it("opens a sealed jar from the workbench card", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: true,
+              produceLots: [],
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: false,
+              produceLots: [],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open Wide-neck HDPE jar" }));
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "open_workbench_tool",
+      {
+        slot_id: "station_1",
+      },
+    );
+  });
+
   it("shows the debug produce draft when dropped onto an empty station surface", async () => {
     vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());

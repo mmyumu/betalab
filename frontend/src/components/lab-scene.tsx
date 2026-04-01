@@ -376,6 +376,19 @@ export function LabScene() {
     });
   };
 
+  const handleToggleToolSeal = (slotId: string, tool: BenchToolInstance) => {
+    if (tool.isSealed) {
+      void experimentApi.openWorkbenchTool({
+        slot_id: slotId,
+      });
+      return;
+    }
+
+    void experimentApi.closeWorkbenchTool({
+      slot_id: slotId,
+    });
+  };
+
   const handleMoveSampleLabel = (targetSlotId: string, payload: { sourceSlotId?: string }) => {
     if (!payload.sourceSlotId) {
       return;
@@ -2045,6 +2058,7 @@ export function LabScene() {
                 onSampleLabelDragEnd={clearDropTargets}
                 onSampleLabelDragStart={handleWorkbenchSampleLabelDragStart}
                 onSampleLabelTextChange={handleSampleLabelTextChange}
+                onToggleToolSeal={handleToggleToolSeal}
                 renderPendingContent={(slot) => renderPendingBenchDropDraft(slot.id)}
                 slots={slots}
                 statusMessage={statusMessage}

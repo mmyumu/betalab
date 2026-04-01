@@ -257,6 +257,8 @@ export type BenchToolInstance = {
   accent: ToolbarAccent;
   toolType: ToolType;
   capacity_ml: number;
+  isSealed?: boolean;
+  closureFault?: string | null;
   sampleLabelText?: string | null;
   produceLots?: ExperimentProduceLot[];
   liquids: BenchLiquidPortion[];

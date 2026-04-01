@@ -2137,6 +2137,37 @@ def test_create_debug_powder_preset_in_grinder() -> None:
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Cryogenic grinder."
 
 
+def test_open_workbench_tool_unseals_a_jar() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    sealed = apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+    sealed = apply_command(
+        service,
+        experiment.id,
+        "close_workbench_tool",
+        {
+            "slot_id": "station_1",
+        },
+    )
+
+    updated = service.open_workbench_tool(experiment.id, "station_1")
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.is_sealed is False
+    assert slot.tool.closure_fault is None
+    assert updated.audit_log[-1] == "Wide-neck HDPE jar opened on Station 1."
+
+
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { canToolBeSealed } from "@/lib/entity-rules";
 import {
   getLiquidDropTargets,
   getProduceLotDropTargets,
@@ -28,6 +29,15 @@ describe("tool drop targets", () => {
       "grinder_widget",
       "trash_bin",
     ]);
+  });
+
+  it("marks sealable containers consistently across tool types", () => {
+    expect(canToolBeSealed("sample_bag")).toBe(true);
+    expect(canToolBeSealed("storage_jar")).toBe(true);
+    expect(canToolBeSealed("centrifuge_tube")).toBe(true);
+    expect(canToolBeSealed("cleanup_tube")).toBe(true);
+    expect(canToolBeSealed("sample_vial")).toBe(true);
+    expect(canToolBeSealed("beaker")).toBe(false);
   });
 
 

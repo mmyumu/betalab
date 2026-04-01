@@ -50,6 +50,11 @@ class CloseWorkbenchToolCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class OpenWorkbenchToolCommand:
+    slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class MoveSampleLabelBetweenWorkbenchToolsCommand:
     source_slot_id: str
     target_slot_id: str

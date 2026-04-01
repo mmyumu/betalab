@@ -31,6 +31,7 @@ from app.services.command_handlers.workbench import (
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
     close_workbench_tool,
+    open_workbench_tool,
     discard_sample_label_from_workbench_tool,
     discard_produce_lot_from_workbench_tool,
     cut_workbench_produce_lot,
@@ -70,6 +71,7 @@ from app.services.commands import (
     AdvanceWorkspaceCryogenicsCommand,
     ApplySampleLabelToWorkbenchToolCommand,
     CloseWorkbenchToolCommand,
+    OpenWorkbenchToolCommand,
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
     CreateProduceLotCommand,
@@ -514,6 +516,13 @@ class ExperimentService:
             experiment_id,
             close_workbench_tool,
             CloseWorkbenchToolCommand(slot_id=slot_id),
+        )
+
+    def open_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            open_workbench_tool,
+            OpenWorkbenchToolCommand(slot_id=slot_id),
         )
 
     def update_workbench_tool_sample_label_text(self, experiment_id: str, slot_id: str, sample_label_text: str) -> ExperimentSchema:

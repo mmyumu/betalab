@@ -173,4 +173,53 @@ describe("ToolbarPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: /Glassware/i }));
     expect(screen.getByTestId("toolbar-category-panel-glassware")).not.toHaveClass("hidden");
   });
+
+  it("renders sealable palette tools as visually closed", async () => {
+    render(
+      <ToolbarPanel
+        categories={[
+          {
+            id: "containers",
+            label: "Containers",
+            description: "Sealable containers.",
+            items: [
+              {
+                id: "sample_vial_lcms",
+                allowedDropTargets: ["workbench_slot", "rack_slot", "trash_bin"],
+                itemType: "tool",
+                name: "Autosampler vial",
+                subtitle: "Injection ready",
+                description: "Sealed vial.",
+                accent: "sky",
+                toolType: "sample_vial",
+                capacity_ml: 2,
+              },
+              {
+                id: "hdpe_storage_jar_2l",
+                allowedDropTargets: ["workbench_slot", "trash_bin"],
+                itemType: "tool",
+                name: "Wide-neck HDPE jar",
+                subtitle: "Bulk powder storage",
+                description: "Sealed jar.",
+                accent: "sky",
+                toolType: "storage_jar",
+                capacity_ml: 2000,
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Containers/i }));
+
+    expect(
+      screen.getByTestId("toolbar-item-sample_vial_lcms").querySelector("[data-kind='sample_vial']"),
+    ).toHaveAttribute("data-seal-state", "sealed");
+    expect(
+      screen
+        .getByTestId("toolbar-item-hdpe_storage_jar_2l")
+        .querySelector("[data-kind='storage_jar']"),
+    ).toHaveAttribute("data-seal-state", "sealed");
+  });
 });

@@ -10,6 +10,7 @@ import {
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
   applySampleLabelToWorkbenchTool,
+  closeWorkbenchTool,
   completeGrinderCycle,
   createExperiment,
   createDebugProduceLotOnWorkbench,
@@ -32,6 +33,7 @@ import {
   moveWidgetProduceLotToWorkbenchTool,
   moveWorkbenchProduceLotToWidget,
   moveWorkspaceWidget,
+  openWorkbenchTool,
   placeToolInRackSlot,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
@@ -70,6 +72,7 @@ const mutationFns = {
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
   applySampleLabelToWorkbenchTool,
+  closeWorkbenchTool,
   completeGrinderCycle,
   createProduceLot,
   createDebugProduceLotOnWorkbench,
@@ -91,6 +94,7 @@ const mutationFns = {
   moveWidgetProduceLotToWorkbenchTool,
   moveWorkbenchProduceLotToWidget,
   moveWorkspaceWidget,
+  openWorkbenchTool,
   placeToolInRackSlot,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
@@ -223,6 +227,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.addWorkspaceWidget, payload),
     applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
+    closeWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.closeWorkbenchTool, payload),
     completeGrinderCycle: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.completeGrinderCycle, payload),
     startGrinderCycle: (payload: Record<string, unknown>) =>
@@ -267,6 +273,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.moveWorkbenchProduceLotToWidget, payload),
     moveWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveWorkspaceWidget, payload),
+    openWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.openWorkbenchTool, payload),
     placeToolInRackSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeToolInRackSlot, payload),
     placeToolOnWorkbench: (payload: Record<string, unknown>) =>

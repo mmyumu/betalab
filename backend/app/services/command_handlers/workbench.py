@@ -16,6 +16,7 @@ from app.services.commands import (
     AddProduceLotToWorkbenchToolCommand,
     ApplySampleLabelToWorkbenchToolCommand,
     CloseWorkbenchToolCommand,
+    OpenWorkbenchToolCommand,
     MoveProduceLotBetweenWorkbenchToolsCommand,
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
@@ -215,6 +216,18 @@ def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolComm
     slot.tool.is_sealed = True
     slot.tool.closure_fault = None
     experiment.audit_log.append(f"{slot.tool.label} sealed on {slot.label}.")
+
+
+def open_workbench_tool(experiment: Experiment, command: OpenWorkbenchToolCommand) -> None:
+    slot = find_workbench_slot(experiment.workbench, command.slot_id)
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before opening it.")
+    if not can_tool_be_sealed(slot.tool.tool_type):
+        raise ValueError(f"{slot.tool.label} cannot be opened.")
+
+    slot.tool.is_sealed = False
+    slot.tool.closure_fault = None
+    experiment.audit_log.append(f"{slot.tool.label} opened on {slot.label}.")
 
 
 def update_workbench_tool_sample_label_text(

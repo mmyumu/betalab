@@ -10,7 +10,13 @@ def can_tool_accept_produce(tool_type: str) -> bool:
 
 
 def can_tool_be_sealed(tool_type: str) -> bool:
-    return tool_type in {"sample_bag", "storage_jar"}
+    return tool_type in {
+        "sample_bag",
+        "storage_jar",
+        "centrifuge_tube",
+        "cleanup_tube",
+        "sample_vial",
+    }
 
 
 def is_workspace_widget_discardable(widget_id: str) -> bool:

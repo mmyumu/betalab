@@ -172,6 +172,95 @@ describe("WorkbenchPanel", () => {
     ).toHaveAttribute("data-fill-segments", "2");
   });
 
+  it("marks sealable tool illustrations with their seal state", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onRemoveLiquid={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_jar_open",
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              accent: "amber",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: false,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_jar_closed",
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              accent: "amber",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              isSealed: true,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+        onToolbarItemDrop={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("bench-tool-card-bench_tool_jar_open")
+        .querySelector("[data-kind='storage_jar']"),
+    ).toHaveAttribute("data-seal-state", "open");
+    expect(
+      screen
+        .getByTestId("bench-tool-card-bench_tool_jar_closed")
+        .querySelector("[data-kind='storage_jar']"),
+    ).toHaveAttribute("data-seal-state", "sealed");
+  });
+
+  it("marks autosampler vial illustrations as sealable and sealed", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onRemoveLiquid={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_vial_closed",
+              toolId: "sample_vial_lcms",
+              label: "Autosampler vial",
+              subtitle: "Injection ready",
+              accent: "sky",
+              toolType: "sample_vial",
+              capacity_ml: 2,
+              isSealed: true,
+              liquids: [],
+              produceLots: [],
+            },
+          },
+        ]}
+        statusMessage="Ready."
+        onToolbarItemDrop={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("bench-tool-card-bench_tool_vial_closed")
+        .querySelector("[data-kind='sample_vial']"),
+    ).toHaveAttribute("data-seal-state", "sealed");
+  });
+
   it("renders a filled sampling bag with visible produce state", () => {
     render(
       <PesticideWorkbenchPanel
