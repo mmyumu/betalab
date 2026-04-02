@@ -339,11 +339,15 @@ class ExperimentService:
             PlaceReceivedBagOnWorkbenchCommand(target_slot_id=target_slot_id),
         )
 
-    def record_gross_weight(self, experiment_id: str) -> ExperimentSchema:
+    def record_gross_weight(
+        self,
+        experiment_id: str,
+        measured_gross_mass_g: float | None = None,
+    ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             record_gross_weight,
-            RecordGrossWeightCommand(),
+            RecordGrossWeightCommand(measured_gross_mass_g=measured_gross_mass_g),
         )
 
     def create_lims_reception(

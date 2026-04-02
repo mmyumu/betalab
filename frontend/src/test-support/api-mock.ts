@@ -43,8 +43,8 @@ export const moveWorkbenchProduceLotToWidget = wrapCommand("move_workbench_produ
 export const restoreTrashedProduceLotToWidget = wrapCommand("restore_trashed_produce_lot_to_widget");
 export const createProduceLot = wrapCommand("create_produce_lot");
 export const placeReceivedBagOnWorkbench = wrapCommand("place_received_bag_on_workbench");
-export const recordGrossWeight = vi.fn((experimentId: string) =>
-  sendExperimentCommand(experimentId, "record_gross_weight", {}),
+export const recordGrossWeight = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
+  sendExperimentCommand(experimentId, "record_gross_weight", payload ?? {}),
 );
 export const createLimsReception = wrapCommand("create_lims_reception");
 export const printLimsLabel = vi.fn((experimentId: string) =>

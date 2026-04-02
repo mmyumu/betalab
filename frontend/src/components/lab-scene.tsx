@@ -6,6 +6,7 @@ import type { DragEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
+import { BenchToolCard } from "@/components/bench-tool-card";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
 import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
@@ -82,6 +83,7 @@ import type {
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
   TrashToolEntry,
+  ToolType,
   ToolbarDragPayload,
   WorkspaceLiquidDragPayload,
 } from "@/types/workbench";
@@ -156,6 +158,17 @@ const rackIllustrationViewBox = { height: 290, width: 480 };
 const rackIllustrationBase = { x: 142, y: 91 };
 const rackIllustrationGap = { x: 61, y: 49 };
 const rackIllustrationColumns = Math.min(4, Math.max(rackSlotCount, 1));
+const toolTareMassByType: Record<ToolType, number> = {
+  volumetric_flask: 140,
+  amber_bottle: 95,
+  sample_vial: 1.5,
+  beaker: 68,
+  centrifuge_tube: 12,
+  cleanup_tube: 7,
+  cutting_board: 320,
+  sample_bag: 36,
+  storage_jar: 180,
+};
 const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 
@@ -200,6 +213,21 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
   const massLabel = formatProduceLotMass(produceLot.totalMassG);
 
   return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+}
+
+function roundMass(massG: number) {
+  return Math.round(massG * 10) / 10;
+}
+
+function getApproximateProduceMassG(produceLot: ExperimentProduceLot) {
+  return roundMass(Math.max(produceLot.totalMassG, 0));
+}
+
+function getApproximateToolMassG(tool: BenchToolInstance) {
+  const tareMassG = toolTareMassByType[tool.toolType] ?? 0;
+  const produceMassG = (tool.produceLots ?? []).reduce((sum, lot) => sum + lot.totalMassG, 0);
+  const liquidMassG = tool.liquids.reduce((sum, liquid) => sum + liquid.volume_ml, 0);
+  return roundMass(Math.max(tareMassG + produceMassG + liquidMassG, 0));
 }
 
 function buildDebugProduceDraftFields(): DropDraftField[] {
@@ -272,6 +300,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const [grinderFeedback, setGrinderFeedback] = useState<"neutral" | "overload" | "jammed">(
     "neutral",
   );
+  const [balanceStagedItem, setBalanceStagedItem] = useState<
+    | {
+        entityKind: "tool";
+        originalPayload:
+          | ToolbarDragPayload
+          | BenchToolDragPayload
+          | BasketToolDragPayload
+          | RackToolDragPayload
+          | TrashToolDragPayload;
+        tool: BenchToolInstance;
+      }
+    | {
+        entityKind: "produce";
+        originalPayload: ProduceDragPayload;
+        produceLot: ExperimentProduceLot;
+      }
+    | null
+  >(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
 
@@ -629,6 +675,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     payload: BenchToolDragPayload | BasketToolDragPayload | RackToolDragPayload | TrashToolDragPayload,
   ) => {
     if (payload.sourceKind === "basket") {
+      setBalanceStagedItem(null);
       void experimentApi.placeReceivedBagOnWorkbench({
         target_slot_id: targetSlotId,
       });
@@ -641,6 +688,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         return;
       }
 
+      setBalanceStagedItem(null);
       void experimentApi.moveToolBetweenWorkbenchSlots( {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
@@ -650,6 +698,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if ("trashToolId" in payload) {
+      setBalanceStagedItem(null);
       void experimentApi.restoreTrashedToolToWorkbenchSlot( {
         target_slot_id: targetSlotId,
         trash_tool_id: payload.trashToolId,
@@ -658,6 +707,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
+    setBalanceStagedItem(null);
     void experimentApi.removeRackToolToWorkbenchSlot( {
       rack_slot_id: payload.rackSlotId,
       target_slot_id: targetSlotId,
@@ -672,7 +722,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (isKnifeMode) {
       return;
     }
-    const allowedDropTargets: DropTargetType[] = ["workbench_slot"];
+    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "gross_balance_widget"];
 
     writeBasketToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -727,6 +777,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (payload.sourceKind === "basket") {
+      setBalanceStagedItem(null);
       void experimentApi.addProduceLotToWorkbenchTool( {
         slot_id: targetSlotId,
         produce_lot_id: payload.produceLotId,
@@ -736,6 +787,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
+      setBalanceStagedItem(null);
       void experimentApi.moveProduceLotBetweenWorkbenchTools( {
         source_slot_id: payload.sourceSlotId,
         target_slot_id: targetSlotId,
@@ -746,6 +798,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (payload.sourceKind === "grinder") {
+      setBalanceStagedItem(null);
       void experimentApi.moveWidgetProduceLotToWorkbenchTool( {
         widget_id: "grinder",
         target_slot_id: targetSlotId,
@@ -756,6 +809,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
+      setBalanceStagedItem(null);
       void experimentApi.restoreTrashedProduceLotToWorkbenchTool( {
         target_slot_id: targetSlotId,
         trash_produce_lot_id: payload.trashProduceLotId,
@@ -929,6 +983,97 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
   };
 
+  const handleGrossBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
+    if (hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget")) {
+      event.preventDefault();
+    }
+  };
+
+  const handleGrossBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (isKnifeMode) {
+      return;
+    }
+    if (!hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget")) {
+      return;
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    const toolPayload =
+      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
+      readBenchToolDragPayload(event.dataTransfer) ??
+      readBasketToolDragPayload(event.dataTransfer) ??
+      readRackToolDragPayload(event.dataTransfer) ??
+      readTrashToolDragPayload(event.dataTransfer);
+    const producePayload = readProduceDragPayload(event.dataTransfer);
+    const measuredMassG = toolPayload
+      ? resolveToolMassFromPayload(toolPayload)
+      : producePayload
+        ? resolveProduceMassFromPayload(producePayload)
+        : null;
+
+    if (measuredMassG === null) {
+      return;
+    }
+
+    if (toolPayload) {
+      const tool = resolveToolFromPayload(toolPayload);
+      if (tool) {
+        setBalanceStagedItem({
+          entityKind: "tool",
+          originalPayload: toolPayload,
+          tool,
+        });
+      }
+    } else if (producePayload) {
+      const produceLot = resolveProduceFromPayload(producePayload);
+      if (produceLot) {
+        setBalanceStagedItem({
+          entityKind: "produce",
+          originalPayload: producePayload,
+          produceLot,
+        });
+      }
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    clearDropTargets();
+    void experimentApi.recordGrossWeight({
+      measured_gross_mass_g: measuredMassG,
+    });
+  };
+
+  const handleBalanceItemDragStart = (dataTransfer: DataTransfer) => {
+    if (!balanceStagedItem) {
+      return;
+    }
+
+    if (balanceStagedItem.entityKind === "tool") {
+      const payload = balanceStagedItem.originalPayload;
+      if ("itemType" in payload && payload.itemType === "tool") {
+        writeToolbarDragPayload(dataTransfer, payload);
+      } else if (payload.sourceKind === "basket") {
+        writeBasketToolDragPayload(dataTransfer, payload);
+      } else if ("sourceSlotId" in payload) {
+        writeBenchToolDragPayload(dataTransfer, payload);
+      } else if ("rackSlotId" in payload) {
+        writeRackToolDragPayload(dataTransfer, payload);
+      } else if ("trashToolId" in payload) {
+        writeTrashToolDragPayload(dataTransfer, payload);
+      }
+      showDropTargets(payload.allowedDropTargets);
+      setActiveDragItem(toDragDescriptor(payload));
+      return;
+    }
+
+    writeProduceDragPayload(dataTransfer, balanceStagedItem.originalPayload);
+    showDropTargets(balanceStagedItem.originalPayload.allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(balanceStagedItem.originalPayload));
+  };
+
   const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
     if (grinderDndDisabled) {
       return;
@@ -970,6 +1115,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (producePayload.sourceKind === "basket") {
+      setBalanceStagedItem(null);
       void experimentApi.addWorkspaceProduceLotToWidget( {
         widget_id: "grinder",
         produce_lot_id: producePayload.produceLotId,
@@ -978,6 +1124,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
+      setBalanceStagedItem(null);
       void experimentApi.moveWorkbenchProduceLotToWidget( {
         widget_id: "grinder",
         source_slot_id: producePayload.sourceSlotId,
@@ -987,6 +1134,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
+      setBalanceStagedItem(null);
       void experimentApi.restoreTrashedProduceLotToWidget( {
         widget_id: "grinder",
         trash_produce_lot_id: producePayload.trashProduceLotId,
@@ -1051,6 +1199,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
       void experimentApi.discardWorkbenchTool( {
         slot_id: benchToolPayload.sourceSlotId,
       });
@@ -1070,6 +1219,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
       void experimentApi.discardRackTool( {
         rack_slot_id: rackToolPayload.rackSlotId,
       });
@@ -1093,6 +1243,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
       void experimentApi.discardWorkspaceProduceLot( {
         produce_lot_id: producePayload.produceLotId,
       });
@@ -1103,6 +1254,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
       void experimentApi.discardWidgetProduceLot( {
         widget_id: "grinder",
         produce_lot_id: producePayload.produceLotId,
@@ -1114,6 +1266,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
       void experimentApi.discardProduceLotFromWorkbenchTool( {
         slot_id: producePayload.sourceSlotId,
         produce_lot_id: producePayload.produceLotId,
@@ -1180,6 +1333,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
   const rackSlots = state.experiment.rack.slots;
+  const basketTool = state.experiment.basketTool;
   const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
@@ -1214,6 +1368,124 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
   const grinderLotIsInHighTorqueZone =
     grinderLotTemperatureC > grinderStartThresholdC && grinderLotTemperatureC < grinderJamThresholdC;
+  const resolveToolMassFromPayload = (
+    payload:
+      | ToolbarDragPayload
+      | BenchToolDragPayload
+      | BasketToolDragPayload
+      | RackToolDragPayload
+      | TrashToolDragPayload,
+  ) => {
+    if ("itemType" in payload && payload.itemType === "tool") {
+      return roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
+    if (payload.sourceKind === "basket") {
+      return basketTool ? getApproximateToolMassG(basketTool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
+    if ("sourceSlotId" in payload) {
+      const tool = slots.find((slot) => slot.id === payload.sourceSlotId)?.tool ?? null;
+      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
+    if ("rackSlotId" in payload) {
+      const tool = rackSlots.find((slot) => slot.id === payload.rackSlotId)?.tool ?? null;
+      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
+    if ("trashToolId" in payload) {
+      const tool = trashedTools.find((entry) => entry.id === payload.trashToolId)?.tool ?? null;
+      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
+    return null;
+  };
+  const resolveToolFromPayload = (
+    payload:
+      | ToolbarDragPayload
+      | BenchToolDragPayload
+      | BasketToolDragPayload
+      | RackToolDragPayload
+      | TrashToolDragPayload,
+  ) => {
+    if ("itemType" in payload && payload.itemType === "tool") {
+      const catalogItem = labToolCatalog[payload.itemId];
+      return catalogItem
+        ? {
+            accent: catalogItem.accent,
+            capacity_ml: catalogItem.capacity_ml,
+            id: payload.itemId,
+            label: catalogItem.name,
+            liquids: [],
+            produceLots: [],
+            sampleLabelText: null,
+            subtitle: catalogItem.subtitle,
+            toolId: payload.itemId,
+            toolType: catalogItem.toolType,
+          }
+        : null;
+    }
+    if (payload.sourceKind === "basket") {
+      return basketTool;
+    }
+    if ("sourceSlotId" in payload) {
+      return slots.find((slot) => slot.id === payload.sourceSlotId)?.tool ?? null;
+    }
+    if ("rackSlotId" in payload) {
+      return rackSlots.find((slot) => slot.id === payload.rackSlotId)?.tool ?? null;
+    }
+    if ("trashToolId" in payload) {
+      return trashedTools.find((entry) => entry.id === payload.trashToolId)?.tool ?? null;
+    }
+    return null;
+  };
+  const resolveProduceMassFromPayload = (payload: ProduceDragPayload) => {
+    if (payload.sourceKind === "basket") {
+      const produceLot = state.experiment.workspace.produceLots.find((lot) => lot.id === payload.produceLotId);
+      return produceLot ? getApproximateProduceMassG(produceLot) : null;
+    }
+    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
+      const slot = slots.find((entry) => entry.id === payload.sourceSlotId) ?? null;
+      const produceLot =
+        slot?.surfaceProduceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        slot?.tool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        null;
+      return produceLot ? getApproximateProduceMassG(produceLot) : null;
+    }
+    if (payload.sourceKind === "grinder") {
+      const produceLot = grinderProduceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
+      return produceLot ? getApproximateProduceMassG(produceLot) : null;
+    }
+    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
+      const produceLot =
+        trashedProduceLots.find((entry) => entry.id === payload.trashProduceLotId)?.produceLot ?? null;
+      return produceLot ? getApproximateProduceMassG(produceLot) : null;
+    }
+    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
+      const preset = debugProducePresets.find((entry) => entry.id === payload.debugProducePresetId) ?? null;
+      return preset ? getApproximateProduceMassG(preset.produceLot) : null;
+    }
+    return null;
+  };
+  const resolveProduceFromPayload = (payload: ProduceDragPayload) => {
+    if (payload.sourceKind === "basket") {
+      return state.experiment.workspace.produceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
+    }
+    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
+      const slot = slots.find((entry) => entry.id === payload.sourceSlotId) ?? null;
+      return (
+        slot?.surfaceProduceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        slot?.tool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        null
+      );
+    }
+    if (payload.sourceKind === "grinder") {
+      return grinderProduceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
+    }
+    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
+      return trashedProduceLots.find((entry) => entry.id === payload.trashProduceLotId)?.produceLot ?? null;
+    }
+    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
+      return debugProducePresets.find((entry) => entry.id === payload.debugProducePresetId)?.produceLot ?? null;
+    }
+    return null;
+  };
   const grinderStatus =
     isGrinderRunning && grinderFault !== "motor_jammed"
       ? "running"
@@ -1588,7 +1860,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (isKnifeMode) {
       return;
     }
-    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "grinder_widget"];
+    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "grinder_widget", "gross_balance_widget"];
 
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -1825,8 +2097,100 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
-  const basketTool = state.experiment.basketTool;
+  const displayBasketTool =
+    balanceStagedItem?.entityKind === "tool" &&
+    balanceStagedItem.originalPayload.sourceKind === "basket"
+      ? null
+      : basketTool;
+  const displayBasketProduceLots =
+    balanceStagedItem?.entityKind === "produce" &&
+    balanceStagedItem.originalPayload.sourceKind === "basket"
+      ? basketProduceLots.filter((lot) => lot.id !== balanceStagedItem.originalPayload.produceLotId)
+      : basketProduceLots;
+  const displaySlots = slots.map((slot) => {
+    if (balanceStagedItem?.entityKind === "tool") {
+      const payload = balanceStagedItem.originalPayload;
+      if (payload.sourceKind === "workbench" && payload.sourceSlotId === slot.id) {
+        return { ...slot, tool: null };
+      }
+    }
+
+    if (balanceStagedItem?.entityKind === "produce") {
+      const payload = balanceStagedItem.originalPayload;
+      if (payload.sourceKind === "workbench" && payload.sourceSlotId === slot.id) {
+        return {
+          ...slot,
+          surfaceProduceLots: (slot.surfaceProduceLots ?? []).filter((lot) => lot.id !== payload.produceLotId),
+          tool: slot.tool
+            ? {
+                ...slot.tool,
+                produceLots: (slot.tool.produceLots ?? []).filter((lot) => lot.id !== payload.produceLotId),
+              }
+            : null,
+        };
+      }
+    }
+
+    return slot;
+  });
+  const displayRackSlots =
+    balanceStagedItem?.entityKind === "tool" &&
+    balanceStagedItem.originalPayload.sourceKind === "rack" &&
+    "rackSlotId" in balanceStagedItem.originalPayload
+      ? rackSlots.map((slot) =>
+          slot.id === balanceStagedItem.originalPayload.rackSlotId ? { ...slot, tool: null } : slot,
+        )
+      : rackSlots;
+  const displayTrashTools =
+    balanceStagedItem?.entityKind === "tool" &&
+    balanceStagedItem.originalPayload.sourceKind === "trash" &&
+    "trashToolId" in balanceStagedItem.originalPayload
+      ? trashedTools.filter((entry) => entry.id !== balanceStagedItem.originalPayload.trashToolId)
+      : trashedTools;
+  const displayTrashProduceLots =
+    balanceStagedItem?.entityKind === "produce" &&
+    balanceStagedItem.originalPayload.sourceKind === "trash" &&
+    balanceStagedItem.originalPayload.trashProduceLotId
+      ? trashedProduceLots.filter((entry) => entry.id !== balanceStagedItem.originalPayload.trashProduceLotId)
+      : trashedProduceLots;
+  const displayGrinderProduceLots =
+    balanceStagedItem?.entityKind === "produce" &&
+    balanceStagedItem.originalPayload.sourceKind === "grinder"
+      ? grinderProduceLots.filter((lot) => lot.id !== balanceStagedItem.originalPayload.produceLotId)
+      : grinderProduceLots;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
+  const grossBalanceStagedContent =
+    balanceStagedItem?.entityKind === "tool" ? (
+      <div data-testid="gross-balance-staged-item">
+        <BenchToolCard
+          draggable
+          onDragEnd={() => {
+            clearDropTargets();
+          }}
+          onDragStart={(event) => {
+            handleBalanceItemDragStart(event.dataTransfer);
+          }}
+          onRemoveLiquid={() => {}}
+          tool={{ ...balanceStagedItem.tool, id: `balance-${balanceStagedItem.tool.id}` }}
+        />
+      </div>
+    ) : balanceStagedItem?.entityKind === "produce" ? (
+      <div data-testid="gross-balance-staged-item">
+        <ProduceLotCard
+          dataTestId={`gross-balance-produce-${balanceStagedItem.produceLot.id}`}
+          draggable
+          metadata={formatProduceLotMetadata(balanceStagedItem.produceLot)}
+          onDragEnd={() => {
+            clearDropTargets();
+          }}
+          onDragStart={(event) => {
+            handleBalanceItemDragStart(event.dataTransfer);
+          }}
+          produceLot={{ ...balanceStagedItem.produceLot, id: `balance-${balanceStagedItem.produceLot.id}` }}
+          variant="expanded"
+        />
+      </div>
+    ) : null;
   const handleCreateAppleLot = () => {
     void experimentApi.createProduceLot( {
       produce_type: "apple",
@@ -1942,9 +2306,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 onTrashedWidgetDragStart={handleTrashedWidgetDragStart}
                 onTrashProduceLotDragStart={handleTrashProduceLotDragStart}
                 onTrashSampleLabelDragStart={handleTrashSampleLabelDragStart}
-                trashedProduceLots={trashedProduceLots}
+                trashedProduceLots={displayTrashProduceLots}
                 trashedSampleLabels={trashedSampleLabels}
-                trashedTools={trashedTools}
+                trashedTools={displayTrashTools}
                 trashedWidgets={trashedWidgets}
               />
             </FloatingWidget>
@@ -1991,7 +2355,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                     />
                   ) : widgetId === "basket" ? (
                     <ProduceBasketWidget
-                      basketTool={basketTool}
+                      basketTool={displayBasketTool}
                       dndDisabled={isKnifeMode}
                       formatProduceLotMetadata={formatProduceLotMetadata}
                       isOpen={isBasketOpen}
@@ -2000,14 +2364,15 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                       onItemDragEnd={clearDropTargets}
                       onProduceDragStart={handleBasketProduceDragStart}
                       onToggle={() => setIsBasketOpen((current) => !current)}
-                      produceLots={basketProduceLots}
+                      produceLots={displayBasketProduceLots}
                     />
                   ) : widgetId === "gross_balance" ? (
                     <GrossBalanceWidget
+                      isDropHighlighted={isDropTargetHighlighted("gross_balance_widget")}
                       measuredGrossMassG={state.experiment.limsReception.measuredGrossMassG}
-                      onMeasure={() => {
-                        void experimentApi.recordGrossWeight();
-                      }}
+                      onDragOver={handleGrossBalanceDragOver}
+                      onDrop={handleGrossBalanceDrop}
+                      stagedContent={grossBalanceStagedContent}
                     />
                   ) : widgetId === "rack" ? (
                     <RackWidget
@@ -2021,7 +2386,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                       onRackSlotDragOver={handleRackSlotDragOver}
                       onRackSlotDrop={handleRackSlotDrop}
                       onRackToolDragStart={handleRackToolDragStart}
-                      rackSlots={rackSlots}
+                      rackSlots={displayRackSlots}
                       slotCount={rackSlotCount}
                     />
                   ) : widgetId === "instrument" ? (
@@ -2121,7 +2486,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          {grinderProduceLots.map((lot) => (
+                          {displayGrinderProduceLots.map((lot) => (
                             <ProduceLotCard
                               className="rounded-[0.9rem] bg-white"
                               dataTestId={`grinder-produce-${lot.id}`}
@@ -2230,7 +2595,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 onSampleLabelTextChange={handleSampleLabelTextChange}
                 onToggleToolSeal={handleToggleToolSeal}
                 renderPendingContent={(slot) => renderPendingBenchDropDraft(slot.id)}
-                slots={slots}
+                slots={displaySlots}
                 statusMessage={statusMessage}
                 onToolbarItemDrop={handleToolbarItemDrop}
               />

@@ -33,6 +33,7 @@ export type DndTargetId =
   | "bench-slot-station_1"
   | "bench-slot-station_2"
   | "grinder-dropzone"
+  | "gross-balance-dropzone"
   | "rack-illustration-slot-1"
   | "widget-workspace"
   | "trash-dropzone";
@@ -75,6 +76,17 @@ const toolItems = toolbarItems.filter((item): item is ToolCatalogItem => item.it
 const paletteItems = toolbarItems.filter((item) => item.itemType !== "sample_label");
 const sampleVialItem = labToolCatalog.sample_vial_lcms;
 const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
+const grossBalanceCompatibleSourceIds = new Set<string>([
+  ...toolItems.map((item) => `palette-${item.id}`),
+  ...toolItems.map((item) => `workbench-${item.id}`),
+  ...toolItems.map((item) => `trash-tool-${item.id}`),
+  "basket-produce-lot-apple",
+  "workbench-produce-lot-apple",
+  "workbench-surface-produce-lot-apple",
+  "grinder-produce-lot-apple",
+  "trash-produce-lot-apple",
+  "rack-sample_vial",
+]);
 
 export const dndTargetCases: {
   assertDragOver: boolean;
@@ -84,6 +96,7 @@ export const dndTargetCases: {
   { id: "bench-slot-station_1", label: "occupied station", assertDragOver: true },
   { id: "bench-slot-station_2", label: "empty station", assertDragOver: true },
   { id: "grinder-dropzone", label: "grinder", assertDragOver: true },
+  { id: "gross-balance-dropzone", label: "gross balance", assertDragOver: true },
   { id: "rack-illustration-slot-1", label: "rack slot", assertDragOver: true },
   { id: "widget-workspace", label: "workspace canvas", assertDragOver: false },
   { id: "trash-dropzone", label: "trash", assertDragOver: true },
@@ -154,7 +167,7 @@ function makeWorkspaceWidgets(
       anchor: "top-left",
       offsetX: 364,
       offsetY: 886,
-      isPresent: false,
+      isPresent: true,
       isTrashed: false,
     },
     {
@@ -1314,7 +1327,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
   };
 }
 
-export const dndSourceCases: DndSourceCase[] = [
+const baseDndSourceCases: DndSourceCase[] = [
   ...paletteItems.map(createPaletteSourceCase),
   createPaletteSampleLabelSourceCase(),
   ...toolItems.map(createWorkbenchToolSourceCase),
@@ -1332,3 +1345,27 @@ export const dndSourceCases: DndSourceCase[] = [
   createTrashWidgetSourceCase("instrument", "lc_msms_instrument", "LC-MS/MS"),
   createTrashWidgetSourceCase("grinder", "cryogenic_grinder", "Cryogenic grinder"),
 ];
+
+export const dndSourceCases: DndSourceCase[] = baseDndSourceCases.map((sourceCase) => ({
+  ...sourceCase,
+  availableTargets: sourceCase.availableTargets.includes("gross-balance-dropzone")
+    ? sourceCase.availableTargets
+    : [...sourceCase.availableTargets, "gross-balance-dropzone"],
+  targetExpectations: {
+    ...sourceCase.targetExpectations,
+    "gross-balance-dropzone": grossBalanceCompatibleSourceIds.has(sourceCase.id)
+      ? {
+          compatible: true,
+          command: {
+            type: "record_gross_weight",
+            payload: expect.objectContaining({
+              measured_gross_mass_g: expect.any(Number),
+            }),
+          },
+        }
+      : {
+          compatible: false,
+          command: null,
+        },
+  },
+}));

@@ -469,9 +469,17 @@ export async function placeReceivedBagOnWorkbench(experimentId: string, payload:
 }
 
 export async function recordGrossWeight(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  const body = _payload && "measured_gross_mass_g" in _payload ? _payload : undefined;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/reception/gross-weight/record`,
+    ...(body
+      ? {
+          body: {
+            measured_gross_mass_g: requireNumber(body, "measured_gross_mass_g"),
+          },
+        }
+      : {}),
   });
 }
 

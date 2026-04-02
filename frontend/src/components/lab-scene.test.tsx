@@ -2392,9 +2392,29 @@ describe("LabScene", () => {
     );
   });
 
-  it("records the gross balance weight from the fixed reception scale", async () => {
+  it("records gross balance weight when a workbench object is dropped onto the scale", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              toolId: "sealed_sampling_bag",
+              label: "Received sampling bag",
+              subtitle: "Field reception",
+              toolType: "sample_bag",
+              capacity_ml: 500,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+            }),
+          },
+        ]),
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
       }),
     );
@@ -2407,13 +2427,23 @@ describe("LabScene", () => {
 
     render(<PesticideWorkbench />);
 
-    fireEvent.click(await screen.findByTestId("gross-balance-measure-button"));
+    const tool = await screen.findByTestId("bench-tool-card-bench_tool_1");
+    const balance = screen.getByTestId("gross-balance-dropzone");
+    const transfer = createDataTransfer();
 
+    fireEvent.dragStart(tool, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(balance, { dataTransfer: transfer });
+    fireEvent(balance, dragOverEvent);
+    fireEvent.drop(balance, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(screen.getByTestId("gross-balance-staged-item")).toBeInTheDocument();
+    expect(screen.queryByTestId("bench-tool-card-bench_tool_1")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
         "record_gross_weight",
-        {},
+        { measured_gross_mass_g: 2486 },
       );
     });
   });

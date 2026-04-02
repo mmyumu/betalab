@@ -6,7 +6,7 @@ import type {
 } from "@/types/workbench";
 
 export function getToolDropTargets(toolType: ToolType): DropTargetType[] {
-  const targets: DropTargetType[] = ["workbench_slot", "trash_bin"];
+  const targets: DropTargetType[] = ["workbench_slot", "trash_bin", "gross_balance_widget"];
 
   if (toolType === "sample_vial") {
     targets.splice(1, 0, "rack_slot");
@@ -38,7 +38,7 @@ export function canToolReceiveContents(toolType: ToolType, isSealed = false): bo
 }
 
 export function getProduceLotDropTargets(): DropTargetType[] {
-  return ["workbench_slot", "grinder_widget", "trash_bin"];
+  return ["workbench_slot", "grinder_widget", "trash_bin", "gross_balance_widget"];
 }
 
 export function getSampleLabelDropTargets(): DropTargetType[] {

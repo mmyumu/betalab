@@ -30,6 +30,17 @@ function getDropTargetMime(targetType: DropTargetType) {
   return `${DROP_TARGET_MIME_PREFIX}${targetType}`;
 }
 
+function isDropTargetType(targetType: unknown): targetType is DropTargetType {
+  return (
+    targetType === "workbench_slot" ||
+    targetType === "workspace_canvas" ||
+    targetType === "rack_slot" ||
+    targetType === "trash_bin" ||
+    targetType === "grinder_widget" ||
+    targetType === "gross_balance_widget"
+  );
+}
+
 export function writeToolbarDragPayload(dataTransfer: DataTransfer, payload: ToolbarDragPayload) {
   const serialized = JSON.stringify(payload);
 
@@ -223,15 +234,7 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<ToolbarDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "tool" &&
@@ -325,15 +328,7 @@ export function readBasketToolDragPayload(
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<BasketToolDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "tool" &&
@@ -370,15 +365,7 @@ export function readLimsLabelTicketDragPayload(
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<LimsLabelTicketDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "lims_label_ticket" &&
@@ -414,15 +401,7 @@ export function readBenchToolDragPayload(dataTransfer: DataTransfer): BenchToolD
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<BenchToolDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "tool" &&
@@ -459,15 +438,7 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<RackToolDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "tool" &&
@@ -505,15 +476,7 @@ export function readTrashToolDragPayload(dataTransfer: DataTransfer): TrashToolD
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<TrashToolDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "tool" &&
@@ -553,15 +516,7 @@ export function readWorkspaceWidgetDragPayload(
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<WorkspaceWidgetDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "workspace_widget" &&
@@ -597,15 +552,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<ProduceDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "produce" &&
@@ -652,15 +599,7 @@ export function readWorkspaceLiquidDragPayload(
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<WorkspaceLiquidDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "workspace_canvas" ||
-          targetType === "rack_slot" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "liquid" &&

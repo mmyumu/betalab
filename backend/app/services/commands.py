@@ -207,7 +207,7 @@ class CreateLimsReceptionCommand:
 
 @dataclass(frozen=True, slots=True)
 class RecordGrossWeightCommand:
-    pass
+    measured_gross_mass_g: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

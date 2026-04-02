@@ -74,7 +74,10 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
             f"/experiments/{experiment_id}/reception/bag/place-on-workbench",
             json={"target_slot_id": "station_1"},
         )
-        weighed = client.post(f"/experiments/{experiment_id}/reception/gross-weight/record")
+        weighed = client.post(
+            f"/experiments/{experiment_id}/reception/gross-weight/record",
+            json={"measured_gross_mass_g": 2486.0},
+        )
         registered = client.post(
             f"/experiments/{experiment_id}/lims/reception",
             json={
@@ -122,6 +125,19 @@ def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
     assert registered.status_code == 200
     assert registered.json()["lims_reception"]["lab_sample_code"].startswith("APP-2026-")
     assert registered.json()["lims_reception"]["measured_gross_mass_g"] is None
+
+
+def test_record_gross_weight_route_accepts_explicit_mass_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        weighed = client.post(
+            f"/experiments/{experiment_id}/reception/gross-weight/record",
+            json={"measured_gross_mass_g": 36.0},
+        )
+
+    assert weighed.status_code == 200
+    assert weighed.json()["lims_reception"]["measured_gross_mass_g"] == pytest.approx(36.0)
 
 
 def test_list_experiments_returns_saved_sessions_over_http() -> None:

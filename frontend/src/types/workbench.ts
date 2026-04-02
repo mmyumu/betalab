@@ -4,7 +4,8 @@ export type DropTargetType =
   | "workspace_canvas"
   | "rack_slot"
   | "trash_bin"
-  | "grinder_widget";
+  | "grinder_widget"
+  | "gross_balance_widget";
 
 type ToolbarBaseItem = {
   allowedDropTargets: DropTargetType[];

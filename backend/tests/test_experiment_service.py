@@ -81,7 +81,10 @@ def apply_command(
         "place_received_bag_on_workbench": lambda: service.place_received_bag_on_workbench(
             experiment_id, payload["target_slot_id"]
         ),
-        "record_gross_weight": lambda: service.record_gross_weight(experiment_id),
+        "record_gross_weight": lambda: service.record_gross_weight(
+            experiment_id,
+            payload.get("measured_gross_mass_g"),
+        ),
         "create_lims_reception": lambda: service.create_lims_reception(
             experiment_id,
             payload["orchard_name"],
@@ -371,6 +374,20 @@ def test_create_lims_reception_allows_manual_entry_before_gross_weight() -> None
     assert updated.lims_reception.lab_sample_code is not None
     assert updated.lims_reception.status == "awaiting_label_application"
     assert updated.lims_reception.measured_gross_mass_g is None
+
+
+def test_record_gross_weight_uses_explicit_measured_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "record_gross_weight",
+        {"measured_gross_mass_g": 36.0},
+    )
+
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(36.0)
 
 
 def test_print_lims_label_requires_reception_entry() -> None:

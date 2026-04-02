@@ -306,7 +306,8 @@ export function useLabExperiment({
     placeWorkbenchToolInRackSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeWorkbenchToolInRackSlot, payload),
     printLimsLabel: () => executeMutation(mutationFns.printLimsLabel),
-    recordGrossWeight: () => executeMutation(mutationFns.recordGrossWeight),
+    recordGrossWeight: (payload?: Record<string, unknown>) =>
+      executeMutation(mutationFns.recordGrossWeight, payload),
     removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.removeLiquidFromWorkbenchTool, payload),
     removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) =>

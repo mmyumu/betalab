@@ -29,10 +29,18 @@ def place_received_bag_on_workbench(
     experiment.audit_log.append(f"Received sampling bag moved from basket to {slot.label}.")
 
 
-def record_gross_weight(experiment: Experiment, _command: RecordGrossWeightCommand) -> None:
-    experiment.lims_reception.measured_gross_mass_g = DEFAULT_RECEIVED_GROSS_MASS_G
+def record_gross_weight(experiment: Experiment, command: RecordGrossWeightCommand) -> None:
+    measured_mass_g = (
+        float(command.measured_gross_mass_g)
+        if command.measured_gross_mass_g is not None
+        else DEFAULT_RECEIVED_GROSS_MASS_G
+    )
+    if measured_mass_g <= 0:
+        raise ValueError("Gross balance mass must be greater than zero.")
+
+    experiment.lims_reception.measured_gross_mass_g = measured_mass_g
     experiment.audit_log.append(
-        f"Gross reception weight recorded at {DEFAULT_RECEIVED_GROSS_MASS_G:.1f} g."
+        f"Gross reception weight recorded at {measured_mass_g:.1f} g."
     )
 
 

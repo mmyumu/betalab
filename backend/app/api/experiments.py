@@ -8,6 +8,7 @@ from app.schemas.experiment import (
     DebugProducePresetSpawnToWorkbenchSchema,
     ExperimentListEntrySchema,
     ExperimentSchema,
+    GrossWeightRecordSchema,
     LimsReceptionCreateSchema,
     PaletteToolDiscardSchema,
     RackToolMoveSchema,
@@ -95,8 +96,16 @@ def place_received_bag_on_workbench(
 
 
 @router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)
-def record_gross_weight(experiment_id: str) -> ExperimentSchema:
-    return _handle_service_errors(lambda: experiment_service.record_gross_weight(experiment_id))
+def record_gross_weight(
+    experiment_id: str,
+    request: GrossWeightRecordSchema | None = None,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.record_gross_weight(
+            experiment_id,
+            request.measured_gross_mass_g if request is not None else None,
+        )
+    )
 
 
 @router.post("/{experiment_id}/lims/reception", response_model=ExperimentSchema)

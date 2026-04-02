@@ -302,6 +302,10 @@ class ReceivedBagPlacementSchema(BaseModel):
     target_slot_id: str
 
 
+class GrossWeightRecordSchema(BaseModel):
+    measured_gross_mass_g: float | None = None
+
+
 class LimsReceptionCreateSchema(BaseModel):
     orchard_name: str
     harvest_date: str

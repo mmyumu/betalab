@@ -51,7 +51,6 @@ export function LimsWidget({
     reception.status === "awaiting_label_application" && reception.labSampleCode !== null;
   const isEmptyState =
     reception.labSampleCode === null &&
-    reception.measuredGrossMassG === null &&
     reception.orchardName.trim().length === 0 &&
     reception.harvestDate.trim().length === 0 &&
     reception.indicativeMassG <= 0;
@@ -104,7 +103,7 @@ export function LimsWidget({
                     Indicative mass: --
                   </text>
                   <text x="28" y="196" fill="#94a3b8" fontSize="12" fontFamily="monospace">
-                    Gross lab mass: {reception.measuredGrossMassG === null ? "--" : `${reception.measuredGrossMassG.toFixed(1)} g`}
+                    Gross lab mass: --
                   </text>
                   <text x="28" y="224" fill="#38bdf8" fontSize="12" fontFamily="monospace">
                     Status: waiting for user entry
