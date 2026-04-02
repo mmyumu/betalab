@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 from app.domain.models import (
     Experiment,
     ExperimentStatus,
+    LimsReception,
+    ProduceLot,
     Rack,
     RackSlot,
     Trash,
+    WorkbenchTool,
     Workspace,
     WorkspaceWidget,
     Workbench,
@@ -17,6 +20,24 @@ from app.domain.models import (
 
 
 def build_experiment() -> Experiment:
+    produce_lot = ProduceLot(
+        id=new_id("produce"),
+        label="Orchard apple lot",
+        produce_type="apple",
+        total_mass_g=2450.0,
+        unit_count=12,
+    )
+    basket_tool = WorkbenchTool(
+        id=new_id("bench_tool"),
+        tool_id="sealed_sampling_bag",
+        label="Sealed sampling bag",
+        subtitle="Field reception",
+        accent="emerald",
+        tool_type="sample_bag",
+        capacity_ml=500.0,
+        field_label_text="Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+        produce_lots=[produce_lot],
+    )
     return Experiment(
         id=new_id("experiment"),
         status=ExperimentStatus.PREPARING,
@@ -35,6 +56,26 @@ def build_experiment() -> Experiment:
         trash=Trash(),
         workspace=Workspace(
             widgets=[
+                WorkspaceWidget(
+                    id="lims",
+                    widget_type="lims_terminal",
+                    label="LIMS terminal",
+                    anchor="top-left",
+                    offset_x=24,
+                    offset_y=886,
+                    is_present=True,
+                    is_trashed=False,
+                ),
+                WorkspaceWidget(
+                    id="gross_balance",
+                    widget_type="gross_balance",
+                    label="Gross balance",
+                    anchor="top-left",
+                    offset_x=364,
+                    offset_y=886,
+                    is_present=False,
+                    is_trashed=False,
+                ),
                 WorkspaceWidget(
                     id="workbench",
                     widget_type="workbench",
@@ -98,9 +139,15 @@ def build_experiment() -> Experiment:
             ],
             produce_lots=[],
         ),
+        lims_reception=LimsReception(
+            orchard_name="",
+            harvest_date="",
+            indicative_mass_g=0.0,
+        ),
+        basket_tool=basket_tool,
         last_simulation_at=datetime.now(timezone.utc),
         audit_log=[
             "Experiment created",
-            "Start by dragging an extraction tool onto the bench.",
+            "Receive the grower bag, weigh it, then register it in the LIMS.",
         ],
     )

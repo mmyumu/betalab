@@ -29,6 +29,10 @@ def _create_experiment(client: TestClient) -> str:
     return created.json()["id"]
 
 
+def _find_widget(payload: dict, widget_id: str) -> dict:
+    return next(widget for widget in payload["workspace"]["widgets"] if widget["id"] == widget_id)
+
+
 def test_settings_defaults_are_exposed() -> None:
     configured = Settings()
 
@@ -57,7 +61,48 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert fetched.json()["workbench"]["slots"][0]["tool"] is None
     assert fetched.json()["rack"]["slots"][0]["tool"] is None
     assert fetched.json()["trash"]["tools"] == []
-    assert fetched.json()["workspace"]["widgets"][0]["id"] == "workbench"
+    assert any(widget["id"] == "workbench" for widget in fetched.json()["workspace"]["widgets"])
+    assert fetched.json()["basket_tool"]["tool_type"] == "sample_bag"
+    assert fetched.json()["lims_reception"]["status"] == "awaiting_reception"
+
+
+def test_reception_routes_register_and_label_received_bag_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        placed = client.post(
+            f"/experiments/{experiment_id}/reception/bag/place-on-workbench",
+            json={"target_slot_id": "station_1"},
+        )
+        weighed = client.post(f"/experiments/{experiment_id}/reception/gross-weight/record")
+        registered = client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Verger Saint-Martin",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": 2486.0,
+            },
+        )
+        printed = client.post(f"/experiments/{experiment_id}/lims/print-label")
+        applied = client.post(
+            f"/experiments/{experiment_id}/lims/apply-label-to-workbench-bag",
+            json={"slot_id": "station_1"},
+        )
+
+    assert placed.status_code == 200
+    assert placed.json()["basket_tool"] is None
+    assert placed.json()["workbench"]["slots"][0]["tool"]["tool_type"] == "sample_bag"
+    assert weighed.status_code == 200
+    assert weighed.json()["lims_reception"]["measured_gross_mass_g"] == pytest.approx(2486.0)
+    assert registered.status_code == 200
+    sample_code = registered.json()["lims_reception"]["lab_sample_code"]
+    assert sample_code.startswith("APP-2026-")
+    assert printed.status_code == 200
+    assert printed.json()["lims_reception"]["printed_label_ticket"]["sample_code"] == sample_code
+    assert applied.status_code == 200
+    assert applied.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == f"{sample_code} • Apples"
+    assert applied.json()["lims_reception"]["status"] == "received"
 
 
 def test_list_experiments_returns_saved_sessions_over_http() -> None:
@@ -406,7 +451,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
                 json={"liquid_id": "dry_ice_pellets", "volume_ml": 275.25},
             )
-            liquid_id = added_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["id"]
+            liquid_id = _find_widget(added_liquid.json(), "grinder")["liquids"][0]["id"]
             updated_liquid = client.patch(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}",
                 json={"volume_ml": 125.5},
@@ -431,11 +476,11 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert produce_loaded.status_code == 200
     assert produce_loaded.json()["workspace"]["produce_lots"] == []
     assert updated_liquid.status_code == 200
-    assert updated_liquid.json()["workspace"]["widgets"][5]["liquids"][0]["volume_ml"] == 125.5
+    assert _find_widget(updated_liquid.json(), "grinder")["liquids"][0]["volume_ml"] == 125.5
     assert advanced.status_code == 200
-    assert advanced.json()["workspace"]["widgets"][5]["produce_lots"][0]["temperature_c"] < 20.0
+    assert _find_widget(advanced.json(), "grinder")["produce_lots"][0]["temperature_c"] < 20.0
     assert removed_liquid.status_code == 200
-    assert removed_liquid.json()["workspace"]["widgets"][5]["liquids"] == []
+    assert _find_widget(removed_liquid.json(), "grinder")["liquids"] == []
     assert discarded_widget.status_code == 200
     assert next(widget for widget in discarded_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
         "is_trashed"
@@ -477,7 +522,7 @@ def test_experiment_stream_pushes_updated_snapshots() -> None:
 
     assert snapshot["id"] == experiment_id
     assert snapshot["snapshot_version"] >= 1
-    assert snapshot["workspace"]["widgets"][5]["produce_lots"][0]["temperature_c"] < 20.0
+    assert _find_widget(snapshot, "grinder")["produce_lots"][0]["temperature_c"] < 20.0
 
 
 def test_produce_lot_routes_round_trip_over_http() -> None:
@@ -548,7 +593,7 @@ def test_produce_lot_routes_round_trip_over_http() -> None:
     assert restored_to_board.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == first_lot_id
     assert added_grinder.status_code == 200
     assert restored_to_widget.status_code == 200
-    assert restored_to_widget.json()["workspace"]["widgets"][5]["produce_lots"][0]["id"] == first_lot_id
+    assert _find_widget(restored_to_widget.json(), "grinder")["produce_lots"][0]["id"] == first_lot_id
     assert moved_to_bench.status_code == 200
     assert moved_to_bench.json()["workbench"]["slots"][1]["surface_produce_lots"][0]["id"] == first_lot_id
     assert restored_to_widget_again.status_code == 200
@@ -584,7 +629,7 @@ def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
         )
 
     assert moved.status_code == 200
-    assert moved.json()["workspace"]["widgets"][5]["produce_lots"][0]["id"] == produce_lot_id
+    assert _find_widget(moved.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
 
 
 def test_new_routes_return_expected_http_errors() -> None:

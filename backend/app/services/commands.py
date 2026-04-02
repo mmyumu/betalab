@@ -193,6 +193,34 @@ class CreateProduceLotCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class PlaceReceivedBagOnWorkbenchCommand:
+    target_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class CreateLimsReceptionCommand:
+    orchard_name: str
+    harvest_date: str
+    indicative_mass_g: float
+    measured_gross_mass_g: float
+
+
+@dataclass(frozen=True, slots=True)
+class RecordGrossWeightCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class PrintLimsLabelCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class ApplyPrintedLimsLabelCommand:
+    slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class CreateDebugProduceLotOnWorkbenchCommand:
     preset_id: str
     target_slot_id: str

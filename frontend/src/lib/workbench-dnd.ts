@@ -1,7 +1,9 @@
 import type {
+  BasketToolDragPayload,
   BenchToolDragPayload,
   DragDescriptor,
   DropTargetType,
+  LimsLabelTicketDragPayload,
   ProduceDragPayload,
   RackToolDragPayload,
   SampleLabelDragPayload,
@@ -14,12 +16,14 @@ import type {
 
 export const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
 export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
+export const BASKET_TOOL_DRAG_MIME = "application/x-betalab-basket-tool-item";
 export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
 export const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
 export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
 export const WORKSPACE_LIQUID_DRAG_MIME = "application/x-betalab-workspace-liquid-item";
 export const PRODUCE_DRAG_MIME = "application/x-betalab-produce-item";
 export const SAMPLE_LABEL_DRAG_MIME = "application/x-betalab-sample-label-item";
+export const LIMS_LABEL_TICKET_DRAG_MIME = "application/x-betalab-lims-label-ticket-item";
 const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
 
 function getDropTargetMime(targetType: DropTargetType) {
@@ -91,6 +95,20 @@ export function writeBenchToolDragPayload(dataTransfer: DataTransfer, payload: B
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
     dataTransfer.setData(getDropTargetMime(targetType), payload.sourceSlotId);
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeBasketToolDragPayload(
+  dataTransfer: DataTransfer,
+  payload: BasketToolDragPayload,
+) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(BASKET_TOOL_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.sourceId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -169,6 +187,20 @@ export function writeSampleLabelDragPayload(
       getDropTargetMime(targetType),
       payload.sourceSlotId ?? payload.trashSampleLabelId ?? payload.sampleLabelId,
     );
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeLimsLabelTicketDragPayload(
+  dataTransfer: DataTransfer,
+  payload: LimsLabelTicketDragPayload,
+) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(LIMS_LABEL_TICKET_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.ticketId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -272,6 +304,97 @@ export function readToolbarDragPayload(dataTransfer: DataTransfer): ToolbarDragP
         sourceId: parsed.sourceId,
         sourceKind: "palette",
         widgetType: parsed.widgetType,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function readBasketToolDragPayload(
+  dataTransfer: DataTransfer,
+): BasketToolDragPayload | null {
+  const rawPayload =
+    dataTransfer.getData(BASKET_TOOL_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<BasketToolDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" ||
+          targetType === "workspace_canvas" ||
+          targetType === "rack_slot" ||
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
+      ) ?? [];
+
+    if (
+      parsed.entityKind === "tool" &&
+      parsed.sourceKind === "basket" &&
+      typeof parsed.sourceId === "string" &&
+      typeof parsed.toolId === "string" &&
+      typeof parsed.toolType === "string"
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "tool",
+        sourceId: parsed.sourceId,
+        sourceKind: "basket",
+        toolId: parsed.toolId,
+        toolType: parsed.toolType,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function readLimsLabelTicketDragPayload(
+  dataTransfer: DataTransfer,
+): LimsLabelTicketDragPayload | null {
+  const rawPayload =
+    dataTransfer.getData(LIMS_LABEL_TICKET_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<LimsLabelTicketDragPayload>;
+    const allowedDropTargets =
+      parsed.allowedDropTargets?.filter(
+        (targetType): targetType is DropTargetType =>
+          targetType === "workbench_slot" ||
+          targetType === "workspace_canvas" ||
+          targetType === "rack_slot" ||
+          targetType === "trash_bin" ||
+          targetType === "grinder_widget",
+      ) ?? [];
+
+    if (
+      parsed.entityKind === "lims_label_ticket" &&
+      parsed.sourceKind === "lims" &&
+      typeof parsed.ticketId === "string" &&
+      typeof parsed.sampleCode === "string" &&
+      typeof parsed.labelText === "string"
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "lims_label_ticket",
+        sourceId: parsed.ticketId,
+        sourceKind: "lims",
+        ticketId: parsed.ticketId,
+        sampleCode: parsed.sampleCode,
+        labelText: parsed.labelText,
       };
     }
   } catch {
@@ -619,13 +742,27 @@ export function toDragDescriptor(
   payload:
     | ToolbarDragPayload
     | BenchToolDragPayload
+    | BasketToolDragPayload
     | RackToolDragPayload
     | TrashToolDragPayload
     | WorkspaceWidgetDragPayload
     | WorkspaceLiquidDragPayload
     | ProduceDragPayload
-    | SampleLabelDragPayload,
+    | SampleLabelDragPayload
+    | LimsLabelTicketDragPayload,
 ): DragDescriptor {
+  if ("ticketId" in payload) {
+    return {
+      allowedDropTargets: payload.allowedDropTargets,
+      entityKind: "lims_label_ticket",
+      ticketId: payload.ticketId,
+      sampleCode: payload.sampleCode,
+      labelText: payload.labelText,
+      sourceId: payload.sourceId,
+      sourceKind: payload.sourceKind,
+    };
+  }
+
   if ("produceLotId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
@@ -713,6 +850,17 @@ export function toDragDescriptor(
     };
   }
 
+  if ("toolId" in payload && payload.sourceKind === "basket") {
+    return {
+      allowedDropTargets: payload.allowedDropTargets,
+      entityKind: "tool",
+      sourceId: payload.sourceId,
+      sourceKind: payload.sourceKind,
+      toolId: payload.toolId,
+      toolType: payload.toolType,
+    };
+  }
+
   if ("sourceSlotId" in payload || "rackSlotId" in payload || "trashToolId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
@@ -745,6 +893,11 @@ export function readDragDescriptor(dataTransfer: DataTransfer): DragDescriptor |
     return toDragDescriptor(benchToolPayload);
   }
 
+  const basketToolPayload = readBasketToolDragPayload(dataTransfer);
+  if (basketToolPayload) {
+    return toDragDescriptor(basketToolPayload);
+  }
+
   const rackToolPayload = readRackToolDragPayload(dataTransfer);
   if (rackToolPayload) {
     return toDragDescriptor(rackToolPayload);
@@ -773,6 +926,11 @@ export function readDragDescriptor(dataTransfer: DataTransfer): DragDescriptor |
   const sampleLabelPayload = readSampleLabelDragPayload(dataTransfer);
   if (sampleLabelPayload) {
     return toDragDescriptor(sampleLabelPayload);
+  }
+
+  const limsLabelTicketPayload = readLimsLabelTicketDragPayload(dataTransfer);
+  if (limsLabelTicketPayload) {
+    return toDragDescriptor(limsLabelTicketPayload);
   }
 
   return null;

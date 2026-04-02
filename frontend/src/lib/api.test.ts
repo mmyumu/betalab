@@ -34,6 +34,16 @@ const makeExperiment = (): Experiment => ({
     produceLots: [],
     widgets: [],
   },
+  limsReception: {
+    orchardName: "",
+    harvestDate: "",
+    indicativeMassG: 0,
+    measuredGrossMassG: null,
+    labSampleCode: null,
+    status: "awaiting_reception",
+    printedLabelTicket: null,
+  },
+  basketTool: null,
   audit_log: [],
 });
 

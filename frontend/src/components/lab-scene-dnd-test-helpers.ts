@@ -7,6 +7,7 @@ import type {
   BenchSlot,
   BenchToolInstance,
   ExperimentWorkspaceWidget,
+  LimsReception,
   RackSlot,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
@@ -65,6 +66,8 @@ const workspaceWidgetItemToId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
   cryogenic_grinder_widget: "grinder",
+  lims_terminal_widget: "lims",
+  gross_balance_widget: "gross_balance",
 } as const;
 
 const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
@@ -134,6 +137,26 @@ function makeWorkspaceWidgets(
   overrides: Partial<ExperimentWorkspaceWidget>[] = [],
 ): ExperimentWorkspaceWidget[] {
   const baseWidgets: ExperimentWorkspaceWidget[] = [
+    {
+      id: "lims",
+      widgetType: "lims_terminal",
+      label: "LIMS terminal",
+      anchor: "top-left",
+      offsetX: 24,
+      offsetY: 886,
+      isPresent: true,
+      isTrashed: false,
+    },
+    {
+      id: "gross_balance",
+      widgetType: "gross_balance",
+      label: "Gross balance",
+      anchor: "top-left",
+      offsetX: 364,
+      offsetY: 886,
+      isPresent: false,
+      isTrashed: false,
+    },
     {
       id: "workbench",
       widgetType: "workbench",
@@ -249,6 +272,8 @@ function makeTrashSampleLabelEntry(): TrashSampleLabelEntry {
 }
 
 function makeExperiment({
+  basketTool = null,
+  limsReception = makeLimsReception(),
   slots = makeSlots(),
   rackSlots = makeRackSlots(),
   trashProduceLots = [],
@@ -257,6 +282,8 @@ function makeExperiment({
   produceLots = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
+  basketTool?: BenchToolInstance | null;
+  limsReception?: LimsReception;
   slots?: BenchSlot[];
   rackSlots?: RackSlot[];
   trashProduceLots?: TrashProduceLotEntry[];
@@ -268,11 +295,28 @@ function makeExperiment({
   return {
     id: "experiment_pesticides",
     status: "preparing",
+    last_simulation_at: "2026-03-28T19:00:00Z",
+    snapshot_version: 1,
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots, widgets: workspaceWidgets },
-    audit_log: ["Experiment created", "Start by dragging an extraction tool onto the bench."],
+    basketTool,
+    limsReception,
+    audit_log: ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],
+  };
+}
+
+function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReception {
+  return {
+    orchardName: "",
+    harvestDate: "",
+    indicativeMassG: 0,
+    measuredGrossMassG: null,
+    labSampleCode: null,
+    status: "awaiting_reception",
+    printedLabelTicket: null,
+    ...overrides,
   };
 }
 
@@ -653,6 +697,8 @@ function createTrashWidgetSourceCase(
         workspaceWidgets: makeWorkspaceWidgets([
           {},
           {},
+          {},
+          {},
           widgetId === "rack"
             ? { isPresent: false, isTrashed: true }
             : { isPresent: true, isTrashed: false },
@@ -664,7 +710,7 @@ function createTrashWidgetSourceCase(
             : {},
           widgetId === "grinder"
             ? { isPresent: false, isTrashed: true }
-            : {},
+            : { isPresent: true, isTrashed: false },
         ]),
       }),
     targetExpectations: {
@@ -978,7 +1024,10 @@ function createGrinderProduceLotSourceCase(): DndSourceCase {
           {},
           {},
           {},
+          {},
+          {},
           {
+            isPresent: true,
             produceLots: [
               {
                 id: "produce_1",
@@ -1065,7 +1114,10 @@ function createGrinderLiquidSourceCase(): DndSourceCase {
           {},
           {},
           {},
+          {},
+          {},
           {
+            isPresent: true,
             liquids: [
               {
                 id: "workspace_liquid_1",

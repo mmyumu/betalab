@@ -10,6 +10,8 @@ from typing import Protocol
 from app.domain.models import (
     Experiment,
     ExperimentStatus,
+    LimsReception,
+    PrintedLabelTicket,
     ProduceLot,
     Rack,
     RackSlot,
@@ -158,6 +160,8 @@ def _serialize_experiment(experiment: Experiment) -> dict:
             "rack": asdict(experiment.rack),
             "trash": asdict(experiment.trash),
             "workspace": asdict(experiment.workspace),
+            "lims_reception": asdict(experiment.lims_reception),
+            "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
             "audit_log": experiment.audit_log,
         }
     ).model_dump(mode="json")
@@ -244,6 +248,19 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                 _deserialize_produce_lot(lot) for lot in schema.workspace.produce_lots
             ],
         ),
+        lims_reception=LimsReception(
+            orchard_name=schema.lims_reception.orchard_name,
+            harvest_date=schema.lims_reception.harvest_date,
+            indicative_mass_g=schema.lims_reception.indicative_mass_g,
+            measured_gross_mass_g=schema.lims_reception.measured_gross_mass_g,
+            lab_sample_code=schema.lims_reception.lab_sample_code,
+            status=schema.lims_reception.status,
+            printed_label_ticket=
+                PrintedLabelTicket(**schema.lims_reception.printed_label_ticket.model_dump())
+                if schema.lims_reception.printed_label_ticket is not None
+                else None,
+        ),
+        basket_tool=_deserialize_workbench_tool(schema.basket_tool),
         last_simulation_at=schema.last_simulation_at,
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
@@ -265,6 +282,7 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         closure_fault=tool_schema.closure_fault,
         internal_pressure_bar=tool_schema.internal_pressure_bar,
         trapped_co2_mass_g=tool_schema.trapped_co2_mass_g,
+        field_label_text=tool_schema.field_label_text,
         sample_label_text=tool_schema.sample_label_text,
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],

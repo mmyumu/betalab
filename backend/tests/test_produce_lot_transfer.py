@@ -35,7 +35,8 @@ def test_transfer_service_moves_produce_lot_from_workbench_to_grinder() -> None:
     assert result.target_label == "Cryogenic grinder"
     assert result.contamination_applied is False
     assert experiment.workbench.slots[0].tool.produce_lots == []
-    assert [lot.id for lot in experiment.workspace.widgets[5].produce_lots] == ["produce_1"]
+    grinder = next(widget for widget in experiment.workspace.widgets if widget.id == "grinder")
+    assert [lot.id for lot in grinder.produce_lots] == ["produce_1"]
 
 
 def test_transfer_service_marks_surface_drop_as_contaminated() -> None:
@@ -49,7 +50,8 @@ def test_transfer_service_marks_surface_drop_as_contaminated() -> None:
         unit_count=2,
         cut_state="ground",
     )
-    experiment.workspace.widgets[5].produce_lots.append(produce_lot)
+    grinder = next(widget for widget in experiment.workspace.widgets if widget.id == "grinder")
+    grinder.produce_lots.append(produce_lot)
 
     result = service.transfer(
         experiment,
@@ -61,7 +63,7 @@ def test_transfer_service_marks_surface_drop_as_contaminated() -> None:
     assert result.target_label == "Station 2"
     assert result.location_label == "Station 2"
     assert result.contamination_applied is True
-    assert experiment.workspace.widgets[5].produce_lots == []
+    assert grinder.produce_lots == []
     assert experiment.workbench.slots[1].surface_produce_lots[0].is_contaminated is True
 
 

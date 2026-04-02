@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
-from app.domain.models import Experiment, ProduceLot, TrashProduceLotEntry, WorkbenchLiquid, new_id
+from app.domain.models import (
+    Experiment,
+    LimsReception,
+    ProduceLot,
+    TrashProduceLotEntry,
+    WorkbenchLiquid,
+    WorkbenchTool,
+    new_id,
+)
 from app.domain.workbench_catalog import get_workbench_liquid_definition
 from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.commands import (
@@ -100,6 +108,26 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
         unit_count=12,
         total_mass_g=2450.0,
     )
+    if experiment.basket_tool is None:
+        experiment.basket_tool = WorkbenchTool(
+            id=new_id("bench_tool"),
+            tool_id="sealed_sampling_bag",
+            label="Received sampling bag",
+            subtitle="Field reception",
+            accent="emerald",
+            tool_type="sample_bag",
+            capacity_ml=500.0,
+            field_label_text="Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+            produce_lots=[produce_lot],
+        )
+        experiment.lims_reception = LimsReception(
+            orchard_name="",
+            harvest_date="",
+            indicative_mass_g=0.0,
+        )
+        experiment.audit_log.append(f"{produce_lot.label} created in a received sampling bag.")
+        return
+
     experiment.workspace.produce_lots.append(produce_lot)
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 

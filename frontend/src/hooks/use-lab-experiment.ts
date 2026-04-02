@@ -9,9 +9,11 @@ import {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
+  applyPrintedLimsLabel,
   applySampleLabelToWorkbenchTool,
   closeWorkbenchTool,
   completeGrinderCycle,
+  createLimsReception,
   createExperiment,
   getExperiment,
   createDebugProduceLotOnWorkbench,
@@ -36,8 +38,11 @@ import {
   moveWorkspaceWidget,
   openWorkbenchTool,
   placeToolInRackSlot,
+  placeReceivedBagOnWorkbench,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
+  printLimsLabel,
+  recordGrossWeight,
   removeLiquidFromWorkbenchTool,
   removeLiquidFromWorkspaceWidget,
   removeRackToolToWorkbenchSlot,
@@ -73,9 +78,11 @@ const mutationFns = {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
+  applyPrintedLimsLabel,
   applySampleLabelToWorkbenchTool,
   closeWorkbenchTool,
   completeGrinderCycle,
+  createLimsReception,
   createProduceLot,
   createDebugProduceLotOnWorkbench,
   createDebugProduceLotToWidget,
@@ -98,8 +105,11 @@ const mutationFns = {
   moveWorkspaceWidget,
   openWorkbenchTool,
   placeToolInRackSlot,
+  placeReceivedBagOnWorkbench,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
+  printLimsLabel,
+  recordGrossWeight,
   removeLiquidFromWorkbenchTool,
   removeLiquidFromWorkspaceWidget,
   removeRackToolToWorkbenchSlot,
@@ -233,6 +243,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.addWorkspaceProduceLotToWidget, payload),
     addWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.addWorkspaceWidget, payload),
+    applyPrintedLimsLabel: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.applyPrintedLimsLabel, payload),
     applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
     closeWorkbenchTool: (payload: Record<string, unknown>) =>
@@ -247,6 +259,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.createDebugProduceLotOnWorkbench, payload),
     createDebugProduceLotToWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.createDebugProduceLotToWidget, payload),
+    createLimsReception: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.createLimsReception, payload),
     cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
     discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
@@ -285,10 +299,14 @@ export function useLabExperiment({
       executeMutation(mutationFns.openWorkbenchTool, payload),
     placeToolInRackSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeToolInRackSlot, payload),
+    placeReceivedBagOnWorkbench: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.placeReceivedBagOnWorkbench, payload),
     placeToolOnWorkbench: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeToolOnWorkbench, payload),
     placeWorkbenchToolInRackSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeWorkbenchToolInRackSlot, payload),
+    printLimsLabel: () => executeMutation(mutationFns.printLimsLabel),
+    recordGrossWeight: () => executeMutation(mutationFns.recordGrossWeight),
     removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.removeLiquidFromWorkbenchTool, payload),
     removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) =>

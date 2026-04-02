@@ -27,6 +27,34 @@ class ProduceLotSchema(BaseModel):
     residual_co2_mass_g: float = 0.0
 
 
+class PrintedLabelTicketSchema(BaseModel):
+    id: str
+    sample_code: str
+    label_text: str
+
+
+class LimsReceptionSchema(BaseModel):
+    orchard_name: str
+    harvest_date: str
+    indicative_mass_g: float
+    measured_gross_mass_g: float | None = None
+    lab_sample_code: str | None = None
+    status: str
+    printed_label_ticket: PrintedLabelTicketSchema | None = None
+
+
+def build_default_lims_reception_schema() -> LimsReceptionSchema:
+    return LimsReceptionSchema(
+        orchard_name="",
+        harvest_date="",
+        indicative_mass_g=0.0,
+        measured_gross_mass_g=None,
+        lab_sample_code=None,
+        status="awaiting_reception",
+        printed_label_ticket=None,
+    )
+
+
 class WorkbenchToolSchema(BaseModel):
     id: str
     tool_id: str
@@ -39,6 +67,7 @@ class WorkbenchToolSchema(BaseModel):
     closure_fault: str | None = None
     internal_pressure_bar: float = 1.0
     trapped_co2_mass_g: float = 0.0
+    field_label_text: str | None = None
     sample_label_text: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
@@ -119,6 +148,8 @@ class ExperimentSchema(BaseModel):
     rack: RackSchema
     trash: TrashSchema
     workspace: WorkspaceSchema
+    lims_reception: LimsReceptionSchema = Field(default_factory=build_default_lims_reception_schema)
+    basket_tool: WorkbenchToolSchema | None = None
     audit_log: list[str]
 
 
@@ -265,3 +296,14 @@ class WorkspaceWidgetMoveWorkbenchProduceLotSchema(BaseModel):
 
 class WorkspaceWidgetMoveProduceLotToWorkbenchSchema(BaseModel):
     target_slot_id: str
+
+
+class ReceivedBagPlacementSchema(BaseModel):
+    target_slot_id: str
+
+
+class LimsReceptionCreateSchema(BaseModel):
+    orchard_name: str
+    harvest_date: str
+    indicative_mass_g: float
+    measured_gross_mass_g: float

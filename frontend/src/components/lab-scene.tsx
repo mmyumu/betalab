@@ -9,7 +9,9 @@ import { ActionBarPanel } from "@/components/action-bar-panel";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
 import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
+import { GrossBalanceWidget } from "@/components/gross-balance-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
+import { LimsWidget } from "@/components/lims-widget";
 import { ProduceBasketWidget } from "@/components/produce-basket-widget";
 import { ProduceLotCard } from "@/components/produce-lot-card";
 import { RackWidget } from "@/components/rack-widget";
@@ -27,7 +29,9 @@ import {
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
+  readBasketToolDragPayload,
   readBenchToolDragPayload,
+  readLimsLabelTicketDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
   readSampleLabelDragPayload,
@@ -36,7 +40,9 @@ import {
   readWorkspaceLiquidDragPayload,
   readWorkspaceWidgetDragPayload,
   toDragDescriptor,
+  writeBasketToolDragPayload,
   writeBenchToolDragPayload,
+  writeLimsLabelTicketDragPayload,
   writeProduceDragPayload,
   writeRackToolDragPayload,
   writeSampleLabelDragPayload,
@@ -60,6 +66,7 @@ import {
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
 import type {
+  BasketToolDragPayload,
   BenchSlot,
   BenchToolDragPayload,
   BenchToolInstance,
@@ -67,6 +74,7 @@ import type {
   DropTargetType,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
+  LimsLabelTicketDragPayload,
   ProduceDragPayload,
   RackSlot,
   RackToolDragPayload,
@@ -85,38 +93,46 @@ const grinderOptimalThresholdC = -40;
 const grinderStartThresholdC = -20;
 const grinderJamThresholdC = -10;
 const widgetIds = [
+  "lims",
   "workbench",
   "trash",
   "rack",
   "instrument",
   "basket",
   "grinder",
+  "gross_balance",
 ] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
   lc_msms_instrument_widget: "instrument",
   cryogenic_grinder_widget: "grinder",
   produce_basket_widget: "basket",
+  lims_terminal_widget: "lims",
+  gross_balance_widget: "gross_balance",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
+  lims: false,
   workbench: false,
   trash: false,
   rack: true,
   instrument: true,
   grinder: true,
   basket: false,
+  gross_balance: true,
 };
 
 type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
+  lims: { x: 24, y: 886, width: 320, fallbackHeight: 320 },
   workbench: { x: 24, y: 24, width: 1105, fallbackHeight: 860 },
   trash: { x: 1276, y: 24, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 500, fallbackHeight: 392 },
   instrument: { x: 812, y: 886, width: 650, fallbackHeight: 392 },
   basket: { x: 1276, y: 262, width: 198, fallbackHeight: 236 },
   grinder: { x: 980, y: 886, width: 430, fallbackHeight: 340 },
+  gross_balance: { x: 364, y: 886, width: 300, fallbackHeight: 280 },
 };
 const rackSlotCount = 12;
 const debugProducePresets: DebugProducePreset[] = [
@@ -144,7 +160,14 @@ const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
-  return value === "rack" || value === "instrument" || value === "basket" || value === "grinder";
+  return (
+    value === "lims" ||
+    value === "rack" ||
+    value === "instrument" ||
+    value === "basket" ||
+    value === "grinder" ||
+    value === "gross_balance"
+  );
 }
 
 function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
@@ -603,8 +626,16 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
   const handleBenchToolDrop = (
     targetSlotId: string,
-    payload: BenchToolDragPayload | RackToolDragPayload | TrashToolDragPayload,
+    payload: BenchToolDragPayload | BasketToolDragPayload | RackToolDragPayload | TrashToolDragPayload,
   ) => {
+    if (payload.sourceKind === "basket") {
+      void experimentApi.placeReceivedBagOnWorkbench({
+        target_slot_id: targetSlotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
     if ("sourceSlotId" in payload) {
       if (payload.sourceSlotId === targetSlotId) {
         return;
@@ -632,6 +663,52 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       target_slot_id: targetSlotId,
     });
     clearDropTargets();
+  };
+
+  const handleBasketToolDragStart = (
+    tool: BenchToolInstance,
+    dataTransfer: DataTransfer,
+  ) => {
+    if (isKnifeMode) {
+      return;
+    }
+    const allowedDropTargets: DropTargetType[] = ["workbench_slot"];
+
+    writeBasketToolDragPayload(dataTransfer, {
+      allowedDropTargets,
+      entityKind: "tool",
+      sourceId: tool.id,
+      sourceKind: "basket",
+      toolId: tool.toolId,
+      toolType: tool.toolType,
+    });
+    showDropTargets(allowedDropTargets);
+    setActiveDragItem({
+      allowedDropTargets,
+      entityKind: "tool",
+      sourceId: tool.id,
+      sourceKind: "basket",
+      toolId: tool.toolId,
+      toolType: tool.toolType,
+    });
+  };
+
+  const handleLimsTicketDragStart = (
+    ticket: NonNullable<typeof state.experiment.limsReception.printedLabelTicket>,
+    dataTransfer: DataTransfer,
+  ) => {
+    const payload: LimsLabelTicketDragPayload = {
+      allowedDropTargets: ["workbench_slot"],
+      entityKind: "lims_label_ticket",
+      sourceId: ticket.id,
+      sourceKind: "lims",
+      ticketId: ticket.id,
+      sampleCode: ticket.sampleCode,
+      labelText: ticket.labelText,
+    };
+    writeLimsLabelTicketDragPayload(dataTransfer, payload);
+    showDropTargets(payload.allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(payload));
   };
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
@@ -980,6 +1057,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
+    const basketToolPayload = readBasketToolDragPayload(event.dataTransfer);
+    if (basketToolPayload?.toolType === "sample_bag") {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      return;
+    }
+
     const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
     if (rackToolPayload) {
       event.preventDefault();
@@ -1044,6 +1129,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       void experimentApi.discardSampleLabelFromWorkbenchTool( {
         slot_id: sampleLabelPayload.sourceSlotId,
       });
+      return;
+    }
+
+    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
+    if (limsTicketPayload) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
     }
   };
 
@@ -1612,6 +1705,26 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
+  const handleCreateLimsReception = (payload: {
+    harvest_date: string;
+    indicative_mass_g: number;
+    orchard_name: string;
+  }) => {
+    void experimentApi.createLimsReception({
+      orchard_name: payload.orchard_name,
+      harvest_date: payload.harvest_date,
+      indicative_mass_g: payload.indicative_mass_g,
+      measured_gross_mass_g: state.experiment.limsReception.measuredGrossMassG ?? 0,
+    });
+  };
+
+  const handleApplyLimsLabelTicket = (targetSlotId: string) => {
+    clearDropTargets();
+    void experimentApi.applyPrintedLimsLabel({
+      slot_id: targetSlotId,
+    });
+  };
+
   const handleTrashSampleLabelDragStart = (
     trashSampleLabel: TrashSampleLabelEntry,
     dataTransfer: DataTransfer,
@@ -1657,6 +1770,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
       if (
         activeDragItem.sourceKind === "palette" ||
+        activeDragItem.sourceKind === "basket" ||
         activeDragItem.sourceKind === "rack" ||
         activeDragItem.sourceKind === "trash"
       ) {
@@ -1688,6 +1802,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
     }
 
+    if (activeDragItem.entityKind === "lims_label_ticket") {
+      return (
+        slot.tool?.toolType === "sample_bag" &&
+        slot.tool.sampleLabelText === null &&
+        state.experiment.limsReception.printedLabelTicket !== null
+      );
+    }
+
     return false;
   };
 
@@ -1703,6 +1825,12 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
+  const basketTool = state.experiment.basketTool;
+  const receivedBagFieldLabelReference =
+    basketTool?.fieldLabelText ??
+    slots.find((slot) => slot.tool?.toolType === "sample_bag" && slot.tool.fieldLabelText)?.tool
+      ?.fieldLabelText ??
+    null;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const handleCreateAppleLot = () => {
     void experimentApi.createProduceLot( {
@@ -1724,10 +1852,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
           </Link>
         </nav>
         <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur xl:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            Betalab
-          </p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight xl:text-[3.25rem]">
+          <h1 className="text-4xl font-semibold tracking-tight xl:text-[3.25rem]">
             Laboratory workspace
           </h1>
         </header>
@@ -1837,13 +1962,17 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                   isActive={activeWidgetId === widgetId}
                   key={widgetId}
                   label={
-                    widgetId === "rack"
+                    widgetId === "lims"
+                      ? "LIMS Widget"
+                      : widgetId === "rack"
                       ? "Rack Widget"
                       : widgetId === "instrument"
                         ? "Instrument Widget"
-                        : widgetId === "grinder"
-                          ? "Grinder Widget"
-                          : "Produce Basket Widget"
+                          : widgetId === "grinder"
+                            ? "Grinder Widget"
+                          : widgetId === "gross_balance"
+                            ? "Gross Balance Widget"
+                            : "Produce Basket Widget"
                   }
                   onDragStart={(widgetId, event) => {
                     if (isKnifeMode) {
@@ -1855,16 +1984,36 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                   position={widgetLayout[widgetId]}
                   zIndex={10 + widgetOrder.indexOf(widgetId)}
                 >
-                  {widgetId === "basket" ? (
+                  {widgetId === "lims" ? (
+                    <LimsWidget
+                      fieldLabelReference={receivedBagFieldLabelReference}
+                      onCreateReception={handleCreateLimsReception}
+                      onPrintLabel={() => {
+                        void experimentApi.printLimsLabel();
+                      }}
+                      onTicketDragEnd={clearDropTargets}
+                      onTicketDragStart={handleLimsTicketDragStart}
+                      reception={state.experiment.limsReception}
+                    />
+                  ) : widgetId === "basket" ? (
                     <ProduceBasketWidget
+                      basketTool={basketTool}
                       dndDisabled={isKnifeMode}
                       formatProduceLotMetadata={formatProduceLotMetadata}
                       isOpen={isBasketOpen}
+                      onBagDragStart={handleBasketToolDragStart}
                       onCreateAppleLot={handleCreateAppleLot}
                       onItemDragEnd={clearDropTargets}
                       onProduceDragStart={handleBasketProduceDragStart}
                       onToggle={() => setIsBasketOpen((current) => !current)}
                       produceLots={basketProduceLots}
+                    />
+                  ) : widgetId === "gross_balance" ? (
+                    <GrossBalanceWidget
+                      measuredGrossMassG={state.experiment.limsReception.measuredGrossMassG}
+                      onMeasure={() => {
+                        void experimentApi.recordGrossWeight();
+                      }}
                     />
                   ) : widgetId === "rack" ? (
                     <RackWidget
@@ -2066,6 +2215,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
               <WorkbenchPanel
                 dndDisabled={isKnifeMode}
                 onAddWorkbenchSlot={handleAddWorkbenchSlot}
+                onApplyLimsLabelTicket={(slotId) => {
+                  handleApplyLimsLabelTicket(slotId);
+                }}
                 onApplySampleLabel={handleApplySampleLabel}
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}

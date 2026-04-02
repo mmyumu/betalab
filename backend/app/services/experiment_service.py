@@ -26,6 +26,13 @@ from app.services.command_handlers.debug import (
     create_debug_produce_lot_on_workbench,
     create_debug_produce_lot_to_widget,
 )
+from app.services.command_handlers.reception import (
+    apply_printed_lims_label,
+    create_lims_reception,
+    place_received_bag_on_workbench,
+    print_lims_label,
+    record_gross_weight,
+)
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
     apply_sample_label_to_workbench_tool,
@@ -70,8 +77,10 @@ from app.services.commands import (
     AddProduceLotToWorkbenchToolCommand,
     AddWorkspaceProduceLotToWidgetCommand,
     AdvanceWorkspaceCryogenicsCommand,
+    ApplyPrintedLimsLabelCommand,
     ApplySampleLabelToWorkbenchToolCommand,
     CloseWorkbenchToolCommand,
+    CreateLimsReceptionCommand,
     OpenWorkbenchToolCommand,
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
@@ -86,10 +95,13 @@ from app.services.commands import (
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
+    PlaceReceivedBagOnWorkbenchCommand,
     PlaceToolOnWorkbenchCommand,
     PlaceWorkbenchToolInRackSlotCommand,
+    PrintLimsLabelCommand,
     RackSlotCommand,
     RackSlotToolCommand,
+    RecordGrossWeightCommand,
     RemoveRackToolToWorkbenchSlotCommand,
     RestoreTrashedProduceLotToWidgetCommand,
     RestoreTrashedProduceLotToWorkbenchToolCommand,
@@ -318,6 +330,53 @@ class ExperimentService:
             experiment_id,
             create_produce_lot,
             CreateProduceLotCommand(produce_type=produce_type),
+        )
+
+    def place_received_bag_on_workbench(self, experiment_id: str, target_slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            place_received_bag_on_workbench,
+            PlaceReceivedBagOnWorkbenchCommand(target_slot_id=target_slot_id),
+        )
+
+    def record_gross_weight(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            record_gross_weight,
+            RecordGrossWeightCommand(),
+        )
+
+    def create_lims_reception(
+        self,
+        experiment_id: str,
+        orchard_name: str,
+        harvest_date: str,
+        indicative_mass_g: float,
+        measured_gross_mass_g: float,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            create_lims_reception,
+            CreateLimsReceptionCommand(
+                orchard_name=orchard_name,
+                harvest_date=harvest_date,
+                indicative_mass_g=indicative_mass_g,
+                measured_gross_mass_g=measured_gross_mass_g,
+            ),
+        )
+
+    def print_lims_label(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            print_lims_label,
+            PrintLimsLabelCommand(),
+        )
+
+    def apply_printed_lims_label(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            apply_printed_lims_label,
+            ApplyPrintedLimsLabelCommand(slot_id=slot_id),
         )
 
     def create_debug_produce_lot_on_workbench(
@@ -627,6 +686,8 @@ class ExperimentService:
                 "rack": asdict(experiment.rack),
                 "trash": asdict(experiment.trash),
                 "workspace": asdict(experiment.workspace),
+                "lims_reception": asdict(experiment.lims_reception),
+                "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
                 "audit_log": experiment.audit_log,
             }
         )

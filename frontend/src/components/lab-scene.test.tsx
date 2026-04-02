@@ -7,6 +7,7 @@ import type {
   BenchSlot,
   BenchToolInstance,
   ExperimentWorkspaceWidget,
+  LimsReception,
   RackSlot,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
@@ -115,6 +116,26 @@ function makeWorkspaceWidgets(
 ): ExperimentWorkspaceWidget[] {
   const baseWidgets: ExperimentWorkspaceWidget[] = [
     {
+      id: "lims",
+      widgetType: "lims_terminal",
+      label: "LIMS terminal",
+      anchor: "top-left",
+      offsetX: 24,
+      offsetY: 886,
+      isPresent: true,
+      isTrashed: false,
+    },
+    {
+      id: "gross_balance",
+      widgetType: "gross_balance",
+      label: "Gross balance",
+      anchor: "top-left",
+      offsetX: 364,
+      offsetY: 886,
+      isPresent: false,
+      isTrashed: false,
+    },
+    {
       id: "workbench",
       widgetType: "workbench",
       label: "Workbench",
@@ -183,9 +204,11 @@ function makeWorkspaceWidgets(
 }
 
 function makeWorkbenchExperiment({
-  auditLog = ["Experiment created", "Start by dragging an extraction tool onto the bench."],
+  auditLog = ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],
   basketProduceLots = [],
+  basketTool = null,
   lastSimulationAt = "2026-03-28T19:00:00Z",
+  limsReception = makeLimsReception(),
   rackSlots = makeRackSlots(),
   snapshotVersion = 1,
   slots = makeSlots(),
@@ -202,7 +225,9 @@ function makeWorkbenchExperiment({
     totalMassG: number;
     unitCount: number | null;
   }[];
+  basketTool?: BenchToolInstance | null;
   lastSimulationAt?: string;
+  limsReception?: LimsReception;
   rackSlots?: RackSlot[];
   snapshotVersion?: number;
   slots?: BenchSlot[];
@@ -220,7 +245,22 @@ function makeWorkbenchExperiment({
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
+    basketTool,
+    limsReception,
     audit_log: auditLog,
+  };
+}
+
+function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReception {
+  return {
+    orchardName: "",
+    harvestDate: "",
+    indicativeMassG: 0,
+    measuredGrossMassG: null,
+    labSampleCode: null,
+    status: "awaiting_reception",
+    printedLabelTicket: null,
+    ...overrides,
   };
 }
 
@@ -275,7 +315,7 @@ function makeTrashSampleLabelEntry(
 }
 
 function makeWorkspaceWithRackVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
-  return makeWorkspaceWidgets([{}, {}, { isPresent: true, ...overrides }, {}, {}, {}]);
+  return makeWorkspaceWidgets([{}, {}, {}, {}, { isPresent: true, ...overrides }, {}, {}, {}]);
 }
 
 function makeWorkspaceWithRackAndInstrumentVisible(
@@ -283,6 +323,8 @@ function makeWorkspaceWithRackAndInstrumentVisible(
   instrumentOverrides: Partial<ExperimentWorkspaceWidget> = {},
 ) {
   return makeWorkspaceWidgets([
+    {},
+    {},
     {},
     {},
     { isPresent: true, ...rackOverrides },
@@ -293,7 +335,13 @@ function makeWorkspaceWithRackAndInstrumentVisible(
 }
 
 function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
-  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, { isPresent: true, ...overrides }]);
+  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, {}, {}, { isPresent: true, ...overrides }]);
+}
+
+function makeWorkspaceWithGrossBalanceVisible(
+  overrides: Partial<ExperimentWorkspaceWidget> = {},
+) {
+  return makeWorkspaceWidgets([{}, { isPresent: true, ...overrides }, {}, {}, {}, {}, {}, {}]);
 }
 
 afterEach(() => {
@@ -1142,7 +1190,16 @@ describe("LabScene", () => {
             tool: makeTool({ liquids: [{ accent: "amber", id: "liq_1", liquidId: "acetonitrile", name: "Acetonitrile", volume_ml: 1 }] }),
           }),
         ],
-        workspaceWidgets: makeWorkspaceWidgets([{}, {}, { isPresent: false, isTrashed: true }, { isPresent: false, isTrashed: true }]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          {},
+          {},
+          { isPresent: false, isTrashed: true },
+          { isPresent: false, isTrashed: true },
+          {},
+          {},
+        ]),
       }),
     );
 
@@ -1187,16 +1244,22 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        auditLog: ["Apple lot 1 created in Produce basket."],
-        basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
-        ],
+        auditLog: ["Apple lot 1 created in a received sampling bag."],
+        basketTool: makeSampleBagTool({
+          id: "bench_tool_bag",
+          label: "Received sampling bag",
+          subtitle: "Field reception",
+          fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple lot 1",
+              produceType: "apple",
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
       }),
     );
 
@@ -1217,11 +1280,11 @@ describe("LabScene", () => {
     fireEvent.click(within(dialog).getByTestId("basket-create-apple-lot-button"));
 
     await waitFor(() => {
-      expect(within(dialog).getByText("Apple lot 1")).toBeInTheDocument();
+      expect(within(dialog).getByText("Received sampling bag")).toBeInTheDocument();
     });
 
-    expect(within(dialog).getByTestId("basket-produce-produce_1")).toBeInTheDocument();
-    expect(within(dialog).getByText("12 units • 2.45 kg")).toBeInTheDocument();
+    expect(within(dialog).getByTestId("basket-received-bag")).toBeInTheDocument();
+    expect(within(dialog).getByText("Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg")).toBeInTheDocument();
     expect(screen.getByTestId("basket-count-badge")).toHaveTextContent("1");
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
@@ -2105,6 +2168,8 @@ describe("LabScene", () => {
         workspaceWidgets: makeWorkspaceWidgets([
           {},
           {},
+          {},
+          {},
           { isPresent: true },
           {},
           {},
@@ -2279,6 +2344,142 @@ describe("LabScene", () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText("Sample label text")).toBeInTheDocument();
+    });
+  });
+
+  it("moves the received basket bag onto an empty bench station", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketTool: makeSampleBagTool({
+          id: "received_bag_1",
+          fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Orchard apple lot",
+              produceType: "apple",
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketTool: null,
+        slots: makeSlots([{ tool: makeSampleBagTool({ id: "received_bag_1" }) }]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+    const bagCard = await screen.findByTestId("basket-received-bag");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(bagCard, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "place_received_bag_on_workbench",
+      { target_slot_id: "station_1" },
+    );
+  });
+
+  it("records the gross balance weight from the fixed reception scale", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({ measuredGrossMassG: 2486 }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("gross-balance-measure-button"));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "record_gross_weight",
+        {},
+      );
+    });
+  });
+
+  it("prints a LIMS ticket and drops it onto the received sampling bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: null,
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: {
+            id: "lims_ticket_1",
+            sampleCode: "APP-2026-0001",
+            labelText: "APP-2026-0001 • Apples",
+          },
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: "APP-2026-0001 • Apples",
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label",
+        { slot_id: "station_1" },
+      );
     });
   });
 
@@ -2711,7 +2912,16 @@ describe("LabScene", () => {
   it("restores a deleted workspace widget from the trash view into the workspace", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        workspaceWidgets: makeWorkspaceWidgets([{}, {}, { isPresent: false, isTrashed: true }, {}]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          {},
+          {},
+          { isPresent: false, isTrashed: true },
+          {},
+          {},
+          {},
+        ]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(

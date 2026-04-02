@@ -11,6 +11,24 @@ class ExperimentStatus(str, Enum):
 
 
 @dataclass
+class PrintedLabelTicket:
+    id: str
+    sample_code: str
+    label_text: str
+
+
+@dataclass
+class LimsReception:
+    orchard_name: str
+    harvest_date: str
+    indicative_mass_g: float
+    measured_gross_mass_g: float | None = None
+    lab_sample_code: str | None = None
+    status: str = "awaiting_reception"
+    printed_label_ticket: PrintedLabelTicket | None = None
+
+
+@dataclass
 class WorkbenchLiquid:
     id: str
     liquid_id: str
@@ -32,6 +50,7 @@ class WorkbenchTool:
     closure_fault: str | None = None
     internal_pressure_bar: float = 1.0
     trapped_co2_mass_g: float = 0.0
+    field_label_text: str | None = None
     sample_label_text: str | None = None
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
@@ -138,6 +157,8 @@ class Experiment:
     rack: Rack
     trash: Trash
     workspace: Workspace
+    lims_reception: LimsReception
+    basket_tool: WorkbenchTool | None
     last_simulation_at: datetime
     snapshot_version: int = 0
     audit_log: list[str] = field(default_factory=list)

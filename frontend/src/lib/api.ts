@@ -5,6 +5,8 @@ import type {
   BenchToolInstance,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
+  LimsReception,
+  PrintedLabelTicket,
   RackSlot,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
@@ -457,6 +459,52 @@ export async function createProduceLot(experimentId: string, payload: MutationPa
   });
 }
 
+export async function placeReceivedBagOnWorkbench(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/reception/bag/place-on-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function recordGrossWeight(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/reception/gross-weight/record`,
+  });
+}
+
+export async function createLimsReception(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/reception`,
+    body: {
+      orchard_name: requireString(body, "orchard_name"),
+      harvest_date: requireString(body, "harvest_date"),
+      indicative_mass_g: requireNumber(body, "indicative_mass_g"),
+      measured_gross_mass_g: requireNumber(body, "measured_gross_mass_g"),
+    },
+  });
+}
+
+export async function printLimsLabel(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/print-label`,
+  });
+}
+
+export async function applyPrintedLimsLabel(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/apply-label-to-workbench-bag`,
+    body: { slot_id: requireString(body, "slot_id") },
+  });
+}
+
 export async function createDebugProduceLotOnWorkbench(
   experimentId: string,
   payload: MutationPayload,
@@ -751,6 +799,18 @@ function normalizeExperiment(experiment: Experiment): Experiment {
         ),
       widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
     },
+    limsReception: normalizeLimsReception(
+      (
+        (experiment as Experiment & Record<string, unknown>).limsReception ??
+        (experiment as Experiment & Record<string, unknown>).lims_reception
+      ) as LimsReception & Record<string, unknown>,
+    ),
+    basketTool: (() => {
+      const rawBasketTool =
+        (experiment as Experiment & Record<string, unknown>).basketTool ??
+        (experiment as Experiment & Record<string, unknown>).basket_tool;
+      return rawBasketTool ? normalizeBenchTool(rawBasketTool as BenchToolInstance & Record<string, unknown>) : null;
+    })(),
   };
 }
 
@@ -783,6 +843,12 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
         : tool.closure_fault !== undefined && tool.closure_fault !== null
           ? String(tool.closure_fault)
           : null,
+    fieldLabelText:
+      tool.fieldLabelText !== undefined
+        ? (tool.fieldLabelText as string | null)
+        : tool.field_label_text !== undefined
+          ? (tool.field_label_text as string | null)
+          : null,
     sampleLabelText:
       tool.sampleLabelText !== undefined
         ? (tool.sampleLabelText as string | null)
@@ -796,6 +862,49 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
       (tool.liquids as BenchLiquidPortion[] | undefined)?.map((liquid) =>
         normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
       ) ?? [],
+  };
+}
+
+function normalizePrintedLabelTicket(
+  ticket: PrintedLabelTicket & Record<string, unknown>,
+): PrintedLabelTicket {
+  return {
+    id: String(ticket.id),
+    sampleCode: String(ticket.sampleCode ?? ticket.sample_code),
+    labelText: String(ticket.labelText ?? ticket.label_text),
+  };
+}
+
+function normalizeLimsReception(
+  reception: (LimsReception & Record<string, unknown>) | null | undefined,
+): LimsReception {
+  return {
+    orchardName: String(reception?.orchardName ?? reception?.orchard_name ?? ""),
+    harvestDate: String(reception?.harvestDate ?? reception?.harvest_date ?? ""),
+    indicativeMassG: Number(reception?.indicativeMassG ?? reception?.indicative_mass_g ?? 0),
+    measuredGrossMassG:
+      reception?.measuredGrossMassG !== undefined && reception.measuredGrossMassG !== null
+        ? Number(reception.measuredGrossMassG)
+      : reception?.measured_gross_mass_g !== undefined && reception.measured_gross_mass_g !== null
+          ? Number(reception.measured_gross_mass_g)
+          : null,
+    labSampleCode:
+      reception?.labSampleCode !== undefined
+        ? (reception.labSampleCode as string | null)
+        : reception?.lab_sample_code !== undefined
+          ? (reception.lab_sample_code as string | null)
+          : null,
+    status: String(reception?.status ?? "awaiting_reception") as LimsReception["status"],
+    printedLabelTicket:
+      reception?.printedLabelTicket !== undefined && reception.printedLabelTicket !== null
+        ? normalizePrintedLabelTicket(
+            reception.printedLabelTicket as PrintedLabelTicket & Record<string, unknown>,
+          )
+        : reception?.printed_label_ticket !== undefined && reception.printed_label_ticket !== null
+          ? normalizePrintedLabelTicket(
+              reception.printed_label_ticket as PrintedLabelTicket & Record<string, unknown>,
+            )
+          : null,
   };
 }
 

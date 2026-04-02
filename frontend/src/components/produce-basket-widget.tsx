@@ -2,16 +2,19 @@
 
 import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
+import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
 import { InventoryWidget } from "@/components/inventory-widget";
 import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
-import type { ExperimentProduceLot } from "@/types/workbench";
+import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceBasketWidgetProps = {
+  basketTool?: BenchToolInstance | null;
   dndDisabled?: boolean;
   formatProduceLotMetadata: (produceLot: ExperimentProduceLot) => string;
   isOpen: boolean;
   onCreateAppleLot: () => void;
+  onBagDragStart?: (tool: BenchToolInstance, dataTransfer: DataTransfer) => void;
   onItemDragEnd?: () => void;
   onProduceDragStart?: (
     produceLotId: string,
@@ -23,20 +26,24 @@ type ProduceBasketWidgetProps = {
 };
 
 export function ProduceBasketWidget({
+  basketTool = null,
   dndDisabled = false,
   formatProduceLotMetadata,
   isOpen,
   onCreateAppleLot,
+  onBagDragStart,
   onItemDragEnd,
   onProduceDragStart,
   onToggle,
   produceLots,
 }: ProduceBasketWidgetProps) {
+  const basketItemCount = produceLots.length + (basketTool ? 1 : 0);
+
   return (
     <InventoryWidget
-      ariaLabel={`Open produce basket (${produceLots.length} lot${produceLots.length === 1 ? "" : "s"})`}
+      ariaLabel={`Open produce basket (${basketItemCount} item${basketItemCount === 1 ? "" : "s"})`}
       buttonTestId="basket-open-button"
-      count={produceLots.length}
+      count={basketItemCount}
       countBadgeClassName="absolute right-[22px] top-1"
       countTestId="basket-count-badge"
       frameClassName="rounded-[1.05rem] px-3 py-3.5"
@@ -48,29 +55,64 @@ export function ProduceBasketWidget({
       title="Produce basket"
     >
       <div className="space-y-4">
-        <button
-          className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
-          data-testid="basket-create-apple-lot-button"
-          onClick={onCreateAppleLot}
-          type="button"
-        >
-          <span className="flex items-center gap-3">
-            <AppleIllustration className="h-12 w-12 shrink-0" />
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-slate-900">
-                Create apple lot
-              </span>
-              <span className="mt-1 block text-sm text-slate-500">
-                Add a representative apple lot to the basket.
+        {!basketTool && produceLots.length === 0 ? (
+          <button
+            className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
+            data-testid="basket-create-apple-lot-button"
+            onClick={onCreateAppleLot}
+            type="button"
+          >
+            <span className="flex items-center gap-3">
+              <AppleIllustration className="h-12 w-12 shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-slate-900">
+                  Create received apple bag
+                </span>
+                <span className="mt-1 block text-sm text-slate-500">
+                  Add a new incoming sample bag with field-label information.
+                </span>
               </span>
             </span>
-          </span>
-        </button>
+          </button>
+        ) : null}
         <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
             Basket contents
           </p>
           <div className="mt-3 space-y-2">
+            {basketTool ? (
+              <DraggableInventoryItem
+                className="rounded-[0.9rem] bg-white"
+                contentClassName="flex-1"
+                dataTestId="basket-received-bag"
+                leading={
+                  <LabAssetIcon
+                    accent="emerald"
+                    className="h-11 w-9 shrink-0"
+                    kind="sample_bag"
+                    produceLots={basketTool.produceLots}
+                    sampleLabelText={basketTool.sampleLabelText}
+                    tone="neutral"
+                  />
+                }
+                onDragEnd={dndDisabled ? undefined : onItemDragEnd}
+                onDragStart={
+                  dndDisabled || !onBagDragStart
+                    ? undefined
+                    : (dataTransfer) => onBagDragStart(basketTool, dataTransfer)
+                }
+                subtitle={
+                  <span className="block truncate text-xs text-slate-500">
+                    {basketTool.fieldLabelText ?? "Field label attached"}
+                  </span>
+                }
+                  title={
+                    <span className="block truncate text-sm font-semibold text-slate-900">
+                      Received sampling bag
+                    </span>
+                  }
+                />
+            ) : null}
             {produceLots.length > 0 ? (
               produceLots.map((lot) => (
                 <DraggableInventoryItem
@@ -102,9 +144,9 @@ export function ProduceBasketWidget({
                   }
                 />
               ))
-            ) : (
+            ) : !basketTool ? (
               <p className="text-sm text-slate-500">No produce lots created yet.</p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

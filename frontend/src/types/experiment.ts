@@ -2,7 +2,9 @@ import type {
   BenchSlot,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
+  BenchToolInstance,
   RackSlot,
+  LimsReception,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
   TrashToolEntry,
@@ -36,6 +38,8 @@ export type Experiment = {
   rack: ExperimentRack;
   trash: ExperimentTrash;
   workspace: ExperimentWorkspace;
+  limsReception: LimsReception;
+  basketTool: BenchToolInstance | null;
   audit_log: string[];
 };
 

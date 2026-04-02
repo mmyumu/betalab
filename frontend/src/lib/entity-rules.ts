@@ -54,7 +54,12 @@ export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
 }
 
 export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidgetId): boolean {
-  return widgetId === "rack" || widgetId === "instrument" || widgetId === "grinder";
+  return (
+    widgetId === "rack" ||
+    widgetId === "instrument" ||
+    widgetId === "grinder" ||
+    widgetId === "gross_balance"
+  );
 }
 
 export function getWorkspaceWidgetDropTargets(

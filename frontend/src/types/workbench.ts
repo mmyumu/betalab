@@ -39,14 +39,18 @@ export type WorkspaceWidgetType =
   | "autosampler_rack"
   | "lc_msms_instrument"
   | "cryogenic_grinder"
-  | "produce_basket";
+  | "produce_basket"
+  | "lims_terminal"
+  | "gross_balance";
 export type ExperimentWorkspaceWidgetId =
   | "workbench"
   | "trash"
   | "rack"
   | "instrument"
   | "grinder"
-  | "basket";
+  | "basket"
+  | "lims"
+  | "gross_balance";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
@@ -56,7 +60,8 @@ export type DragEntityKind =
   | "liquid"
   | "workspace_widget"
   | "produce"
-  | "sample_label";
+  | "sample_label"
+  | "lims_label_ticket";
 export type DragSourceKind =
   | "palette"
   | "debug_palette"
@@ -64,7 +69,8 @@ export type DragSourceKind =
   | "rack"
   | "trash"
   | "basket"
-  | "grinder";
+  | "grinder"
+  | "lims";
 
 export type DebugProducePresetId = "apple_powder_residual_co2";
 
@@ -152,6 +158,15 @@ export type SampleLabelDragPayload = BaseDragPayload & {
   trashSampleLabelId?: string;
 };
 
+export type LimsLabelTicketDragPayload = BaseDragPayload & {
+  entityKind: "lims_label_ticket";
+  sourceId: string;
+  sourceKind: "lims";
+  ticketId: string;
+  sampleCode: string;
+  labelText: string;
+};
+
 export type ProduceDragPayload = BaseDragPayload & {
   debugProducePresetId?: DebugProducePresetId;
   entityKind: "produce";
@@ -177,6 +192,14 @@ export type BenchToolDragPayload = BaseDragPayload & {
   sourceSlotId: string;
   sourceId: string;
   sourceKind: "workbench";
+  toolId: string;
+  toolType: ToolType;
+};
+
+export type BasketToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
+  sourceId: string;
+  sourceKind: "basket";
   toolId: string;
   toolType: ToolType;
 };
@@ -233,6 +256,12 @@ export type DragDescriptor =
       trashSampleLabelId?: string;
     })
   | (BaseDragPayload & {
+      entityKind: "lims_label_ticket";
+      ticketId: string;
+      sampleCode: string;
+      labelText: string;
+    })
+  | (BaseDragPayload & {
       entityKind: "produce";
       debugProducePresetId?: DebugProducePresetId;
       produceLotId: string;
@@ -259,6 +288,7 @@ export type BenchToolInstance = {
   capacity_ml: number;
   isSealed?: boolean;
   closureFault?: string | null;
+  fieldLabelText?: string | null;
   sampleLabelText?: string | null;
   produceLots?: ExperimentProduceLot[];
   liquids: BenchLiquidPortion[];
@@ -281,6 +311,22 @@ export type TrashToolEntry = {
   id: string;
   originLabel: string;
   tool: BenchToolInstance;
+};
+
+export type PrintedLabelTicket = {
+  id: string;
+  sampleCode: string;
+  labelText: string;
+};
+
+export type LimsReception = {
+  orchardName: string;
+  harvestDate: string;
+  indicativeMassG: number;
+  measuredGrossMassG: number | null;
+  labSampleCode: string | null;
+  status: "awaiting_reception" | "awaiting_label_application" | "received";
+  printedLabelTicket: PrintedLabelTicket | null;
 };
 
 export type TrashProduceLotEntry = {

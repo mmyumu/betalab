@@ -8,9 +8,11 @@ from app.schemas.experiment import (
     DebugProducePresetSpawnToWorkbenchSchema,
     ExperimentListEntrySchema,
     ExperimentSchema,
+    LimsReceptionCreateSchema,
     PaletteToolDiscardSchema,
     RackToolMoveSchema,
     RackToolMoveToWorkbenchSchema,
+    ReceivedBagPlacementSchema,
     RackToolPlacementSchema,
     RackWorkbenchPlacementSchema,
     TrashProduceLotRestoreToWidgetSchema,
@@ -77,6 +79,55 @@ def delete_experiment(experiment_id: str) -> None:
 @router.get("/{experiment_id}", response_model=ExperimentSchema)
 def get_experiment(experiment_id: str) -> ExperimentSchema:
     return _handle_service_errors(lambda: experiment_service.get_experiment(experiment_id))
+
+
+@router.post("/{experiment_id}/reception/bag/place-on-workbench", response_model=ExperimentSchema)
+def place_received_bag_on_workbench(
+    experiment_id: str,
+    request: ReceivedBagPlacementSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.place_received_bag_on_workbench(
+            experiment_id,
+            request.target_slot_id,
+        )
+    )
+
+
+@router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)
+def record_gross_weight(experiment_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.record_gross_weight(experiment_id))
+
+
+@router.post("/{experiment_id}/lims/reception", response_model=ExperimentSchema)
+def create_lims_reception(
+    experiment_id: str,
+    request: LimsReceptionCreateSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.create_lims_reception(
+            experiment_id,
+            request.orchard_name,
+            request.harvest_date,
+            request.indicative_mass_g,
+            request.measured_gross_mass_g,
+        )
+    )
+
+
+@router.post("/{experiment_id}/lims/print-label", response_model=ExperimentSchema)
+def print_lims_label(experiment_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.print_lims_label(experiment_id))
+
+
+@router.post("/{experiment_id}/lims/apply-label-to-workbench-bag", response_model=ExperimentSchema)
+def apply_printed_lims_label(
+    experiment_id: str,
+    request: WorkbenchSlotReferenceSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.apply_printed_lims_label(experiment_id, request.slot_id)
+    )
 
 
 @router.websocket("/{experiment_id}/stream")

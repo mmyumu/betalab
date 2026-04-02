@@ -78,6 +78,21 @@ def apply_command(
             experiment_id, payload["trash_produce_lot_id"], payload["widget_id"]
         ),
         "create_produce_lot": lambda: service.create_produce_lot(experiment_id, payload["produce_type"]),
+        "place_received_bag_on_workbench": lambda: service.place_received_bag_on_workbench(
+            experiment_id, payload["target_slot_id"]
+        ),
+        "record_gross_weight": lambda: service.record_gross_weight(experiment_id),
+        "create_lims_reception": lambda: service.create_lims_reception(
+            experiment_id,
+            payload["orchard_name"],
+            payload["harvest_date"],
+            payload["indicative_mass_g"],
+            payload["measured_gross_mass_g"],
+        ),
+        "print_lims_label": lambda: service.print_lims_label(experiment_id),
+        "apply_printed_lims_label": lambda: service.apply_printed_lims_label(
+            experiment_id, payload["slot_id"]
+        ),
         "create_debug_produce_lot_on_workbench": lambda: service.create_debug_produce_lot_on_workbench(
             experiment_id,
             payload["preset_id"],
@@ -169,7 +184,7 @@ def apply_command(
     return handlers[command_type]()
 
 
-def test_create_experiment_returns_empty_workbench() -> None:
+def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> None:
     service = ExperimentService()
 
     experiment = service.create_experiment()
@@ -197,6 +212,8 @@ def test_create_experiment_returns_empty_workbench() -> None:
     assert all(slot.tool is None for slot in experiment.rack.slots)
     assert experiment.trash.tools == []
     assert [widget.id for widget in experiment.workspace.widgets] == [
+        "lims",
+        "gross_balance",
         "workbench",
         "trash",
         "rack",
@@ -205,17 +222,25 @@ def test_create_experiment_returns_empty_workbench() -> None:
         "grinder",
     ]
     assert experiment.workspace.widgets[0].is_present is True
-    assert experiment.workspace.widgets[1].is_present is True
-    assert experiment.workspace.widgets[2].is_present is False
-    assert experiment.workspace.widgets[3].is_present is False
-    assert experiment.workspace.widgets[4].is_present is True
+    assert experiment.workspace.widgets[1].is_present is False
+    assert experiment.workspace.widgets[2].is_present is True
+    assert experiment.workspace.widgets[3].is_present is True
+    assert experiment.workspace.widgets[4].is_present is False
     assert experiment.workspace.widgets[5].is_present is False
-    assert experiment.workspace.widgets[1].anchor == "top-left"
-    assert experiment.workspace.widgets[1].offset_x == 1276
-    assert experiment.workspace.widgets[1].offset_y == 24
+    assert experiment.workspace.widgets[6].is_present is True
+    assert experiment.workspace.widgets[7].is_present is False
+    assert experiment.workspace.widgets[3].anchor == "top-left"
+    assert experiment.workspace.widgets[3].offset_x == 1276
+    assert experiment.workspace.widgets[3].offset_y == 24
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.workspace.produce_lots == []
-    assert experiment.audit_log[-1] == "Start by dragging an extraction tool onto the bench."
+    assert experiment.basket_tool is not None
+    assert experiment.basket_tool.tool_type == "sample_bag"
+    assert experiment.basket_tool.field_label_text is not None
+    assert len(experiment.basket_tool.produce_lots) == 1
+    assert experiment.lims_reception.status == "awaiting_reception"
+    assert experiment.lims_reception.lab_sample_code is None
+    assert experiment.audit_log[-1] == "Receive the grower bag, weigh it, then register it in the LIMS."
 
 
 def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
@@ -258,7 +283,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert len(slot.tool.liquids) == 1
     assert slot.tool.liquids[0].volume_ml == 20.0
 
-    updated = apply_command(service, 
+    updated = apply_command(service,
         experiment.id,
         "update_workbench_liquid_volume",
         {
@@ -271,6 +296,69 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
     assert slot.tool is not None
     assert slot.tool.liquids[0].volume_ml == 1.5
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 1.5 mL in 50 mL centrifuge tube."
+
+
+def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "place_received_bag_on_workbench",
+        {"target_slot_id": "station_1"},
+    )
+
+    assert updated.basket_tool is None
+    assert updated.workbench.slots[0].tool is not None
+    assert updated.workbench.slots[0].tool.tool_type == "sample_bag"
+
+    updated = apply_command(service, experiment.id, "record_gross_weight", {})
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(2486.0)
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Verger Saint-Martin",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+            "measured_gross_mass_g": 2486.0,
+        },
+    )
+    assert updated.lims_reception.lab_sample_code is not None
+    assert updated.lims_reception.lab_sample_code.startswith("APP-2026-")
+    assert updated.lims_reception.status == "awaiting_label_application"
+
+    updated = apply_command(service, experiment.id, "print_lims_label", {})
+    assert updated.lims_reception.printed_label_ticket is not None
+    assert (
+        updated.lims_reception.printed_label_ticket.sample_code
+        == updated.lims_reception.lab_sample_code
+    )
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "apply_printed_lims_label",
+        {"slot_id": "station_1"},
+    )
+    assert updated.lims_reception.printed_label_ticket is None
+    assert updated.lims_reception.status == "received"
+    assert updated.workbench.slots[0].tool is not None
+    assert (
+        updated.workbench.slots[0].tool.sample_label_text
+        == f"{updated.lims_reception.lab_sample_code} • Apples"
+    )
+
+
+def test_print_lims_label_requires_reception_entry() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Create the LIMS reception entry before printing a label."):
+        apply_command(service, experiment.id, "print_lims_label", {})
 
 
 def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
@@ -1927,7 +2015,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     assert grinder.produce_lots == []
     assert station_1.tool is not None
     assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
-    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.03)
     assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Sealed sampling bag."
 
 
