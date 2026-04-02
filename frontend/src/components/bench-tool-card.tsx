@@ -80,6 +80,7 @@ export function BenchToolCard({
   const isProduceSurface = canToolAcceptProduce(tool.toolType);
   const isSealable = canToolBeSealed(tool.toolType);
   const isSealed = tool.isSealed ?? false;
+  const canDragContainedProduce = !isSealed;
   const hasSampleLabel = isSampleBag && tool.sampleLabelText !== null && tool.sampleLabelText !== undefined;
   const hasFieldLabel = isSampleBag && tool.fieldLabelText !== null && tool.fieldLabelText !== undefined;
   const sealStateLabel =
@@ -266,17 +267,20 @@ export function BenchToolCard({
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
                 <ProduceLotCard
-                  className="bg-slate-50"
+                  className={canDragContainedProduce ? "bg-slate-50" : "cursor-not-allowed bg-slate-100/90 opacity-75"}
                   dataTestId={`bench-produce-lot-${produceLot.id}`}
-                  draggable={Boolean(onProduceLotDragStart)}
+                  draggable={canDragContainedProduce && Boolean(onProduceLotDragStart)}
                   footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
                   metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
                   onClick={() => {
                     onProduceLotClick?.(produceLot);
                   }}
-                  onDragEnd={onProduceLotDragEnd}
+                  onDragEnd={canDragContainedProduce ? onProduceLotDragEnd : undefined}
                   onDragStart={(event) => {
+                    if (!canDragContainedProduce) {
+                      return;
+                    }
                     onProduceLotDragStart?.(produceLot, event);
                   }}
                   produceLot={produceLot}
@@ -292,16 +296,20 @@ export function BenchToolCard({
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
                 <ProduceLotCard
+                  className={canDragContainedProduce ? undefined : "cursor-not-allowed opacity-75"}
                   dataTestId={`bench-produce-lot-${produceLot.id}`}
-                  draggable={Boolean(onProduceLotDragStart)}
+                  draggable={canDragContainedProduce && Boolean(onProduceLotDragStart)}
                   footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
                   metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
                   onClick={() => {
                     onProduceLotClick?.(produceLot);
                   }}
-                  onDragEnd={onProduceLotDragEnd}
+                  onDragEnd={canDragContainedProduce ? onProduceLotDragEnd : undefined}
                   onDragStart={(event) => {
+                    if (!canDragContainedProduce) {
+                      return;
+                    }
                     onProduceLotDragStart?.(produceLot, event);
                   }}
                   produceLot={produceLot}
@@ -317,7 +325,11 @@ export function BenchToolCard({
             tool.liquids.map((liquid) => (
               <div
                 key={liquid.id}
-                className="rounded-[0.9rem] border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                className={`rounded-[0.9rem] border px-2.5 py-1 text-xs font-medium ${
+                  isSealed
+                    ? "cursor-not-allowed border-slate-200 bg-slate-100/90 text-slate-500 opacity-75"
+                    : "border-slate-200 bg-slate-50 text-slate-700"
+                }`}
               >
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
                   <div className="flex min-w-0 items-center gap-2">
@@ -331,8 +343,12 @@ export function BenchToolCard({
                   <button
                     aria-label={`Remove ${liquid.name}`}
                     className="row-span-2 inline-flex h-8 w-8 items-center justify-center self-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                    disabled={isSealed}
                     draggable={false}
                     onClick={() => {
+                      if (isSealed) {
+                        return;
+                      }
                       onRemoveLiquid(liquid.id);
                     }}
                     type="button"

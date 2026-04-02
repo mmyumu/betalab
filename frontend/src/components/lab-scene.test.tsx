@@ -2896,6 +2896,73 @@ describe("LabScene", () => {
     );
   });
 
+  it("does not allow dragging a produce lot out of a closed sample bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              isSealed: true,
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+            }),
+          },
+          { tool: makeSampleBagTool({ id: "bench_tool_2" }) },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const produceLotCard = await screen.findByTestId("bench-produce-lot-produce_1");
+    expect(produceLotCard).not.toHaveAttribute("draggable", "true");
+
+    const transfer = createDataTransfer();
+    fireEvent.dragStart(produceLotCard, { dataTransfer: transfer });
+
+    expect(screen.getByTestId("bench-slot-station_1")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("bench-slot-station_2")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
+  it("shows locked contents feedback and disables liquid removal in a closed container", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              isSealed: true,
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 2,
+                  accent: "amber",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const removeButton = await screen.findByRole("button", { name: "Remove Acetonitrile" });
+    expect(removeButton).toBeDisabled();
+
+    fireEvent.click(removeButton);
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+  });
+
   it("discards a produce lot from a sealed sampling bag when dropped into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
