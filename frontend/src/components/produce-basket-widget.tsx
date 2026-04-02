@@ -55,26 +55,24 @@ export function ProduceBasketWidget({
       title="Produce basket"
     >
       <div className="space-y-4">
-        {!basketTool && produceLots.length === 0 ? (
-          <button
-            className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
-            data-testid="basket-create-apple-lot-button"
-            onClick={onCreateAppleLot}
-            type="button"
-          >
-            <span className="flex items-center gap-3">
-              <AppleIllustration className="h-12 w-12 shrink-0" />
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-slate-900">
-                  Create received apple bag
-                </span>
-                <span className="mt-1 block text-sm text-slate-500">
-                  Add a new incoming sample bag with field-label information.
-                </span>
+        <button
+          className="w-full rounded-[1rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-100/80"
+          data-testid="basket-create-apple-lot-button"
+          onClick={onCreateAppleLot}
+          type="button"
+        >
+          <span className="flex items-center gap-3">
+            <AppleIllustration className="h-12 w-12 shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-900">
+                Create received apple bag
+              </span>
+              <span className="mt-1 block text-sm text-slate-500">
+                Add a new incoming sample bag with field-label information.
               </span>
             </span>
-          </button>
-        ) : null}
+          </span>
+        </button>
         <div className="rounded-[1rem] border border-slate-200 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
             Basket contents

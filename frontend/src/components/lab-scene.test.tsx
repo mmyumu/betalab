@@ -2539,6 +2539,24 @@ describe("LabScene", () => {
     });
   });
 
+  it("keeps the basket create button visible even when the basket already contains a received bag", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketTool: makeSampleBagTool({
+          id: "basket_bag_1",
+          isSealed: true,
+          fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+    expect(await screen.findByTestId("basket-create-apple-lot-button")).toBeInTheDocument();
+    expect(screen.getByTestId("basket-received-bag")).toBeInTheDocument();
+  });
+
   it("prints a LIMS ticket and drops it onto the received sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

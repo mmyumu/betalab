@@ -241,6 +241,7 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
     assert experiment.workspace.produce_lots == []
     assert experiment.basket_tool is not None
     assert experiment.basket_tool.tool_type == "sample_bag"
+    assert experiment.basket_tool.is_sealed is True
     assert experiment.basket_tool.field_label_text is not None
     assert len(experiment.basket_tool.produce_lots) == 1
     assert experiment.lims_reception.status == "awaiting_reception"
@@ -488,6 +489,18 @@ def test_discard_basket_tool_moves_received_sampling_bag_to_trash() -> None:
     assert updated.trash.tools[0].origin_label == "Produce basket"
     assert updated.trash.tools[0].tool.tool_type == "sample_bag"
     assert updated.audit_log[-1] == "Sealed sampling bag discarded from Produce basket."
+
+
+def test_create_produce_lot_recreates_a_sealed_received_sampling_bag_when_basket_is_empty() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(service, experiment.id, "discard_basket_tool", {})
+    updated = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
+
+    assert updated.basket_tool is not None
+    assert updated.basket_tool.tool_type == "sample_bag"
+    assert updated.basket_tool.is_sealed is True
 
 
 def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:

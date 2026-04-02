@@ -35,6 +35,7 @@ def build_experiment() -> Experiment:
         accent="emerald",
         tool_type="sample_bag",
         capacity_ml=500.0,
+        is_sealed=True,
         field_label_text="Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
         produce_lots=[produce_lot],
     )
