@@ -105,17 +105,19 @@ export function BenchToolCard({
           onDragStart={onDragStart}
         >
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-semibold leading-5 text-slate-950">{tool.label}</h3>
+            <h3 className="min-w-0 flex-1 text-base font-semibold leading-5 text-slate-950">
+              {tool.label}
+            </h3>
             {isSealable ? (
-              <div className="flex items-center gap-2">
+              <div className="flex w-[7.75rem] shrink-0 items-center justify-end gap-2">
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${sealStateToneClass}`.trim()}
+                  className={`inline-flex min-w-[3.5rem] justify-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${sealStateToneClass}`.trim()}
                 >
                   {sealStateLabel}
                 </span>
                 <button
                   aria-label={`${isSealed ? "Open" : "Close"} ${tool.label}`}
-                  className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  className="inline-flex min-w-[3.75rem] justify-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                   draggable={false}
                   onClick={() => {
                     onToggleSeal?.();
