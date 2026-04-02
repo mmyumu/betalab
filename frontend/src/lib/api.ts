@@ -468,6 +468,13 @@ export async function placeReceivedBagOnWorkbench(experimentId: string, payload:
   });
 }
 
+export async function discardBasketTool(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/reception/bag/discard`,
+  });
+}
+
 export async function recordGrossWeight(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
   const body = _payload && "measured_gross_mass_g" in _payload ? _payload : undefined;
   return sendMutationRequest(experimentId, {
@@ -504,6 +511,13 @@ export async function printLimsLabel(experimentId: string, _payload?: MutationPa
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/lims/print-label`,
+  });
+}
+
+export async function discardPrintedLimsLabel(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "DELETE",
+    path: `/experiments/${experimentId}/lims/printed-label`,
   });
 }
 

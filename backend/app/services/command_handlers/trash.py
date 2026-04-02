@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.domain.models import Experiment, TrashSampleLabelEntry, TrashToolEntry, new_id
 from app.services.commands import (
+    DiscardBasketToolCommand,
     DiscardSampleLabelFromPaletteCommand,
     DiscardToolFromPaletteCommand,
     RackSlotCommand,
@@ -41,6 +42,22 @@ def discard_workbench_tool(experiment: Experiment, command: WorkbenchSlotCommand
         )
     )
     experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
+
+
+def discard_basket_tool(experiment: Experiment, _command: DiscardBasketToolCommand) -> None:
+    if experiment.basket_tool is None:
+        raise ValueError("Place a received sampling bag in the basket before discarding it.")
+
+    discarded_tool = experiment.basket_tool
+    experiment.basket_tool = None
+    experiment.trash.tools.append(
+        TrashToolEntry(
+            id=new_id("trash_tool"),
+            origin_label="Produce basket",
+            tool=discarded_tool,
+        )
+    )
+    experiment.audit_log.append(f"{discarded_tool.label} discarded from Produce basket.")
 
 
 def discard_tool_from_palette(experiment: Experiment, command: DiscardToolFromPaletteCommand) -> None:

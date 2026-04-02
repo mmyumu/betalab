@@ -198,6 +198,11 @@ class PlaceReceivedBagOnWorkbenchCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class DiscardBasketToolCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class CreateLimsReceptionCommand:
     orchard_name: str
     harvest_date: str
@@ -212,6 +217,11 @@ class RecordGrossWeightCommand:
 
 @dataclass(frozen=True, slots=True)
 class PrintLimsLabelCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class DiscardPrintedLimsLabelCommand:
     pass
 
 

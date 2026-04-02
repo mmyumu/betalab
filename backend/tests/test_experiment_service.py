@@ -81,6 +81,7 @@ def apply_command(
         "place_received_bag_on_workbench": lambda: service.place_received_bag_on_workbench(
             experiment_id, payload["target_slot_id"]
         ),
+        "discard_basket_tool": lambda: service.discard_basket_tool(experiment_id),
         "record_gross_weight": lambda: service.record_gross_weight(
             experiment_id,
             payload.get("measured_gross_mass_g"),
@@ -93,6 +94,7 @@ def apply_command(
             payload.get("measured_gross_mass_g"),
         ),
         "print_lims_label": lambda: service.print_lims_label(experiment_id),
+        "discard_printed_lims_label": lambda: service.discard_printed_lims_label(experiment_id),
         "apply_printed_lims_label": lambda: service.apply_printed_lims_label(
             experiment_id, payload["slot_id"]
         ),
@@ -396,6 +398,96 @@ def test_print_lims_label_requires_reception_entry() -> None:
 
     with pytest.raises(ValueError, match="Create the LIMS reception entry before printing a label."):
         apply_command(service, experiment.id, "print_lims_label", {})
+
+
+def test_print_lims_label_requires_current_ticket_to_be_removed_first() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+    assert updated.lims_reception.lab_sample_code is not None
+
+    updated = apply_command(service, experiment.id, "print_lims_label", {})
+    assert updated.lims_reception.printed_label_ticket is not None
+
+    with pytest.raises(
+        ValueError,
+        match="Remove the current printed ticket from the LIMS before printing another label.",
+    ):
+        apply_command(service, experiment.id, "print_lims_label", {})
+
+
+def test_print_lims_label_can_reprint_after_ticket_leaves_lims() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_received_bag_on_workbench",
+        {"target_slot_id": "station_1"},
+    )
+    apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+    apply_command(service, experiment.id, "print_lims_label", {})
+    updated = apply_command(
+        service,
+        experiment.id,
+        "apply_printed_lims_label",
+        {"slot_id": "station_1"},
+    )
+    assert updated.lims_reception.printed_label_ticket is None
+
+    updated = apply_command(service, experiment.id, "print_lims_label", {})
+    assert updated.lims_reception.printed_label_ticket is not None
+
+
+def test_print_lims_label_can_reprint_after_ticket_is_discarded_from_lims() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+    updated = apply_command(service, experiment.id, "print_lims_label", {})
+    assert updated.lims_reception.printed_label_ticket is not None
+
+
+def test_discard_basket_tool_moves_received_sampling_bag_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(service, experiment.id, "discard_basket_tool", {})
+
+    assert updated.basket_tool is None
+    assert len(updated.trash.tools) == 1
+    assert updated.trash.tools[0].origin_label == "Produce basket"
+    assert updated.trash.tools[0].tool.tool_type == "sample_bag"
+    assert updated.audit_log[-1] == "Sealed sampling bag discarded from Produce basket."
 
 
 def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:

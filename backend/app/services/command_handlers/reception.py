@@ -5,6 +5,7 @@ from app.services.command_handlers.support import find_workbench_slot
 from app.services.commands import (
     ApplyPrintedLimsLabelCommand,
     CreateLimsReceptionCommand,
+    DiscardPrintedLimsLabelCommand,
     PlaceReceivedBagOnWorkbenchCommand,
     PrintLimsLabelCommand,
     RecordGrossWeightCommand,
@@ -66,6 +67,8 @@ def print_lims_label(experiment: Experiment, _command: PrintLimsLabelCommand) ->
     sample_code = experiment.lims_reception.lab_sample_code
     if sample_code is None:
         raise ValueError("Create the LIMS reception entry before printing a label.")
+    if experiment.lims_reception.printed_label_ticket is not None:
+        raise ValueError("Remove the current printed ticket from the LIMS before printing another label.")
 
     experiment.lims_reception.printed_label_ticket = PrintedLabelTicket(
         id=new_id("lims_ticket"),
@@ -73,6 +76,18 @@ def print_lims_label(experiment: Experiment, _command: PrintLimsLabelCommand) ->
         label_text=f"{sample_code} • Apples",
     )
     experiment.audit_log.append(f"LIMS label printed for {sample_code}.")
+
+
+def discard_printed_lims_label(
+    experiment: Experiment,
+    _command: DiscardPrintedLimsLabelCommand,
+) -> None:
+    ticket = experiment.lims_reception.printed_label_ticket
+    if ticket is None:
+        raise ValueError("There is no printed LIMS ticket to discard.")
+
+    experiment.lims_reception.printed_label_ticket = None
+    experiment.audit_log.append(f"LIMS label {ticket.sample_code} discarded from terminal.")
 
 
 def apply_printed_lims_label(

@@ -80,6 +80,7 @@ const grossBalanceCompatibleSourceIds = new Set<string>([
   ...toolItems.map((item) => `palette-${item.id}`),
   ...toolItems.map((item) => `workbench-${item.id}`),
   ...toolItems.map((item) => `trash-tool-${item.id}`),
+  "basket-received-bag",
   "basket-produce-lot-apple",
   "workbench-produce-lot-apple",
   "workbench-surface-produce-lot-apple",
@@ -843,6 +844,55 @@ function createBasketProduceSourceCase(): DndSourceCase {
   };
 }
 
+function createBasketReceivedBagSourceCase(): DndSourceCase {
+  return {
+    id: "basket-received-bag",
+    label: "basket received sampling bag",
+    sourceTestId: "basket-received-bag",
+    openBasket: true,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "grinder-dropzone",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        basketTool: makeTool(sampleBagItem, {
+          id: "basket_bag_1",
+          sampleLabelText: null,
+        }),
+        slots: makeSlots([{ tool: makeTool(sampleVialItem) }]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": { compatible: false, command: null },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "place_received_bag_on_workbench",
+          payload: {
+            target_slot_id: "station_2",
+          },
+        },
+      },
+      "grinder-dropzone": { compatible: false, command: null },
+      "rack-illustration-slot-1": { compatible: false, command: null },
+      "widget-workspace": { compatible: false, command: null },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_basket_tool",
+          payload: {},
+        },
+      },
+    },
+  };
+}
+
 function createWorkbenchProduceLotSourceCase(): DndSourceCase {
   return {
     id: "workbench-produce-lot-apple",
@@ -1327,16 +1377,79 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
   };
 }
 
+function createLimsPrintedTicketSourceCase(): DndSourceCase {
+  return {
+    id: "lims-printed-ticket",
+    label: "LIMS printed ticket",
+    sourceTestId: "lims-printed-ticket",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "grinder-dropzone",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: null }) },
+          { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: "LOT-1" }) },
+        ]),
+        limsReception: makeLimsReception({
+          orchardName: "Martin Orchard",
+          harvestDate: "2026-03-29",
+          indicativeMassG: 2500,
+          measuredGrossMassG: null,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: {
+            id: "lims_ticket_1",
+            sampleCode: "APP-2026-0001",
+            labelText: "APP-2026-0001 • Apples",
+          },
+        }),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: true,
+        command: {
+          type: "apply_printed_lims_label",
+          payload: {
+            slot_id: "station_1",
+          },
+        },
+      },
+      "bench-slot-station_2": { compatible: false, command: null },
+      "grinder-dropzone": { compatible: false, command: null },
+      "rack-illustration-slot-1": { compatible: false, command: null },
+      "widget-workspace": { compatible: false, command: null },
+      "trash-dropzone": {
+        compatible: true,
+        command: {
+          type: "discard_printed_lims_label",
+          payload: {},
+        },
+      },
+    },
+  };
+}
+
 const baseDndSourceCases: DndSourceCase[] = [
   ...paletteItems.map(createPaletteSourceCase),
   createPaletteSampleLabelSourceCase(),
   ...toolItems.map(createWorkbenchToolSourceCase),
+  createBasketReceivedBagSourceCase(),
   createBasketProduceSourceCase(),
   createWorkbenchProduceLotSourceCase(),
   createWorkbenchSurfaceProduceLotSourceCase(),
   createGrinderProduceLotSourceCase(),
   createGrinderLiquidSourceCase(),
   createWorkbenchSampleLabelSourceCase(),
+  createLimsPrintedTicketSourceCase(),
   createTrashProduceLotSourceCase(),
   createTrashSampleLabelSourceCase(),
   createRackSourceCase(),

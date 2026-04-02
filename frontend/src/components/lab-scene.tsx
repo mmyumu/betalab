@@ -745,7 +745,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (isKnifeMode) {
       return;
     }
-    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "gross_balance_widget"];
+    const allowedDropTargets = getToolDropTargets(tool.toolType);
 
     writeBasketToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -770,8 +770,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     ticket: NonNullable<typeof state.experiment.limsReception.printedLabelTicket>,
     dataTransfer: DataTransfer,
   ) => {
+    const allowedDropTargets = getSampleLabelDropTargets();
     const payload: LimsLabelTicketDragPayload = {
-      allowedDropTargets: ["workbench_slot"],
+      allowedDropTargets,
       entityKind: "lims_label_ticket",
       sourceId: ticket.id,
       sourceKind: "lims",
@@ -1255,6 +1256,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      setBalanceStagedItem(null);
+      void experimentApi.discardBasketTool();
       return;
     }
 
@@ -1334,6 +1337,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
+      void experimentApi.discardPrintedLimsLabel();
     }
   };
 

@@ -20,7 +20,9 @@ import {
   createDebugProduceLotToWidget,
   createProduceLot,
   cutWorkbenchProduceLot,
+  discardBasketTool,
   discardProduceLotFromWorkbenchTool,
+  discardPrintedLimsLabel,
   discardRackTool,
   discardSampleLabelFromPalette,
   discardSampleLabelFromWorkbenchTool,
@@ -87,7 +89,9 @@ const mutationFns = {
   createDebugProduceLotOnWorkbench,
   createDebugProduceLotToWidget,
   cutWorkbenchProduceLot,
+  discardBasketTool,
   discardProduceLotFromWorkbenchTool,
+  discardPrintedLimsLabel,
   discardRackTool,
   discardSampleLabelFromPalette,
   discardSampleLabelFromWorkbenchTool,
@@ -263,8 +267,12 @@ export function useLabExperiment({
       executeMutation(mutationFns.createLimsReception, payload),
     cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
+    discardBasketTool: () =>
+      executeMutation(mutationFns.discardBasketTool),
     discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.discardProduceLotFromWorkbenchTool, payload),
+    discardPrintedLimsLabel: () =>
+      executeMutation(mutationFns.discardPrintedLimsLabel),
     discardRackTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.discardRackTool, payload),
     discardSampleLabelFromPalette: (payload?: Record<string, unknown>) =>

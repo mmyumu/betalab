@@ -127,6 +127,37 @@ def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
     assert registered.json()["lims_reception"]["measured_gross_mass_g"] is None
 
 
+def test_received_bag_can_be_discarded_from_basket_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        discarded = client.post(f"/experiments/{experiment_id}/reception/bag/discard")
+
+    assert discarded.status_code == 200
+    assert discarded.json()["basket_tool"] is None
+    assert len(discarded.json()["trash"]["tools"]) == 1
+    assert discarded.json()["trash"]["tools"][0]["origin_label"] == "Produce basket"
+
+
+def test_printed_lims_ticket_can_be_discarded_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Martin Orchard",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": None,
+            },
+        )
+        client.post(f"/experiments/{experiment_id}/lims/print-label")
+        discarded = client.delete(f"/experiments/{experiment_id}/lims/printed-label")
+
+    assert discarded.status_code == 200
+    assert discarded.json()["lims_reception"]["printed_label_ticket"] is None
+
+
 def test_record_gross_weight_route_accepts_explicit_mass_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)

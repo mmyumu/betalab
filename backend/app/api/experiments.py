@@ -95,6 +95,11 @@ def place_received_bag_on_workbench(
     )
 
 
+@router.post("/{experiment_id}/reception/bag/discard", response_model=ExperimentSchema)
+def discard_received_bag(experiment_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.discard_basket_tool(experiment_id))
+
+
 @router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)
 def record_gross_weight(
     experiment_id: str,
@@ -127,6 +132,11 @@ def create_lims_reception(
 @router.post("/{experiment_id}/lims/print-label", response_model=ExperimentSchema)
 def print_lims_label(experiment_id: str) -> ExperimentSchema:
     return _handle_service_errors(lambda: experiment_service.print_lims_label(experiment_id))
+
+
+@router.delete("/{experiment_id}/lims/printed-label", response_model=ExperimentSchema)
+def discard_printed_lims_label(experiment_id: str) -> ExperimentSchema:
+    return _handle_service_errors(lambda: experiment_service.discard_printed_lims_label(experiment_id))
 
 
 @router.post("/{experiment_id}/lims/apply-label-to-workbench-bag", response_model=ExperimentSchema)

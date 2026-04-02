@@ -2494,6 +2494,51 @@ describe("LabScene", () => {
     });
   });
 
+  it("discards the received sampling bag from the basket into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment({
+      basketTool: makeSampleBagTool({
+        id: "basket_bag_1",
+        fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+      }),
+    }));
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketTool: null,
+        trashTools: [
+          {
+            id: "trash_tool_1",
+            originLabel: "Produce basket",
+            tool: makeSampleBagTool({
+              id: "basket_bag_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+            }),
+          },
+        ],
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+    const bag = await screen.findByTestId("basket-received-bag");
+    const trash = screen.getByTestId("trash-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(bag, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(trash, { dataTransfer: transfer });
+    fireEvent(trash, dragOverEvent);
+    fireEvent.drop(trash, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "discard_basket_tool",
+        {},
+      );
+    });
+  });
+
   it("prints a LIMS ticket and drops it onto the received sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
@@ -2557,6 +2602,74 @@ describe("LabScene", () => {
         { slot_id: "station_1" },
       );
     });
+  });
+
+  it("discards a printed LIMS ticket directly into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: {
+            id: "lims_ticket_1",
+            sampleCode: "APP-2026-0001",
+            labelText: "APP-2026-0001 • Apples",
+          },
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: null,
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const trash = screen.getByTestId("trash-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(trash, { dataTransfer: transfer });
+    fireEvent(trash, dragOverEvent);
+    fireEvent.drop(trash, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "discard_printed_lims_label",
+        {},
+      );
+    });
+  });
+
+  it("shows a small printer ticket indicator when a LIMS ticket is present", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: {
+            id: "lims_ticket_1",
+            sampleCode: "APP-2026-0001",
+            labelText: "APP-2026-0001 • Apples",
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    expect(await screen.findByTestId("lims-printer-ticket")).toBeInTheDocument();
   });
 
   it("updates the sampling label text on blur", async () => {

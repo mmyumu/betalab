@@ -14,6 +14,7 @@ from app.services.command_handlers.rack import (
     remove_rack_tool_to_workbench_slot,
 )
 from app.services.command_handlers.trash import (
+    discard_basket_tool,
     discard_sample_label_from_palette,
     discard_tool_from_palette,
     discard_rack_tool,
@@ -29,6 +30,7 @@ from app.services.command_handlers.debug import (
 from app.services.command_handlers.reception import (
     apply_printed_lims_label,
     create_lims_reception,
+    discard_printed_lims_label,
     place_received_bag_on_workbench,
     print_lims_label,
     record_gross_weight,
@@ -85,6 +87,8 @@ from app.services.commands import (
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
     CreateProduceLotCommand,
+    DiscardBasketToolCommand,
+    DiscardPrintedLimsLabelCommand,
     DiscardSampleLabelFromPaletteCommand,
     DiscardToolFromPaletteCommand,
     DiscardWidgetProduceLotCommand,
@@ -187,6 +191,13 @@ class ExperimentService:
             experiment_id,
             discard_workbench_tool,
             WorkbenchSlotCommand(slot_id=slot_id),
+        )
+
+    def discard_basket_tool(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            discard_basket_tool,
+            DiscardBasketToolCommand(),
         )
 
     def discard_tool_from_palette(self, experiment_id: str, tool_id: str) -> ExperimentSchema:
@@ -374,6 +385,13 @@ class ExperimentService:
             experiment_id,
             print_lims_label,
             PrintLimsLabelCommand(),
+        )
+
+    def discard_printed_lims_label(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            discard_printed_lims_label,
+            DiscardPrintedLimsLabelCommand(),
         )
 
     def apply_printed_lims_label(self, experiment_id: str, slot_id: str) -> ExperimentSchema:

@@ -48,7 +48,7 @@ export function LimsWidget({
     harvestDate.trim().length > 0 &&
     hasIndicativeMass;
   const canPrintLabel =
-    reception.status === "awaiting_label_application" && reception.labSampleCode !== null;
+    reception.labSampleCode !== null && reception.printedLabelTicket === null;
   const isEmptyState =
     reception.labSampleCode === null &&
     reception.orchardName.trim().length === 0 &&
@@ -137,7 +137,17 @@ export function LimsWidget({
             </svg>
           </div>
           <div className="border-t border-slate-300 bg-[linear-gradient(180deg,#c9d2dc,#b6c2cd)] px-4 py-3">
-            <div className="ml-auto h-3.5 w-28 rounded-full border border-slate-400/80 bg-[linear-gradient(180deg,#94a3b8,#64748b)]" />
+            <div className="flex items-end justify-between gap-4">
+              <div className="h-5 w-20 rounded-t-[0.7rem] border border-slate-400/80 border-b-0 bg-[linear-gradient(180deg,#e2e8f0,#cbd5e1)] px-2 pt-1">
+                {reception.printedLabelTicket ? (
+                  <div
+                    className="h-6 w-14 rounded-[0.35rem] border border-slate-300 bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)]"
+                    data-testid="lims-printer-ticket"
+                  />
+                ) : null}
+              </div>
+              <div className="h-3.5 w-28 rounded-full border border-slate-400/80 bg-[linear-gradient(180deg,#94a3b8,#64748b)]" />
+            </div>
           </div>
         </div>
         <div className="grid gap-2">
