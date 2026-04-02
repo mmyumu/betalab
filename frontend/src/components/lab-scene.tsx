@@ -465,6 +465,27 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
+  const handleBalanceToolSealToggle = () => {
+    if (!balanceStagedItem || balanceStagedItem.entityKind !== "tool") {
+      return;
+    }
+
+    const payload = balanceStagedItem.originalPayload;
+    if (payload.sourceKind !== "workbench" || !("sourceSlotId" in payload)) {
+      return;
+    }
+
+    const sourceTool =
+      state.status === "ready"
+        ? state.experiment.workbench.slots.find((slot) => slot.id === payload.sourceSlotId)?.tool ?? null
+        : null;
+    if (!sourceTool) {
+      return;
+    }
+
+    handleToggleToolSeal(payload.sourceSlotId, sourceTool);
+  };
+
   const handleMoveSampleLabel = (targetSlotId: string, payload: { sourceSlotId?: string }) => {
     if (!payload.sourceSlotId) {
       return;
@@ -685,6 +706,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
     if ("sourceSlotId" in payload) {
       if (payload.sourceSlotId === targetSlotId) {
+        setBalanceStagedItem(null);
+        clearDropTargets();
         return;
       }
 
@@ -787,6 +810,12 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
+      if (payload.sourceSlotId === targetSlotId) {
+        setBalanceStagedItem(null);
+        clearDropTargets();
+        return;
+      }
+
       setBalanceStagedItem(null);
       void experimentApi.moveProduceLotBetweenWorkbenchTools( {
         source_slot_id: payload.sourceSlotId,
@@ -1052,7 +1081,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (balanceStagedItem.entityKind === "tool") {
-      const payload = balanceStagedItem.originalPayload;
+      const payload =
+        balanceStagedItem.originalPayload.sourceKind === "workbench" &&
+        "sourceSlotId" in balanceStagedItem.originalPayload
+          ? {
+              ...balanceStagedItem.originalPayload,
+              sourceId: "gross_balance",
+            }
+          : balanceStagedItem.originalPayload;
       if ("itemType" in payload && payload.itemType === "tool") {
         writeToolbarDragPayload(dataTransfer, payload);
       } else if (payload.sourceKind === "basket") {
@@ -1069,9 +1105,17 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
-    writeProduceDragPayload(dataTransfer, balanceStagedItem.originalPayload);
-    showDropTargets(balanceStagedItem.originalPayload.allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(balanceStagedItem.originalPayload));
+    const payload =
+      balanceStagedItem.originalPayload.sourceKind === "workbench" &&
+      balanceStagedItem.originalPayload.sourceSlotId
+        ? {
+            ...balanceStagedItem.originalPayload,
+            sourceId: "gross_balance",
+          }
+        : balanceStagedItem.originalPayload;
+    writeProduceDragPayload(dataTransfer, payload);
+    showDropTargets(payload.allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(payload));
   };
 
   const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -2158,9 +2202,22 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     balanceStagedItem.originalPayload.sourceKind === "grinder"
       ? grinderProduceLots.filter((lot) => lot.id !== balanceStagedItem.originalPayload.produceLotId)
       : grinderProduceLots;
+  const displayBalanceTool =
+    balanceStagedItem?.entityKind === "tool" &&
+    balanceStagedItem.originalPayload.sourceKind === "workbench" &&
+    "sourceSlotId" in balanceStagedItem.originalPayload
+      ? slots.find((slot) => slot.id === balanceStagedItem.originalPayload.sourceSlotId)?.tool ??
+        balanceStagedItem.tool
+      : balanceStagedItem?.entityKind === "tool"
+        ? balanceStagedItem.tool
+        : null;
+  const displayBalanceProduceLot =
+    balanceStagedItem?.entityKind === "produce"
+      ? resolveProduceFromPayload(balanceStagedItem.originalPayload) ?? balanceStagedItem.produceLot
+      : null;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const grossBalanceStagedContent =
-    balanceStagedItem?.entityKind === "tool" ? (
+    balanceStagedItem?.entityKind === "tool" && displayBalanceTool ? (
       <div data-testid="gross-balance-staged-item">
         <BenchToolCard
           draggable
@@ -2170,23 +2227,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
           onDragStart={(event) => {
             handleBalanceItemDragStart(event.dataTransfer);
           }}
+          onToggleSeal={handleBalanceToolSealToggle}
           onRemoveLiquid={() => {}}
-          tool={{ ...balanceStagedItem.tool, id: `balance-${balanceStagedItem.tool.id}` }}
+          tool={{ ...displayBalanceTool, id: `balance-${displayBalanceTool.id}` }}
         />
       </div>
-    ) : balanceStagedItem?.entityKind === "produce" ? (
+    ) : balanceStagedItem?.entityKind === "produce" && displayBalanceProduceLot ? (
       <div data-testid="gross-balance-staged-item">
         <ProduceLotCard
-          dataTestId={`gross-balance-produce-${balanceStagedItem.produceLot.id}`}
+          dataTestId={`gross-balance-produce-${displayBalanceProduceLot.id}`}
           draggable
-          metadata={formatProduceLotMetadata(balanceStagedItem.produceLot)}
+          metadata={formatProduceLotMetadata(displayBalanceProduceLot)}
           onDragEnd={() => {
             clearDropTargets();
           }}
           onDragStart={(event) => {
             handleBalanceItemDragStart(event.dataTransfer);
           }}
-          produceLot={{ ...balanceStagedItem.produceLot, id: `balance-${balanceStagedItem.produceLot.id}` }}
+          produceLot={{ ...displayBalanceProduceLot, id: `balance-${displayBalanceProduceLot.id}` }}
           variant="expanded"
         />
       </div>
