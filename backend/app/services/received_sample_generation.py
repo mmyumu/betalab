@@ -1,13 +1,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 import random
 
 from app.domain.models import ProduceLot, WorkbenchTool, new_id
 
 SAMPLE_BAG_TARE_MASS_G = 36.0
-DEFAULT_ORCHARD_NAME = "Martin Orchard"
-DEFAULT_HARVEST_DATE = "2026-03-29"
+_ORCHARD_NAME_WEIGHTS: tuple[tuple[str, float], ...] = (
+    ("Martin Orchard", 0.24),
+    ("North Field Orchard", 0.18),
+    ("Golden Ridge Orchard", 0.18),
+    ("Riverbend Orchard", 0.14),
+    ("Valley Crest Orchard", 0.14),
+    ("Green Hollow Orchard", 0.12),
+)
+_HARVEST_DAYS_BACK_WEIGHTS: tuple[tuple[int, float], ...] = (
+    (1, 0.12),
+    (2, 0.16),
+    (3, 0.18),
+    (4, 0.16),
+    (5, 0.12),
+    (6, 0.1),
+    (7, 0.08),
+    (8, 0.04),
+    (9, 0.02),
+    (10, 0.02),
+)
 
 _THEORETICAL_LOT_MASS_WEIGHTS_G: tuple[tuple[float, float], ...] = (
     (2000.0, 0.22),
@@ -41,6 +60,19 @@ class ReceivedAppleSampleSpec:
 
 def generate_received_apple_sample_spec(rng: random.Random | None = None) -> ReceivedAppleSampleSpec:
     rng = rng or random.Random()
+    orchard_name = rng.choices(
+        [name for name, _weight in _ORCHARD_NAME_WEIGHTS],
+        weights=[weight for _name, weight in _ORCHARD_NAME_WEIGHTS],
+        k=1,
+    )[0]
+    harvest_days_back = rng.choices(
+        [days for days, _weight in _HARVEST_DAYS_BACK_WEIGHTS],
+        weights=[weight for _days, weight in _HARVEST_DAYS_BACK_WEIGHTS],
+        k=1,
+    )[0]
+    harvest_date = (
+        datetime.now(timezone.utc).date() - timedelta(days=harvest_days_back)
+    ).isoformat()
     theoretical_mass_g = rng.choices(
         [mass for mass, _weight in _THEORETICAL_LOT_MASS_WEIGHTS_G],
         weights=[weight for _mass, weight in _THEORETICAL_LOT_MASS_WEIGHTS_G],
@@ -53,8 +85,8 @@ def generate_received_apple_sample_spec(rng: random.Random | None = None) -> Rec
     unit_count = max(8, int(round(actual_mass_g / 205.0)))
 
     return ReceivedAppleSampleSpec(
-        orchard_name=DEFAULT_ORCHARD_NAME,
-        harvest_date=DEFAULT_HARVEST_DATE,
+        orchard_name=orchard_name,
+        harvest_date=harvest_date,
         theoretical_mass_g=theoretical_mass_g,
         actual_mass_g=actual_mass_g,
         unit_count=unit_count,

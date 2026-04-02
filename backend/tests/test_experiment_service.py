@@ -1,5 +1,6 @@
 import pytest
-from datetime import timedelta
+from datetime import date, timedelta
+import re
 
 from app.services.received_sample_generation import SAMPLE_BAG_TARE_MASS_G
 from app.services.experiment_repository import SqliteExperimentRepository
@@ -244,7 +245,13 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
     assert experiment.basket_tool.tool_type == "sample_bag"
     assert experiment.basket_tool.is_sealed is True
     assert experiment.basket_tool.field_label_text is not None
-    assert experiment.basket_tool.field_label_text.startswith("Martin Orchard • Harvest 2026-03-29 • Approx. ")
+    match = re.match(
+        r"^(?P<orchard>.+) • Harvest (?P<harvest_date>\d{4}-\d{2}-\d{2}) • Approx\. (?P<mass>\d+\.\d{2}) kg$",
+        experiment.basket_tool.field_label_text,
+    )
+    assert match is not None
+    harvest_date = date.fromisoformat(match.group("harvest_date"))
+    assert date.today() - timedelta(days=10) <= harvest_date <= date.today() - timedelta(days=1)
     assert len(experiment.basket_tool.produce_lots) == 1
     assert experiment.lims_reception.status == "awaiting_reception"
     assert experiment.lims_reception.lab_sample_code is None
