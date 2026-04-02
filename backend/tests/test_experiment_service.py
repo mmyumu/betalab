@@ -87,7 +87,7 @@ def apply_command(
             payload["orchard_name"],
             payload["harvest_date"],
             payload["indicative_mass_g"],
-            payload["measured_gross_mass_g"],
+            payload.get("measured_gross_mass_g"),
         ),
         "print_lims_label": lambda: service.print_lims_label(experiment_id),
         "apply_printed_lims_label": lambda: service.apply_printed_lims_label(
@@ -351,6 +351,26 @@ def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
         updated.workbench.slots[0].tool.sample_label_text
         == f"{updated.lims_reception.lab_sample_code} • Apples"
     )
+
+
+def test_create_lims_reception_allows_manual_entry_before_gross_weight() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+
+    assert updated.lims_reception.lab_sample_code is not None
+    assert updated.lims_reception.status == "awaiting_label_application"
+    assert updated.lims_reception.measured_gross_mass_g is None
 
 
 def test_print_lims_label_requires_reception_entry() -> None:

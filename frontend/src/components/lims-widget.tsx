@@ -6,7 +6,6 @@ import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widge
 import type { LimsReception, PrintedLabelTicket } from "@/types/workbench";
 
 type LimsWidgetProps = {
-  fieldLabelReference?: string | null;
   onCreateReception: (payload: {
     harvest_date: string;
     indicative_mass_g: number;
@@ -19,7 +18,6 @@ type LimsWidgetProps = {
 };
 
 export function LimsWidget({
-  fieldLabelReference = null,
   onCreateReception,
   onPrintLabel,
   onTicketDragEnd,
@@ -46,7 +44,6 @@ export function LimsWidget({
   const hasIndicativeMass =
     Number.isFinite(indicativeMassValue) && indicativeMassValue > 0;
   const canCreateReception =
-    reception.measuredGrossMassG !== null &&
     orchardName.trim().length > 0 &&
     harvestDate.trim().length > 0 &&
     hasIndicativeMass;
@@ -95,7 +92,7 @@ export function LimsWidget({
                     Awaiting accession
                   </text>
                   <text x="28" y="104" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Read field label and record gross weight.
+                    Enter sample details and record gross weight.
                   </text>
                   <text x="28" y="136" fill="#94a3b8" fontSize="12" fontFamily="monospace">
                     Orchard: --
@@ -143,14 +140,6 @@ export function LimsWidget({
           <div className="border-t border-slate-300 bg-[linear-gradient(180deg,#c9d2dc,#b6c2cd)] px-4 py-3">
             <div className="ml-auto h-3.5 w-28 rounded-full border border-slate-400/80 bg-[linear-gradient(180deg,#94a3b8,#64748b)]" />
           </div>
-        </div>
-        <div className="rounded-[1.1rem] border border-slate-200 bg-white px-3 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Field label reference
-          </p>
-          <p className="mt-1 text-sm text-slate-700">
-            {fieldLabelReference ?? "No received bag available."}
-          </p>
         </div>
         <div className="grid gap-2">
           <label className="grid gap-1">

@@ -306,4 +306,4 @@ class LimsReceptionCreateSchema(BaseModel):
     orchard_name: str
     harvest_date: str
     indicative_mass_g: float
-    measured_gross_mass_g: float
+    measured_gross_mass_g: float | None = None

@@ -2418,6 +2418,52 @@ describe("LabScene", () => {
     });
   });
 
+  it("allows creating a LIMS record from manual entry without a gross weight", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          orchardName: "Martin Orchard",
+          harvestDate: "2026-03-29",
+          indicativeMassG: 2500,
+          measuredGrossMassG: null,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.change(await screen.findByLabelText("Orchard / producer"), {
+      target: { value: "Martin Orchard" },
+    });
+    fireEvent.change(screen.getByLabelText("Harvest date"), {
+      target: { value: "2026-03-29" },
+    });
+    fireEvent.change(screen.getByLabelText("Indicative field mass (g)"), {
+      target: { value: "2500" },
+    });
+
+    const createButton = screen.getByRole("button", { name: "Create LIMS record" });
+    expect(createButton).toBeEnabled();
+
+    fireEvent.click(createButton);
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "create_lims_reception",
+        {
+          orchard_name: "Martin Orchard",
+          harvest_date: "2026-03-29",
+          indicative_mass_g: 2500,
+          measured_gross_mass_g: null,
+        },
+      );
+    });
+  });
+
   it("prints a LIMS ticket and drops it onto the received sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

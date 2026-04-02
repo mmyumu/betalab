@@ -484,7 +484,10 @@ export async function createLimsReception(experimentId: string, payload: Mutatio
       orchard_name: requireString(body, "orchard_name"),
       harvest_date: requireString(body, "harvest_date"),
       indicative_mass_g: requireNumber(body, "indicative_mass_g"),
-      measured_gross_mass_g: requireNumber(body, "measured_gross_mass_g"),
+      measured_gross_mass_g:
+        body.measured_gross_mass_g === undefined || body.measured_gross_mass_g === null
+          ? null
+          : requireNumber(body, "measured_gross_mass_g"),
     },
   });
 }

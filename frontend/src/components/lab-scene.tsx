@@ -1714,7 +1714,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       orchard_name: payload.orchard_name,
       harvest_date: payload.harvest_date,
       indicative_mass_g: payload.indicative_mass_g,
-      measured_gross_mass_g: state.experiment.limsReception.measuredGrossMassG ?? 0,
+      measured_gross_mass_g: state.experiment.limsReception.measuredGrossMassG,
     });
   };
 
@@ -1826,11 +1826,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashedWidgets.length === 0;
   const basketProduceLots = state.experiment.workspace.produceLots;
   const basketTool = state.experiment.basketTool;
-  const receivedBagFieldLabelReference =
-    basketTool?.fieldLabelText ??
-    slots.find((slot) => slot.tool?.toolType === "sample_bag" && slot.tool.fieldLabelText)?.tool
-      ?.fieldLabelText ??
-    null;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const handleCreateAppleLot = () => {
     void experimentApi.createProduceLot( {
@@ -1986,7 +1981,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 >
                   {widgetId === "lims" ? (
                     <LimsWidget
-                      fieldLabelReference={receivedBagFieldLabelReference}
                       onCreateReception={handleCreateLimsReception}
                       onPrintLabel={() => {
                         void experimentApi.printLimsLabel();

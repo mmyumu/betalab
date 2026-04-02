@@ -352,7 +352,7 @@ class ExperimentService:
         orchard_name: str,
         harvest_date: str,
         indicative_mass_g: float,
-        measured_gross_mass_g: float,
+        measured_gross_mass_g: float | None,
     ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,

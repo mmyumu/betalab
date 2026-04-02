@@ -105,6 +105,25 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
     assert applied.json()["lims_reception"]["status"] == "received"
 
 
+def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        registered = client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Martin Orchard",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": None,
+            },
+        )
+
+    assert registered.status_code == 200
+    assert registered.json()["lims_reception"]["lab_sample_code"].startswith("APP-2026-")
+    assert registered.json()["lims_reception"]["measured_gross_mass_g"] is None
+
+
 def test_list_experiments_returns_saved_sessions_over_http() -> None:
     with TestClient(app) as client:
         first_id = _create_experiment(client)

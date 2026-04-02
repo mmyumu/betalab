@@ -40,14 +40,15 @@ def create_lims_reception(
     experiment: Experiment,
     command: CreateLimsReceptionCommand,
 ) -> None:
-    if command.measured_gross_mass_g <= 0:
+    if command.measured_gross_mass_g is not None and command.measured_gross_mass_g <= 0:
         raise ValueError("Gross reception mass must be greater than zero.")
 
     sample_code = experiment.lims_reception.lab_sample_code or _build_sample_code(experiment)
     experiment.lims_reception.orchard_name = command.orchard_name.strip()
     experiment.lims_reception.harvest_date = command.harvest_date.strip()
     experiment.lims_reception.indicative_mass_g = float(command.indicative_mass_g)
-    experiment.lims_reception.measured_gross_mass_g = float(command.measured_gross_mass_g)
+    if command.measured_gross_mass_g is not None:
+        experiment.lims_reception.measured_gross_mass_g = float(command.measured_gross_mass_g)
     experiment.lims_reception.lab_sample_code = sample_code
     experiment.lims_reception.status = "awaiting_label_application"
     experiment.audit_log.append(f"LIMS reception created for {sample_code}.")
