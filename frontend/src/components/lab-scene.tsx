@@ -2045,6 +2045,83 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
+  const getBalanceStagedWorkbenchSlotId = () => {
+    if (
+      !balanceStagedItem ||
+      balanceStagedItem.entityKind !== "tool" ||
+      balanceStagedItem.originalPayload.sourceKind !== "workbench" ||
+      !("sourceSlotId" in balanceStagedItem.originalPayload)
+    ) {
+      return null;
+    }
+
+    return balanceStagedItem.originalPayload.sourceSlotId;
+  };
+
+  const canAcceptBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
+    const sourceSlotId = getBalanceStagedWorkbenchSlotId();
+    if (!sourceSlotId || !displayBalanceTool) {
+      return false;
+    }
+    if (displayBalanceTool.toolType !== "sample_bag" || displayBalanceTool.sampleLabelText !== null) {
+      return false;
+    }
+    if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
+      return false;
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "sample_label") {
+      return true;
+    }
+
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    if (sampleLabelPayload?.sourceKind === "workbench" || sampleLabelPayload?.sourceKind === "trash") {
+      return true;
+    }
+
+    const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
+    return limsLabelTicketPayload !== null;
+  };
+
+  const handleBalanceStagedToolDragOver = (event: DragEvent<HTMLElement>) => {
+    if (canAcceptBalanceStagedToolDrop(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handleBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
+    const sourceSlotId = getBalanceStagedWorkbenchSlotId();
+    if (!sourceSlotId || !canAcceptBalanceStagedToolDrop(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (toolbarPayload?.itemType === "sample_label") {
+      handleApplySampleLabel(sourceSlotId);
+      return;
+    }
+
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    if (sampleLabelPayload?.sourceKind === "workbench") {
+      handleMoveSampleLabel(sourceSlotId, sampleLabelPayload);
+      return;
+    }
+    if (sampleLabelPayload?.sourceKind === "trash") {
+      handleRestoreTrashedSampleLabel(sourceSlotId, sampleLabelPayload);
+      return;
+    }
+
+    const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
+    if (limsLabelTicketPayload) {
+      handleApplyLimsLabelTicket(sourceSlotId);
+    }
+  };
+
   const handleTrashSampleLabelDragStart = (
     trashSampleLabel: TrashSampleLabelEntry,
     dataTransfer: DataTransfer,
@@ -2222,7 +2299,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const grossBalanceStagedContent =
     balanceStagedItem?.entityKind === "tool" && displayBalanceTool ? (
-      <div data-testid="gross-balance-staged-item">
+      <div
+        data-testid="gross-balance-staged-item"
+        onDragOver={handleBalanceStagedToolDragOver}
+        onDrop={handleBalanceStagedToolDrop}
+      >
         <BenchToolCard
           draggable
           onDragEnd={() => {

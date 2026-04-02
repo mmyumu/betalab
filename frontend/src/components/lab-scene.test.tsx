@@ -2622,6 +2622,106 @@ describe("LabScene", () => {
     });
   });
 
+  it("applies a LIMS ticket onto a received sampling bag while it is staged on the gross balance", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: null,
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: {
+            id: "lims_ticket_1",
+            sampleCode: "APP-2026-0001",
+            labelText: "APP-2026-0001 • Apples",
+          },
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockImplementation(async (_experimentId, type) => {
+      if (type === "record_gross_weight") {
+        return makeWorkbenchExperiment({
+          slots: makeSlots([
+            {
+              tool: makeSampleBagTool({
+                id: "bench_tool_1",
+                fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+                sampleLabelText: null,
+              }),
+            },
+          ]),
+          limsReception: makeLimsReception({
+            measuredGrossMassG: 2486,
+            labSampleCode: "APP-2026-0001",
+            status: "awaiting_label_application",
+            printedLabelTicket: {
+              id: "lims_ticket_1",
+              sampleCode: "APP-2026-0001",
+              labelText: "APP-2026-0001 • Apples",
+            },
+          }),
+          workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+        });
+      }
+
+      return makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: "APP-2026-0001 • Apples",
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      });
+    });
+
+    render(<PesticideWorkbench />);
+
+    const bag = await screen.findByTestId("bench-tool-card-bench_tool_1");
+    const balance = screen.getByTestId("gross-balance-dropzone");
+    const bagTransfer = createDataTransfer();
+
+    fireEvent.dragStart(bag, { dataTransfer: bagTransfer });
+    fireEvent.dragOver(balance, { dataTransfer: bagTransfer });
+    fireEvent.drop(balance, { dataTransfer: bagTransfer });
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const stagedBag = screen.getByTestId("gross-balance-staged-item");
+    const ticketTransfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: ticketTransfer });
+    const dragOverEvent = createEvent.dragOver(stagedBag, { dataTransfer: ticketTransfer });
+    fireEvent(stagedBag, dragOverEvent);
+    fireEvent.drop(stagedBag, { dataTransfer: ticketTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label",
+        { slot_id: "station_1" },
+      );
+    });
+  });
+
   it("discards a printed LIMS ticket directly into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
