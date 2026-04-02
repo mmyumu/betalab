@@ -1,6 +1,7 @@
 import pytest
 from datetime import timedelta
 
+from app.services.received_sample_generation import SAMPLE_BAG_TARE_MASS_G
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentService
 
@@ -243,6 +244,7 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
     assert experiment.basket_tool.tool_type == "sample_bag"
     assert experiment.basket_tool.is_sealed is True
     assert experiment.basket_tool.field_label_text is not None
+    assert experiment.basket_tool.field_label_text.startswith("Martin Orchard • Harvest 2026-03-29 • Approx. ")
     assert len(experiment.basket_tool.produce_lots) == 1
     assert experiment.lims_reception.status == "awaiting_reception"
     assert experiment.lims_reception.lab_sample_code is None
@@ -318,9 +320,13 @@ def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
     assert updated.basket_tool is None
     assert updated.workbench.slots[0].tool is not None
     assert updated.workbench.slots[0].tool.tool_type == "sample_bag"
+    expected_gross_mass_g = round(
+        updated.workbench.slots[0].tool.produce_lots[0].total_mass_g + SAMPLE_BAG_TARE_MASS_G,
+        1,
+    )
 
     updated = apply_command(service, experiment.id, "record_gross_weight", {})
-    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(2486.0)
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(expected_gross_mass_g)
 
     updated = apply_command(
         service,
@@ -330,7 +336,7 @@ def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
             "orchard_name": "Verger Saint-Martin",
             "harvest_date": "2026-03-29",
             "indicative_mass_g": 2500.0,
-            "measured_gross_mass_g": 2486.0,
+            "measured_gross_mass_g": expected_gross_mass_g,
         },
     )
     assert updated.lims_reception.lab_sample_code is not None

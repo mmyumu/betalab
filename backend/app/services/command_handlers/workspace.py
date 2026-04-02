@@ -43,6 +43,7 @@ from app.services.command_handlers.support import (
     find_workspace_widget,
     round_volume,
 )
+from app.services.received_sample_generation import build_received_sampling_bag
 
 physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
@@ -101,6 +102,18 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
     apple_lot_count = sum(
         1 for lot in experiment.workspace.produce_lots if lot.produce_type == produce_type
     )
+    if experiment.basket_tool is None:
+        experiment.basket_tool = build_received_sampling_bag(label="Received sampling bag")
+        experiment.lims_reception = LimsReception(
+            orchard_name="",
+            harvest_date="",
+            indicative_mass_g=0.0,
+        )
+        experiment.audit_log.append(
+            f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag."
+        )
+        return
+
     produce_lot = ProduceLot(
         id=new_id("produce"),
         label=f"Apple lot {apple_lot_count + 1}",
@@ -108,26 +121,6 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
         unit_count=12,
         total_mass_g=2450.0,
     )
-    if experiment.basket_tool is None:
-        experiment.basket_tool = WorkbenchTool(
-            id=new_id("bench_tool"),
-            tool_id="sealed_sampling_bag",
-            label="Received sampling bag",
-            subtitle="Field reception",
-            accent="emerald",
-            tool_type="sample_bag",
-            capacity_ml=500.0,
-            is_sealed=True,
-            field_label_text="Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-            produce_lots=[produce_lot],
-        )
-        experiment.lims_reception = LimsReception(
-            orchard_name="",
-            harvest_date="",
-            indicative_mass_g=0.0,
-        )
-        experiment.audit_log.append(f"{produce_lot.label} created in a received sampling bag.")
-        return
 
     experiment.workspace.produce_lots.append(produce_lot)
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")

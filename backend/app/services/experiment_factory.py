@@ -6,39 +6,20 @@ from app.domain.models import (
     Experiment,
     ExperimentStatus,
     LimsReception,
-    ProduceLot,
     Rack,
     RackSlot,
     Trash,
-    WorkbenchTool,
     Workspace,
     WorkspaceWidget,
     Workbench,
     WorkbenchSlot,
     new_id,
 )
+from app.services.received_sample_generation import build_received_sampling_bag
 
 
 def build_experiment() -> Experiment:
-    produce_lot = ProduceLot(
-        id=new_id("produce"),
-        label="Orchard apple lot",
-        produce_type="apple",
-        total_mass_g=2450.0,
-        unit_count=12,
-    )
-    basket_tool = WorkbenchTool(
-        id=new_id("bench_tool"),
-        tool_id="sealed_sampling_bag",
-        label="Sealed sampling bag",
-        subtitle="Field reception",
-        accent="emerald",
-        tool_type="sample_bag",
-        capacity_ml=500.0,
-        is_sealed=True,
-        field_label_text="Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-        produce_lots=[produce_lot],
-    )
+    basket_tool = build_received_sampling_bag()
     return Experiment(
         id=new_id("experiment"),
         status=ExperimentStatus.PREPARING,

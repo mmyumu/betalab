@@ -43,6 +43,8 @@ export function LimsWidget({
   const indicativeMassValue = Number.parseFloat(indicativeMassText);
   const hasIndicativeMass =
     Number.isFinite(indicativeMassValue) && indicativeMassValue > 0;
+  const formatIndicativeMass = (massG: number) =>
+    Number.isInteger(massG) ? `${massG.toFixed(0)} g` : `${massG.toFixed(1)} g`;
   const canCreateReception =
     orchardName.trim().length > 0 &&
     harvestDate.trim().length > 0 &&
@@ -121,7 +123,7 @@ export function LimsWidget({
                     Harvest date: {reception.harvestDate || harvestDate || "--"}
                   </text>
                   <text x="28" y="146" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Indicative mass: {reception.indicativeMassG > 0 ? `${reception.indicativeMassG.toFixed(0)} g` : hasIndicativeMass ? `${indicativeMassValue.toFixed(0)} g` : "--"}
+                    Indicative mass: {reception.indicativeMassG > 0 ? formatIndicativeMass(reception.indicativeMassG) : hasIndicativeMass ? formatIndicativeMass(indicativeMassValue) : "--"}
                   </text>
                   <text x="28" y="166" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
                     Gross lab mass: {reception.measuredGrossMassG === null ? "--" : `${reception.measuredGrossMassG.toFixed(1)} g`}
@@ -175,9 +177,11 @@ export function LimsWidget({
             <input
               className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
               inputMode="decimal"
+              min="0"
               onChange={(event) => setIndicativeMassText(event.target.value)}
               placeholder="2500"
-              type="text"
+              step="0.1"
+              type="number"
               value={indicativeMassText}
             />
           </label>

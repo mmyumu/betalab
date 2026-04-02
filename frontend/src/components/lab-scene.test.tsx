@@ -2455,7 +2455,7 @@ describe("LabScene", () => {
         limsReception: makeLimsReception({
           orchardName: "Martin Orchard",
           harvestDate: "2026-03-29",
-          indicativeMassG: 2500,
+          indicativeMassG: 2041.1,
           measuredGrossMassG: null,
           labSampleCode: "APP-2026-0001",
           status: "awaiting_label_application",
@@ -2472,7 +2472,7 @@ describe("LabScene", () => {
       target: { value: "2026-03-29" },
     });
     fireEvent.change(screen.getByLabelText("Indicative field mass (g)"), {
-      target: { value: "2500" },
+      target: { value: "2041.1" },
     });
 
     const createButton = screen.getByRole("button", { name: "Create LIMS record" });
@@ -2487,7 +2487,7 @@ describe("LabScene", () => {
         {
           orchard_name: "Martin Orchard",
           harvest_date: "2026-03-29",
-          indicative_mass_g: 2500,
+          indicative_mass_g: 2041.1,
           measured_gross_mass_g: null,
         },
       );

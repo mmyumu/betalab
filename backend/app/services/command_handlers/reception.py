@@ -10,9 +10,7 @@ from app.services.commands import (
     PrintLimsLabelCommand,
     RecordGrossWeightCommand,
 )
-
-
-DEFAULT_RECEIVED_GROSS_MASS_G = 2486.0
+from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
 
 
 def place_received_bag_on_workbench(
@@ -34,8 +32,22 @@ def record_gross_weight(experiment: Experiment, command: RecordGrossWeightComman
     measured_mass_g = (
         float(command.measured_gross_mass_g)
         if command.measured_gross_mass_g is not None
-        else DEFAULT_RECEIVED_GROSS_MASS_G
+        else resolve_received_bag_gross_mass_g(experiment.basket_tool)
     )
+    if measured_mass_g is None:
+        measured_mass_g = next(
+            (
+                gross_mass_g
+                for gross_mass_g in (
+                    resolve_received_bag_gross_mass_g(slot.tool)
+                    for slot in experiment.workbench.slots
+                )
+                if gross_mass_g is not None
+            ),
+            None,
+        )
+    if measured_mass_g is None:
+        raise ValueError("Place the received sampling bag before recording its gross mass.")
     if measured_mass_g <= 0:
         raise ValueError("Gross balance mass must be greater than zero.")
 
