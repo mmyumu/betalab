@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent, ReactNode } from "react";
+import type { DragEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 
 import { BenchToolCard } from "@/components/bench-tool-card";
 import { ProduceLotCard } from "@/components/produce-lot-card";
@@ -71,6 +71,26 @@ type WorkbenchPanelProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onBenchToolDragEnd?: () => void;
+  onBenchToolClick?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: MouseEvent<HTMLElement>,
+  ) => void;
+  onBenchToolPointerDown?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: PointerEvent<HTMLElement>,
+  ) => void;
+  onBenchToolPointerUp?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: PointerEvent<HTMLElement>,
+  ) => void;
+  onBenchToolIllustrationClick?: (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => void;
   onProduceLotDragStart?: (
     slotId: string,
     produceLot: ExperimentProduceLot,
@@ -107,6 +127,10 @@ export function WorkbenchPanel({
   canDragBenchTool,
   isBenchSlotHighlighted,
   onBenchToolDragEnd,
+  onBenchToolClick,
+  onBenchToolPointerDown,
+  onBenchToolPointerUp,
+  onBenchToolIllustrationClick,
   onBenchToolDragStart,
   onBenchToolDrop,
   onProduceLotClick,
@@ -383,6 +407,9 @@ export function WorkbenchPanel({
                       draggable={
                         !dndDisabled && (canDragBenchTool ? canDragBenchTool(slot.id, tool) : false)
                       }
+                      onClick={(event) => {
+                        onBenchToolClick?.(slot.id, tool, event);
+                      }}
                       onDragStart={(event) => {
                         if (!onBenchToolDragStart) {
                           return;
@@ -408,6 +435,15 @@ export function WorkbenchPanel({
                       }
                       onDragEnd={() => {
                         onBenchToolDragEnd?.();
+                      }}
+                      onPointerDown={(event) => {
+                        onBenchToolPointerDown?.(slot.id, tool, event);
+                      }}
+                      onPointerUp={(event) => {
+                        onBenchToolPointerUp?.(slot.id, tool, event);
+                      }}
+                      onToolIllustrationClick={(event) => {
+                        onBenchToolIllustrationClick?.(slot.id, tool, event);
                       }}
                       onRemoveLiquid={(liquidId) => {
                         onRemoveLiquid(slot.id, liquidId);

@@ -16,11 +16,13 @@ from app.services.commands import (
     AddProduceLotToWorkbenchToolCommand,
     ApplySampleLabelToWorkbenchToolCommand,
     CloseWorkbenchToolCommand,
+    LoadSpatulaFromWorkbenchToolCommand,
     OpenWorkbenchToolCommand,
     MoveProduceLotBetweenWorkbenchToolsCommand,
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
     PlaceToolOnWorkbenchCommand,
+    PourSpatulaIntoWorkbenchToolCommand,
     RestoreTrashedSampleLabelToWorkbenchToolCommand,
     UpdateWorkbenchLiquidVolumeCommand,
     UpdateWorkbenchToolSampleLabelTextCommand,
@@ -47,6 +49,7 @@ from app.services.command_handlers.support import (
 
 produce_lot_transfer_service = ProduceLotTransferService()
 physical_simulation_service = PhysicalSimulationService()
+spatula_capacity_g = 2.0
 
 
 def place_tool_on_workbench(experiment: Experiment, command: PlaceToolOnWorkbenchCommand) -> None:
@@ -225,6 +228,67 @@ def open_workbench_tool(experiment: Experiment, command: OpenWorkbenchToolComman
     experiment.audit_log.append(f"{slot.tool.label} opened on {slot.label}.")
 
 
+def load_spatula_from_workbench_tool(
+    experiment: Experiment,
+    command: LoadSpatulaFromWorkbenchToolCommand,
+) -> None:
+    slot = find_workbench_slot(experiment.workbench, command.slot_id)
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before loading the spatula.")
+    if slot.tool.tool_type != "storage_jar":
+        raise ValueError("The spatula can only be loaded from a storage jar.")
+    if slot.tool.is_sealed:
+        raise ValueError(f"Open {slot.tool.label} before loading the spatula.")
+    if experiment.spatula.is_loaded and experiment.spatula.loaded_powder_mass_g > 0:
+        raise ValueError("Empty the spatula before loading it again.")
+    if slot.tool.powder_mass_g <= 0:
+        raise ValueError(f"{slot.tool.label} is empty.")
+
+    available_mass_g = max(slot.tool.powder_mass_g, 0.0)
+    fill_ratio = 0.45 + ((experiment.snapshot_version % 11) * 0.045)
+    loaded_mass_g = min(spatula_capacity_g, available_mass_g, round(spatula_capacity_g * fill_ratio, 3))
+    if loaded_mass_g <= 0:
+        raise ValueError(f"{slot.tool.label} is empty.")
+
+    slot.tool.powder_mass_g = round(max(slot.tool.powder_mass_g - loaded_mass_g, 0.0), 3)
+    experiment.spatula.is_loaded = True
+    experiment.spatula.loaded_powder_mass_g = loaded_mass_g
+    experiment.spatula.source_tool_id = slot.tool.id
+    experiment.audit_log.append(f"Spatula loaded from {slot.tool.label}.")
+
+
+def pour_spatula_into_workbench_tool(
+    experiment: Experiment,
+    command: PourSpatulaIntoWorkbenchToolCommand,
+) -> None:
+    slot = find_workbench_slot(experiment.workbench, command.slot_id)
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before receiving powder.")
+    if slot.tool.tool_type != "sample_vial":
+        raise ValueError("The spatula can only pour into an autosampler vial.")
+    if slot.tool.is_sealed:
+        raise ValueError(f"Open {slot.tool.label} before adding powder.")
+    if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
+        raise ValueError("Load the spatula before pouring.")
+
+    requested_mass_g = max(float(command.delta_mass_g), 0.0)
+    if requested_mass_g <= 0:
+        return
+
+    transferred_mass_g = min(requested_mass_g, experiment.spatula.loaded_powder_mass_g)
+    slot.tool.powder_mass_g = round(slot.tool.powder_mass_g + transferred_mass_g, 3)
+    experiment.spatula.loaded_powder_mass_g = round(
+        max(experiment.spatula.loaded_powder_mass_g - transferred_mass_g, 0.0),
+        3,
+    )
+    if experiment.spatula.loaded_powder_mass_g <= 0:
+        experiment.spatula.is_loaded = False
+        experiment.spatula.loaded_powder_mass_g = 0.0
+        experiment.spatula.source_tool_id = None
+
+    experiment.audit_log.append(f"Powder transferred into {slot.tool.label}.")
+
+
 def update_workbench_tool_sample_label_text(
     experiment: Experiment,
     command: UpdateWorkbenchToolSampleLabelTextCommand,
@@ -240,11 +304,11 @@ def update_workbench_tool_sample_label_text(
     label.text = next_text
     if next_text:
         experiment.audit_log.append(
-            f"Manual label updated to {next_text} on {slot.tool.label}."
+            f"Sample label updated to {next_text} on {slot.tool.label}."
         )
         return
 
-    experiment.audit_log.append(f"Manual label cleared on {slot.tool.label}.")
+    experiment.audit_log.append(f"Sample label cleared on {slot.tool.label}.")
 
 
 def move_sample_label_between_workbench_tools(
@@ -473,4 +537,6 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         closure_fault=None,
         labels=[],
         produce_lots=[],
+        liquids=[],
+        powder_mass_g=60.0 if tool_definition.tool_type == "storage_jar" else 0.0,
     )

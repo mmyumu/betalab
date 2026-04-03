@@ -8,6 +8,7 @@ from app.domain.models import (
     LimsReception,
     Rack,
     RackSlot,
+    SpatulaState,
     Trash,
     Workspace,
     WorkspaceWidget,
@@ -128,6 +129,7 @@ def build_experiment() -> Experiment:
         ),
         lims_entries=[],
         basket_tool=basket_tool,
+        spatula=SpatulaState(),
         last_simulation_at=datetime.now(timezone.utc),
         audit_log=[
             "Experiment created",

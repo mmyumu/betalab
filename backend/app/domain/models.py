@@ -75,6 +75,14 @@ class WorkbenchTool:
     labels: list[ContainerLabel] = field(default_factory=list)
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
+    powder_mass_g: float = 0.0
+
+
+@dataclass
+class SpatulaState:
+    is_loaded: bool = False
+    loaded_powder_mass_g: float = 0.0
+    source_tool_id: str | None = None
 
 
 @dataclass
@@ -182,6 +190,7 @@ class Experiment:
     lims_reception: LimsReception
     last_simulation_at: datetime
     basket_tool: WorkbenchTool | None = None
+    spatula: SpatulaState = field(default_factory=SpatulaState)
     lims_entries: list[LimsReception] = field(default_factory=list)
     snapshot_version: int = 0
     audit_log: list[str] = field(default_factory=list)

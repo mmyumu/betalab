@@ -316,6 +316,11 @@ function makeExperiment({
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots, widgets: workspaceWidgets },
     basketTool,
+    spatula: {
+      isLoaded: false,
+      loadedPowderMassG: 0,
+      sourceToolId: null,
+    },
     limsReception,
     limsEntries: limsReception.labSampleCode ? [limsReception] : [],
     audit_log: ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],

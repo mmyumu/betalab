@@ -55,12 +55,14 @@ import {
   moveWidgetProduceLotToWorkbenchTool,
   moveWorkbenchProduceLotToWidget,
   moveWorkspaceWidget,
+  loadSpatulaFromWorkbenchTool,
   openWorkbenchTool,
   placeToolInRackSlot,
   placeReceivedBagOnWorkbench,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
   printLimsLabel,
+  pourSpatulaIntoWorkbenchTool,
   recordGrossWeight,
   removeLiquidFromWorkbenchTool,
   removeLiquidFromWorkspaceWidget,
@@ -143,12 +145,14 @@ const mutationFns = {
   moveWidgetProduceLotToWorkbenchTool,
   moveWorkbenchProduceLotToWidget,
   moveWorkspaceWidget,
+  loadSpatulaFromWorkbenchTool,
   openWorkbenchTool,
   placeToolInRackSlot,
   placeReceivedBagOnWorkbench,
   placeToolOnWorkbench,
   placeWorkbenchToolInRackSlot,
   printLimsLabel,
+  pourSpatulaIntoWorkbenchTool,
   recordGrossWeight,
   removeLiquidFromWorkbenchTool,
   removeLiquidFromWorkspaceWidget,
@@ -373,6 +377,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.moveWorkspaceProduceLotToGrossBalance, payload),
     moveWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveWorkspaceWidget, payload),
+    loadSpatulaFromWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.loadSpatulaFromWorkbenchTool, payload),
     openGrossBalanceTool: () =>
       executeMutation(mutationFns.openGrossBalanceTool),
     openWorkbenchTool: (payload: Record<string, unknown>) =>
@@ -387,6 +393,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.placeWorkbenchToolInRackSlot, payload),
     printLimsLabel: (payload?: Record<string, unknown>) =>
       executeMutation(mutationFns.printLimsLabel, payload),
+    pourSpatulaIntoWorkbenchTool: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.pourSpatulaIntoWorkbenchTool, payload),
     recordGrossWeight: (payload?: Record<string, unknown>) =>
       executeMutation(mutationFns.recordGrossWeight, payload),
     removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>

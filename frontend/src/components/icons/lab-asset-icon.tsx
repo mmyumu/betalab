@@ -22,6 +22,7 @@ type LabAssetIconProps = {
   fillSegments?: Array<{ accent: ToolbarAccent; ratio: number }>;
   isSealed?: boolean;
   kind: ToolType | LiquidType;
+  powderMassG?: number;
   produceLots?: ExperimentProduceLot[];
   sampleLabelText?: string | null;
   tone?: "accent" | "neutral";
@@ -199,6 +200,7 @@ function SampleVialIcon({
   label,
   liquidDefs,
   liquidFill,
+  powderMassG = 0,
   stroke,
 }: {
   closureFault?: string | null;
@@ -208,9 +210,11 @@ function SampleVialIcon({
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
+  powderMassG?: number;
   stroke: string;
 }) {
   const liquidTop = 86 - fillRatio * 30;
+  const powderHeight = Math.min(Math.max(powderMassG * 3.2, 0), 14);
   const sealVisualState: SealVisualState =
     closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
@@ -233,6 +237,17 @@ function SampleVialIcon({
         stroke="none"
       />
       <path d={`M34 ${liquidTop}C40 ${liquidTop - 2} 48 ${liquidTop + 2} 54 ${liquidTop}`} opacity="0.65" />
+      {powderHeight > 0 ? (
+        <>
+          <path
+            d={`M35 ${98 - powderHeight}C39 ${94 - powderHeight} 49 ${95 - powderHeight} 53 ${98 - powderHeight}V91C53 95 49 98 44 98C39 98 35 95 35 91V${98 - powderHeight}Z`}
+            fill="#d6c6a8"
+            opacity="0.92"
+            stroke="none"
+          />
+          <path d={`M35 ${98 - powderHeight}C40 ${95 - powderHeight} 48 ${96 - powderHeight} 53 ${98 - powderHeight}`} opacity="0.5" />
+        </>
+      ) : null}
     </VesselFrame>
   );
 }
@@ -515,6 +530,7 @@ function StorageJarIcon({
   glow,
   isSealed = false,
   label,
+  powderMassG = 0,
   produceLots,
   stroke,
 }: {
@@ -522,10 +538,12 @@ function StorageJarIcon({
   glow: string;
   isSealed?: boolean;
   label: string;
+  powderMassG?: number;
   produceLots: ExperimentProduceLot[];
   stroke: string;
 }) {
   const isLoaded = produceLots.length > 0;
+  const powderHeight = Math.min(Math.max(powderMassG / 6, 0), 28);
   const sealVisualState: SealVisualState =
     closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
   const visibleProduceLots = produceLots.slice(0, 2);
@@ -578,6 +596,17 @@ function StorageJarIcon({
       ) : (
         <path d="M28 58H60V86C60 92 55 96 50 96H38C33 96 28 92 28 86V58Z" fill="#f8fafc" opacity="0.6" stroke="none" />
       )}
+      {powderHeight > 0 ? (
+        <>
+          <path
+            d={`M27 ${92 - powderHeight}C33 ${85 - powderHeight} 54 ${86 - powderHeight} 61 ${90 - powderHeight}V84C61 91 54 96 44 98C34 96 27 91 27 84V${92 - powderHeight}Z`}
+            fill="#d7c9af"
+            opacity="0.88"
+            stroke="none"
+          />
+          <path d={`M27 ${92 - powderHeight}C34 ${87 - powderHeight} 54 ${88 - powderHeight} 61 ${90 - powderHeight}`} opacity="0.5" />
+        </>
+      ) : null}
       <path d="M26 34H62" opacity="0.45" />
       <path d="M24 30H64" stroke={sealVisualState === "popped" ? "#e11d48" : undefined} />
     </VesselFrame>
@@ -592,6 +621,7 @@ export function LabAssetIcon({
   fillSegments,
   isSealed = false,
   kind,
+  powderMassG = 0,
   produceLots = [],
   sampleLabelText,
   tone = "accent",
@@ -658,7 +688,7 @@ export function LabAssetIcon({
       icon = <CleanupTubeIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
       break;
     case "sample_vial":
-      icon = <SampleVialIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
+      icon = <SampleVialIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} powderMassG={powderMassG} />;
       break;
     case "beaker":
       icon = <BeakerIcon {...sharedProps} />;
@@ -686,6 +716,7 @@ export function LabAssetIcon({
           glow={palette.glow}
           isSealed={isSealed}
           label={label}
+          powderMassG={powderMassG}
           produceLots={produceLots}
           stroke={palette.stroke}
         />
@@ -715,6 +746,7 @@ export function LabAssetIcon({
       data-fill-segments={displaySegments.length}
       data-kind={kind}
       data-closure-fault={closureFault ?? ""}
+      data-powder-mass-g={powderMassG}
       data-primary-produce-cut-state={produceLots[0]?.cutState ?? ""}
       data-produce-lot-count={produceLots.length}
       data-sample-label-text={sampleLabelText ?? ""}

@@ -62,7 +62,9 @@ from app.services.command_handlers.workbench import (
     add_produce_lot_to_workbench_tool,
     add_liquid_to_workbench_tool,
     close_workbench_tool,
+    load_spatula_from_workbench_tool,
     open_workbench_tool,
+    pour_spatula_into_workbench_tool,
     discard_sample_label_from_workbench_tool,
     discard_produce_lot_from_workbench_tool,
     cut_workbench_produce_lot,
@@ -131,6 +133,8 @@ from app.services.commands import (
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
     MoveWorkbenchToolToGrossBalanceCommand,
+    LoadSpatulaFromWorkbenchToolCommand,
+    PourSpatulaIntoWorkbenchToolCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
     MoveWidgetProduceLotToGrossBalanceCommand,
     MoveWorkspaceProduceLotToGrossBalanceCommand,
@@ -828,20 +832,45 @@ class ExperimentService:
             OpenWorkbenchToolCommand(slot_id=slot_id),
         )
 
+    def load_spatula_from_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            load_spatula_from_workbench_tool,
+            LoadSpatulaFromWorkbenchToolCommand(slot_id=slot_id),
+        )
+
+    def pour_spatula_into_workbench_tool(
+        self,
+        experiment_id: str,
+        slot_id: str,
+        delta_mass_g: float,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            pour_spatula_into_workbench_tool,
+            PourSpatulaIntoWorkbenchToolCommand(slot_id=slot_id, delta_mass_g=delta_mass_g),
+        )
+
     def update_workbench_tool_sample_label_text(
         self,
         experiment_id: str,
         slot_id: str,
-        label_id: str,
-        sample_label_text: str,
+        label_id_or_text: str,
+        sample_label_text: str | None = None,
     ) -> ExperimentSchema:
+        if sample_label_text is None:
+            resolved_label_id = self._get_default_tool_label_id(experiment_id, slot_id)
+            resolved_sample_label_text = label_id_or_text
+        else:
+            resolved_label_id = label_id_or_text
+            resolved_sample_label_text = sample_label_text
         return self._apply_command(
             experiment_id,
             update_workbench_tool_sample_label_text,
             UpdateWorkbenchToolSampleLabelTextCommand(
                 slot_id=slot_id,
-                label_id=label_id,
-                sample_label_text=sample_label_text,
+                label_id=resolved_label_id,
+                sample_label_text=resolved_sample_label_text,
             ),
         )
 
@@ -850,15 +879,16 @@ class ExperimentService:
         experiment_id: str,
         source_slot_id: str,
         target_slot_id: str,
-        label_id: str,
+        label_id: str | None = None,
     ) -> ExperimentSchema:
+        resolved_label_id = label_id or self._get_default_tool_label_id(experiment_id, source_slot_id)
         return self._apply_command(
             experiment_id,
             move_sample_label_between_workbench_tools,
             MoveSampleLabelBetweenWorkbenchToolsCommand(
                 source_slot_id=source_slot_id,
                 target_slot_id=target_slot_id,
-                label_id=label_id,
+                label_id=resolved_label_id,
             ),
         )
 
@@ -866,12 +896,13 @@ class ExperimentService:
         self,
         experiment_id: str,
         slot_id: str,
-        label_id: str,
+        label_id: str | None = None,
     ) -> ExperimentSchema:
+        resolved_label_id = label_id or self._get_default_tool_label_id(experiment_id, slot_id)
         return self._apply_command(
             experiment_id,
             discard_sample_label_from_workbench_tool,
-            WorkbenchSampleLabelCommand(slot_id=slot_id, label_id=label_id),
+            WorkbenchSampleLabelCommand(slot_id=slot_id, label_id=resolved_label_id),
         )
 
     def restore_trashed_sample_label_to_workbench_tool(self, experiment_id: str, trash_sample_label_id: str, target_slot_id: str) -> ExperimentSchema:
@@ -893,6 +924,13 @@ class ExperimentService:
         if experiment is None:
             raise ExperimentNotFoundError(experiment_id)
         return experiment
+
+    def _get_default_tool_label_id(self, experiment_id: str, slot_id: str) -> str:
+        experiment = self._require_experiment(experiment_id)
+        slot = next((slot for slot in experiment.workbench.slots if slot.id == slot_id), None)
+        if slot is None or slot.tool is None or not slot.tool.labels:
+            raise ValueError("Unknown workbench tool label")
+        return slot.tool.labels[0].id
 
     def _apply_command(
         self,
@@ -941,6 +979,7 @@ class ExperimentService:
                 "lims_reception": asdict(experiment.lims_reception),
                 "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
                 "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+                "spatula": asdict(experiment.spatula),
                 "audit_log": experiment.audit_log,
             }
         )

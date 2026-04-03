@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { DragEvent } from "react";
+import type { DragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 
 import { FloatingWidget } from "@/components/floating-widget";
 import { ActionBarPanel } from "@/components/action-bar-panel";
@@ -188,6 +188,7 @@ const toolTareMassByType: Record<ToolType, number> = {
 };
 const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
+const spatulaCursor = "crosshair";
 
 function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
   return (
@@ -244,7 +245,8 @@ function getApproximateToolMassG(tool: BenchToolInstance) {
   const tareMassG = toolTareMassByType[tool.toolType] ?? 0;
   const produceMassG = (tool.produceLots ?? []).reduce((sum, lot) => sum + lot.totalMassG, 0);
   const liquidMassG = tool.liquids.reduce((sum, liquid) => sum + liquid.volume_ml, 0);
-  return roundMass(Math.max(tareMassG + produceMassG + liquidMassG, 0));
+  const powderMassG = tool.powderMassG ?? 0;
+  return roundMass(Math.max(tareMassG + produceMassG + liquidMassG + powderMassG, 0));
 }
 
 function buildDebugProduceDraftFields(): DropDraftField[] {
@@ -330,6 +332,20 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   );
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
+  const isSpatulaMode = activeActionId === "spatula";
+  const dndDisabledByAction = isKnifeMode || isSpatulaMode;
+  const spatula =
+    state.status === "ready"
+      ? state.experiment.spatula
+      : {
+          isLoaded: false,
+          loadedPowderMassG: 0,
+          sourceToolId: null,
+        };
+  const [spatulaCursorPosition, setSpatulaCursorPosition] = useState<{ x: number; y: number } | null>(null);
+  const [spatulaHintMessage, setSpatulaHintMessage] = useState<string | null>(null);
+  const spatulaPourIntervalRef = useRef<number | null>(null);
+  const spatulaPourStateRef = useRef<{ slotId: string; startY: number; currentRateG: number } | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -346,13 +362,20 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         return;
       }
 
-      if (event.key.toLowerCase() !== "k") {
+      const actionKey = event.key.toLowerCase();
+      if (actionKey !== "k" && actionKey !== "s") {
         return;
       }
 
       event.preventDefault();
       clearDropTargets();
-      setActiveActionId((current) => (current === "knife" ? null : "knife"));
+      setActiveActionId((current) =>
+        current === (actionKey === "k" ? "knife" : "spatula")
+          ? null
+          : actionKey === "k"
+            ? "knife"
+            : "spatula",
+      );
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -406,6 +429,58 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     setActiveDropTargets([]);
     setActiveDragItem(null);
   };
+
+  const stopSpatulaPour = () => {
+    if (spatulaPourIntervalRef.current !== null) {
+      window.clearInterval(spatulaPourIntervalRef.current);
+      spatulaPourIntervalRef.current = null;
+    }
+    spatulaPourStateRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!isSpatulaMode) {
+      setSpatulaHintMessage(null);
+      return;
+    }
+
+    setSpatulaHintMessage(
+      spatula.isLoaded
+        ? "Maintiens sur une fiole puis lève la souris pour verser."
+        : "Clique sur une jarre ouverte pour charger la spatule.",
+    );
+  }, [isSpatulaMode, spatula.isLoaded]);
+
+  useEffect(() => {
+    if (!isSpatulaMode) {
+      setSpatulaCursorPosition(null);
+      stopSpatulaPour();
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      setSpatulaCursorPosition({ x: event.clientX, y: event.clientY });
+      const pourState = spatulaPourStateRef.current;
+      if (!pourState) {
+        return;
+      }
+
+      const liftPx = Math.max(pourState.startY - event.clientY, 0);
+      pourState.currentRateG = Math.min(0.28, 0.06 + liftPx * 0.0022);
+    };
+
+    const handlePointerUp = () => {
+      stopSpatulaPour();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      stopSpatulaPour();
+    };
+  }, [isSpatulaMode]);
 
   const isDropTargetHighlighted = (targetType: DropTargetType) => {
     return activeDropTargets.includes(targetType);
@@ -474,6 +549,96 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     void experimentApi.closeWorkbenchTool({
       slot_id: slotId,
     });
+  };
+
+  const handleSpatulaToolPointerDown = (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: ReactPointerEvent<HTMLElement>,
+  ) => {
+    if (!isSpatulaMode || event.button !== 0) {
+      return;
+    }
+
+    if (tool.toolType !== "sample_vial") {
+      return;
+    }
+
+    if (!spatula.isLoaded) {
+      setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
+      return;
+    }
+
+    event.preventDefault();
+    stopSpatulaPour();
+    setSpatulaHintMessage("Versement en cours...");
+    spatulaPourStateRef.current = {
+      slotId,
+      startY: event.clientY,
+      currentRateG: 0.08,
+    };
+    spatulaPourIntervalRef.current = window.setInterval(() => {
+      const pourState = spatulaPourStateRef.current;
+      if (!pourState) {
+        return;
+      }
+
+      void experimentApi.pourSpatulaIntoWorkbenchTool({
+        slot_id: pourState.slotId,
+        delta_mass_g: Number(pourState.currentRateG.toFixed(3)),
+      });
+    }, 100);
+  };
+
+  const handleSpatulaToolPointerUp = () => {
+    stopSpatulaPour();
+  };
+
+  const handleSpatulaToolIllustrationClick = (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: ReactMouseEvent<HTMLButtonElement>,
+  ) => {
+    if (!isSpatulaMode || tool.toolType !== "storage_jar") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    stopSpatulaPour();
+    setSpatulaHintMessage("Chargement de la spatule...");
+    void experimentApi.loadSpatulaFromWorkbenchTool({
+      slot_id: slotId,
+    });
+  };
+
+  const handleSpatulaToolCardClick = (
+    slotId: string,
+    tool: BenchToolInstance,
+    event: ReactMouseEvent<HTMLElement>,
+  ) => {
+    if (!isSpatulaMode) {
+      return;
+    }
+
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("button, input, textarea, select")) {
+      return;
+    }
+
+    if (tool.toolType === "storage_jar") {
+      event.preventDefault();
+      stopSpatulaPour();
+      setSpatulaHintMessage("Chargement de la spatule...");
+      void experimentApi.loadSpatulaFromWorkbenchTool({
+        slot_id: slotId,
+      });
+      return;
+    }
+
+    if (tool.toolType === "sample_vial" && !spatula.isLoaded) {
+      setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
+    }
   };
 
   const handleBalanceToolSealToggle = () => {
@@ -660,7 +825,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return false;
     }
     return getBenchToolAllowedDropTargets(tool).length > 0;
@@ -755,7 +920,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getToolDropTargets(tool.toolType);
@@ -974,7 +1139,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleWorkspaceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const target = event.target as HTMLElement | null;
@@ -988,7 +1153,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleWorkspaceDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const target = event.target as HTMLElement | null;
@@ -1031,7 +1196,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleGrossBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     if (
@@ -1044,7 +1209,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleGrossBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const canDropOnBalanceWidget = hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget");
@@ -1280,7 +1445,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleTrashDragOver = (event: DragEvent<HTMLButtonElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     if (hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
@@ -1289,7 +1454,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleTrashDrop = (event: DragEvent<HTMLButtonElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     if (!hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
@@ -1675,7 +1840,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       : grinderCanAttempt
         ? "ready"
         : "idle";
-  const grinderDndDisabled = isKnifeMode || isGrinderRunning;
+  const grinderDndDisabled = dndDisabledByAction || isGrinderRunning;
   const handleStartGrinder = () => {
     if (!grinderCanAttempt || isGrinderRunning || isCommandPending) {
       return;
@@ -1813,7 +1978,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
 
   const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {
@@ -1822,7 +1987,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleRackSlotDrop = (event: DragEvent<HTMLDivElement>, slotIndex: number) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const targetRackSlot = rackSlots[slotIndex];
@@ -1906,7 +2071,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     tool: BenchToolInstance,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getToolDropTargets(tool.toolType);
@@ -1936,7 +2101,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashTool: TrashToolEntry,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
@@ -1965,7 +2130,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     widget: ExperimentWorkspaceWidget,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getWorkspaceWidgetDropTargets(widget.id);
@@ -1993,7 +2158,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashProduceLot: TrashProduceLotEntry,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getProduceLotDropTargets();
@@ -2024,7 +2189,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     produceType: "apple",
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getProduceLotDropTargets();
@@ -2052,7 +2217,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     preset: DebugProducePreset,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets: DropTargetType[] = ["workbench_slot", "grinder_widget", "gross_balance_widget"];
@@ -2111,7 +2276,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const allowedDropTargets = getProduceLotDropTargets();
@@ -2142,7 +2307,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     label: BenchLabel,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
 
@@ -2322,7 +2487,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashSampleLabel: TrashSampleLabelEntry,
     dataTransfer: DataTransfer,
   ) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return;
     }
     const label =
@@ -2360,7 +2525,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
-    if (isKnifeMode) {
+    if (dndDisabledByAction) {
       return false;
     }
     if (!activeDragItem) {
@@ -2430,7 +2595,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const isRackSlotHighlighted =
-    !isKnifeMode &&
+    !dndDisabledByAction &&
     activeDropTargets.includes("rack_slot") &&
     activeDragItem?.entityKind === "tool" &&
     activeDragItem.toolType === "sample_vial";
@@ -2500,7 +2665,12 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       produce_type: "apple",
     });
   };
-  const workspaceCursor = activeActionId === "knife" ? knifeCursor : undefined;
+  const workspaceCursor =
+    activeActionId === "knife"
+      ? knifeCursor
+      : activeActionId === "spatula"
+        ? spatulaCursor
+        : undefined;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -2525,10 +2695,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
             <div>
               <ToolbarPanel
                 categories={labWorkflowCategories}
-                dragDisabled={isKnifeMode}
+                dragDisabled={dndDisabledByAction}
                 onItemDragEnd={clearDropTargets}
                 onItemDragStart={(item, allowedDropTargets) => {
-                  if (isKnifeMode) {
+                  if (dndDisabledByAction) {
                     return;
                   }
                   const payload = createToolbarDragPayload(item);
@@ -2587,7 +2757,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
               isActive={activeWidgetId === "trash"}
               label="Trash Widget"
               onDragStart={(widgetId, event) => {
-                if (isKnifeMode) {
+                if (dndDisabledByAction) {
                   return;
                 }
                 handleWidgetDragStart(widgetId, event);
@@ -2597,7 +2767,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
               zIndex={10 + widgetOrder.indexOf("trash")}
             >
               <TrashWidget
-                dndDisabled={isKnifeMode}
+                dndDisabled={dndDisabledByAction}
                 formatProduceLotMetadata={formatProduceLotMetadata}
                 isDropHighlighted={isDropTargetHighlighted("trash_bin")}
                 isEmpty={isTrashEmpty}
@@ -2638,7 +2808,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                             : "Produce Basket Widget"
                   }
                   onDragStart={(widgetId, event) => {
-                    if (isKnifeMode) {
+                    if (dndDisabledByAction) {
                       return;
                     }
                     handleWidgetDragStart(widgetId, event);
@@ -2661,7 +2831,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                   ) : widgetId === "basket" ? (
                     <ProduceBasketWidget
                       basketTool={displayBasketTool}
-                      dndDisabled={isKnifeMode}
+                      dndDisabled={dndDisabledByAction}
                       formatProduceLotMetadata={formatProduceLotMetadata}
                       isOpen={isBasketOpen}
                       onBagDragStart={handleBasketToolDragStart}
@@ -2681,7 +2851,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                     />
                   ) : widgetId === "rack" ? (
                     <RackWidget
-                      dndDisabled={isKnifeMode}
+                      dndDisabled={dndDisabledByAction}
                       getSlotPosition={getRackIllustrationSlotPosition}
                       isSlotHighlighted={isRackSlotHighlighted}
                       loadedCount={rackLoadedCount}
@@ -2867,7 +3037,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
               isActive={activeWidgetId === "workbench"}
               label="Workbench Widget"
               onDragStart={(widgetId, event) => {
-                if (isKnifeMode) {
+                if (dndDisabledByAction) {
                   return;
                 }
                 handleWidgetDragStart(widgetId, event);
@@ -2877,7 +3047,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
               zIndex={5}
             >
               <WorkbenchPanel
-                dndDisabled={isKnifeMode}
+                dndDisabled={dndDisabledByAction}
                 onAddWorkbenchSlot={handleAddWorkbenchSlot}
                 onApplyLimsLabelTicket={(slotId) => {
                   handleApplyLimsLabelTicket({ slotId });
@@ -2888,7 +3058,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 }
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}
+                onBenchToolClick={handleSpatulaToolCardClick}
                 onBenchToolDragEnd={clearDropTargets}
+                onBenchToolIllustrationClick={handleSpatulaToolIllustrationClick}
+                onBenchToolPointerDown={handleSpatulaToolPointerDown}
+                onBenchToolPointerUp={handleSpatulaToolPointerUp}
                 onBenchToolDragStart={handleBenchToolDragStart}
                 onBenchToolDrop={handleBenchToolDrop}
                 onProduceLotClick={handleWorkbenchProduceLotClick}
@@ -2917,14 +3091,41 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
           >
             <ActionBarPanel
               activeActionId={activeActionId}
+              helperText={isSpatulaMode ? spatulaHintMessage : null}
               onToggleAction={(actionId) => {
                 clearDropTargets();
+                stopSpatulaPour();
                 setActiveActionId((current) => (current === actionId ? null : actionId));
               }}
+              spatulaLoaded={spatula.isLoaded}
             />
           </div>
         </div>
       </div>
+      {isSpatulaMode && spatulaCursorPosition ? (
+        <div
+          className="pointer-events-none fixed z-[80] h-7 w-20"
+          style={{
+            left: spatulaCursorPosition.x + 8,
+            top: spatulaCursorPosition.y - 20,
+          }}
+        >
+          <div className="relative h-full w-full opacity-90">
+            <div className="absolute left-0 top-[11px] h-2.5 w-12 rounded-full bg-slate-800" />
+            <div className="absolute left-[42px] top-[9px] h-2 w-7 rounded-r-full border border-slate-700 border-l-0 bg-slate-200" />
+            {spatula.isLoaded ? (
+              <div
+                className="absolute left-[40px] rounded-full bg-[#d8c9ae]"
+                style={{
+                  bottom: 9,
+                  height: `${6 + Math.min(spatula.loadedPowderMassG, 2) * 4}px`,
+                  width: `${12 + Math.min(spatula.loadedPowderMassG, 2) * 6}px`,
+                }}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

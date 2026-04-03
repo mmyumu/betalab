@@ -1,4 +1,4 @@
-import type { DragEvent, ReactNode } from "react";
+import type { DragEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { ProduceLotCard } from "@/components/produce-lot-card";
@@ -17,9 +17,12 @@ type BenchToolCardProps = {
   className?: string;
   dataDropHighlighted?: boolean;
   draggable?: boolean;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onDragOver?: (event: DragEvent<HTMLElement>) => void;
   onDrop?: (event: DragEvent<HTMLElement>) => void;
+  onPointerDown?: (event: PointerEvent<HTMLElement>) => void;
+  onPointerUp?: (event: PointerEvent<HTMLElement>) => void;
   onProduceLotClick?: (produceLot: ExperimentProduceLot) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   pendingContent?: ReactNode;
@@ -30,6 +33,7 @@ type BenchToolCardProps = {
   onToggleSeal?: () => void;
   onSampleLabelDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onSampleLabelDragStart?: (label: BenchLabel, event: DragEvent<HTMLElement>) => void;
+  onToolIllustrationClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   tool: BenchToolInstance;
 };
 
@@ -61,9 +65,12 @@ export function BenchToolCard({
   className,
   dataDropHighlighted = false,
   draggable = false,
+  onClick,
   onDragEnd,
   onDragOver,
   onDrop,
+  onPointerDown,
+  onPointerUp,
   onProduceLotClick,
   onDragStart,
   pendingContent,
@@ -74,6 +81,7 @@ export function BenchToolCard({
   onToggleSeal,
   onSampleLabelDragEnd,
   onSampleLabelDragStart,
+  onToolIllustrationClick,
   tool,
 }: BenchToolCardProps) {
   const produceLots = tool.produceLots ?? [];
@@ -82,6 +90,7 @@ export function BenchToolCard({
   );
   const totalProduceMassG = produceLots.reduce((total, lot) => total + lot.totalMassG, 0);
   const fillRatio = tool.capacity_ml > 0 ? Math.min(currentVolume / tool.capacity_ml, 1) : 0;
+  const powderMassG = tool.powderMassG ?? 0;
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const isFilled = liquidVisualState.hasVisibleLiquid;
   const fillPercentage = (fillRatio * 100).toFixed(2);
@@ -90,6 +99,7 @@ export function BenchToolCard({
     ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
     : undefined;
   const isSampleBag = tool.toolType === "sample_bag";
+  const isPowderTool = tool.toolType === "storage_jar" || tool.toolType === "sample_vial";
   const isProduceSurface = canToolAcceptProduce(tool.toolType);
   const isSealable = canToolBeSealed(tool.toolType);
   const isSealed = tool.isSealed ?? false;
@@ -139,8 +149,11 @@ export function BenchToolCard({
           className={draggable ? dragAffordanceClassName : ""}
           data-testid={`bench-tool-card-${tool.id}`}
           draggable={draggable}
+          onClick={onClick}
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}
+          onPointerDown={onPointerDown}
+          onPointerUp={onPointerUp}
         >
           <div className="flex items-start justify-between gap-2">
             <h3 className="min-w-0 flex-1 text-base font-semibold leading-5 text-slate-950">
@@ -168,18 +181,28 @@ export function BenchToolCard({
             ) : null}
           </div>
           <div className="mt-1.5 flex min-w-0 items-start gap-2.5">
-            <LabAssetIcon
-              accent={tool.accent}
-              className="h-22 w-16 shrink-0"
-              closureFault={tool.closureFault}
-              fillRatio={fillRatio}
-              fillSegments={liquidSegments}
-              isSealed={tool.isSealed}
-              kind={tool.toolType}
-              produceLots={produceLots}
-              sampleLabelText={displayLabelText}
-              tone="neutral"
-            />
+            <button
+              aria-label={`${tool.label} illustration`}
+              className="shrink-0 rounded-xl"
+              data-testid={`bench-tool-illustration-${tool.id}`}
+              draggable={false}
+              onClick={onToolIllustrationClick}
+              type="button"
+            >
+              <LabAssetIcon
+                accent={tool.accent}
+                className="h-22 w-16 shrink-0"
+                closureFault={tool.closureFault}
+                fillRatio={fillRatio}
+                fillSegments={liquidSegments}
+                isSealed={tool.isSealed}
+                kind={tool.toolType}
+                powderMassG={powderMassG}
+                produceLots={produceLots}
+                sampleLabelText={displayLabelText}
+                tone="neutral"
+              />
+            </button>
             <div className="min-w-0">
               <p className="text-xs text-slate-600">{tool.subtitle}</p>
               <p className="mt-1.5 text-[11px] font-medium text-slate-500">
@@ -191,6 +214,14 @@ export function BenchToolCard({
                     ? produceLots.length > 0
                       ? `${produceLots.length} produce lot${produceLots.length === 1 ? "" : "s"} staged`
                       : "Ready for produce staging"
+                  : isPowderTool
+                    ? tool.toolType === "storage_jar"
+                      ? powderMassG > 0
+                        ? "Powder reservoir loaded"
+                        : "Ready for spatula loading"
+                      : powderMassG > 0
+                        ? "Powder deposit present"
+                        : "Ready for powder dosing"
                   : tool.liquids.length > 0
                     ? `${tool.liquids.length} liquid loaded`
                     : "Ready for liquid additions"}
@@ -249,11 +280,23 @@ export function BenchToolCard({
             <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Current fill
+                  {isPowderTool ? "Powder state" : "Current fill"}
                 </p>
-                <p className="mt-0.5 text-base font-semibold text-slate-950">{fillPercentage}%</p>
+                <p className="mt-0.5 text-base font-semibold text-slate-950">
+                  {isPowderTool
+                    ? powderMassG > 0
+                      ? tool.toolType === "storage_jar"
+                        ? "Loaded"
+                        : "Receiving"
+                      : "Empty"
+                    : `${fillPercentage}%`}
+                </p>
                 <p className="text-[11px] text-slate-500">
-                  {formatVolume(currentVolume)} / {formatVolume(tool.capacity_ml)} mL
+                  {isPowderTool
+                    ? tool.toolType === "storage_jar"
+                      ? "Source jar for spatula transfers"
+                      : "Powder settles visually in the vial"
+                    : `${formatVolume(currentVolume)} / ${formatVolume(tool.capacity_ml)} mL`}
                 </p>
               </div>
             </div>

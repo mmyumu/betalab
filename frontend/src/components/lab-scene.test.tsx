@@ -248,6 +248,11 @@ function makeWorkbenchExperiment({
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
     basketTool,
+    spatula: {
+      isLoaded: false,
+      loadedPowderMassG: 0,
+      sourceToolId: null,
+    },
     limsReception,
     limsEntries,
     audit_log: auditLog,
@@ -2249,6 +2254,57 @@ describe("LabScene", () => {
 
     fireEvent.keyDown(window, { key: "K" });
     expect(knifeButton).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("loads the spatula when clicking a storage jar in spatula mode", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_tool_jar",
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              powderMassG: 60,
+            }),
+          },
+        ]),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Spatula loaded from Wide-neck HDPE jar."],
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_tool_jar",
+              toolId: "hdpe_storage_jar_2l",
+              label: "Wide-neck HDPE jar",
+              subtitle: "Bulk powder storage",
+              toolType: "storage_jar",
+              capacity_ml: 2000,
+              powderMassG: 58.4,
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Powder spatula" }));
+    fireEvent.click(screen.getByTestId("bench-tool-illustration-bench_tool_jar"));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "load_spatula_from_workbench_tool",
+        { slot_id: "station_1" },
+      );
+    });
   });
 
   it("cuts a whole apple on a cutting board when clicking it in knife mode", async () => {

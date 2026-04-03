@@ -9,6 +9,7 @@ import type {
   LimsReception,
   PrintedLabelTicket,
   RackSlot,
+  SpatulaState,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
   TrashToolEntry,
@@ -985,6 +986,23 @@ export async function openWorkbenchTool(experimentId: string, payload: MutationP
   });
 }
 
+export async function loadSpatulaFromWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/spatula/load`,
+  });
+}
+
+export async function pourSpatulaIntoWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/spatula/pour`,
+    body: { delta_mass_g: requireNumber(body, "delta_mass_g") },
+  });
+}
+
 export async function updateWorkbenchToolSampleLabelText(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1076,6 +1094,11 @@ function normalizeExperiment(experiment: Experiment): Experiment {
         (experiment as Experiment & Record<string, unknown>).basket_tool;
       return rawBasketTool ? normalizeBenchTool(rawBasketTool as BenchToolInstance & Record<string, unknown>) : null;
     })(),
+    spatula: normalizeSpatulaState(
+      ((experiment as Experiment & Record<string, unknown>).spatula ?? {}) as
+        SpatulaState &
+        Record<string, unknown>,
+    ),
   };
 }
 
@@ -1150,6 +1173,20 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
       (tool.liquids as BenchLiquidPortion[] | undefined)?.map((liquid) =>
         normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
       ) ?? [],
+    powderMassG: Number(tool.powderMassG ?? tool.powder_mass_g ?? 0),
+  };
+}
+
+function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>): SpatulaState {
+  return {
+    isLoaded: Boolean(spatula.isLoaded ?? spatula.is_loaded ?? false),
+    loadedPowderMassG: Number(spatula.loadedPowderMassG ?? spatula.loaded_powder_mass_g ?? 0),
+    sourceToolId:
+      spatula.sourceToolId !== undefined
+        ? (spatula.sourceToolId as string | null)
+        : spatula.source_tool_id !== undefined
+          ? (spatula.source_tool_id as string | null)
+          : null,
   };
 }
 

@@ -13,6 +13,12 @@ class WorkbenchLiquidSchema(BaseModel):
     accent: str
 
 
+class SpatulaStateSchema(BaseModel):
+    is_loaded: bool = False
+    loaded_powder_mass_g: float = 0.0
+    source_tool_id: str | None = None
+
+
 class ProduceLotSchema(BaseModel):
     id: str
     label: str
@@ -84,6 +90,7 @@ class WorkbenchToolSchema(BaseModel):
     labels: list[ContainerLabelSchema] = Field(default_factory=list)
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
+    powder_mass_g: float = 0.0
 
     @model_validator(mode="before")
     @classmethod
@@ -224,6 +231,7 @@ class ExperimentSchema(BaseModel):
     lims_reception: LimsReceptionSchema = Field(default_factory=build_default_lims_reception_schema)
     lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
     basket_tool: WorkbenchToolSchema | None = None
+    spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
     audit_log: list[str]
 
 
@@ -275,6 +283,10 @@ class WorkbenchToolSampleLabelUpdateSchema(BaseModel):
 class WorkbenchToolSampleLabelMoveSchema(BaseModel):
     label_id: str | None = None
     target_tool_id: str
+
+
+class WorkbenchToolPowderPourSchema(BaseModel):
+    delta_mass_g: float
 
 
 class WorkbenchToolProduceLotCreateSchema(BaseModel):

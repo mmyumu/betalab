@@ -5,6 +5,7 @@ import type {
   BenchToolInstance,
   RackSlot,
   LimsReception,
+  SpatulaState,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
   TrashToolEntry,
@@ -41,6 +42,7 @@ export type Experiment = {
   limsReception: LimsReception;
   limsEntries: LimsReception[];
   basketTool: BenchToolInstance | null;
+  spatula: SpatulaState;
   audit_log: string[];
 };
 

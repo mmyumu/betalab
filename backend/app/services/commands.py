@@ -56,6 +56,17 @@ class OpenWorkbenchToolCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class LoadSpatulaFromWorkbenchToolCommand:
+    slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class PourSpatulaIntoWorkbenchToolCommand:
+    slot_id: str
+    delta_mass_g: float
+
+
+@dataclass(frozen=True, slots=True)
 class MoveSampleLabelBetweenWorkbenchToolsCommand:
     source_slot_id: str
     target_slot_id: str

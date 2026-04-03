@@ -29,6 +29,7 @@ from app.schemas.experiment import (
     WorkbenchToolLiquidCreateSchema,
     WorkbenchToolLiquidUpdateSchema,
     WorkbenchToolMoveSchema,
+    WorkbenchToolPowderPourSchema,
     WorkbenchToolPlacementSchema,
     WorkbenchToolProduceLotCreateSchema,
     WorkbenchToolSampleLabelMoveSchema,
@@ -497,6 +498,31 @@ def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
         lambda: experiment_service.open_workbench_tool(
             experiment_id,
             _find_tool_slot(experiment_id, tool_id),
+        )
+    )
+
+
+@router.post("/{experiment_id}/workbench/tools/{tool_id}/spatula/load", response_model=ExperimentSchema)
+def load_spatula_from_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.load_spatula_from_workbench_tool(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+        )
+    )
+
+
+@router.post("/{experiment_id}/workbench/tools/{tool_id}/spatula/pour", response_model=ExperimentSchema)
+def pour_spatula_into_workbench_tool(
+    experiment_id: str,
+    tool_id: str,
+    request: WorkbenchToolPowderPourSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.pour_spatula_into_workbench_tool(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+            request.delta_mass_g,
         )
     )
 

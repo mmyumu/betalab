@@ -47,6 +47,11 @@ const makeExperiment = (): Experiment => ({
   },
   limsEntries: [],
   basketTool: null,
+  spatula: {
+    isLoaded: false,
+    loadedPowderMassG: 0,
+    sourceToolId: null,
+  },
   audit_log: [],
 });
 

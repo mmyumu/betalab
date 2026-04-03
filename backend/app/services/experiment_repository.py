@@ -18,6 +18,7 @@ from app.domain.models import (
     ProduceLot,
     Rack,
     RackSlot,
+    SpatulaState,
     Trash,
     TrashProduceLotEntry,
     TrashSampleLabelEntry,
@@ -166,6 +167,7 @@ def _serialize_experiment(experiment: Experiment) -> dict:
             "lims_reception": asdict(experiment.lims_reception),
             "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
             "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+            "spatula": asdict(experiment.spatula),
             "audit_log": experiment.audit_log,
         }
     ).model_dump(mode="json")
@@ -269,6 +271,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         ),
         last_simulation_at=schema.last_simulation_at,
         basket_tool=_deserialize_workbench_tool(schema.basket_tool),
+        spatula=SpatulaState(**schema.spatula.model_dump()),
         lims_entries=_deserialize_lims_entries(schema),
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
@@ -332,6 +335,7 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         labels=[_deserialize_container_label(label) for label in tool_schema.labels],
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
+        powder_mass_g=tool_schema.powder_mass_g,
     )
 
 
