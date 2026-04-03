@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment, TrashProduceLotEntry, TrashToolEntry
-from app.domain.rules import can_tool_be_sealed
+from app.domain.rules import can_tool_accept_produce, can_tool_be_sealed, can_tool_receive_contents
 from app.services.command_handlers.support import (
     find_rack_slot,
     find_trash_tool,
@@ -186,10 +186,28 @@ def close_gross_balance_tool(experiment: Experiment, _command: CloseGrossBalance
 class GrossBalanceProduceLotTarget:
     def validate(self, experiment: Experiment) -> None:
         widget = _find_gross_balance_widget(experiment)
-        _validate_balance_empty(widget)
+        if widget.tool is not None:
+            if not can_tool_accept_produce(widget.tool.tool_type):
+                raise ValueError(f"{widget.tool.label} does not accept produce.")
+            if not can_tool_receive_contents(widget.tool.tool_type, widget.tool.is_sealed):
+                raise ValueError(f"Open {widget.tool.label} before adding produce.")
+            if widget.tool.produce_lots:
+                raise ValueError(f"{widget.tool.label} already contains a produce lot.")
+            return
+
+        if widget.produce_lots:
+            raise ValueError(f"{widget.label} already contains a produce lot.")
 
     def place(self, experiment: Experiment, produce_lot) -> ProduceLotPlacement:
         widget = _find_gross_balance_widget(experiment)
+        if widget.tool is not None:
+            widget.tool.produce_lots.append(produce_lot)
+            _update_balance_measured_mass(experiment)
+            return ProduceLotPlacement(
+                target_label=widget.tool.label,
+                location_label=f"{widget.tool.label} on {widget.label}",
+            )
+
         widget.produce_lots.append(produce_lot)
         _update_balance_measured_mass(experiment)
         return ProduceLotPlacement(target_label=widget.label, location_label=widget.label)
