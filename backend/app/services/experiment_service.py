@@ -153,6 +153,7 @@ from app.services.commands import (
     RestoreTrashedToolToRackSlotCommand,
     RestoreTrashedToolToWorkbenchSlotCommand,
     UpdateWorkbenchLiquidVolumeCommand,
+    WorkbenchSampleLabelCommand,
     UpdateWorkbenchToolSampleLabelTextCommand,
     UpdateWorkspaceWidgetLiquidVolumeCommand,
     WorkbenchLiquidCommand,
@@ -827,31 +828,50 @@ class ExperimentService:
             OpenWorkbenchToolCommand(slot_id=slot_id),
         )
 
-    def update_workbench_tool_sample_label_text(self, experiment_id: str, slot_id: str, sample_label_text: str) -> ExperimentSchema:
+    def update_workbench_tool_sample_label_text(
+        self,
+        experiment_id: str,
+        slot_id: str,
+        label_id: str,
+        sample_label_text: str,
+    ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             update_workbench_tool_sample_label_text,
             UpdateWorkbenchToolSampleLabelTextCommand(
                 slot_id=slot_id,
+                label_id=label_id,
                 sample_label_text=sample_label_text,
             ),
         )
 
-    def move_sample_label_between_workbench_tools(self, experiment_id: str, source_slot_id: str, target_slot_id: str) -> ExperimentSchema:
+    def move_sample_label_between_workbench_tools(
+        self,
+        experiment_id: str,
+        source_slot_id: str,
+        target_slot_id: str,
+        label_id: str,
+    ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             move_sample_label_between_workbench_tools,
             MoveSampleLabelBetweenWorkbenchToolsCommand(
                 source_slot_id=source_slot_id,
                 target_slot_id=target_slot_id,
+                label_id=label_id,
             ),
         )
 
-    def discard_sample_label_from_workbench_tool(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
+    def discard_sample_label_from_workbench_tool(
+        self,
+        experiment_id: str,
+        slot_id: str,
+        label_id: str,
+    ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             discard_sample_label_from_workbench_tool,
-            WorkbenchSlotCommand(slot_id=slot_id),
+            WorkbenchSampleLabelCommand(slot_id=slot_id, label_id=label_id),
         )
 
     def restore_trashed_sample_label_to_workbench_tool(self, experiment_id: str, trash_sample_label_id: str, target_slot_id: str) -> ExperimentSchema:

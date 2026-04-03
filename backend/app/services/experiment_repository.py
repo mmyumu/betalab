@@ -8,9 +8,12 @@ from pathlib import Path
 from typing import Protocol
 
 from app.domain.models import (
+    ContainerLabel,
     Experiment,
     ExperimentStatus,
+    LimsLabel,
     LimsReception,
+    ManualLabel,
     PrintedLabelTicket,
     ProduceLot,
     Rack,
@@ -217,7 +220,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                 TrashSampleLabelEntry(
                     id=entry.id,
                     origin_label=entry.origin_label,
-                    sample_label_text=entry.sample_label_text,
+                    label=_deserialize_container_label(entry.label),
                 )
                 for entry in schema.trash.sample_labels
             ],
@@ -326,10 +329,26 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         internal_pressure_bar=tool_schema.internal_pressure_bar,
         trapped_co2_mass_g=tool_schema.trapped_co2_mass_g,
         field_label_text=tool_schema.field_label_text,
-        sample_label_text=tool_schema.sample_label_text,
-        sample_label_received_date=tool_schema.sample_label_received_date,
+        labels=[_deserialize_container_label(label) for label in tool_schema.labels],
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
+    )
+
+
+def _deserialize_container_label(label_schema) -> ContainerLabel:
+    if label_schema.label_kind == "lims":
+        return LimsLabel(
+            id=label_schema.id,
+            text=label_schema.text,
+            label_kind="lims",
+            sample_code=label_schema.sample_code or "",
+            received_date=label_schema.received_date or "",
+        )
+
+    return ManualLabel(
+        id=label_schema.id,
+        text=label_schema.text,
+        label_kind="manual",
     )
 
 

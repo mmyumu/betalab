@@ -89,7 +89,11 @@ export function ProduceBasketWidget({
                     className="h-11 w-9 shrink-0"
                     kind="sample_bag"
                     produceLots={basketTool.produceLots}
-                    sampleLabelText={basketTool.sampleLabelText}
+                    sampleLabelText={
+                      basketTool.labels?.find((label) => label.labelKind === "lims")?.text ??
+                      basketTool.labels?.[0]?.text ??
+                      null
+                    }
                     tone="neutral"
                   />
                 }

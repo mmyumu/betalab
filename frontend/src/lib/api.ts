@@ -1,5 +1,6 @@
 import type { Experiment, ExperimentListEntry } from "@/types/experiment";
 import type {
+  BenchLabel,
   BenchLiquidPortion,
   BenchSlot,
   BenchToolInstance,
@@ -988,7 +989,7 @@ export async function updateWorkbenchToolSampleLabelText(experimentId: string, p
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "PATCH",
-    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-label`,
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-labels/${requireString(body, "label_id")}`,
     body: { sample_label_text: requireString(body, "sample_label_text") },
   });
 }
@@ -997,7 +998,7 @@ export async function moveSampleLabelBetweenWorkbenchTools(experimentId: string,
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
-    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "source_slot_id"))}/sample-label/move-to-tool`,
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "source_slot_id"))}/sample-labels/${requireString(body, "label_id")}/move-to-tool`,
     body: { target_tool_id: findWorkbenchToolId(experimentId, requireString(body, "target_slot_id")) },
   });
 }
@@ -1006,7 +1007,7 @@ export async function discardSampleLabelFromWorkbenchTool(experimentId: string, 
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "DELETE",
-    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-label`,
+    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/sample-labels/${requireString(body, "label_id")}`,
   });
 }
 
@@ -1113,18 +1114,35 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
         : tool.field_label_text !== undefined
           ? (tool.field_label_text as string | null)
           : null,
-    sampleLabelText:
-      tool.sampleLabelText !== undefined
-        ? (tool.sampleLabelText as string | null)
-        : tool.sample_label_text !== undefined
-          ? (tool.sample_label_text as string | null)
-          : null,
-    sampleLabelReceivedDate:
-      tool.sampleLabelReceivedDate !== undefined
-        ? (tool.sampleLabelReceivedDate as string | null)
-        : tool.sample_label_received_date !== undefined
-          ? (tool.sample_label_received_date as string | null)
-          : null,
+    labels:
+      tool.labels !== undefined
+        ? (tool.labels as Array<BenchLabel & Record<string, unknown>>).map((label) =>
+            normalizeBenchLabel(label),
+          )
+        : tool.sampleLabelText !== undefined || tool.sample_label_text !== undefined
+          ? [
+              {
+                id: `${String(tool.id)}-legacy-label`,
+                labelKind:
+                  tool.sampleLabelReceivedDate !== undefined ||
+                  tool.sample_label_received_date !== undefined
+                    ? "lims"
+                    : "manual",
+                text: String(tool.sampleLabelText ?? tool.sample_label_text ?? ""),
+                receivedDate:
+                  tool.sampleLabelReceivedDate !== undefined
+                    ? (tool.sampleLabelReceivedDate as string | null)
+                    : tool.sample_label_received_date !== undefined
+                      ? (tool.sample_label_received_date as string | null)
+                      : null,
+                sampleCode:
+                  tool.sampleLabelReceivedDate !== undefined ||
+                  tool.sample_label_received_date !== undefined
+                    ? String(tool.sampleLabelText ?? tool.sample_label_text ?? "")
+                    : null,
+              },
+            ]
+          : [],
     produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
@@ -1132,6 +1150,26 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
       (tool.liquids as BenchLiquidPortion[] | undefined)?.map((liquid) =>
         normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
       ) ?? [],
+  };
+}
+
+function normalizeBenchLabel(label: BenchLabel & Record<string, unknown>): BenchLabel {
+  return {
+    id: String(label.id),
+    labelKind: String(label.labelKind ?? label.label_kind ?? "manual") as BenchLabel["labelKind"],
+    text: String(label.text ?? ""),
+    receivedDate:
+      label.receivedDate !== undefined
+        ? (label.receivedDate as string | null)
+        : label.received_date !== undefined
+          ? (label.received_date as string | null)
+          : null,
+    sampleCode:
+      label.sampleCode !== undefined
+        ? (label.sampleCode as string | null)
+        : label.sample_code !== undefined
+          ? (label.sample_code as string | null)
+          : null,
   };
 }
 
@@ -1229,7 +1267,16 @@ function normalizeTrashSampleLabel(entry: TrashSampleLabelEntry & Record<string,
   return {
     id: String(entry.id),
     originLabel: String(entry.originLabel ?? entry.origin_label),
-    sampleLabelText: String(entry.sampleLabelText ?? entry.sample_label_text ?? ""),
+    label:
+      entry.label !== undefined
+        ? normalizeBenchLabel((entry.label ?? {}) as BenchLabel & Record<string, unknown>)
+        : {
+            id: `${String(entry.id)}-legacy-label`,
+            labelKind: "manual",
+            text: String(entry.sampleLabelText ?? entry.sample_label_text ?? ""),
+            receivedDate: null,
+            sampleCode: null,
+          },
   };
 }
 

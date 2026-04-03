@@ -11,7 +11,7 @@ import {
   getContainerLiquidVisualState,
   getLiquidAccentPalette,
 } from "@/lib/liquid-visuals";
-import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
+import type { BenchLabel, BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type BenchToolCardProps = {
   className?: string;
@@ -26,10 +26,10 @@ type BenchToolCardProps = {
   onProduceLotDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotDragStart?: (produceLot: ExperimentProduceLot, event: DragEvent<HTMLElement>) => void;
   onRemoveLiquid: (liquidId: string) => void;
-  onSampleLabelTextChange?: (sampleLabelText: string) => void;
+  onSampleLabelTextChange?: (labelId: string, sampleLabelText: string) => void;
   onToggleSeal?: () => void;
   onSampleLabelDragEnd?: (event: DragEvent<HTMLElement>) => void;
-  onSampleLabelDragStart?: (event: DragEvent<HTMLElement>) => void;
+  onSampleLabelDragStart?: (label: BenchLabel, event: DragEvent<HTMLElement>) => void;
   tool: BenchToolInstance;
 };
 
@@ -51,6 +51,10 @@ function formatLotMetadata(unitCount: number | null, totalMassG: number) {
   const massLabel = formatMass(totalMassG);
 
   return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+}
+
+function getPrimaryToolLabelText(labels: BenchLabel[]) {
+  return labels.find((label) => label.labelKind === "lims")?.text ?? labels[0]?.text ?? null;
 }
 
 export function BenchToolCard({
@@ -90,8 +94,26 @@ export function BenchToolCard({
   const isSealable = canToolBeSealed(tool.toolType);
   const isSealed = tool.isSealed ?? false;
   const canDragContainedProduce = !isSealed;
-  const hasSampleLabel = isSampleBag && tool.sampleLabelText !== null && tool.sampleLabelText !== undefined;
+  const legacySampleLabelText = (tool as BenchToolInstance & { sampleLabelText?: string | null }).sampleLabelText;
+  const legacySampleLabelReceivedDate = (
+    tool as BenchToolInstance & { sampleLabelReceivedDate?: string | null }
+  ).sampleLabelReceivedDate;
+  const labels =
+    tool.labels ??
+    (legacySampleLabelText !== null && legacySampleLabelText !== undefined
+      ? [
+          {
+            id: `${tool.id}-legacy-label`,
+            labelKind: legacySampleLabelReceivedDate ? "lims" : "manual",
+            text: legacySampleLabelText,
+            receivedDate: legacySampleLabelReceivedDate ?? null,
+            sampleCode: legacySampleLabelReceivedDate ? legacySampleLabelText : null,
+          } satisfies BenchLabel,
+        ]
+      : []);
+  const hasLabels = labels.length > 0;
   const hasFieldLabel = isSampleBag && tool.fieldLabelText !== null && tool.fieldLabelText !== undefined;
+  const displayLabelText = isSampleBag ? getPrimaryToolLabelText(labels) : null;
   const sealStateLabel =
     tool.closureFault === "pressure_pop" ? "Popped" : isSealed ? "Sealed" : "Open";
   const sealStateToneClass =
@@ -155,7 +177,7 @@ export function BenchToolCard({
               isSealed={tool.isSealed}
               kind={tool.toolType}
               produceLots={produceLots}
-              sampleLabelText={tool.sampleLabelText}
+              sampleLabelText={displayLabelText}
               tone="neutral"
             />
             <div className="min-w-0">
@@ -202,46 +224,6 @@ export function BenchToolCard({
                 </div>
               </div>
             </div>
-            {hasSampleLabel ? (
-              <div
-                className={`rounded-[0.95rem] border border-sky-200 bg-sky-50/70 px-2.5 py-2 ${
-                  onSampleLabelDragStart ? dragAffordanceClassName : ""
-                }`}
-                data-testid={`sample-label-card-${tool.id}`}
-                draggable={Boolean(onSampleLabelDragStart)}
-                onDragEnd={onSampleLabelDragEnd}
-                onDragStart={onSampleLabelDragStart}
-              >
-                {hasFieldLabel ? (
-                  <SampleIdentityLabel
-                    receivedDate={tool.sampleLabelReceivedDate}
-                    sampleCode={tool.sampleLabelText ?? ""}
-                  />
-                ) : (
-                  <input
-                    aria-label="Sample label text"
-                    className="mt-1 w-full rounded-lg border border-sky-200 bg-white px-2 py-1 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400"
-                    data-testid={`sample-label-input-${tool.id}`}
-                    defaultValue={tool.sampleLabelText ?? ""}
-                    draggable={false}
-                    onBlur={(event) => {
-                      onSampleLabelTextChange?.(event.currentTarget.value);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.currentTarget.blur();
-                      }
-                    }}
-                    placeholder="Enter lot number"
-                    type="text"
-                  />
-                )}
-              </div>
-            ) : (
-              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
-                {hasFieldLabel ? "Drop LIMS ticket here" : "Drop sample label here"}
-              </span>
-            )}
           </div>
         ) : isProduceSurface ? (
           produceLots.length === 0 ? (
@@ -277,6 +259,61 @@ export function BenchToolCard({
             </div>
           </div>
         )}
+
+        {hasLabels ? (
+          <div className="space-y-2">
+            {labels.map((label) => (
+              <div
+                className={`rounded-[0.95rem] border px-2.5 py-2 ${
+                  label.labelKind === "lims"
+                    ? "border-sky-200 bg-sky-50/70"
+                    : "border-slate-200 bg-slate-50/90"
+                } ${onSampleLabelDragStart ? dragAffordanceClassName : ""}`.trim()}
+                data-testid={
+                  labels.length === 1
+                    ? `sample-label-card-${tool.id}`
+                    : `sample-label-card-${tool.id}-${label.id}`
+                }
+                draggable={Boolean(onSampleLabelDragStart)}
+                key={label.id}
+                onDragEnd={onSampleLabelDragEnd}
+                onDragStart={(event) => {
+                  onSampleLabelDragStart?.(label, event);
+                }}
+              >
+                {label.labelKind === "lims" ? (
+                  <SampleIdentityLabel
+                    receivedDate={label.receivedDate ?? null}
+                    sampleCode={label.sampleCode ?? label.text}
+                  />
+                ) : (
+                  <input
+                    aria-label="Sample label text"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400"
+                    data-testid={
+                      labels.length === 1
+                        ? `sample-label-input-${tool.id}`
+                        : `sample-label-input-${tool.id}-${label.id}`
+                    }
+                    defaultValue={label.text}
+                    draggable={false}
+                    onBlur={(event) => {
+                      onSampleLabelTextChange?.(label.id, event.currentTarget.value);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="Write a note"
+                    readOnly={label.labelKind !== "manual"}
+                    type="text"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div className="space-y-0.5">
           {pendingContent ? (

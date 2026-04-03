@@ -1,4 +1,5 @@
 import type {
+  BenchLabel,
   BasketToolDragPayload,
   BenchToolDragPayload,
   DragDescriptor,
@@ -721,6 +722,7 @@ export function readSampleLabelDragPayload(
         sampleLabelText: parsed.sampleLabelText,
         sourceId: parsed.sourceId,
         sourceKind: parsed.sourceKind,
+        ...(parsed.label ? { label: parsed.label as BenchLabel } : {}),
         ...(parsed.sourceKind === "workbench" ? { sourceSlotId: parsed.sourceSlotId } : {}),
         ...(parsed.sourceKind === "trash"
           ? { trashSampleLabelId: parsed.trashSampleLabelId }
@@ -820,11 +822,12 @@ export function toDragDescriptor(
   }
 
   if ("sampleLabelId" in payload) {
-    return {
-      allowedDropTargets: payload.allowedDropTargets,
-      entityKind: "sample_label",
-      sampleLabelId: payload.sampleLabelId,
-      sampleLabelText: payload.sampleLabelText,
+      return {
+        allowedDropTargets: payload.allowedDropTargets,
+        entityKind: "sample_label",
+        label: payload.label,
+        sampleLabelId: payload.sampleLabelId,
+        sampleLabelText: payload.sampleLabelText,
       sourceId: payload.sourceId,
       sourceKind: payload.sourceKind,
       ...(payload.sourceSlotId ? { sourceSlotId: payload.sourceSlotId } : {}),

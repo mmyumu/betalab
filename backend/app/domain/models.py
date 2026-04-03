@@ -19,6 +19,24 @@ class PrintedLabelTicket:
 
 
 @dataclass
+class ContainerLabel:
+    id: str
+    text: str
+    label_kind: str
+
+
+@dataclass
+class ManualLabel(ContainerLabel):
+    pass
+
+
+@dataclass
+class LimsLabel(ContainerLabel):
+    sample_code: str = ""
+    received_date: str = ""
+
+
+@dataclass
 class LimsReception:
     orchard_name: str
     harvest_date: str
@@ -54,8 +72,7 @@ class WorkbenchTool:
     internal_pressure_bar: float = 1.0
     trapped_co2_mass_g: float = 0.0
     field_label_text: str | None = None
-    sample_label_text: str | None = None
-    sample_label_received_date: str | None = None
+    labels: list[ContainerLabel] = field(default_factory=list)
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
@@ -103,7 +120,7 @@ class TrashProduceLotEntry:
 class TrashSampleLabelEntry:
     id: str
     origin_label: str
-    sample_label_text: str
+    label: ContainerLabel
 
 
 @dataclass

@@ -23,6 +23,7 @@ from app.services.command_handlers.support import (
     find_workbench_slot,
 )
 from app.services.command_handlers.workbench import build_workbench_tool
+from app.services.command_handlers.support import build_manual_label
 
 produce_lot_transfer_service = ProduceLotTransferService()
 
@@ -80,10 +81,10 @@ def discard_sample_label_from_palette(
         TrashSampleLabelEntry(
             id=new_id("trash_sample_label"),
             origin_label="Palette",
-            sample_label_text="",
+            label=build_manual_label(text=""),
         )
     )
-    experiment.audit_log.append("Sample label discarded from Palette.")
+    experiment.audit_log.append("Manual label discarded from Palette.")
 
 
 def restore_trashed_tool_to_workbench_slot(

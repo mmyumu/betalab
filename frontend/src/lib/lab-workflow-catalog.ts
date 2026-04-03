@@ -192,9 +192,9 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         id: "sampling_bag_label",
         allowedDropTargets: getSampleLabelDropTargets(),
         itemType: "sample_label",
-        name: "Sampling label",
-        subtitle: "Traceability",
-        description: "Adhesive lot label for sampling bags before accessioning.",
+        name: "Label",
+        subtitle: "Free note",
+        description: "Manual adhesive label with editable free text.",
         accent: "sky",
       },
       {

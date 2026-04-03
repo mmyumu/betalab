@@ -501,8 +501,25 @@ def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     )
 
 
-@router.patch("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
+@router.patch("/{experiment_id}/workbench/tools/{tool_id}/sample-labels/{label_id}", response_model=ExperimentSchema)
 def update_workbench_tool_sample_label_text(
+    experiment_id: str,
+    tool_id: str,
+    label_id: str,
+    request: WorkbenchToolSampleLabelUpdateSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.update_workbench_tool_sample_label_text(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+            label_id,
+            request.sample_label_text,
+        )
+    )
+
+
+@router.patch("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
+def update_workbench_tool_primary_sample_label_text(
     experiment_id: str,
     tool_id: str,
     request: WorkbenchToolSampleLabelUpdateSchema,
@@ -511,7 +528,28 @@ def update_workbench_tool_sample_label_text(
         lambda: experiment_service.update_workbench_tool_sample_label_text(
             experiment_id,
             _find_tool_slot(experiment_id, tool_id),
+            _find_default_tool_label_id(experiment_id, tool_id),
             request.sample_label_text,
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/workbench/tools/{tool_id}/sample-labels/{label_id}/move-to-tool",
+    response_model=ExperimentSchema,
+)
+def move_sample_label_between_workbench_tools(
+    experiment_id: str,
+    tool_id: str,
+    label_id: str,
+    request: WorkbenchToolSampleLabelMoveSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.move_sample_label_between_workbench_tools(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+            _find_tool_slot(experiment_id, request.target_tool_id),
+            label_id,
         )
     )
 
@@ -520,7 +558,7 @@ def update_workbench_tool_sample_label_text(
     "/{experiment_id}/workbench/tools/{tool_id}/sample-label/move-to-tool",
     response_model=ExperimentSchema,
 )
-def move_sample_label_between_workbench_tools(
+def move_primary_sample_label_between_workbench_tools(
     experiment_id: str,
     tool_id: str,
     request: WorkbenchToolSampleLabelMoveSchema,
@@ -530,16 +568,36 @@ def move_sample_label_between_workbench_tools(
             experiment_id,
             _find_tool_slot(experiment_id, tool_id),
             _find_tool_slot(experiment_id, request.target_tool_id),
+            _find_default_tool_label_id(experiment_id, tool_id),
+        )
+    )
+
+
+@router.delete("/{experiment_id}/workbench/tools/{tool_id}/sample-labels/{label_id}", response_model=ExperimentSchema)
+def discard_sample_label_from_workbench_tool(
+    experiment_id: str,
+    tool_id: str,
+    label_id: str,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.discard_sample_label_from_workbench_tool(
+            experiment_id,
+            _find_tool_slot(experiment_id, tool_id),
+            label_id,
         )
     )
 
 
 @router.delete("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
-def discard_sample_label_from_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
+def discard_primary_sample_label_from_workbench_tool(
+    experiment_id: str,
+    tool_id: str,
+) -> ExperimentSchema:
     return _handle_service_errors(
         lambda: experiment_service.discard_sample_label_from_workbench_tool(
             experiment_id,
             _find_tool_slot(experiment_id, tool_id),
+            _find_default_tool_label_id(experiment_id, tool_id),
         )
     )
 
@@ -1029,6 +1087,20 @@ def _find_tool_slot(experiment_id: str, tool_id: str) -> str:
         if slot.tool is not None and slot.tool.id == tool_id:
             return slot.id
     raise HTTPException(status_code=400, detail="Unknown workbench tool")
+
+
+def _find_default_tool_label_id(experiment_id: str, tool_id: str) -> str:
+    experiment = _get_experiment_or_404(experiment_id)
+    for slot in experiment.workbench.slots:
+        if slot.tool is None or slot.tool.id != tool_id:
+            continue
+        manual_label = next((label for label in slot.tool.labels if label.label_kind == "manual"), None)
+        if manual_label is not None:
+            return manual_label.id
+        if slot.tool.labels:
+            return slot.tool.labels[0].id
+        break
+    raise HTTPException(status_code=400, detail="Unknown workbench tool label")
 
 
 def _find_rack_tool_slot(experiment_id: str, tool_id: str) -> str:

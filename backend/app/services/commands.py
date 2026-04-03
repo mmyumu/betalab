@@ -41,6 +41,7 @@ class ApplySampleLabelToWorkbenchToolCommand:
 @dataclass(frozen=True, slots=True)
 class UpdateWorkbenchToolSampleLabelTextCommand:
     slot_id: str
+    label_id: str
     sample_label_text: str
 
 
@@ -58,12 +59,19 @@ class OpenWorkbenchToolCommand:
 class MoveSampleLabelBetweenWorkbenchToolsCommand:
     source_slot_id: str
     target_slot_id: str
+    label_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class RestoreTrashedSampleLabelToWorkbenchToolCommand:
     trash_sample_label_id: str
     target_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class WorkbenchSampleLabelCommand:
+    slot_id: str
+    label_id: str
 
 
 @dataclass(frozen=True, slots=True)

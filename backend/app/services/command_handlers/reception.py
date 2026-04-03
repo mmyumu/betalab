@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.domain.models import Experiment, LimsReception, PrintedLabelTicket, TrashSampleLabelEntry, new_id
-from app.services.command_handlers.support import find_workbench_slot
+from app.services.command_handlers.support import build_lims_label, find_workbench_slot
 from app.services.commands import (
     ApplyPrintedLimsLabelToGrossBalanceBagCommand,
     ApplyPrintedLimsLabelToBasketBagCommand,
@@ -141,7 +141,11 @@ def discard_printed_lims_label(
         TrashSampleLabelEntry(
             id=new_id("trash_sample_label"),
             origin_label="LIMS terminal",
-            sample_label_text=ticket.label_text,
+            label=build_lims_label(
+                sample_code=ticket.sample_code,
+                text=ticket.label_text,
+                received_date=ticket.received_date,
+            ),
         )
     )
     experiment.audit_log.append(f"LIMS label {ticket.sample_code} discarded from terminal.")
@@ -152,15 +156,20 @@ def apply_printed_lims_label(
     command: ApplyPrintedLimsLabelCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None or slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{slot.label} does not contain the received sampling bag.")
+    if slot.tool is None:
+        raise ValueError(f"{slot.label} does not contain a tool.")
 
     ticket = experiment.lims_reception.printed_label_ticket
     if ticket is None:
         raise ValueError("Print the LIMS label before applying it to the bag.")
 
-    slot.tool.sample_label_text = ticket.label_text
-    slot.tool.sample_label_received_date = ticket.received_date
+    slot.tool.labels.append(
+        build_lims_label(
+            sample_code=ticket.sample_code,
+            text=ticket.label_text,
+            received_date=ticket.received_date,
+        )
+    )
     _consume_printed_lims_ticket(experiment, ticket)
     experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {slot.tool.label}.")
 
@@ -177,8 +186,13 @@ def apply_printed_lims_label_to_basket_bag(
     if ticket is None:
         raise ValueError("Print the LIMS label before applying it to the bag.")
 
-    basket_tool.sample_label_text = ticket.label_text
-    basket_tool.sample_label_received_date = ticket.received_date
+    basket_tool.labels.append(
+        build_lims_label(
+            sample_code=ticket.sample_code,
+            text=ticket.label_text,
+            received_date=ticket.received_date,
+        )
+    )
     _consume_printed_lims_ticket(experiment, ticket)
     experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {basket_tool.label}.")
 
@@ -196,8 +210,13 @@ def apply_printed_lims_label_to_gross_balance_bag(
     if ticket is None:
         raise ValueError("Print the LIMS label before applying it to the bag.")
 
-    balance_tool.sample_label_text = ticket.label_text
-    balance_tool.sample_label_received_date = ticket.received_date
+    balance_tool.labels.append(
+        build_lims_label(
+            sample_code=ticket.sample_code,
+            text=ticket.label_text,
+            received_date=ticket.received_date,
+        )
+    )
     _consume_printed_lims_ticket(experiment, ticket)
     experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {balance_tool.label}.")
 

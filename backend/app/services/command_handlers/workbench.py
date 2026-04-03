@@ -25,6 +25,7 @@ from app.services.commands import (
     UpdateWorkbenchLiquidVolumeCommand,
     UpdateWorkbenchToolSampleLabelTextCommand,
     WorkbenchLiquidCommand,
+    WorkbenchSampleLabelCommand,
     WorkbenchProduceLotCommand,
     WorkbenchSlotCommand,
 )
@@ -36,6 +37,8 @@ from app.services.produce_lot_transfer import (
     WorkspaceProduceLotSource,
 )
 from app.services.command_handlers.support import (
+    build_manual_label,
+    find_tool_label,
     find_trash_sample_label,
     find_workbench_slot,
     format_volume,
@@ -186,13 +189,8 @@ def apply_sample_label_to_workbench_tool(
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before adding a sample label.")
-    if slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{slot.tool.label} does not accept a sample label.")
-    if slot.tool.sample_label_text is not None:
-        raise ValueError(f"{slot.tool.label} already has a sample label.")
-
-    slot.tool.sample_label_text = ""
-    experiment.audit_log.append(f"Sample label applied to {slot.tool.label} on {slot.label}.")
+    slot.tool.labels.append(build_manual_label())
+    experiment.audit_log.append(f"Manual label applied to {slot.tool.label} on {slot.label}.")
 
 
 def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolCommand) -> None:
@@ -234,20 +232,19 @@ def update_workbench_tool_sample_label_text(
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before editing its sample label.")
-    if slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{slot.tool.label} does not accept a sample label.")
-    if slot.tool.sample_label_text is None:
-        raise ValueError(f"{slot.tool.label} does not have a sample label yet.")
+    label = find_tool_label(slot.tool, command.label_id)
+    if label.label_kind != "manual":
+        raise ValueError("Only manual labels can be edited.")
 
     next_text = command.sample_label_text.strip()
-    slot.tool.sample_label_text = next_text
+    label.text = next_text
     if next_text:
         experiment.audit_log.append(
-            f"Sample label updated to {next_text} on {slot.tool.label}."
+            f"Manual label updated to {next_text} on {slot.tool.label}."
         )
         return
 
-    experiment.audit_log.append(f"Sample label cleared on {slot.tool.label}.")
+    experiment.audit_log.append(f"Manual label cleared on {slot.tool.label}.")
 
 
 def move_sample_label_between_workbench_tools(
@@ -261,47 +258,34 @@ def move_sample_label_between_workbench_tools(
         return
     if source_slot.tool is None:
         raise ValueError(f"Place a tool on {source_slot.label} before moving its sample label.")
-    if source_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{source_slot.tool.label} does not contain a sample label.")
-    if source_slot.tool.sample_label_text is None:
-        raise ValueError(f"{source_slot.tool.label} does not have a sample label yet.")
     if target_slot.tool is None:
         raise ValueError(f"Place a tool on {target_slot.label} before adding a sample label.")
-    if target_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{target_slot.tool.label} does not accept a sample label.")
-    if target_slot.tool.sample_label_text is not None:
-        raise ValueError(f"{target_slot.tool.label} already has a sample label.")
+    label = find_tool_label(source_slot.tool, command.label_id)
 
-    sample_label_text = source_slot.tool.sample_label_text
-    source_slot.tool.sample_label_text = None
-    target_slot.tool.sample_label_text = sample_label_text
+    source_slot.tool.labels = [entry for entry in source_slot.tool.labels if entry.id != label.id]
+    target_slot.tool.labels.append(label)
     experiment.audit_log.append(
-        f"Sample label moved from {source_slot.tool.label} on {source_slot.label} to {target_slot.tool.label} on {target_slot.label}."
+        f"Label moved from {source_slot.tool.label} on {source_slot.label} to {target_slot.tool.label} on {target_slot.label}."
     )
 
 
 def discard_sample_label_from_workbench_tool(
     experiment: Experiment,
-    command: WorkbenchSlotCommand,
+    command: WorkbenchSampleLabelCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
     if slot.tool is None:
         raise ValueError(f"Place a tool on {slot.label} before removing its sample label.")
-    if slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{slot.tool.label} does not accept a sample label.")
-    if slot.tool.sample_label_text is None:
-        raise ValueError(f"{slot.tool.label} does not have a sample label yet.")
-
-    sample_label_text = slot.tool.sample_label_text
-    slot.tool.sample_label_text = None
+    label = find_tool_label(slot.tool, command.label_id)
+    slot.tool.labels = [entry for entry in slot.tool.labels if entry.id != label.id]
     experiment.trash.sample_labels.append(
         TrashSampleLabelEntry(
             id=new_id("trash_sample_label"),
             origin_label=slot.tool.label,
-            sample_label_text=sample_label_text,
+            label=label,
         )
     )
-    experiment.audit_log.append(f"Sample label discarded from {slot.tool.label}.")
+    experiment.audit_log.append(f"Label discarded from {slot.tool.label}.")
 
 
 def restore_trashed_sample_label_to_workbench_tool(
@@ -315,19 +299,14 @@ def restore_trashed_sample_label_to_workbench_tool(
 
     if target_slot.tool is None:
         raise ValueError(f"Place a tool on {target_slot.label} before adding a sample label.")
-    if target_slot.tool.tool_type != "sample_bag":
-        raise ValueError(f"{target_slot.tool.label} does not accept a sample label.")
-    if target_slot.tool.sample_label_text is not None:
-        raise ValueError(f"{target_slot.tool.label} already has a sample label.")
-
-    target_slot.tool.sample_label_text = trashed_sample_label.sample_label_text
+    target_slot.tool.labels.append(trashed_sample_label.label)
     experiment.trash.sample_labels = [
         entry
         for entry in experiment.trash.sample_labels
         if entry.id != trashed_sample_label.id
     ]
     experiment.audit_log.append(
-        f"Sample label restored from trash to {target_slot.tool.label} on {target_slot.label}."
+        f"Label restored from trash to {target_slot.tool.label} on {target_slot.label}."
     )
 
 
@@ -492,6 +471,6 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         capacity_ml=tool_definition.capacity_ml,
         is_sealed=False,
         closure_fault=None,
-        sample_label_text=None,
+        labels=[],
         produce_lots=[],
     )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 class WorkbenchLiquidSchema(BaseModel):
     id: str
@@ -32,6 +32,14 @@ class PrintedLabelTicketSchema(BaseModel):
     sample_code: str
     label_text: str
     received_date: str = ""
+
+
+class ContainerLabelSchema(BaseModel):
+    id: str
+    label_kind: str
+    text: str
+    sample_code: str | None = None
+    received_date: str | None = None
 
 
 class LimsReceptionSchema(BaseModel):
@@ -73,10 +81,47 @@ class WorkbenchToolSchema(BaseModel):
     internal_pressure_bar: float = 1.0
     trapped_co2_mass_g: float = 0.0
     field_label_text: str | None = None
-    sample_label_text: str | None = None
-    sample_label_received_date: str | None = None
-    produce_lots: list[ProduceLotSchema]
-    liquids: list[WorkbenchLiquidSchema]
+    labels: list[ContainerLabelSchema] = Field(default_factory=list)
+    produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
+    liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_sample_label_fields(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        if "labels" in value:
+            return value
+
+        sample_label_text = value.get("sample_label_text")
+        sample_label_received_date = value.get("sample_label_received_date")
+        if sample_label_text is None:
+            value["labels"] = []
+            return value
+
+        value["labels"] = [
+            {
+                "id": f"{value.get('id', 'tool')}-legacy-label",
+                "label_kind": "lims" if sample_label_received_date else "manual",
+                "text": sample_label_text,
+                "sample_code": sample_label_text if sample_label_received_date else None,
+                "received_date": sample_label_received_date,
+            }
+        ]
+        return value
+
+    @computed_field
+    def sample_label_text(self) -> str | None:
+        lims_label = next((label for label in self.labels if label.label_kind == "lims"), None)
+        if lims_label is not None:
+            return lims_label.text
+        manual_label = next((label for label in self.labels if label.label_kind == "manual"), None)
+        return manual_label.text if manual_label is not None else None
+
+    @computed_field
+    def sample_label_received_date(self) -> str | None:
+        lims_label = next((label for label in self.labels if label.label_kind == "lims"), None)
+        return lims_label.received_date if lims_label is not None else None
 
 
 class WorkbenchSlotSchema(BaseModel):
@@ -115,7 +160,28 @@ class TrashProduceLotEntrySchema(BaseModel):
 class TrashSampleLabelEntrySchema(BaseModel):
     id: str
     origin_label: str
-    sample_label_text: str
+    label: ContainerLabelSchema
+
+    @model_validator(mode="before")
+    @classmethod
+    def _upgrade_legacy_sample_label_text(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        if "label" in value:
+            return value
+
+        value["label"] = {
+            "id": f"{value.get('id', 'trash-sample-label')}-legacy-label",
+            "label_kind": "manual",
+            "text": value.get("sample_label_text", ""),
+            "sample_code": None,
+            "received_date": None,
+        }
+        return value
+
+    @computed_field
+    def sample_label_text(self) -> str:
+        return self.label.text
 
 
 class TrashSchema(BaseModel):
@@ -202,10 +268,12 @@ class WorkbenchToolLiquidUpdateSchema(BaseModel):
 
 
 class WorkbenchToolSampleLabelUpdateSchema(BaseModel):
+    label_id: str | None = None
     sample_label_text: str
 
 
 class WorkbenchToolSampleLabelMoveSchema(BaseModel):
+    label_id: str | None = None
     target_tool_id: str
 
 

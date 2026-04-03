@@ -190,7 +190,7 @@ export function TrashWidget({
             }
             title={
               <p className="truncate text-sm font-semibold text-slate-900">
-                {trashSampleLabel.sampleLabelText || "Untitled sample label"}
+                {trashSampleLabel.label?.text || "Untitled label"}
               </p>
             }
           />

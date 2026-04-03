@@ -98,6 +98,14 @@ export type SampleLabelCatalogItem = ToolbarBaseItem & {
   itemType: "sample_label";
 };
 
+export type BenchLabel = {
+  id: string;
+  labelKind: "manual" | "lims";
+  text: string;
+  receivedDate?: string | null;
+  sampleCode?: string | null;
+};
+
 export type ToolbarItem =
   | ToolCatalogItem
   | LiquidCatalogItem
@@ -153,6 +161,7 @@ export type ToolbarDragPayload =
 
 export type SampleLabelDragPayload = BaseDragPayload & {
   entityKind: "sample_label";
+  label: BenchLabel;
   sampleLabelId: string;
   sampleLabelText: string;
   sourceId: string;
@@ -261,6 +270,7 @@ export type DragDescriptor =
     })
   | (BaseDragPayload & {
       entityKind: "sample_label";
+      label?: BenchLabel;
       sampleLabelId: string;
       sampleLabelText?: string;
       sourceSlotId?: string;
@@ -300,8 +310,7 @@ export type BenchToolInstance = {
   isSealed?: boolean;
   closureFault?: string | null;
   fieldLabelText?: string | null;
-  sampleLabelText?: string | null;
-  sampleLabelReceivedDate?: string | null;
+  labels?: BenchLabel[];
   produceLots?: ExperimentProduceLot[];
   liquids: BenchLiquidPortion[];
 };
@@ -353,7 +362,7 @@ export type TrashProduceLotEntry = {
 export type TrashSampleLabelEntry = {
   id: string;
   originLabel: string;
-  sampleLabelText: string;
+  label: BenchLabel;
 };
 
 export type ExperimentWorkspaceWidget = {

@@ -21,6 +21,7 @@ import {
   readToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type {
+  BenchLabel,
   BasketToolDragPayload,
   BenchSlot,
   BenchToolDragPayload,
@@ -89,10 +90,10 @@ type WorkbenchPanelProps = {
   onSampleLabelDragEnd?: () => void;
   onSampleLabelDragStart?: (
     slotId: string,
-    tool: BenchToolInstance,
+    label: BenchLabel,
     dataTransfer: DataTransfer,
   ) => void;
-  onSampleLabelTextChange?: (slotId: string, sampleLabelText: string) => void;
+  onSampleLabelTextChange?: (slotId: string, labelId: string, sampleLabelText: string) => void;
   onToggleToolSeal?: (slotId: string, tool: BenchToolInstance) => void;
   renderPendingContent?: (slot: BenchSlot, tool: BenchToolInstance | null) => ReactNode;
   slots: BenchSlot[];
@@ -177,7 +178,7 @@ export function WorkbenchPanel({
       if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
         return false;
       }
-      return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
+      return slot.tool !== null;
     }
 
     if (descriptor.entityKind === "lims_label_ticket") {
@@ -411,8 +412,8 @@ export function WorkbenchPanel({
                       onRemoveLiquid={(liquidId) => {
                         onRemoveLiquid(slot.id, liquidId);
                       }}
-                      onSampleLabelTextChange={(sampleLabelText) => {
-                        onSampleLabelTextChange?.(slot.id, sampleLabelText);
+                      onSampleLabelTextChange={(labelId, sampleLabelText) => {
+                        onSampleLabelTextChange?.(slot.id, labelId, sampleLabelText);
                       }}
                       onToggleSeal={() => {
                         onToggleToolSeal?.(slot.id, tool);
@@ -421,8 +422,8 @@ export function WorkbenchPanel({
                       onSampleLabelDragStart={
                         dndDisabled
                           ? undefined
-                          : (event) => {
-                              onSampleLabelDragStart?.(slot.id, tool, event.dataTransfer);
+                          : (label, event) => {
+                              onSampleLabelDragStart?.(slot.id, label, event.dataTransfer);
                             }
                       }
                       pendingContent={pendingContent}

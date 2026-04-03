@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from app.domain.models import (
+    ContainerLabel,
+    LimsLabel,
+    ManualLabel,
     ProduceLot,
     Rack,
     RackSlot,
@@ -13,6 +16,8 @@ from app.domain.models import (
     Workbench,
     WorkbenchLiquid,
     WorkbenchSlot,
+    WorkbenchTool,
+    new_id,
 )
 
 
@@ -53,6 +58,33 @@ def find_trash_sample_label(
     if sample_label is None:
         raise ValueError("Unknown trash sample label")
     return sample_label
+
+
+def find_tool_label(tool: WorkbenchTool, label_id: str) -> ContainerLabel:
+    label = next((entry for entry in tool.labels if entry.id == label_id), None)
+    if label is None:
+        raise ValueError("Unknown tool label")
+    return label
+
+
+def build_manual_label(*, label_id: str | None = None, text: str = "") -> ManualLabel:
+    return ManualLabel(id=label_id or new_id("label_manual"), text=text, label_kind="manual")
+
+
+def build_lims_label(
+    *,
+    label_id: str | None = None,
+    sample_code: str,
+    text: str,
+    received_date: str,
+) -> LimsLabel:
+    return LimsLabel(
+        id=label_id or new_id("label_lims"),
+        text=text,
+        label_kind="lims",
+        sample_code=sample_code,
+        received_date=received_date,
+    )
 
 
 def find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidget:

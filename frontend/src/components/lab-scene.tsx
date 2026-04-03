@@ -70,6 +70,7 @@ import {
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
 import type {
+  BenchLabel,
   BasketToolDragPayload,
   BenchSlot,
   BenchToolDragPayload,
@@ -129,6 +130,18 @@ const widgetTrashability: Record<WidgetId, boolean> = {
 
 type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
+
+function getToolLabels(tool: BenchToolInstance | null | undefined) {
+  return tool?.labels ?? [];
+}
+
+function getToolManualLabels(tool: BenchToolInstance | null | undefined) {
+  return getToolLabels(tool).filter((label) => label.labelKind === "manual");
+}
+
+function getToolHasLimsLabel(tool: BenchToolInstance | null | undefined) {
+  return getToolLabels(tool).some((label) => label.labelKind === "lims");
+}
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   lims: { x: 24, y: 886, width: 500, fallbackHeight: 320 },
@@ -275,7 +288,7 @@ type LabSceneProps = {
   experimentId?: string;
 };
 
-type SampleBagTarget =
+type LabelTarget =
   | {
       kind: "workbench";
       slotId: string;
@@ -442,8 +455,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
-  const handleSampleLabelTextChange = (slotId: string, sampleLabelText: string) => {
+  const handleSampleLabelTextChange = (slotId: string, labelId: string, sampleLabelText: string) => {
     void experimentApi.updateWorkbenchToolSampleLabelText( {
+      ...(labelId.endsWith("-legacy-label") ? {} : { label_id: labelId }),
       slot_id: slotId,
       sample_label_text: sampleLabelText,
     });
@@ -473,13 +487,17 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     void experimentApi.closeGrossBalanceTool();
   };
 
-  const handleMoveSampleLabel = (targetSlotId: string, payload: { sourceSlotId?: string }) => {
-    if (!payload.sourceSlotId) {
+  const handleMoveSampleLabel = (
+    targetSlotId: string,
+    payload: { label?: BenchLabel; sourceSlotId?: string },
+  ) => {
+    if (!payload.sourceSlotId || !payload.label) {
       return;
     }
 
     clearDropTargets();
     void experimentApi.moveSampleLabelBetweenWorkbenchTools( {
+      label_id: payload.label.id,
       source_slot_id: payload.sourceSlotId,
       target_slot_id: targetSlotId,
     });
@@ -1018,7 +1036,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
     if (
       hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget") ||
-      (canApplyLimsTicketToSampleBagTarget(getGrossBalanceSampleBagTarget()) &&
+      (canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
         hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool"))
     ) {
       event.preventDefault();
@@ -1031,7 +1049,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
     const canDropOnBalanceWidget = hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget");
     const canDropOnBalanceBag =
-      canApplyLimsTicketToSampleBagTarget(getGrossBalanceSampleBagTarget()) &&
+      canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
       hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool");
     if (!canDropOnBalanceWidget && !canDropOnBalanceBag) {
       return;
@@ -1042,7 +1060,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       if (limsTicketPayload) {
         event.preventDefault();
         event.stopPropagation();
-        applyLimsTicketToSampleBagTarget(getGrossBalanceSampleBagTarget());
+        applyLimsTicketToLabelTarget(getGrossBalanceLabelTarget());
         return;
       }
     }
@@ -1559,9 +1577,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
             capacity_ml: catalogItem.capacity_ml,
             id: payload.itemId,
             label: catalogItem.name,
+            labels: [],
             liquids: [],
             produceLots: [],
-            sampleLabelText: null,
             subtitle: catalogItem.subtitle,
             toolId: payload.itemId,
             toolType: catalogItem.toolType,
@@ -2118,13 +2136,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
   const handleWorkbenchSampleLabelDragStart = (
     slotId: string,
-    tool: BenchToolInstance,
+    label: BenchLabel,
     dataTransfer: DataTransfer,
   ) => {
     if (isKnifeMode) {
-      return;
-    }
-    if (tool.sampleLabelText === null || tool.sampleLabelText === undefined) {
       return;
     }
 
@@ -2133,8 +2148,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     writeSampleLabelDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "sample_label",
-      sampleLabelId: `${tool.id}-sample-label`,
-      sampleLabelText: tool.sampleLabelText,
+      label,
+      sampleLabelId: label.id,
+      sampleLabelText: label.text,
       sourceId: slotId,
       sourceKind: "workbench",
       sourceSlotId: slotId,
@@ -2143,8 +2159,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     setActiveDragItem({
       allowedDropTargets,
       entityKind: "sample_label",
-      sampleLabelId: `${tool.id}-sample-label`,
-      sampleLabelText: tool.sampleLabelText,
+      label,
+      sampleLabelId: label.id,
+      sampleLabelText: label.text,
       sourceId: slotId,
       sourceKind: "workbench",
       sourceSlotId: slotId,
@@ -2191,8 +2208,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
   };
 
-  const getWorkbenchSampleBagTarget = (slot: BenchSlot): SampleBagTarget | null => {
-    if (!slot.tool || slot.tool.toolType !== "sample_bag") {
+  const getWorkbenchLabelTarget = (slot: BenchSlot): LabelTarget | null => {
+    if (!slot.tool) {
       return null;
     }
 
@@ -2203,8 +2220,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
   };
 
-  const getGrossBalanceSampleBagTarget = (): SampleBagTarget | null => {
-    if (!grossBalanceTool || grossBalanceTool.toolType !== "sample_bag") {
+  const getGrossBalanceLabelTarget = (): LabelTarget | null => {
+    if (!grossBalanceTool) {
       return null;
     }
 
@@ -2214,16 +2231,16 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
   };
 
-  const canApplyLimsTicketToSampleBagTarget = (target: SampleBagTarget | null) => {
+  const canApplyLimsTicketToLabelTarget = (target: LabelTarget | null) => {
     return (
       target !== null &&
-      target.tool.sampleLabelText === null &&
+      !getToolHasLimsLabel(target.tool) &&
       state.experiment.limsReception.printedLabelTicket !== null
     );
   };
 
-  const applyLimsTicketToSampleBagTarget = (target: SampleBagTarget | null) => {
-    if (!canApplyLimsTicketToSampleBagTarget(target)) {
+  const applyLimsTicketToLabelTarget = (target: LabelTarget | null) => {
+    if (!canApplyLimsTicketToLabelTarget(target)) {
       return;
     }
 
@@ -2236,11 +2253,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const canAcceptBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceSampleBagTarget();
+    const labelTarget = getGrossBalanceLabelTarget();
     if (!labelTarget) {
       return false;
     }
-    if (!canApplyLimsTicketToSampleBagTarget(labelTarget)) {
+    if (!canApplyLimsTicketToLabelTarget(labelTarget)) {
       return false;
     }
     if (!hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool")) {
@@ -2249,12 +2266,12 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     if (toolbarPayload?.itemType === "sample_label") {
-      return true;
+      return false;
     }
 
     const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
     if (sampleLabelPayload?.sourceKind === "workbench" || sampleLabelPayload?.sourceKind === "trash") {
-      return true;
+      return false;
     }
 
     const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
@@ -2264,7 +2281,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const isGrossBalanceSampleBagHighlighted =
     activeDragItem?.entityKind === "lims_label_ticket" &&
     activeDropTargets.includes("sample_bag_tool") &&
-    canApplyLimsTicketToSampleBagTarget(getGrossBalanceSampleBagTarget());
+    canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget());
 
   const handleBalanceStagedToolDragOver = (event: DragEvent<HTMLElement>) => {
     if (canAcceptBalanceStagedToolDrop(event)) {
@@ -2274,7 +2291,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
 
   const handleBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceSampleBagTarget();
+    const labelTarget = getGrossBalanceLabelTarget();
     if (!labelTarget || !canAcceptBalanceStagedToolDrop(event)) {
       return;
     }
@@ -2294,7 +2311,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
     const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
     if (limsLabelTicketPayload) {
-      applyLimsTicketToSampleBagTarget(labelTarget);
+      applyLimsTicketToLabelTarget(labelTarget);
     }
   };
 
@@ -2305,13 +2322,23 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (isKnifeMode) {
       return;
     }
+    const label =
+      trashSampleLabel.label ??
+      ({
+        id: trashSampleLabel.id,
+        labelKind: "manual",
+        text: (trashSampleLabel as TrashSampleLabelEntry & { sampleLabelText?: string }).sampleLabelText ?? "",
+        receivedDate: null,
+        sampleCode: null,
+      } satisfies BenchLabel);
     const allowedDropTargets = getSampleLabelDropTargets();
 
     writeSampleLabelDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "sample_label",
+      label,
       sampleLabelId: trashSampleLabel.id,
-      sampleLabelText: trashSampleLabel.sampleLabelText,
+      sampleLabelText: label.text,
       sourceId: trashSampleLabel.id,
       sourceKind: "trash",
       trashSampleLabelId: trashSampleLabel.id,
@@ -2320,8 +2347,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     setActiveDragItem({
       allowedDropTargets,
       entityKind: "sample_label",
+      label,
       sampleLabelId: trashSampleLabel.id,
-      sampleLabelText: trashSampleLabel.sampleLabelText,
+      sampleLabelText: label.text,
       sourceId: trashSampleLabel.id,
       sourceKind: "trash",
       trashSampleLabelId: trashSampleLabel.id,
@@ -2385,14 +2413,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       if (!activeDropTargets.includes("workbench_slot")) {
         return false;
       }
-      return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
+      return slot.tool !== null;
     }
 
     if (activeDragItem.entityKind === "lims_label_ticket") {
       if (!activeDropTargets.includes("sample_bag_tool")) {
         return false;
       }
-      return canApplyLimsTicketToSampleBagTarget(getWorkbenchSampleBagTarget(slot));
+      return canApplyLimsTicketToLabelTarget(getWorkbenchLabelTarget(slot));
     }
 
     return false;
@@ -2853,7 +2881,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 }}
                 onApplySampleLabel={handleApplySampleLabel}
                 canApplyLimsLabelTicketToSlot={(slot) =>
-                  canApplyLimsTicketToSampleBagTarget(getWorkbenchSampleBagTarget(slot))
+                  canApplyLimsTicketToLabelTarget(getWorkbenchLabelTarget(slot))
                 }
                 canDragBenchTool={canDragBenchTool}
                 isBenchSlotHighlighted={isBenchSlotHighlighted}
