@@ -79,8 +79,8 @@ export const discardGrossBalanceProduceLot = vi.fn((experimentId: string, payloa
   sendExperimentCommand(experimentId, "discard_gross_balance_produce_lot", payload ?? {}),
 );
 export const createLimsReception = wrapCommand("create_lims_reception");
-export const printLimsLabel = vi.fn((experimentId: string) =>
-  sendExperimentCommand(experimentId, "print_lims_label", {}),
+export const printLimsLabel = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
+  sendExperimentCommand(experimentId, "print_lims_label", payload ?? {}),
 );
 export const discardPrintedLimsLabel = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "discard_printed_lims_label", {}),

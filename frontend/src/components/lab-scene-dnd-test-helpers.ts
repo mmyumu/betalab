@@ -317,12 +317,14 @@ function makeExperiment({
     workspace: { produceLots, widgets: workspaceWidgets },
     basketTool,
     limsReception,
+    limsEntries: limsReception.labSampleCode ? [limsReception] : [],
     audit_log: ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],
   };
 }
 
 function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReception {
   return {
+    id: null,
     orchardName: "",
     harvestDate: "",
     indicativeMassG: 0,

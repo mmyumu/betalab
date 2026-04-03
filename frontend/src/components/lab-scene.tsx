@@ -2151,12 +2151,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
-  const handleCreateLimsReception = (payload: {
+  const handleSaveLimsReception = (payload: {
+    entry_id?: string;
     harvest_date: string;
     indicative_mass_g: number;
     orchard_name: string;
   }) => {
     void experimentApi.createLimsReception({
+      ...(payload.entry_id ? { entry_id: payload.entry_id } : {}),
       orchard_name: payload.orchard_name,
       harvest_date: payload.harvest_date,
       indicative_mass_g: payload.indicative_mass_g,
@@ -2614,10 +2616,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                 >
                   {widgetId === "lims" ? (
                     <LimsWidget
-                      onCreateReception={handleCreateLimsReception}
-                      onPrintLabel={() => {
-                        void experimentApi.printLimsLabel();
+                      entries={state.experiment.limsEntries}
+                      onPrintLabel={(entryId) => {
+                        void experimentApi.printLimsLabel(entryId ? { entry_id: entryId } : undefined);
                       }}
+                      onSaveReception={handleSaveLimsReception}
                       onTicketDragEnd={clearDropTargets}
                       onTicketDragStart={handleLimsTicketDragStart}
                       reception={state.experiment.limsReception}

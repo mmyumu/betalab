@@ -39,6 +39,7 @@ export type Experiment = {
   trash: ExperimentTrash;
   workspace: ExperimentWorkspace;
   limsReception: LimsReception;
+  limsEntries: LimsReception[];
   basketTool: BenchToolInstance | null;
   audit_log: string[];
 };

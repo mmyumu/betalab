@@ -333,6 +333,7 @@ export type PrintedLabelTicket = {
 };
 
 export type LimsReception = {
+  id: string | null;
   orchardName: string;
   harvestDate: string;
   indicativeMassG: number;

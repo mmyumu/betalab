@@ -560,6 +560,7 @@ class ExperimentService:
         harvest_date: str,
         indicative_mass_g: float,
         measured_gross_mass_g: float | None,
+        entry_id: str | None = None,
     ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
@@ -569,14 +570,15 @@ class ExperimentService:
                 harvest_date=harvest_date,
                 indicative_mass_g=indicative_mass_g,
                 measured_gross_mass_g=measured_gross_mass_g,
+                entry_id=entry_id,
             ),
         )
 
-    def print_lims_label(self, experiment_id: str) -> ExperimentSchema:
+    def print_lims_label(self, experiment_id: str, entry_id: str | None = None) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             print_lims_label,
-            PrintLimsLabelCommand(),
+            PrintLimsLabelCommand(entry_id=entry_id),
         )
 
     def discard_printed_lims_label(self, experiment_id: str) -> ExperimentSchema:
@@ -915,6 +917,7 @@ class ExperimentService:
                 "trash": asdict(experiment.trash),
                 "workspace": asdict(experiment.workspace),
                 "lims_reception": asdict(experiment.lims_reception),
+                "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
                 "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
                 "audit_log": experiment.audit_log,
             }

@@ -126,6 +126,7 @@ def build_experiment() -> Experiment:
             harvest_date="",
             indicative_mass_g=0.0,
         ),
+        lims_entries=[],
         basket_tool=basket_tool,
         last_simulation_at=datetime.now(timezone.utc),
         audit_log=[

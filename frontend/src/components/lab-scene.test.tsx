@@ -209,6 +209,7 @@ function makeWorkbenchExperiment({
   basketTool = null,
   lastSimulationAt = "2026-03-28T19:00:00Z",
   limsReception = makeLimsReception(),
+  limsEntries = limsReception.labSampleCode ? [limsReception] : [],
   rackSlots = makeRackSlots(),
   snapshotVersion = 1,
   slots = makeSlots(),
@@ -227,6 +228,7 @@ function makeWorkbenchExperiment({
   }[];
   basketTool?: BenchToolInstance | null;
   lastSimulationAt?: string;
+  limsEntries?: LimsReception[];
   limsReception?: LimsReception;
   rackSlots?: RackSlot[];
   snapshotVersion?: number;
@@ -247,12 +249,14 @@ function makeWorkbenchExperiment({
     workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
     basketTool,
     limsReception,
+    limsEntries,
     audit_log: auditLog,
   };
 }
 
 function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReception {
   return {
+    id: null,
     orchardName: "",
     harvestDate: "",
     indicativeMassG: 0,
@@ -2525,6 +2529,34 @@ describe("LabScene", () => {
     });
   });
 
+  it("keeps New entry selected when the user switches away from the current entry", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          id: "lims_entry_1",
+          orchardName: "Martin Orchard",
+          harvestDate: "2026-03-29",
+          indicativeMassG: 2041.1,
+          measuredGrossMassG: null,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const recordSelect = await screen.findByLabelText("Record");
+    expect(recordSelect).toHaveValue("lims_entry_1");
+
+    fireEvent.change(recordSelect, { target: { value: "new" } });
+
+    await waitFor(() => {
+      expect(recordSelect).toHaveValue("new");
+      expect(screen.getByRole("button", { name: "Create LIMS record" })).toBeInTheDocument();
+    });
+  });
+
   it("discards the received sampling bag from the basket into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment({
       basketTool: makeSampleBagTool({
@@ -2938,6 +2970,13 @@ describe("LabScene", () => {
           status: "awaiting_label_application",
           printedLabelTicket: null,
         }),
+        trashSampleLabels: [
+          {
+            id: "trash_sample_label_1",
+            originLabel: "LIMS terminal",
+            sampleLabelText: "APP-2026-0001",
+          },
+        ],
       }),
     );
 
@@ -2960,7 +2999,11 @@ describe("LabScene", () => {
         {},
       );
     });
+
+    fireEvent.click(trash);
+    expect(await screen.findByTestId("trash-sample-label-trash_sample_label_1")).toBeInTheDocument();
   });
+
 
   it("shows a small printer ticket indicator when a LIMS ticket is present", async () => {
     vi.mocked(createExperiment).mockResolvedValue(

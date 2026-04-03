@@ -524,6 +524,66 @@ def test_print_lims_label_can_reprint_after_ticket_is_discarded_from_lims() -> N
     assert updated.lims_reception.printed_label_ticket is not None
 
 
+def test_discard_printed_lims_label_moves_ticket_to_trash_sample_labels() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+    apply_command(service, experiment.id, "print_lims_label", {})
+
+    updated = apply_command(service, experiment.id, "discard_printed_lims_label", {})
+
+    assert updated.lims_reception.printed_label_ticket is None
+    assert len(updated.trash.sample_labels) == 1
+    assert updated.trash.sample_labels[0].origin_label == "LIMS terminal"
+    assert updated.trash.sample_labels[0].sample_label_text == "APP-2026-0001"
+
+
+def test_print_lims_label_can_target_a_selected_existing_entry() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    first = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+        },
+    )
+    second = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "North Orchard",
+            "harvest_date": "2026-03-30",
+            "indicative_mass_g": 3000.0,
+        },
+    )
+
+    first_entry_id = first.lims_entries[0].id
+    assert first_entry_id is not None
+    assert second.lims_reception.lab_sample_code == "APP-2026-0002"
+
+    updated = service.print_lims_label(experiment.id, first_entry_id)
+
+    assert updated.lims_reception.lab_sample_code == "APP-2026-0001"
+    assert updated.lims_reception.printed_label_ticket is not None
+    assert updated.lims_reception.printed_label_ticket.sample_code == "APP-2026-0001"
+
+
 def test_discard_basket_tool_moves_received_sampling_bag_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

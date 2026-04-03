@@ -1,45 +1,89 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SampleIdentityLabel } from "@/components/sample-identity-label";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import type { LimsReception, PrintedLabelTicket } from "@/types/workbench";
 
 type LimsWidgetProps = {
-  onCreateReception: (payload: {
+  entries: LimsReception[];
+  onSaveReception: (payload: {
+    entry_id?: string;
     harvest_date: string;
     indicative_mass_g: number;
     orchard_name: string;
   }) => void;
-  onPrintLabel: () => void;
+  onPrintLabel: (entryId?: string) => void;
   onTicketDragEnd?: () => void;
   onTicketDragStart?: (ticket: PrintedLabelTicket, dataTransfer: DataTransfer) => void;
   reception: LimsReception;
 };
 
 export function LimsWidget({
-  onCreateReception,
+  entries,
+  onSaveReception,
   onPrintLabel,
   onTicketDragEnd,
   onTicketDragStart,
   reception,
 }: LimsWidgetProps) {
-  const [orchardName, setOrchardName] = useState(reception.orchardName);
-  const [harvestDate, setHarvestDate] = useState(reception.harvestDate);
-  const [indicativeMassText, setIndicativeMassText] = useState(
-    reception.indicativeMassG > 0 ? reception.indicativeMassG.toFixed(0) : "",
-  );
+  const [selectedEntryId, setSelectedEntryId] = useState<string>(reception.id ?? "new");
+  const [orchardName, setOrchardName] = useState("");
+  const [harvestDate, setHarvestDate] = useState("");
+  const [indicativeMassText, setIndicativeMassText] = useState("");
+  const previousReceptionIdRef = useRef<string | null>(reception.id);
+  const selectedEntryIdRef = useRef<string>(reception.id ?? "new");
+
+  const selectedEntry =
+    selectedEntryId === "new"
+      ? null
+      : entries.find((entry) => entry.id === selectedEntryId) ?? null;
+  const selectedEntryView =
+    selectedEntry && selectedEntry.id === reception.id
+      ? { ...selectedEntry, ...reception }
+      : selectedEntry;
 
   useEffect(() => {
-    if (reception.status !== "awaiting_reception") {
-      setOrchardName(reception.orchardName);
-      setHarvestDate(reception.harvestDate);
-      setIndicativeMassText(
-        reception.indicativeMassG > 0 ? reception.indicativeMassG.toFixed(0) : "",
-      );
+    if (reception.id !== previousReceptionIdRef.current) {
+      previousReceptionIdRef.current = reception.id;
+      if (reception.id && entries.some((entry) => entry.id === reception.id)) {
+        selectedEntryIdRef.current = reception.id;
+        setSelectedEntryId(reception.id);
+        return;
+      }
     }
-  }, [reception.harvestDate, reception.indicativeMassG, reception.orchardName, reception.status]);
+  }, [entries, reception.id]);
+
+  useEffect(() => {
+    if (selectedEntryId !== "new" && !entries.some((entry) => entry.id === selectedEntryId)) {
+      selectedEntryIdRef.current = "new";
+      setSelectedEntryId("new");
+      return;
+    }
+
+    if (entries.length === 0 && reception.id === null && selectedEntryId !== "new") {
+      selectedEntryIdRef.current = "new";
+      setSelectedEntryId("new");
+    }
+  }, [entries, reception.id, selectedEntryId]);
+
+  useEffect(() => {
+    if (selectedEntryView) {
+      setOrchardName(selectedEntryView.orchardName);
+      setHarvestDate(selectedEntryView.harvestDate);
+      setIndicativeMassText(
+        selectedEntryView.indicativeMassG > 0 ? selectedEntryView.indicativeMassG.toFixed(1) : "",
+      );
+      return;
+    }
+
+    if (selectedEntryId === "new") {
+      setOrchardName("");
+      setHarvestDate("");
+      setIndicativeMassText("");
+    }
+  }, [selectedEntryId, selectedEntryView]);
 
   const indicativeMassValue = Number.parseFloat(indicativeMassText);
   const hasIndicativeMass =
@@ -51,12 +95,14 @@ export function LimsWidget({
     harvestDate.trim().length > 0 &&
     hasIndicativeMass;
   const canPrintLabel =
-    reception.labSampleCode !== null && reception.printedLabelTicket === null;
+    selectedEntryView?.labSampleCode !== null &&
+    selectedEntryView !== null &&
+    reception.printedLabelTicket === null;
   const isEmptyState =
-    reception.labSampleCode === null &&
-    reception.orchardName.trim().length === 0 &&
-    reception.harvestDate.trim().length === 0 &&
-    reception.indicativeMassG <= 0;
+    selectedEntryView === null;
+  const displayedEntry = selectedEntryView ?? reception;
+  const displayedTicket = selectedEntryView?.printedLabelTicket ?? reception.printedLabelTicket;
+  const saveButtonLabel = selectedEntryView === null ? "Create LIMS record" : "Update LIMS record";
 
   return (
     <WorkspaceEquipmentWidget
@@ -118,22 +164,22 @@ export function LimsWidget({
                     Reception record
                   </text>
                   <text x="28" y="106" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Orchard: {reception.orchardName || orchardName || "--"}
+                    Orchard: {displayedEntry.orchardName || orchardName || "--"}
                   </text>
                   <text x="28" y="126" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Harvest date: {reception.harvestDate || harvestDate || "--"}
+                    Harvest date: {displayedEntry.harvestDate || harvestDate || "--"}
                   </text>
                   <text x="28" y="146" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Indicative mass: {reception.indicativeMassG > 0 ? formatIndicativeMass(reception.indicativeMassG) : hasIndicativeMass ? formatIndicativeMass(indicativeMassValue) : "--"}
+                    Indicative mass: {displayedEntry.indicativeMassG > 0 ? formatIndicativeMass(displayedEntry.indicativeMassG) : hasIndicativeMass ? formatIndicativeMass(indicativeMassValue) : "--"}
                   </text>
                   <text x="28" y="166" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Gross lab mass: {reception.measuredGrossMassG === null ? "--" : `${reception.measuredGrossMassG.toFixed(1)} g`}
+                    Gross lab mass: {displayedEntry.measuredGrossMassG === null ? "--" : `${displayedEntry.measuredGrossMassG.toFixed(1)} g`}
                   </text>
                   <text x="28" y="186" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Sample code: {reception.labSampleCode ?? "--"}
+                    Sample code: {displayedEntry.labSampleCode ?? "--"}
                   </text>
                   <text x="28" y="214" fill="#22c55e" fontSize="12" fontFamily="monospace">
-                    Status: {reception.status}
+                    Status: {displayedEntry.status}
                   </text>
                 </>
               )}
@@ -142,7 +188,7 @@ export function LimsWidget({
           <div className="border-t border-slate-300 bg-[linear-gradient(180deg,#c9d2dc,#b6c2cd)] px-4 py-3">
             <div className="flex items-end justify-between gap-4">
               <div className="h-5 w-20 rounded-t-[0.7rem] border border-slate-400/80 border-b-0 bg-[linear-gradient(180deg,#e2e8f0,#cbd5e1)] px-2 pt-1">
-                {reception.printedLabelTicket ? (
+                {displayedTicket ? (
                   <div
                     className="h-6 w-14 rounded-[0.35rem] border border-slate-300 bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)]"
                     data-testid="lims-printer-ticket"
@@ -154,6 +200,24 @@ export function LimsWidget({
           </div>
         </div>
         <div className="grid gap-2">
+          <label className="grid gap-1">
+            <span className="text-xs font-medium text-slate-600">Record</span>
+            <select
+              className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-400"
+              onChange={(event) => {
+                selectedEntryIdRef.current = event.target.value;
+                setSelectedEntryId(event.target.value);
+              }}
+              value={selectedEntryId}
+            >
+              <option value="new">New entry</option>
+              {entries.map((entry) => (
+                <option key={entry.id ?? entry.labSampleCode} value={entry.id ?? ""}>
+                  {entry.labSampleCode ?? "Unnumbered entry"}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="grid gap-1">
             <span className="text-xs font-medium text-slate-600">Orchard / producer</span>
             <input
@@ -192,7 +256,8 @@ export function LimsWidget({
             className="rounded-full bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
             disabled={!canCreateReception}
             onClick={() =>
-              onCreateReception({
+              onSaveReception({
+                ...(selectedEntry ? { entry_id: selectedEntry.id ?? undefined } : {}),
                 harvest_date: harvestDate,
                 indicative_mass_g: indicativeMassValue,
                 orchard_name: orchardName,
@@ -200,25 +265,29 @@ export function LimsWidget({
             }
             type="button"
           >
-            Create LIMS record
+            {saveButtonLabel}
           </button>
           <button
             className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-40"
             disabled={!canPrintLabel}
-            onClick={onPrintLabel}
+            onClick={() =>
+              onPrintLabel(
+                selectedEntryIdRef.current !== "new" ? selectedEntryIdRef.current : undefined,
+              )
+            }
             type="button"
           >
-            Print label
+            {selectedEntryView ? "Reprint label" : "Print label"}
           </button>
         </div>
-        {reception.printedLabelTicket ? (
+        {displayedTicket ? (
           <div
             className="cursor-grab rounded-[1rem] border border-dashed border-sky-300 bg-sky-50 px-3 py-2"
             data-testid="lims-printed-ticket"
             draggable
             onDragEnd={onTicketDragEnd}
             onDragStart={(event) => {
-              onTicketDragStart?.(reception.printedLabelTicket!, event.dataTransfer);
+              onTicketDragStart?.(displayedTicket, event.dataTransfer);
             }}
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -226,8 +295,8 @@ export function LimsWidget({
             </p>
             <div className="mt-1">
               <SampleIdentityLabel
-                receivedDate={reception.printedLabelTicket.receivedDate}
-                sampleCode={reception.printedLabelTicket.sampleCode}
+                receivedDate={displayedTicket.receivedDate}
+                sampleCode={displayedTicket.sampleCode}
                 variant="ticket"
               />
             </div>

@@ -23,6 +23,7 @@ class LimsReception:
     orchard_name: str
     harvest_date: str
     indicative_mass_g: float
+    id: str | None = None
     measured_gross_mass_g: float | None = None
     lab_sample_code: str | None = None
     status: str = "awaiting_reception"
@@ -161,8 +162,9 @@ class Experiment:
     trash: Trash
     workspace: Workspace
     lims_reception: LimsReception
-    basket_tool: WorkbenchTool | None
     last_simulation_at: datetime
+    basket_tool: WorkbenchTool | None = None
+    lims_entries: list[LimsReception] = field(default_factory=list)
     snapshot_version: int = 0
     audit_log: list[str] = field(default_factory=list)
 

@@ -38,6 +38,7 @@ class LimsReceptionSchema(BaseModel):
     orchard_name: str
     harvest_date: str
     indicative_mass_g: float
+    id: str | None = None
     measured_gross_mass_g: float | None = None
     lab_sample_code: str | None = None
     status: str
@@ -49,6 +50,7 @@ def build_default_lims_reception_schema() -> LimsReceptionSchema:
         orchard_name="",
         harvest_date="",
         indicative_mass_g=0.0,
+        id=None,
         measured_gross_mass_g=None,
         lab_sample_code=None,
         status="awaiting_reception",
@@ -152,6 +154,7 @@ class ExperimentSchema(BaseModel):
     trash: TrashSchema
     workspace: WorkspaceSchema
     lims_reception: LimsReceptionSchema = Field(default_factory=build_default_lims_reception_schema)
+    lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
     basket_tool: WorkbenchToolSchema | None = None
     audit_log: list[str]
 
@@ -303,7 +306,6 @@ class WorkspaceWidgetMoveWorkbenchProduceLotSchema(BaseModel):
 
 class WorkspaceWidgetMoveProduceLotToWorkbenchSchema(BaseModel):
     target_slot_id: str
-    produce_lot_id: str
 
 
 class ReceivedBagPlacementSchema(BaseModel):
@@ -315,7 +317,12 @@ class GrossWeightRecordSchema(BaseModel):
 
 
 class LimsReceptionCreateSchema(BaseModel):
+    entry_id: str | None = None
     orchard_name: str
     harvest_date: str
     indicative_mass_g: float
     measured_gross_mass_g: float | None = None
+
+
+class LimsLabelPrintSchema(BaseModel):
+    entry_id: str | None = None

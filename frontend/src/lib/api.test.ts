@@ -35,6 +35,7 @@ const makeExperiment = (): Experiment => ({
     widgets: [],
   },
   limsReception: {
+    id: null,
     orchardName: "",
     harvestDate: "",
     indicativeMassG: 0,
@@ -43,6 +44,7 @@ const makeExperiment = (): Experiment => ({
     status: "awaiting_reception",
     printedLabelTicket: null,
   },
+  limsEntries: [],
   basketTool: null,
   audit_log: [],
 });

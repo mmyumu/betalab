@@ -258,6 +258,7 @@ class CreateLimsReceptionCommand:
     harvest_date: str
     indicative_mass_g: float
     measured_gross_mass_g: float | None = None
+    entry_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -306,7 +307,7 @@ class DiscardGrossBalanceProduceLotCommand:
 
 @dataclass(frozen=True, slots=True)
 class PrintLimsLabelCommand:
-    pass
+    entry_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

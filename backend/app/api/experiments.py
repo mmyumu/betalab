@@ -9,6 +9,7 @@ from app.schemas.experiment import (
     ExperimentListEntrySchema,
     ExperimentSchema,
     GrossWeightRecordSchema,
+    LimsLabelPrintSchema,
     LimsReceptionCreateSchema,
     PaletteToolDiscardSchema,
     RackSlotReferenceSchema,
@@ -127,13 +128,22 @@ def create_lims_reception(
             request.harvest_date,
             request.indicative_mass_g,
             request.measured_gross_mass_g,
+            request.entry_id,
         )
     )
 
 
 @router.post("/{experiment_id}/lims/print-label", response_model=ExperimentSchema)
-def print_lims_label(experiment_id: str) -> ExperimentSchema:
-    return _handle_service_errors(lambda: experiment_service.print_lims_label(experiment_id))
+def print_lims_label(
+    experiment_id: str,
+    request: LimsLabelPrintSchema | None = None,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.print_lims_label(
+            experiment_id,
+            request.entry_id if request is not None else None,
+        )
+    )
 
 
 @router.delete("/{experiment_id}/lims/printed-label", response_model=ExperimentSchema)

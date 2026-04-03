@@ -161,6 +161,7 @@ def _serialize_experiment(experiment: Experiment) -> dict:
             "trash": asdict(experiment.trash),
             "workspace": asdict(experiment.workspace),
             "lims_reception": asdict(experiment.lims_reception),
+            "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
             "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
             "audit_log": experiment.audit_log,
         }
@@ -253,6 +254,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
             orchard_name=schema.lims_reception.orchard_name,
             harvest_date=schema.lims_reception.harvest_date,
             indicative_mass_g=schema.lims_reception.indicative_mass_g,
+            id=schema.lims_reception.id,
             measured_gross_mass_g=schema.lims_reception.measured_gross_mass_g,
             lab_sample_code=schema.lims_reception.lab_sample_code,
             status=schema.lims_reception.status,
@@ -261,11 +263,48 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                 if schema.lims_reception.printed_label_ticket is not None
                 else None,
         ),
-        basket_tool=_deserialize_workbench_tool(schema.basket_tool),
         last_simulation_at=schema.last_simulation_at,
+        basket_tool=_deserialize_workbench_tool(schema.basket_tool),
+        lims_entries=_deserialize_lims_entries(schema),
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
     )
+
+
+def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:
+    if schema.lims_entries:
+        return [
+            LimsReception(
+                orchard_name=entry.orchard_name,
+                harvest_date=entry.harvest_date,
+                indicative_mass_g=entry.indicative_mass_g,
+                id=entry.id,
+                measured_gross_mass_g=entry.measured_gross_mass_g,
+                lab_sample_code=entry.lab_sample_code,
+                status=entry.status,
+                printed_label_ticket=
+                    PrintedLabelTicket(**entry.printed_label_ticket.model_dump())
+                    if entry.printed_label_ticket is not None
+                    else None,
+            )
+            for entry in schema.lims_entries
+        ]
+
+    if schema.lims_reception.lab_sample_code is None:
+        return []
+
+    return [
+        LimsReception(
+            orchard_name=schema.lims_reception.orchard_name,
+            harvest_date=schema.lims_reception.harvest_date,
+            indicative_mass_g=schema.lims_reception.indicative_mass_g,
+            id=schema.lims_reception.id,
+            measured_gross_mass_g=schema.lims_reception.measured_gross_mass_g,
+            lab_sample_code=schema.lims_reception.lab_sample_code,
+            status=schema.lims_reception.status,
+            printed_label_ticket=None,
+        )
+    ]
 
 
 def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:

@@ -695,6 +695,10 @@ export async function createLimsReception(experimentId: string, payload: Mutatio
     method: "POST",
     path: `/experiments/${experimentId}/lims/reception`,
     body: {
+      entry_id:
+        body.entry_id === undefined || body.entry_id === null
+          ? null
+          : requireString(body, "entry_id"),
       orchard_name: requireString(body, "orchard_name"),
       harvest_date: requireString(body, "harvest_date"),
       indicative_mass_g: requireNumber(body, "indicative_mass_g"),
@@ -706,10 +710,15 @@ export async function createLimsReception(experimentId: string, payload: Mutatio
   });
 }
 
-export async function printLimsLabel(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+export async function printLimsLabel(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  const entryId =
+    payload && payload.entry_id !== undefined && payload.entry_id !== null
+      ? requireString(payload, "entry_id")
+      : null;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/lims/print-label`,
+    body: entryId === null ? undefined : { entry_id: entryId },
   });
 }
 
@@ -1049,6 +1058,13 @@ function normalizeExperiment(experiment: Experiment): Experiment {
         (experiment as Experiment & Record<string, unknown>).lims_reception
       ) as LimsReception & Record<string, unknown>,
     ),
+    limsEntries: (
+      (experiment as Experiment & Record<string, unknown>).limsEntries ??
+      (experiment as Experiment & Record<string, unknown>).lims_entries ??
+      []
+    ).map((entry) =>
+      normalizeLimsReception(entry as LimsReception & Record<string, unknown>),
+    ),
     basketTool: (() => {
       const rawBasketTool =
         (experiment as Experiment & Record<string, unknown>).basketTool ??
@@ -1130,6 +1146,10 @@ function normalizeLimsReception(
   reception: (LimsReception & Record<string, unknown>) | null | undefined,
 ): LimsReception {
   return {
+    id:
+      reception?.id !== undefined && reception.id !== null
+        ? String(reception.id)
+        : null,
     orchardName: String(reception?.orchardName ?? reception?.orchard_name ?? ""),
     harvestDate: String(reception?.harvestDate ?? reception?.harvest_date ?? ""),
     indicativeMassG: Number(reception?.indicativeMassG ?? reception?.indicative_mass_g ?? 0),
