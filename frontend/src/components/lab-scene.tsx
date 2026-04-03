@@ -1432,6 +1432,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.stopPropagation();
       clearDropTargets();
       void experimentApi.discardSampleLabelFromWorkbenchTool( {
+        ...(sampleLabelPayload.sampleLabelId.endsWith("-legacy-label")
+          ? {}
+          : { label_id: sampleLabelPayload.sampleLabelId }),
         slot_id: sampleLabelPayload.sourceSlotId,
       });
       return;
