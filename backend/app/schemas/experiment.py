@@ -31,6 +31,7 @@ class PrintedLabelTicketSchema(BaseModel):
     id: str
     sample_code: str
     label_text: str
+    received_date: str = ""
 
 
 class LimsReceptionSchema(BaseModel):
@@ -69,6 +70,7 @@ class WorkbenchToolSchema(BaseModel):
     trapped_co2_mass_g: float = 0.0
     field_label_text: str | None = None
     sample_label_text: str | None = None
+    sample_label_received_date: str | None = None
     produce_lots: list[ProduceLotSchema]
     liquids: list[WorkbenchLiquidSchema]
 
@@ -130,6 +132,7 @@ class WorkspaceWidgetSchema(BaseModel):
     grinder_run_duration_ms: float = 0.0
     grinder_run_remaining_ms: float = 0.0
     grinder_fault: str | None = None
+    tool: WorkbenchToolSchema | None = None
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
 
@@ -235,6 +238,10 @@ class TrashToolRestoreToWorkbenchSchema(BaseModel):
 
 
 class TrashToolRestoreToRackSchema(BaseModel):
+    rack_slot_id: str
+
+
+class RackSlotReferenceSchema(BaseModel):
     rack_slot_id: str
 
 

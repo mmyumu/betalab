@@ -264,6 +264,18 @@ function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReceptio
   };
 }
 
+function makePrintedLimsTicket(
+  overrides: Partial<NonNullable<LimsReception["printedLabelTicket"]>> = {},
+): NonNullable<LimsReception["printedLabelTicket"]> {
+  return {
+    id: "lims_ticket_1",
+    sampleCode: "APP-2026-0001",
+    labelText: "APP-2026-0001",
+    receivedDate: "2026-04-03",
+    ...overrides,
+  };
+}
+
 function makeSampleBagTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
   return makeTool({
     toolId: "sealed_sampling_bag",
@@ -2421,7 +2433,25 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         limsReception: makeLimsReception({ measuredGrossMassG: 2486 }),
-        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeTool({
+            id: "bench_tool_1",
+            toolId: "sealed_sampling_bag",
+            label: "Received sampling bag",
+            subtitle: "Field reception",
+            toolType: "sample_bag",
+            capacity_ml: 500,
+            produceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+          }),
+        }),
       }),
     );
 
@@ -2437,15 +2467,16 @@ describe("LabScene", () => {
     fireEvent.drop(balance, { dataTransfer: transfer });
 
     expect(dragOverEvent.defaultPrevented).toBe(true);
-    expect(screen.getByTestId("gross-balance-staged-item")).toBeInTheDocument();
-    expect(screen.queryByTestId("bench-tool-card-bench_tool_1")).not.toBeInTheDocument();
     await waitFor(() => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
-        "record_gross_weight",
-        { measured_gross_mass_g: 2486 },
+        "move_workbench_tool_to_gross_balance",
+        { source_slot_id: "station_1" },
       );
     });
+    expect(screen.getByTestId("gross-balance-staged-item")).toBeInTheDocument();
+    expect(screen.queryByTestId("bench-tool-card-bench_tool_1")).not.toBeInTheDocument();
+    expect(screen.getByText("2486.0 g")).toBeInTheDocument();
   });
 
   it("allows creating a LIMS record from manual entry without a gross weight", async () => {
@@ -2573,11 +2604,7 @@ describe("LabScene", () => {
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",
           status: "awaiting_label_application",
-          printedLabelTicket: {
-            id: "lims_ticket_1",
-            sampleCode: "APP-2026-0001",
-            labelText: "APP-2026-0001 • Apples",
-          },
+          printedLabelTicket: makePrintedLimsTicket(),
         }),
       }),
     );
@@ -2588,7 +2615,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: "APP-2026-0001 • Apples",
+              sampleLabelText: "APP-2026-0001",
             }),
           },
         ]),
@@ -2638,17 +2665,13 @@ describe("LabScene", () => {
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",
           status: "awaiting_label_application",
-          printedLabelTicket: {
-            id: "lims_ticket_1",
-            sampleCode: "APP-2026-0001",
-            labelText: "APP-2026-0001 • Apples",
-          },
+          printedLabelTicket: makePrintedLimsTicket(),
         }),
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
       }),
     );
     vi.mocked(sendExperimentCommand).mockImplementation(async (_experimentId, type) => {
-      if (type === "record_gross_weight") {
+      if (type === "move_workbench_tool_to_gross_balance") {
         return makeWorkbenchExperiment({
           slots: makeSlots([
             {
@@ -2663,13 +2686,15 @@ describe("LabScene", () => {
             measuredGrossMassG: 2486,
             labSampleCode: "APP-2026-0001",
             status: "awaiting_label_application",
-            printedLabelTicket: {
-              id: "lims_ticket_1",
-              sampleCode: "APP-2026-0001",
-              labelText: "APP-2026-0001 • Apples",
-            },
+            printedLabelTicket: makePrintedLimsTicket(),
           }),
-          workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+          workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: null,
+            }),
+          }),
         });
       }
 
@@ -2679,7 +2704,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: "APP-2026-0001 • Apples",
+              sampleLabelText: "APP-2026-0001",
             }),
           },
         ]),
@@ -2689,7 +2714,13 @@ describe("LabScene", () => {
           status: "received",
           printedLabelTicket: null,
         }),
-        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeSampleBagTool({
+            id: "bench_tool_1",
+            fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+            sampleLabelText: "APP-2026-0001",
+          }),
+        }),
       });
     });
 
@@ -2716,8 +2747,102 @@ describe("LabScene", () => {
     await waitFor(() => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
-        "apply_printed_lims_label",
-        { slot_id: "station_1" },
+        "apply_printed_lims_label_to_gross_balance_bag",
+        {},
+      );
+    });
+  });
+
+  it("applies a LIMS ticket onto a basket bag while it is staged on the gross balance", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        basketTool: makeSampleBagTool({
+          id: "basket_bag_1",
+          fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+          sampleLabelText: null,
+        }),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: makePrintedLimsTicket(),
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockImplementation(async (_experimentId, type) => {
+      if (type === "move_basket_tool_to_gross_balance") {
+        return makeWorkbenchExperiment({
+          basketTool: makeSampleBagTool({
+            id: "basket_bag_1",
+            fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+            sampleLabelText: null,
+          }),
+          limsReception: makeLimsReception({
+            measuredGrossMassG: 2486,
+            labSampleCode: "APP-2026-0001",
+            status: "awaiting_label_application",
+            printedLabelTicket: makePrintedLimsTicket(),
+          }),
+          workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+            tool: makeSampleBagTool({
+              id: "basket_bag_1",
+              fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+              sampleLabelText: null,
+            }),
+          }),
+        });
+      }
+
+      return makeWorkbenchExperiment({
+        basketTool: makeSampleBagTool({
+          id: "basket_bag_1",
+          fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+          sampleLabelText: "APP-2026-0001",
+        }),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeSampleBagTool({
+            id: "basket_bag_1",
+            fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
+            sampleLabelText: "APP-2026-0001",
+          }),
+        }),
+      });
+    });
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+
+    const bag = await screen.findByTestId("basket-received-bag");
+    const balance = screen.getByTestId("gross-balance-dropzone");
+    const bagTransfer = createDataTransfer();
+
+    fireEvent.dragStart(bag, { dataTransfer: bagTransfer });
+    fireEvent.dragOver(balance, { dataTransfer: bagTransfer });
+    fireEvent.drop(balance, { dataTransfer: bagTransfer });
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const stagedBag = screen.getByTestId("gross-balance-staged-item");
+    const ticketTransfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: ticketTransfer });
+    const dragOverEvent = createEvent.dragOver(stagedBag, { dataTransfer: ticketTransfer });
+    fireEvent(stagedBag, dragOverEvent);
+    fireEvent.drop(stagedBag, { dataTransfer: ticketTransfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label_to_gross_balance_bag",
+        {},
       );
     });
   });
@@ -2729,11 +2854,7 @@ describe("LabScene", () => {
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",
           status: "awaiting_label_application",
-          printedLabelTicket: {
-            id: "lims_ticket_1",
-            sampleCode: "APP-2026-0001",
-            labelText: "APP-2026-0001 • Apples",
-          },
+          printedLabelTicket: makePrintedLimsTicket(),
         }),
       }),
     );
@@ -2776,11 +2897,7 @@ describe("LabScene", () => {
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",
           status: "awaiting_label_application",
-          printedLabelTicket: {
-            id: "lims_ticket_1",
-            sampleCode: "APP-2026-0001",
-            labelText: "APP-2026-0001 • Apples",
-          },
+          printedLabelTicket: makePrintedLimsTicket(),
         }),
       }),
     );

@@ -3,6 +3,7 @@ import type { DragEvent, ReactNode } from "react";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { ProduceLotCard } from "@/components/produce-lot-card";
 import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
+import { SampleIdentityLabel } from "@/components/sample-identity-label";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce, canToolBeSealed } from "@/lib/entity-rules";
 import {
@@ -13,8 +14,12 @@ import {
 import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type BenchToolCardProps = {
+  className?: string;
+  dataDropHighlighted?: boolean;
   draggable?: boolean;
   onDragEnd?: (event: DragEvent<HTMLElement>) => void;
+  onDragOver?: (event: DragEvent<HTMLElement>) => void;
+  onDrop?: (event: DragEvent<HTMLElement>) => void;
   onProduceLotClick?: (produceLot: ExperimentProduceLot) => void;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
   pendingContent?: ReactNode;
@@ -49,8 +54,12 @@ function formatLotMetadata(unitCount: number | null, totalMassG: number) {
 }
 
 export function BenchToolCard({
+  className,
+  dataDropHighlighted = false,
   draggable = false,
   onDragEnd,
+  onDragOver,
+  onDrop,
   onProduceLotClick,
   onDragStart,
   pendingContent,
@@ -94,7 +103,14 @@ export function BenchToolCard({
 
   return (
     <article
-      className="rounded-[1.45rem] border border-slate-200 bg-white p-2 shadow-sm"
+      className={`rounded-[1.45rem] border bg-white p-2 shadow-sm ${
+        dataDropHighlighted
+          ? "border-sky-300 ring-2 ring-sky-200/80"
+          : "border-slate-200"
+      } ${className ?? ""}`.trim()}
+      data-drop-highlighted={dataDropHighlighted ? "true" : "false"}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
     >
       <div className="flex flex-col gap-2">
         <div
@@ -196,11 +212,11 @@ export function BenchToolCard({
                 onDragEnd={onSampleLabelDragEnd}
                 onDragStart={onSampleLabelDragStart}
               >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Lab label
-                </p>
                 {hasFieldLabel ? (
-                  <p className="mt-1 text-sm font-medium text-slate-900">{tool.sampleLabelText}</p>
+                  <SampleIdentityLabel
+                    receivedDate={tool.sampleLabelReceivedDate}
+                    sampleCode={tool.sampleLabelText ?? ""}
+                  />
                 ) : (
                   <input
                     aria-label="Sample label text"

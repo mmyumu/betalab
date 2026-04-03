@@ -27,7 +27,28 @@ from app.services.command_handlers.debug import (
     create_debug_produce_lot_on_workbench,
     create_debug_produce_lot_to_widget,
 )
+from app.services.command_handlers.gross_balance import (
+    close_gross_balance_tool,
+    discard_gross_balance_produce_lot,
+    discard_gross_balance_tool,
+    move_basket_tool_to_gross_balance,
+    place_tool_on_gross_balance,
+    move_gross_balance_produce_lot_to_widget,
+    move_gross_balance_produce_lot_to_workbench,
+    move_gross_balance_tool_to_rack,
+    move_gross_balance_tool_to_workbench,
+    move_rack_tool_to_gross_balance,
+    move_widget_produce_lot_to_gross_balance,
+    move_workbench_produce_lot_to_gross_balance,
+    move_workbench_tool_to_gross_balance,
+    move_workspace_produce_lot_to_gross_balance,
+    open_gross_balance_tool,
+    restore_trashed_produce_lot_to_gross_balance,
+    restore_trashed_tool_to_gross_balance,
+)
 from app.services.command_handlers.reception import (
+    apply_printed_lims_label_to_gross_balance_bag,
+    apply_printed_lims_label_to_basket_bag,
     apply_printed_lims_label,
     create_lims_reception,
     discard_printed_lims_label,
@@ -80,26 +101,43 @@ from app.services.commands import (
     AddWorkspaceProduceLotToWidgetCommand,
     AdvanceWorkspaceCryogenicsCommand,
     ApplyPrintedLimsLabelCommand,
+    ApplyPrintedLimsLabelToGrossBalanceBagCommand,
+    ApplyPrintedLimsLabelToBasketBagCommand,
     ApplySampleLabelToWorkbenchToolCommand,
+    CloseGrossBalanceToolCommand,
     CloseWorkbenchToolCommand,
     CreateLimsReceptionCommand,
-    OpenWorkbenchToolCommand,
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
     CreateProduceLotCommand,
     DiscardBasketToolCommand,
+    DiscardGrossBalanceProduceLotCommand,
+    DiscardGrossBalanceToolCommand,
     DiscardPrintedLimsLabelCommand,
     DiscardSampleLabelFromPaletteCommand,
     DiscardToolFromPaletteCommand,
     DiscardWidgetProduceLotCommand,
     DiscardWorkspaceProduceLotCommand,
+    MoveBasketToolToGrossBalanceCommand,
+    MoveGrossBalanceProduceLotToWidgetCommand,
+    MoveGrossBalanceProduceLotToWorkbenchCommand,
+    MoveGrossBalanceToolToRackCommand,
+    MoveGrossBalanceToolToWorkbenchCommand,
     MoveProduceLotBetweenWorkbenchToolsCommand,
     MoveRackToolBetweenSlotsCommand,
+    MoveRackToolToGrossBalanceCommand,
     MoveWorkbenchProduceLotToWidgetCommand,
+    MoveWorkbenchProduceLotToGrossBalanceCommand,
     MoveSampleLabelBetweenWorkbenchToolsCommand,
     MoveToolBetweenWorkbenchSlotsCommand,
+    MoveWorkbenchToolToGrossBalanceCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
+    MoveWidgetProduceLotToGrossBalanceCommand,
+    MoveWorkspaceProduceLotToGrossBalanceCommand,
+    OpenGrossBalanceToolCommand,
+    OpenWorkbenchToolCommand,
     PlaceReceivedBagOnWorkbenchCommand,
+    PlaceToolOnGrossBalanceCommand,
     PlaceToolOnWorkbenchCommand,
     PlaceWorkbenchToolInRackSlotCommand,
     PrintLimsLabelCommand,
@@ -107,9 +145,11 @@ from app.services.commands import (
     RackSlotToolCommand,
     RecordGrossWeightCommand,
     RemoveRackToolToWorkbenchSlotCommand,
+    RestoreTrashedProduceLotToGrossBalanceCommand,
     RestoreTrashedProduceLotToWidgetCommand,
     RestoreTrashedProduceLotToWorkbenchToolCommand,
     RestoreTrashedSampleLabelToWorkbenchToolCommand,
+    RestoreTrashedToolToGrossBalanceCommand,
     RestoreTrashedToolToRackSlotCommand,
     RestoreTrashedToolToWorkbenchSlotCommand,
     UpdateWorkbenchLiquidVolumeCommand,
@@ -361,6 +401,150 @@ class ExperimentService:
             RecordGrossWeightCommand(measured_gross_mass_g=measured_gross_mass_g),
         )
 
+    def move_workbench_tool_to_gross_balance(self, experiment_id: str, source_slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_workbench_tool_to_gross_balance,
+            MoveWorkbenchToolToGrossBalanceCommand(source_slot_id=source_slot_id),
+        )
+
+    def move_basket_tool_to_gross_balance(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_basket_tool_to_gross_balance,
+            MoveBasketToolToGrossBalanceCommand(),
+        )
+
+    def place_tool_on_gross_balance(self, experiment_id: str, tool_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            place_tool_on_gross_balance,
+            PlaceToolOnGrossBalanceCommand(tool_id=tool_id),
+        )
+
+    def move_rack_tool_to_gross_balance(self, experiment_id: str, rack_slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_rack_tool_to_gross_balance,
+            MoveRackToolToGrossBalanceCommand(rack_slot_id=rack_slot_id),
+        )
+
+    def restore_trashed_tool_to_gross_balance(self, experiment_id: str, trash_tool_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_tool_to_gross_balance,
+            RestoreTrashedToolToGrossBalanceCommand(trash_tool_id=trash_tool_id),
+        )
+
+    def move_gross_balance_tool_to_workbench(self, experiment_id: str, target_slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_gross_balance_tool_to_workbench,
+            MoveGrossBalanceToolToWorkbenchCommand(target_slot_id=target_slot_id),
+        )
+
+    def move_gross_balance_tool_to_rack(self, experiment_id: str, rack_slot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_gross_balance_tool_to_rack,
+            MoveGrossBalanceToolToRackCommand(rack_slot_id=rack_slot_id),
+        )
+
+    def discard_gross_balance_tool(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            discard_gross_balance_tool,
+            DiscardGrossBalanceToolCommand(),
+        )
+
+    def open_gross_balance_tool(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            open_gross_balance_tool,
+            OpenGrossBalanceToolCommand(),
+        )
+
+    def close_gross_balance_tool(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            close_gross_balance_tool,
+            CloseGrossBalanceToolCommand(),
+        )
+
+    def move_workspace_produce_lot_to_gross_balance(self, experiment_id: str, produce_lot_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_workspace_produce_lot_to_gross_balance,
+            MoveWorkspaceProduceLotToGrossBalanceCommand(produce_lot_id=produce_lot_id),
+        )
+
+    def move_workbench_produce_lot_to_gross_balance(
+        self,
+        experiment_id: str,
+        source_slot_id: str,
+        produce_lot_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_workbench_produce_lot_to_gross_balance,
+            MoveWorkbenchProduceLotToGrossBalanceCommand(
+                source_slot_id=source_slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
+        )
+
+    def move_widget_produce_lot_to_gross_balance(
+        self,
+        experiment_id: str,
+        widget_id: str,
+        produce_lot_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_widget_produce_lot_to_gross_balance,
+            MoveWidgetProduceLotToGrossBalanceCommand(widget_id=widget_id, produce_lot_id=produce_lot_id),
+        )
+
+    def restore_trashed_produce_lot_to_gross_balance(
+        self,
+        experiment_id: str,
+        trash_produce_lot_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            restore_trashed_produce_lot_to_gross_balance,
+            RestoreTrashedProduceLotToGrossBalanceCommand(trash_produce_lot_id=trash_produce_lot_id),
+        )
+
+    def move_gross_balance_produce_lot_to_workbench(
+        self,
+        experiment_id: str,
+        target_slot_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_gross_balance_produce_lot_to_workbench,
+            MoveGrossBalanceProduceLotToWorkbenchCommand(target_slot_id=target_slot_id),
+        )
+
+    def move_gross_balance_produce_lot_to_widget(
+        self,
+        experiment_id: str,
+        widget_id: str,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            move_gross_balance_produce_lot_to_widget,
+            MoveGrossBalanceProduceLotToWidgetCommand(widget_id=widget_id),
+        )
+
+    def discard_gross_balance_produce_lot(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            discard_gross_balance_produce_lot,
+            DiscardGrossBalanceProduceLotCommand(),
+        )
+
     def create_lims_reception(
         self,
         experiment_id: str,
@@ -399,6 +583,20 @@ class ExperimentService:
             experiment_id,
             apply_printed_lims_label,
             ApplyPrintedLimsLabelCommand(slot_id=slot_id),
+        )
+
+    def apply_printed_lims_label_to_basket_bag(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            apply_printed_lims_label_to_basket_bag,
+            ApplyPrintedLimsLabelToBasketBagCommand(),
+        )
+
+    def apply_printed_lims_label_to_gross_balance_bag(self, experiment_id: str) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            apply_printed_lims_label_to_gross_balance_bag,
+            ApplyPrintedLimsLabelToGrossBalanceBagCommand(),
         )
 
     def create_debug_produce_lot_on_workbench(

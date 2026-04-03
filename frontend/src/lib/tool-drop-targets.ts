@@ -3,6 +3,7 @@ export {
   canToolAcceptLiquids,
   canToolAcceptProduce,
   canToolReceiveContents,
+  getLimsLabelTicketDropTargets,
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,

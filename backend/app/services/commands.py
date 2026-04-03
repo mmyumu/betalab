@@ -203,6 +203,56 @@ class DiscardBasketToolCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveWorkbenchToolToGrossBalanceCommand:
+    source_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveBasketToolToGrossBalanceCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class PlaceToolOnGrossBalanceCommand:
+    tool_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveRackToolToGrossBalanceCommand:
+    rack_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreTrashedToolToGrossBalanceCommand:
+    trash_tool_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveGrossBalanceToolToWorkbenchCommand:
+    target_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveGrossBalanceToolToRackCommand:
+    rack_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class DiscardGrossBalanceToolCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class OpenGrossBalanceToolCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class CloseGrossBalanceToolCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class CreateLimsReceptionCommand:
     orchard_name: str
     harvest_date: str
@@ -216,7 +266,54 @@ class RecordGrossWeightCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveWorkspaceProduceLotToGrossBalanceCommand:
+    produce_lot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveWorkbenchProduceLotToGrossBalanceCommand:
+    source_slot_id: str
+    produce_lot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveWidgetProduceLotToGrossBalanceCommand:
+    widget_id: str
+    produce_lot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreTrashedProduceLotToGrossBalanceCommand:
+    trash_produce_lot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveGrossBalanceProduceLotToWorkbenchCommand:
+    target_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveGrossBalanceProduceLotToWidgetCommand:
+    widget_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class DiscardGrossBalanceProduceLotCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class PrintLimsLabelCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class ApplyPrintedLimsLabelToBasketBagCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class ApplyPrintedLimsLabelToGrossBalanceBagCommand:
     pass
 
 

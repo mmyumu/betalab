@@ -235,6 +235,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     grinder_run_duration_ms=widget.grinder_run_duration_ms,
                     grinder_run_remaining_ms=widget.grinder_run_remaining_ms,
                     grinder_fault=widget.grinder_fault,
+                    tool=_deserialize_workbench_tool(widget.tool),
                     produce_lots=[
                         _deserialize_produce_lot(lot) for lot in widget.produce_lots
                     ],
@@ -284,6 +285,7 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         trapped_co2_mass_g=tool_schema.trapped_co2_mass_g,
         field_label_text=tool_schema.field_label_text,
         sample_label_text=tool_schema.sample_label_text,
+        sample_label_received_date=tool_schema.sample_label_received_date,
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
     )

@@ -3,6 +3,7 @@ import type {
   BenchToolDragPayload,
   DragDescriptor,
   DropTargetType,
+  GrossBalanceToolDragPayload,
   LimsLabelTicketDragPayload,
   ProduceDragPayload,
   RackToolDragPayload,
@@ -18,6 +19,7 @@ export const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
 export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
 export const BASKET_TOOL_DRAG_MIME = "application/x-betalab-basket-tool-item";
 export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
+export const GROSS_BALANCE_TOOL_DRAG_MIME = "application/x-betalab-gross-balance-tool-item";
 export const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
 export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
 export const WORKSPACE_LIQUID_DRAG_MIME = "application/x-betalab-workspace-liquid-item";
@@ -33,6 +35,7 @@ function getDropTargetMime(targetType: DropTargetType) {
 function isDropTargetType(targetType: unknown): targetType is DropTargetType {
   return (
     targetType === "workbench_slot" ||
+    targetType === "sample_bag_tool" ||
     targetType === "workspace_canvas" ||
     targetType === "rack_slot" ||
     targetType === "trash_bin" ||
@@ -131,6 +134,20 @@ export function writeRackToolDragPayload(dataTransfer: DataTransfer, payload: Ra
   dataTransfer.setData("text/plain", serialized);
   payload.allowedDropTargets.forEach((targetType) => {
     dataTransfer.setData(getDropTargetMime(targetType), payload.rackSlotId);
+  });
+  dataTransfer.effectAllowed = "move";
+}
+
+export function writeGrossBalanceToolDragPayload(
+  dataTransfer: DataTransfer,
+  payload: GrossBalanceToolDragPayload,
+) {
+  const serialized = JSON.stringify(payload);
+
+  dataTransfer.setData(GROSS_BALANCE_TOOL_DRAG_MIME, serialized);
+  dataTransfer.setData("text/plain", serialized);
+  payload.allowedDropTargets.forEach((targetType) => {
+    dataTransfer.setData(getDropTargetMime(targetType), payload.sourceId);
   });
   dataTransfer.effectAllowed = "move";
 }
@@ -466,6 +483,44 @@ export function readRackToolDragPayload(dataTransfer: DataTransfer): RackToolDra
   return null;
 }
 
+export function readGrossBalanceToolDragPayload(
+  dataTransfer: DataTransfer,
+): GrossBalanceToolDragPayload | null {
+  const rawPayload =
+    dataTransfer.getData(GROSS_BALANCE_TOOL_DRAG_MIME) || dataTransfer.getData("text/plain");
+
+  if (!rawPayload) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as Partial<GrossBalanceToolDragPayload>;
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
+
+    if (
+      parsed.entityKind === "tool" &&
+      parsed.sourceKind === "gross_balance" &&
+      typeof parsed.sourceId === "string" &&
+      typeof parsed.toolId === "string" &&
+      typeof parsed.toolType === "string" &&
+      allowedDropTargets.length > 0
+    ) {
+      return {
+        allowedDropTargets,
+        entityKind: "tool",
+        sourceId: parsed.sourceId,
+        sourceKind: "gross_balance",
+        toolId: parsed.toolId,
+        toolType: parsed.toolType,
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function readTrashToolDragPayload(dataTransfer: DataTransfer): TrashToolDragPayload | null {
   const rawPayload =
     dataTransfer.getData(TRASH_TOOL_DRAG_MIME) || dataTransfer.getData("text/plain");
@@ -560,6 +615,7 @@ export function readProduceDragPayload(dataTransfer: DataTransfer): ProduceDragP
       typeof parsed.produceType === "string" &&
       typeof parsed.sourceId === "string" &&
       (parsed.sourceKind === "basket" ||
+        parsed.sourceKind === "gross_balance" ||
         (parsed.sourceKind === "debug_palette" && typeof parsed.debugProducePresetId === "string") ||
         parsed.sourceKind === "grinder" ||
         (parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
@@ -643,6 +699,7 @@ export function readSampleLabelDragPayload(
       parsed.allowedDropTargets?.filter(
         (targetType): targetType is DropTargetType =>
           targetType === "workbench_slot" ||
+          targetType === "gross_balance_widget" ||
           targetType === "trash_bin" ||
           targetType === "grinder_widget",
       ) ?? [];
@@ -683,6 +740,7 @@ export function toDragDescriptor(
     | BenchToolDragPayload
     | BasketToolDragPayload
     | RackToolDragPayload
+    | GrossBalanceToolDragPayload
     | TrashToolDragPayload
     | WorkspaceWidgetDragPayload
     | WorkspaceLiquidDragPayload
@@ -800,6 +858,17 @@ export function toDragDescriptor(
     };
   }
 
+  if ("toolId" in payload && payload.sourceKind === "gross_balance") {
+    return {
+      allowedDropTargets: payload.allowedDropTargets,
+      entityKind: "tool",
+      sourceId: payload.sourceId,
+      sourceKind: payload.sourceKind,
+      toolId: payload.toolId,
+      toolType: payload.toolType,
+    };
+  }
+
   if ("sourceSlotId" in payload || "rackSlotId" in payload || "trashToolId" in payload) {
     return {
       allowedDropTargets: payload.allowedDropTargets,
@@ -840,6 +909,11 @@ export function readDragDescriptor(dataTransfer: DataTransfer): DragDescriptor |
   const rackToolPayload = readRackToolDragPayload(dataTransfer);
   if (rackToolPayload) {
     return toDragDescriptor(rackToolPayload);
+  }
+
+  const grossBalanceToolPayload = readGrossBalanceToolDragPayload(dataTransfer);
+  if (grossBalanceToolPayload) {
+    return toDragDescriptor(grossBalanceToolPayload);
   }
 
   const trashToolPayload = readTrashToolDragPayload(dataTransfer);

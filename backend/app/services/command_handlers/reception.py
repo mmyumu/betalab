@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from app.domain.models import Experiment, PrintedLabelTicket, new_id
 from app.services.command_handlers.support import find_workbench_slot
 from app.services.commands import (
+    ApplyPrintedLimsLabelToGrossBalanceBagCommand,
+    ApplyPrintedLimsLabelToBasketBagCommand,
     ApplyPrintedLimsLabelCommand,
     CreateLimsReceptionCommand,
     DiscardPrintedLimsLabelCommand,
@@ -11,6 +15,7 @@ from app.services.commands import (
     RecordGrossWeightCommand,
 )
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
+from app.services.command_handlers.support import find_workspace_widget
 
 
 def place_received_bag_on_workbench(
@@ -85,7 +90,8 @@ def print_lims_label(experiment: Experiment, _command: PrintLimsLabelCommand) ->
     experiment.lims_reception.printed_label_ticket = PrintedLabelTicket(
         id=new_id("lims_ticket"),
         sample_code=sample_code,
-        label_text=f"{sample_code} • Apples",
+        label_text=sample_code,
+        received_date=datetime.now(timezone.utc).date().isoformat(),
     )
     experiment.audit_log.append(f"LIMS label printed for {sample_code}.")
 
@@ -115,9 +121,49 @@ def apply_printed_lims_label(
         raise ValueError("Print the LIMS label before applying it to the bag.")
 
     slot.tool.sample_label_text = ticket.label_text
+    slot.tool.sample_label_received_date = ticket.received_date
     experiment.lims_reception.printed_label_ticket = None
     experiment.lims_reception.status = "received"
     experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {slot.tool.label}.")
+
+
+def apply_printed_lims_label_to_basket_bag(
+    experiment: Experiment,
+    _command: ApplyPrintedLimsLabelToBasketBagCommand,
+) -> None:
+    basket_tool = experiment.basket_tool
+    if basket_tool is None or basket_tool.tool_type != "sample_bag":
+        raise ValueError("The produce basket does not contain the received sampling bag.")
+
+    ticket = experiment.lims_reception.printed_label_ticket
+    if ticket is None:
+        raise ValueError("Print the LIMS label before applying it to the bag.")
+
+    basket_tool.sample_label_text = ticket.label_text
+    basket_tool.sample_label_received_date = ticket.received_date
+    experiment.lims_reception.printed_label_ticket = None
+    experiment.lims_reception.status = "received"
+    experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {basket_tool.label}.")
+
+
+def apply_printed_lims_label_to_gross_balance_bag(
+    experiment: Experiment,
+    _command: ApplyPrintedLimsLabelToGrossBalanceBagCommand,
+) -> None:
+    balance_widget = find_workspace_widget(experiment.workspace, "gross_balance")
+    balance_tool = balance_widget.tool
+    if balance_tool is None or balance_tool.tool_type != "sample_bag":
+        raise ValueError("The gross balance does not contain the received sampling bag.")
+
+    ticket = experiment.lims_reception.printed_label_ticket
+    if ticket is None:
+        raise ValueError("Print the LIMS label before applying it to the bag.")
+
+    balance_tool.sample_label_text = ticket.label_text
+    balance_tool.sample_label_received_date = ticket.received_date
+    experiment.lims_reception.printed_label_ticket = None
+    experiment.lims_reception.status = "received"
+    experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {balance_tool.label}.")
 
 
 def _build_sample_code(experiment: Experiment) -> str:

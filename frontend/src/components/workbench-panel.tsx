@@ -12,6 +12,7 @@ import {
   readBasketToolDragPayload,
   readDragDescriptor,
   readBenchToolDragPayload,
+  readGrossBalanceToolDragPayload,
   readLimsLabelTicketDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
@@ -25,6 +26,7 @@ import type {
   BenchToolDragPayload,
   BenchToolInstance,
   ExperimentProduceLot,
+  GrossBalanceToolDragPayload,
   LimsLabelTicketDragPayload,
   ProduceDragPayload,
   RackToolDragPayload,
@@ -36,6 +38,7 @@ import type {
 type ToolDropPayload =
   | BenchToolDragPayload
   | BasketToolDragPayload
+  | GrossBalanceToolDragPayload
   | RackToolDragPayload
   | TrashToolDragPayload;
 
@@ -79,6 +82,7 @@ type WorkbenchPanelProps = {
   onApplySampleLabel?: (slotId: string) => void;
   onMoveSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
   onApplyLimsLabelTicket?: (targetSlotId: string, payload: LimsLabelTicketDragPayload) => void;
+  canApplyLimsLabelTicketToSlot?: (slot: BenchSlot) => boolean;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onRemoveWorkbenchSlot?: (slotId: string) => void;
   onRestoreTrashedSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
@@ -110,6 +114,7 @@ export function WorkbenchPanel({
   onApplySampleLabel,
   onMoveSampleLabel,
   onApplyLimsLabelTicket,
+  canApplyLimsLabelTicketToSlot,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
   onRestoreTrashedSampleLabel,
@@ -126,9 +131,6 @@ export function WorkbenchPanel({
     if (dndDisabled) {
       return false;
     }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
-      return false;
-    }
 
     const descriptor = readDragDescriptor(event.dataTransfer);
     if (!descriptor) {
@@ -143,6 +145,7 @@ export function WorkbenchPanel({
       if (
         descriptor.sourceKind === "palette" ||
         descriptor.sourceKind === "basket" ||
+        descriptor.sourceKind === "gross_balance" ||
         descriptor.sourceKind === "rack" ||
         descriptor.sourceKind === "trash"
       ) {
@@ -171,11 +174,21 @@ export function WorkbenchPanel({
     }
 
     if (descriptor.entityKind === "sample_label") {
+      if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
+        return false;
+      }
       return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
     }
 
     if (descriptor.entityKind === "lims_label_ticket") {
-      return slot.tool?.toolType === "sample_bag" && slot.tool.sampleLabelText === null;
+      if (!hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool")) {
+        return false;
+      }
+      return canApplyLimsLabelTicketToSlot?.(slot) ?? false;
+    }
+
+    if (!hasCompatibleDropTarget(event.dataTransfer, "workbench_slot")) {
+      return false;
     }
 
     return false;
@@ -206,6 +219,12 @@ export function WorkbenchPanel({
     const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
     if (rackToolPayload) {
       onBenchToolDrop?.(slot.id, rackToolPayload);
+      return;
+    }
+
+    const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
+    if (grossBalanceToolPayload) {
+      onBenchToolDrop?.(slot.id, grossBalanceToolPayload);
       return;
     }
 

@@ -103,8 +103,10 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
     assert sample_code.startswith("APP-2026-")
     assert printed.status_code == 200
     assert printed.json()["lims_reception"]["printed_label_ticket"]["sample_code"] == sample_code
+    assert printed.json()["lims_reception"]["printed_label_ticket"]["received_date"]
     assert applied.status_code == 200
-    assert applied.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == f"{sample_code} • Apples"
+    assert applied.json()["workbench"]["slots"][0]["tool"]["sample_label_text"] == sample_code
+    assert applied.json()["workbench"]["slots"][0]["tool"]["sample_label_received_date"]
     assert applied.json()["lims_reception"]["status"] == "received"
 
 
@@ -125,6 +127,31 @@ def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
     assert registered.status_code == 200
     assert registered.json()["lims_reception"]["lab_sample_code"].startswith("APP-2026-")
     assert registered.json()["lims_reception"]["measured_gross_mass_g"] is None
+
+
+def test_printed_lims_label_can_be_applied_to_basket_bag_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Martin Orchard",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": None,
+            },
+        )
+        printed = client.post(f"/experiments/{experiment_id}/lims/print-label")
+        applied = client.post(f"/experiments/{experiment_id}/lims/apply-label-to-basket-bag")
+
+    assert printed.status_code == 200
+    assert applied.status_code == 200
+    sample_code = printed.json()["lims_reception"]["printed_label_ticket"]["sample_code"]
+    assert applied.json()["basket_tool"]["sample_label_text"] == sample_code
+    assert applied.json()["basket_tool"]["sample_label_received_date"]
+    assert applied.json()["lims_reception"]["printed_label_ticket"] is None
+    assert applied.json()["lims_reception"]["status"] == "received"
 
 
 def test_received_bag_can_be_discarded_from_basket_over_http() -> None:

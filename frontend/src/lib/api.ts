@@ -475,6 +475,117 @@ export async function discardBasketTool(experimentId: string, _payload?: Mutatio
   });
 }
 
+export async function moveWorkbenchToolToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-workbench-tool`,
+    body: { slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
+export async function moveBasketToolToGrossBalance(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-basket-tool`,
+  });
+}
+
+export async function placeToolOnGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-tool`,
+    body: { tool_id: requireString(body, "tool_id") },
+  });
+}
+
+export async function moveRackToolToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-rack-tool`,
+    body: { rack_slot_id: requireString(body, "rack_slot_id") },
+  });
+}
+
+export async function restoreTrashedToolToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/restore-trash-tool/${requireString(body, "trash_tool_id")}`,
+  });
+}
+
+export async function moveGrossBalanceToolToWorkbench(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/move-tool-to-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function moveGrossBalanceToolToRack(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/move-tool-to-rack`,
+    body: { rack_slot_id: requireString(body, "rack_slot_id") },
+  });
+}
+
+export async function discardGrossBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/discard-tool`,
+  });
+}
+
+export async function openGrossBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/open-tool`,
+  });
+}
+
+export async function closeGrossBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/close-tool`,
+  });
+}
+
 export async function recordGrossWeight(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
   const body = _payload && "measured_gross_mass_g" in _payload ? _payload : undefined;
   return sendMutationRequest(experimentId, {
@@ -487,6 +598,87 @@ export async function recordGrossWeight(experimentId: string, _payload?: Mutatio
           },
         }
       : {}),
+  });
+}
+
+export async function moveWorkspaceProduceLotToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-workspace-produce-lot/${requireString(body, "produce_lot_id")}`,
+  });
+}
+
+export async function moveWorkbenchProduceLotToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-workbench-produce-lot`,
+    body: {
+      source_slot_id: requireString(body, "source_slot_id"),
+      produce_lot_id: requireString(body, "produce_lot_id"),
+    },
+  });
+}
+
+export async function moveWidgetProduceLotToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-widget-produce-lot`,
+    body: { produce_lot_id: requireString(body, "produce_lot_id") },
+  });
+}
+
+export async function restoreTrashedProduceLotToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/restore-trash-produce-lot/${requireString(body, "trash_produce_lot_id")}`,
+  });
+}
+
+export async function moveGrossBalanceProduceLotToWorkbench(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/move-produce-lot-to-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function moveGrossBalanceProduceLotToWidget(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/move-produce-lot-to-widget`,
+  });
+}
+
+export async function discardGrossBalanceProduceLot(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/discard-produce-lot`,
   });
 }
 
@@ -527,6 +719,26 @@ export async function applyPrintedLimsLabel(experimentId: string, payload: Mutat
     method: "POST",
     path: `/experiments/${experimentId}/lims/apply-label-to-workbench-bag`,
     body: { slot_id: requireString(body, "slot_id") },
+  });
+}
+
+export async function applyPrintedLimsLabelToBasketBag(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/apply-label-to-basket-bag`,
+  });
+}
+
+export async function applyPrintedLimsLabelToGrossBalanceBag(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/apply-label-to-gross-balance-bag`,
   });
 }
 
@@ -880,6 +1092,12 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
         : tool.sample_label_text !== undefined
           ? (tool.sample_label_text as string | null)
           : null,
+    sampleLabelReceivedDate:
+      tool.sampleLabelReceivedDate !== undefined
+        ? (tool.sampleLabelReceivedDate as string | null)
+        : tool.sample_label_received_date !== undefined
+          ? (tool.sample_label_received_date as string | null)
+          : null,
     produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
@@ -897,6 +1115,7 @@ function normalizePrintedLabelTicket(
     id: String(ticket.id),
     sampleCode: String(ticket.sampleCode ?? ticket.sample_code),
     labelText: String(ticket.labelText ?? ticket.label_text),
+    receivedDate: String(ticket.receivedDate ?? ticket.received_date ?? ""),
   };
 }
 
@@ -982,6 +1201,10 @@ function normalizeWorkspaceWidget(
 ): ExperimentWorkspaceWidget {
   const legacyX = Number(widget.x ?? 0);
   const legacyY = Number(widget.y ?? 0);
+  const rawTool = (widget.tool ?? (widget as Record<string, unknown>).tool) as
+    | (BenchToolInstance & Record<string, unknown>)
+    | null
+    | undefined;
 
   return {
     id: String(widget.id) as ExperimentWorkspaceWidget["id"],
@@ -1002,6 +1225,7 @@ function normalizeWorkspaceWidget(
     y: legacyY,
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
+    tool: rawTool === undefined ? undefined : rawTool === null ? null : normalizeBenchTool(rawTool),
     produceLots: (widget.produceLots ?? widget.produce_lots ?? []).map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),

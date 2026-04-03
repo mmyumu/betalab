@@ -1,6 +1,7 @@
 export type ToolbarAccent = "amber" | "emerald" | "rose" | "sky";
 export type DropTargetType =
   | "workbench_slot"
+  | "sample_bag_tool"
   | "workspace_canvas"
   | "rack_slot"
   | "trash_bin"
@@ -71,6 +72,7 @@ export type DragSourceKind =
   | "trash"
   | "basket"
   | "grinder"
+  | "gross_balance"
   | "lims";
 
 export type DebugProducePresetId = "apple_powder_residual_co2";
@@ -174,7 +176,7 @@ export type ProduceDragPayload = BaseDragPayload & {
   produceLotId: string;
   produceType: ProduceLotType;
   sourceId: string;
-  sourceKind: "basket" | "workbench" | "trash" | "grinder" | "debug_palette";
+  sourceKind: "basket" | "workbench" | "trash" | "grinder" | "gross_balance" | "debug_palette";
   sourceSlotId?: string;
   trashProduceLotId?: string;
 };
@@ -210,6 +212,14 @@ export type RackToolDragPayload = BaseDragPayload & {
   rackSlotId: string;
   sourceId: string;
   sourceKind: "rack";
+  toolId: string;
+  toolType: ToolType;
+};
+
+export type GrossBalanceToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
+  sourceId: string;
+  sourceKind: "gross_balance";
   toolId: string;
   toolType: ToolType;
 };
@@ -291,6 +301,7 @@ export type BenchToolInstance = {
   closureFault?: string | null;
   fieldLabelText?: string | null;
   sampleLabelText?: string | null;
+  sampleLabelReceivedDate?: string | null;
   produceLots?: ExperimentProduceLot[];
   liquids: BenchLiquidPortion[];
 };
@@ -318,6 +329,7 @@ export type PrintedLabelTicket = {
   id: string;
   sampleCode: string;
   labelText: string;
+  receivedDate: string;
 };
 
 export type LimsReception = {
@@ -356,6 +368,7 @@ export type ExperimentWorkspaceWidget = {
   y?: number;
   isPresent: boolean;
   isTrashed: boolean;
+  tool?: BenchToolInstance | null;
   produceLots?: ExperimentProduceLot[];
   liquids?: BenchLiquidPortion[];
 };

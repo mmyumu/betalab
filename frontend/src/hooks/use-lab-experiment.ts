@@ -9,8 +9,11 @@ import {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
+  applyPrintedLimsLabelToGrossBalanceBag,
   applyPrintedLimsLabel,
+  applyPrintedLimsLabelToBasketBag,
   applySampleLabelToWorkbenchTool,
+  closeGrossBalanceTool,
   closeWorkbenchTool,
   completeGrinderCycle,
   createLimsReception,
@@ -21,6 +24,8 @@ import {
   createProduceLot,
   cutWorkbenchProduceLot,
   discardBasketTool,
+  discardGrossBalanceProduceLot,
+  discardGrossBalanceTool,
   discardProduceLotFromWorkbenchTool,
   discardPrintedLimsLabel,
   discardRackTool,
@@ -31,8 +36,20 @@ import {
   discardWorkbenchTool,
   discardWorkspaceProduceLot,
   discardWorkspaceWidget,
+  moveBasketToolToGrossBalance,
+  placeToolOnGrossBalance,
+  moveGrossBalanceProduceLotToWidget,
+  moveGrossBalanceProduceLotToWorkbench,
+  moveGrossBalanceToolToRack,
+  moveGrossBalanceToolToWorkbench,
   moveProduceLotBetweenWorkbenchTools,
   moveRackToolBetweenSlots,
+  moveRackToolToGrossBalance,
+  moveWorkbenchProduceLotToGrossBalance,
+  moveWorkbenchToolToGrossBalance,
+  moveWidgetProduceLotToGrossBalance,
+  moveWorkspaceProduceLotToGrossBalance,
+  openGrossBalanceTool,
   moveSampleLabelBetweenWorkbenchTools,
   moveToolBetweenWorkbenchSlots,
   moveWidgetProduceLotToWorkbenchTool,
@@ -50,8 +67,10 @@ import {
   removeRackToolToWorkbenchSlot,
   removeWorkbenchSlot,
   restoreTrashedProduceLotToWorkbenchTool,
+  restoreTrashedProduceLotToGrossBalance,
   restoreTrashedProduceLotToWidget,
   restoreTrashedSampleLabelToWorkbenchTool,
+  restoreTrashedToolToGrossBalance,
   restoreTrashedToolToRackSlot,
   restoreTrashedToolToWorkbenchSlot,
   subscribeToExperimentStream,
@@ -80,8 +99,11 @@ const mutationFns = {
   addWorkbenchSlot,
   addWorkspaceProduceLotToWidget,
   addWorkspaceWidget,
+  applyPrintedLimsLabelToGrossBalanceBag,
   applyPrintedLimsLabel,
+  applyPrintedLimsLabelToBasketBag,
   applySampleLabelToWorkbenchTool,
+  closeGrossBalanceTool,
   closeWorkbenchTool,
   completeGrinderCycle,
   createLimsReception,
@@ -90,6 +112,8 @@ const mutationFns = {
   createDebugProduceLotToWidget,
   cutWorkbenchProduceLot,
   discardBasketTool,
+  discardGrossBalanceProduceLot,
+  discardGrossBalanceTool,
   discardProduceLotFromWorkbenchTool,
   discardPrintedLimsLabel,
   discardRackTool,
@@ -100,8 +124,20 @@ const mutationFns = {
   discardWorkbenchTool,
   discardWorkspaceProduceLot,
   discardWorkspaceWidget,
+  moveBasketToolToGrossBalance,
+  placeToolOnGrossBalance,
+  moveGrossBalanceProduceLotToWidget,
+  moveGrossBalanceProduceLotToWorkbench,
+  moveGrossBalanceToolToRack,
+  moveGrossBalanceToolToWorkbench,
   moveProduceLotBetweenWorkbenchTools,
   moveRackToolBetweenSlots,
+  moveRackToolToGrossBalance,
+  moveWorkbenchProduceLotToGrossBalance,
+  moveWorkbenchToolToGrossBalance,
+  moveWidgetProduceLotToGrossBalance,
+  moveWorkspaceProduceLotToGrossBalance,
+  openGrossBalanceTool,
   moveSampleLabelBetweenWorkbenchTools,
   moveToolBetweenWorkbenchSlots,
   moveWidgetProduceLotToWorkbenchTool,
@@ -119,8 +155,10 @@ const mutationFns = {
   removeRackToolToWorkbenchSlot,
   removeWorkbenchSlot,
   restoreTrashedProduceLotToWorkbenchTool,
+  restoreTrashedProduceLotToGrossBalance,
   restoreTrashedProduceLotToWidget,
   restoreTrashedSampleLabelToWorkbenchTool,
+  restoreTrashedToolToGrossBalance,
   restoreTrashedToolToRackSlot,
   restoreTrashedToolToWorkbenchSlot,
   startGrinderCycle,
@@ -249,8 +287,14 @@ export function useLabExperiment({
       executeMutation(mutationFns.addWorkspaceWidget, payload),
     applyPrintedLimsLabel: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.applyPrintedLimsLabel, payload),
+    applyPrintedLimsLabelToGrossBalanceBag: () =>
+      executeMutation(mutationFns.applyPrintedLimsLabelToGrossBalanceBag),
+    applyPrintedLimsLabelToBasketBag: () =>
+      executeMutation(mutationFns.applyPrintedLimsLabelToBasketBag),
     applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
+    closeGrossBalanceTool: () =>
+      executeMutation(mutationFns.closeGrossBalanceTool),
     closeWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.closeWorkbenchTool, payload),
     completeGrinderCycle: (payload: Record<string, unknown>) =>
@@ -269,6 +313,10 @@ export function useLabExperiment({
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
     discardBasketTool: () =>
       executeMutation(mutationFns.discardBasketTool),
+    discardGrossBalanceProduceLot: () =>
+      executeMutation(mutationFns.discardGrossBalanceProduceLot),
+    discardGrossBalanceTool: () =>
+      executeMutation(mutationFns.discardGrossBalanceTool),
     discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.discardProduceLotFromWorkbenchTool, payload),
     discardPrintedLimsLabel: () =>
@@ -289,20 +337,44 @@ export function useLabExperiment({
       executeMutation(mutationFns.discardWorkspaceProduceLot, payload),
     discardWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.discardWorkspaceWidget, payload),
+    moveBasketToolToGrossBalance: () =>
+      executeMutation(mutationFns.moveBasketToolToGrossBalance),
+    placeToolOnGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.placeToolOnGrossBalance, payload),
+    moveGrossBalanceProduceLotToWidget: () =>
+      executeMutation(mutationFns.moveGrossBalanceProduceLotToWidget),
+    moveGrossBalanceProduceLotToWorkbench: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveGrossBalanceProduceLotToWorkbench, payload),
+    moveGrossBalanceToolToRack: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveGrossBalanceToolToRack, payload),
+    moveGrossBalanceToolToWorkbench: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveGrossBalanceToolToWorkbench, payload),
     moveProduceLotBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveProduceLotBetweenWorkbenchTools, payload),
     moveRackToolBetweenSlots: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveRackToolBetweenSlots, payload),
+    moveRackToolToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveRackToolToGrossBalance, payload),
     moveSampleLabelBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveSampleLabelBetweenWorkbenchTools, payload),
     moveToolBetweenWorkbenchSlots: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveToolBetweenWorkbenchSlots, payload),
+    moveWorkbenchProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWorkbenchProduceLotToGrossBalance, payload),
+    moveWorkbenchToolToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWorkbenchToolToGrossBalance, payload),
     moveWidgetProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveWidgetProduceLotToWorkbenchTool, payload),
+    moveWidgetProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWidgetProduceLotToGrossBalance, payload),
     moveWorkbenchProduceLotToWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveWorkbenchProduceLotToWidget, payload),
+    moveWorkspaceProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveWorkspaceProduceLotToGrossBalance, payload),
     moveWorkspaceWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveWorkspaceWidget, payload),
+    openGrossBalanceTool: () =>
+      executeMutation(mutationFns.openGrossBalanceTool),
     openWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.openWorkbenchTool, payload),
     placeToolInRackSlot: (payload: Record<string, unknown>) =>
@@ -324,12 +396,16 @@ export function useLabExperiment({
       executeMutation(mutationFns.removeRackToolToWorkbenchSlot, payload),
     removeWorkbenchSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.removeWorkbenchSlot, payload),
+    restoreTrashedProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedProduceLotToGrossBalance, payload),
     restoreTrashedProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToWorkbenchTool, payload),
     restoreTrashedProduceLotToWidget: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToWidget, payload),
     restoreTrashedSampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.restoreTrashedSampleLabelToWorkbenchTool, payload),
+    restoreTrashedToolToGrossBalance: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.restoreTrashedToolToGrossBalance, payload),
     restoreTrashedToolToRackSlot: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.restoreTrashedToolToRackSlot, payload),
     restoreTrashedToolToWorkbenchSlot: (payload: Record<string, unknown>) =>

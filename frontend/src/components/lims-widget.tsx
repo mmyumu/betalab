@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { SampleIdentityLabel } from "@/components/sample-identity-label";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 import type { LimsReception, PrintedLabelTicket } from "@/types/workbench";
 
@@ -223,10 +224,13 @@ export function LimsWidget({
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Printed ticket
             </p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">
-              {reception.printedLabelTicket.sampleCode}
-            </p>
-            <p className="text-xs text-slate-600">{reception.printedLabelTicket.labelText}</p>
+            <div className="mt-1">
+              <SampleIdentityLabel
+                receivedDate={reception.printedLabelTicket.receivedDate}
+                sampleCode={reception.printedLabelTicket.sampleCode}
+                variant="ticket"
+              />
+            </div>
           </div>
         ) : null}
       </div>

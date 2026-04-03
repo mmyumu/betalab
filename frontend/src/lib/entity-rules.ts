@@ -45,6 +45,10 @@ export function getSampleLabelDropTargets(): DropTargetType[] {
   return ["workbench_slot", "trash_bin"];
 }
 
+export function getLimsLabelTicketDropTargets(): DropTargetType[] {
+  return ["sample_bag_tool", "trash_bin"];
+}
+
 export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
   if (liquidType === "dry_ice_pellets") {
     return ["grinder_widget"];

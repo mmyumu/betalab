@@ -15,6 +15,7 @@ class PrintedLabelTicket:
     id: str
     sample_code: str
     label_text: str
+    received_date: str = ""
 
 
 @dataclass
@@ -52,6 +53,7 @@ class WorkbenchTool:
     trapped_co2_mass_g: float = 0.0
     field_label_text: str | None = None
     sample_label_text: str | None = None
+    sample_label_received_date: str | None = None
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
@@ -122,6 +124,7 @@ class WorkspaceWidget:
     grinder_run_duration_ms: float = 0.0
     grinder_run_remaining_ms: float = 0.0
     grinder_fault: str | None = None
+    tool: WorkbenchTool | None = None
     produce_lots: list["ProduceLot"] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
