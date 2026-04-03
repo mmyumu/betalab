@@ -307,26 +307,41 @@ def restore_trashed_produce_lot_to_gross_balance(
 @router.post("/{experiment_id}/gross-balance/move-produce-lot-to-workbench", response_model=ExperimentSchema)
 def move_gross_balance_produce_lot_to_workbench(
     experiment_id: str,
-    request: TargetWorkbenchSlotSchema,
+    request: WorkspaceWidgetMoveProduceLotToWorkbenchSchema,
 ) -> ExperimentSchema:
     return _handle_service_errors(
-        lambda: experiment_service.move_gross_balance_produce_lot_to_workbench(experiment_id, request.target_slot_id)
+        lambda: experiment_service.move_gross_balance_produce_lot_to_workbench(
+            experiment_id,
+            request.target_slot_id,
+            request.produce_lot_id,
+        )
     )
 
 
 @router.post("/{experiment_id}/gross-balance/move-produce-lot-to-widget", response_model=ExperimentSchema)
 def move_gross_balance_produce_lot_to_widget(
     experiment_id: str,
+    request: WorkspaceWidgetProduceLotCreateSchema,
 ) -> ExperimentSchema:
     return _handle_service_errors(
-        lambda: experiment_service.move_gross_balance_produce_lot_to_widget(experiment_id, "grinder")
+        lambda: experiment_service.move_gross_balance_produce_lot_to_widget(
+            experiment_id,
+            "grinder",
+            request.produce_lot_id,
+        )
     )
 
 
 @router.post("/{experiment_id}/gross-balance/discard-produce-lot", response_model=ExperimentSchema)
-def discard_gross_balance_produce_lot(experiment_id: str) -> ExperimentSchema:
+def discard_gross_balance_produce_lot(
+    experiment_id: str,
+    request: WorkbenchToolProduceLotCreateSchema,
+) -> ExperimentSchema:
     return _handle_service_errors(
-        lambda: experiment_service.discard_gross_balance_produce_lot(experiment_id)
+        lambda: experiment_service.discard_gross_balance_produce_lot(
+            experiment_id,
+            request.produce_lot_id,
+        )
     )
 
 

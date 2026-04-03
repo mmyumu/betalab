@@ -196,14 +196,15 @@ class GrossBalanceProduceLotTarget:
 
 
 class GrossBalanceProduceLotSource:
+    def __init__(self, produce_lot_id: str):
+        self.produce_lot_id = produce_lot_id
+
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
-        widget = _find_gross_balance_widget(experiment)
-        if not widget.produce_lots:
-            raise ValueError(f"{widget.label} does not contain a produce lot.")
-        produce_lot = widget.produce_lots[0]
-        widget.produce_lots = []
-        _update_balance_measured_mass(experiment)
-        return ProduceLotRemoval(produce_lot=produce_lot, source_label=widget.label)
+        produce_lot, source_label = _remove_gross_balance_produce_lot(
+            experiment,
+            self.produce_lot_id,
+        )
+        return ProduceLotRemoval(produce_lot=produce_lot, source_label=source_label)
 
 
 def move_workspace_produce_lot_to_gross_balance(
@@ -260,7 +261,7 @@ def move_gross_balance_produce_lot_to_workbench(
 ) -> None:
     result = produce_lot_transfer_service.transfer(
         experiment,
-        GrossBalanceProduceLotSource(),
+        GrossBalanceProduceLotSource(command.produce_lot_id),
         WorkbenchProduceLotTarget(command.target_slot_id),
     )
     experiment.audit_log.append(f"{result.produce_lot.label} moved from {result.source_label} to {result.target_label}.")
@@ -272,7 +273,7 @@ def move_gross_balance_produce_lot_to_widget(
 ) -> None:
     result = produce_lot_transfer_service.transfer(
         experiment,
-        GrossBalanceProduceLotSource(),
+        GrossBalanceProduceLotSource(command.produce_lot_id),
         GrinderProduceLotTarget(command.widget_id),
     )
     experiment.audit_log.append(f"{result.produce_lot.label} moved from {result.source_label} to {result.target_label}.")
@@ -280,22 +281,20 @@ def move_gross_balance_produce_lot_to_widget(
 
 def discard_gross_balance_produce_lot(
     experiment: Experiment,
-    _command: DiscardGrossBalanceProduceLotCommand,
+    command: DiscardGrossBalanceProduceLotCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
-    if not widget.produce_lots:
-        raise ValueError(f"{widget.label} does not contain a produce lot.")
-    produce_lot = widget.produce_lots[0]
-    widget.produce_lots = []
+    produce_lot, source_label = _remove_gross_balance_produce_lot(
+        experiment,
+        command.produce_lot_id,
+    )
     experiment.trash.produce_lots.append(
         TrashProduceLotEntry(
             id=f"trash_produce_{produce_lot.id}",
-            origin_label=widget.label,
+            origin_label=source_label,
             produce_lot=produce_lot,
         )
     )
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{produce_lot.label} discarded from {widget.label}.")
+    experiment.audit_log.append(f"{produce_lot.label} discarded from {source_label}.")
 
 
 def _find_gross_balance_widget(experiment: Experiment):
@@ -345,4 +344,23 @@ def _estimate_tool_mass(tool) -> float:
     produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
     liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
     return round(tare_by_tool_type.get(tool.tool_type, 0) + produce_mass_g + liquid_mass_g, 1)
+
+
+def _remove_gross_balance_produce_lot(experiment: Experiment, produce_lot_id: str):
+    widget = _find_gross_balance_widget(experiment)
+    if widget.tool is not None:
+        produce_lot = next((lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None)
+        if produce_lot is not None:
+            widget.tool.produce_lots = [
+                lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id
+            ]
+            _update_balance_measured_mass(experiment)
+            return produce_lot, widget.label
+
+    produce_lot = next((lot for lot in widget.produce_lots if lot.id == produce_lot_id), None)
+    if produce_lot is None:
+        raise ValueError(f"{widget.label} does not contain produce lot {produce_lot_id}.")
+    widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot_id]
+    _update_balance_measured_mass(experiment)
+    return produce_lot, widget.label
     PlaceToolOnGrossBalanceCommand,

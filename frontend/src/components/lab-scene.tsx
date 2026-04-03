@@ -832,6 +832,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (payload.sourceKind === "gross_balance") {
       void experimentApi.moveGrossBalanceProduceLotToWorkbench({
         target_slot_id: targetSlotId,
+        produce_lot_id: payload.produceLotId,
       });
       clearDropTargets();
       return;
@@ -1170,6 +1171,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     setActiveDragItem(toDragDescriptor(payload));
   };
 
+  const handleGrossBalanceProduceLotDragStart = (
+    produceLot: ExperimentProduceLot,
+    dataTransfer: DataTransfer,
+  ) => {
+    const allowedDropTargets = getProduceLotDropTargets();
+    const payload: ProduceDragPayload = {
+      allowedDropTargets,
+      entityKind: "produce",
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType,
+      sourceId: produceLot.id,
+      sourceKind: "gross_balance",
+    };
+    writeProduceDragPayload(dataTransfer, payload);
+    showDropTargets(payload.allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(payload));
+  };
+
   const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
     if (grinderDndDisabled) {
       return;
@@ -1228,7 +1247,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
 
     if (producePayload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceProduceLotToWidget();
+      void experimentApi.moveGrossBalanceProduceLotToWidget({
+        produce_lot_id: producePayload.produceLotId,
+      });
       return;
     }
 
@@ -1370,7 +1391,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.discardGrossBalanceProduceLot();
+      void experimentApi.discardGrossBalanceProduceLot({
+        produce_lot_id: producePayload.produceLotId,
+      });
       return;
     }
 
@@ -1580,7 +1603,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return produceLot ? getApproximateProduceMassG(produceLot) : null;
     }
     if (payload.sourceKind === "gross_balance") {
-      return grossBalanceProduceLot ? getApproximateProduceMassG(grossBalanceProduceLot) : null;
+      const produceLot =
+        grossBalanceTool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        grossBalanceProduceLot;
+      return produceLot ? getApproximateProduceMassG(produceLot) : null;
     }
     if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
       const produceLot =
@@ -1609,7 +1635,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return grinderProduceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
     }
     if (payload.sourceKind === "gross_balance") {
-      return grossBalanceProduceLot;
+      return (
+        grossBalanceTool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
+        grossBalanceProduceLot
+      );
     }
     if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
       return trashedProduceLots.find((entry) => entry.id === payload.trashProduceLotId)?.produceLot ?? null;
@@ -2402,6 +2431,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
           }}
           onDragStart={(event) => {
             handleBalanceItemDragStart(event.dataTransfer);
+          }}
+          onProduceLotDragEnd={clearDropTargets}
+          onProduceLotDragStart={(produceLot, event) => {
+            handleGrossBalanceProduceLotDragStart(produceLot, event.dataTransfer);
           }}
           onDragOver={handleBalanceStagedToolDragOver}
           onDrop={handleBalanceStagedToolDrop}

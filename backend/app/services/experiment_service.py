@@ -520,29 +520,37 @@ class ExperimentService:
         self,
         experiment_id: str,
         target_slot_id: str,
+        produce_lot_id: str,
     ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             move_gross_balance_produce_lot_to_workbench,
-            MoveGrossBalanceProduceLotToWorkbenchCommand(target_slot_id=target_slot_id),
+            MoveGrossBalanceProduceLotToWorkbenchCommand(
+                target_slot_id=target_slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
 
     def move_gross_balance_produce_lot_to_widget(
         self,
         experiment_id: str,
         widget_id: str,
+        produce_lot_id: str,
     ) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             move_gross_balance_produce_lot_to_widget,
-            MoveGrossBalanceProduceLotToWidgetCommand(widget_id=widget_id),
+            MoveGrossBalanceProduceLotToWidgetCommand(
+                widget_id=widget_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
 
-    def discard_gross_balance_produce_lot(self, experiment_id: str) -> ExperimentSchema:
+    def discard_gross_balance_produce_lot(self, experiment_id: str, produce_lot_id: str) -> ExperimentSchema:
         return self._apply_command(
             experiment_id,
             discard_gross_balance_produce_lot,
-            DiscardGrossBalanceProduceLotCommand(),
+            DiscardGrossBalanceProduceLotCommand(produce_lot_id=produce_lot_id),
         )
 
     def create_lims_reception(

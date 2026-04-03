@@ -290,16 +290,18 @@ class RestoreTrashedProduceLotToGrossBalanceCommand:
 @dataclass(frozen=True, slots=True)
 class MoveGrossBalanceProduceLotToWorkbenchCommand:
     target_slot_id: str
+    produce_lot_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class MoveGrossBalanceProduceLotToWidgetCommand:
     widget_id: str
+    produce_lot_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class DiscardGrossBalanceProduceLotCommand:
-    pass
+    produce_lot_id: str
 
 
 @dataclass(frozen=True, slots=True)

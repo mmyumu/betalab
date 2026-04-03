@@ -2847,6 +2847,78 @@ describe("LabScene", () => {
     });
   });
 
+  it("allows dragging produce out of an open sampling bag while it is on the gross balance", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeSampleBagTool({
+            id: "balance_bag_1",
+            isSealed: false,
+            produceLots: [
+              {
+                id: "produce_1",
+                label: "Apple lot 1",
+                produceType: "apple",
+                totalMassG: 2450,
+                unitCount: 12,
+              },
+            ],
+          }),
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeSampleBagTool({
+              id: "bench_tool_1",
+              produceLots: [
+                {
+                  id: "produce_1",
+                  label: "Apple lot 1",
+                  produceType: "apple",
+                  totalMassG: 2450,
+                  unitCount: 12,
+                },
+              ],
+            }),
+          },
+        ]),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeSampleBagTool({
+            id: "balance_bag_1",
+            isSealed: false,
+            produceLots: [],
+          }),
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const produceCard = await screen.findByTestId("bench-produce-lot-produce_1");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(produceCard, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "move_gross_balance_produce_lot_to_workbench",
+        {
+          target_slot_id: "station_1",
+          produce_lot_id: "produce_1",
+        },
+      );
+    });
+  });
+
   it("discards a printed LIMS ticket directly into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

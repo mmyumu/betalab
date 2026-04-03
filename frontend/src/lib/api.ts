@@ -658,27 +658,34 @@ export async function moveGrossBalanceProduceLotToWorkbench(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/move-produce-lot-to-workbench`,
-    body: { target_slot_id: requireString(body, "target_slot_id") },
+    body: {
+      target_slot_id: requireString(body, "target_slot_id"),
+      produce_lot_id: requireString(body, "produce_lot_id"),
+    },
   });
 }
 
 export async function moveGrossBalanceProduceLotToWidget(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload: MutationPayload,
 ): Promise<Experiment> {
+  const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/move-produce-lot-to-widget`,
+    body: { produce_lot_id: requireString(body, "produce_lot_id") },
   });
 }
 
 export async function discardGrossBalanceProduceLot(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload: MutationPayload,
 ): Promise<Experiment> {
+  const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/discard-produce-lot`,
+    body: { produce_lot_id: requireString(body, "produce_lot_id") },
   });
 }
 
