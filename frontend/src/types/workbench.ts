@@ -338,6 +338,7 @@ export type LimsReception = {
   harvestDate: string;
   indicativeMassG: number;
   measuredGrossMassG: number | null;
+  measuredSampleMassG: number | null;
   labSampleCode: string | null;
   status: "awaiting_reception" | "awaiting_label_application" | "received";
   printedLabelTicket: PrintedLabelTicket | null;

@@ -560,6 +560,7 @@ class ExperimentService:
         harvest_date: str,
         indicative_mass_g: float,
         measured_gross_mass_g: float | None,
+        measured_sample_mass_g: float | None = None,
         entry_id: str | None = None,
     ) -> ExperimentSchema:
         return self._apply_command(
@@ -570,6 +571,7 @@ class ExperimentService:
                 harvest_date=harvest_date,
                 indicative_mass_g=indicative_mass_g,
                 measured_gross_mass_g=measured_gross_mass_g,
+                measured_sample_mass_g=measured_sample_mass_g,
                 entry_id=entry_id,
             ),
         )

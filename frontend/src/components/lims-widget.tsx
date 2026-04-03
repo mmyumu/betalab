@@ -12,6 +12,7 @@ type LimsWidgetProps = {
     entry_id?: string;
     harvest_date: string;
     indicative_mass_g: number;
+    measured_sample_mass_g: number | null;
     orchard_name: string;
   }) => void;
   onPrintLabel: (entryId?: string) => void;
@@ -32,6 +33,7 @@ export function LimsWidget({
   const [orchardName, setOrchardName] = useState("");
   const [harvestDate, setHarvestDate] = useState("");
   const [indicativeMassText, setIndicativeMassText] = useState("");
+  const [measuredSampleMassText, setMeasuredSampleMassText] = useState("");
   const previousReceptionIdRef = useRef<string | null>(reception.id);
   const selectedEntryIdRef = useRef<string>(reception.id ?? "new");
 
@@ -43,6 +45,10 @@ export function LimsWidget({
     selectedEntry && selectedEntry.id === reception.id
       ? { ...selectedEntry, ...reception }
       : selectedEntry;
+  const selectedEntryOrchardName = selectedEntryView?.orchardName ?? null;
+  const selectedEntryHarvestDate = selectedEntryView?.harvestDate ?? null;
+  const selectedEntryIndicativeMassG = selectedEntryView?.indicativeMassG ?? null;
+  const selectedEntryMeasuredSampleMassG = selectedEntryView?.measuredSampleMassG ?? null;
 
   useEffect(() => {
     if (reception.id !== previousReceptionIdRef.current) {
@@ -70,10 +76,17 @@ export function LimsWidget({
 
   useEffect(() => {
     if (selectedEntryView) {
-      setOrchardName(selectedEntryView.orchardName);
-      setHarvestDate(selectedEntryView.harvestDate);
+      setOrchardName(selectedEntryOrchardName ?? "");
+      setHarvestDate(selectedEntryHarvestDate ?? "");
       setIndicativeMassText(
-        selectedEntryView.indicativeMassG > 0 ? selectedEntryView.indicativeMassG.toFixed(1) : "",
+        selectedEntryIndicativeMassG !== null && selectedEntryIndicativeMassG > 0
+          ? selectedEntryIndicativeMassG.toFixed(1)
+          : "",
+      );
+      setMeasuredSampleMassText(
+        selectedEntryMeasuredSampleMassG !== null
+          ? selectedEntryMeasuredSampleMassG.toFixed(2)
+          : "",
       );
       return;
     }
@@ -82,14 +95,25 @@ export function LimsWidget({
       setOrchardName("");
       setHarvestDate("");
       setIndicativeMassText("");
+      setMeasuredSampleMassText("");
     }
-  }, [selectedEntryId, selectedEntryView]);
+  }, [
+    selectedEntryHarvestDate,
+    selectedEntryId,
+    selectedEntryIndicativeMassG,
+    selectedEntryMeasuredSampleMassG,
+    selectedEntryOrchardName,
+  ]);
 
   const indicativeMassValue = Number.parseFloat(indicativeMassText);
+  const measuredSampleMassValue = Number.parseFloat(measuredSampleMassText);
   const hasIndicativeMass =
     Number.isFinite(indicativeMassValue) && indicativeMassValue > 0;
+  const hasMeasuredSampleMass =
+    Number.isFinite(measuredSampleMassValue) && measuredSampleMassValue > 0;
   const formatIndicativeMass = (massG: number) =>
     Number.isInteger(massG) ? `${massG.toFixed(0)} g` : `${massG.toFixed(1)} g`;
+  const formatMeasuredSampleMass = (massG: number) => `${massG.toFixed(2)} g`;
   const canCreateReception =
     orchardName.trim().length > 0 &&
     harvestDate.trim().length > 0 &&
@@ -106,10 +130,10 @@ export function LimsWidget({
 
   return (
     <WorkspaceEquipmentWidget
-      bodyClassName="px-4 py-4"
+      bodyClassName="px-3 py-4"
       eyebrow="LIMS"
     >
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <div className="overflow-hidden rounded-[1.4rem] border border-slate-300 bg-[linear-gradient(180deg,#d8dee5,#c2ccd6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
           <div className="rounded-t-[1.4rem] border-b border-slate-300 bg-[linear-gradient(180deg,#f8fafc,#e2e8f0)] px-4 py-3">
             <div className="flex items-center justify-between gap-3">
@@ -122,13 +146,13 @@ export function LimsWidget({
               </div>
             </div>
           </div>
-          <div className="bg-[linear-gradient(180deg,#0f172a,#16233a)] px-4 py-4">
+          <div className="bg-[linear-gradient(180deg,#0f172a,#16233a)] px-3 py-3">
             <svg
               aria-label="LIMS terminal screen"
-              className="h-[15.5rem] w-full rounded-[1rem] border border-sky-400/25 bg-[#07111f] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.06)]"
-              viewBox="0 0 360 248"
+              className="h-[14.25rem] w-full rounded-[1rem] border border-sky-400/25 bg-[#07111f] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.06)]"
+              viewBox="0 0 360 228"
             >
-              <rect x="0" y="0" width="360" height="248" rx="18" fill="#07111f" />
+              <rect x="0" y="0" width="360" height="228" rx="18" fill="#07111f" />
               <rect x="18" y="18" width="324" height="28" rx="8" fill="#0d1b2d" />
               <circle cx="34" cy="32" r="4" fill="#22c55e" />
               <text x="52" y="36" fill="#7dd3fc" fontSize="13" fontFamily="monospace">
@@ -140,7 +164,7 @@ export function LimsWidget({
                     Awaiting accession
                   </text>
                   <text x="28" y="104" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Enter sample details and record gross weight.
+                    Enter sample details and the precise sample mass.
                   </text>
                   <text x="28" y="136" fill="#94a3b8" fontSize="12" fontFamily="monospace">
                     Orchard: --
@@ -152,9 +176,9 @@ export function LimsWidget({
                     Indicative mass: --
                   </text>
                   <text x="28" y="196" fill="#94a3b8" fontSize="12" fontFamily="monospace">
-                    Gross lab mass: --
+                    Sample mass: --
                   </text>
-                  <text x="28" y="224" fill="#38bdf8" fontSize="12" fontFamily="monospace">
+                  <text x="28" y="212" fill="#38bdf8" fontSize="12" fontFamily="monospace">
                     Status: waiting for user entry
                   </text>
                 </>
@@ -173,12 +197,16 @@ export function LimsWidget({
                     Indicative mass: {displayedEntry.indicativeMassG > 0 ? formatIndicativeMass(displayedEntry.indicativeMassG) : hasIndicativeMass ? formatIndicativeMass(indicativeMassValue) : "--"}
                   </text>
                   <text x="28" y="166" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
-                    Gross lab mass: {displayedEntry.measuredGrossMassG === null ? "--" : `${displayedEntry.measuredGrossMassG.toFixed(1)} g`}
+                    Sample mass: {displayedEntry.measuredSampleMassG !== null
+                      ? formatMeasuredSampleMass(displayedEntry.measuredSampleMassG)
+                      : hasMeasuredSampleMass
+                        ? formatMeasuredSampleMass(measuredSampleMassValue)
+                        : "--"}
                   </text>
                   <text x="28" y="186" fill="#7dd3fc" fontSize="12" fontFamily="monospace">
                     Sample code: {displayedEntry.labSampleCode ?? "--"}
                   </text>
-                  <text x="28" y="214" fill="#22c55e" fontSize="12" fontFamily="monospace">
+                  <text x="28" y="206" fill="#22c55e" fontSize="11" fontFamily="monospace">
                     Status: {displayedEntry.status}
                   </text>
                 </>
@@ -199,11 +227,11 @@ export function LimsWidget({
             </div>
           </div>
         </div>
-        <div className="grid gap-2">
-          <label className="grid gap-1">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="col-span-2 grid gap-1">
             <span className="text-xs font-medium text-slate-600">Record</span>
             <select
-              className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-400"
+              className="rounded-[0.8rem] border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none ring-0 focus:border-sky-400"
               onChange={(event) => {
                 selectedEntryIdRef.current = event.target.value;
                 setSelectedEntryId(event.target.value);
@@ -218,29 +246,29 @@ export function LimsWidget({
               ))}
             </select>
           </label>
-          <label className="grid gap-1">
+          <label className="grid gap-1 rounded-[0.9rem] border border-slate-200 bg-white/85 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
             <span className="text-xs font-medium text-slate-600">Orchard / producer</span>
             <input
-              className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
+              className="rounded-[0.8rem] border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
               onChange={(event) => setOrchardName(event.target.value)}
               placeholder="Enter orchard or producer"
               type="text"
               value={orchardName}
             />
           </label>
-          <label className="grid gap-1">
+          <label className="grid gap-1 rounded-[0.9rem] border border-slate-200 bg-white/85 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
             <span className="text-xs font-medium text-slate-600">Harvest date</span>
             <input
-              className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-sky-400"
+              className="rounded-[0.8rem] border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none ring-0 focus:border-sky-400"
               onChange={(event) => setHarvestDate(event.target.value)}
               type="date"
               value={harvestDate}
             />
           </label>
-          <label className="grid gap-1">
+          <label className="grid gap-1 rounded-[0.9rem] border border-slate-200 bg-white/85 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
             <span className="text-xs font-medium text-slate-600">Indicative field mass (g)</span>
             <input
-              className="rounded-[0.9rem] border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
+              className="rounded-[0.8rem] border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
               inputMode="decimal"
               min="0"
               onChange={(event) => setIndicativeMassText(event.target.value)}
@@ -250,16 +278,30 @@ export function LimsWidget({
               value={indicativeMassText}
             />
           </label>
+          <label className="grid gap-1 rounded-[0.9rem] border border-slate-200 bg-white/85 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+            <span className="text-xs font-medium text-slate-600">Sample mass (g)</span>
+            <input
+              className="rounded-[0.8rem] border border-slate-300 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400"
+              inputMode="decimal"
+              min="0"
+              onChange={(event) => setMeasuredSampleMassText(event.target.value)}
+              placeholder="10.00"
+              step="0.01"
+              type="number"
+              value={measuredSampleMassText}
+            />
+          </label>
         </div>
         <div className="flex gap-2">
           <button
-            className="rounded-full bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="rounded-full bg-slate-950 px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-40"
             disabled={!canCreateReception}
             onClick={() =>
               onSaveReception({
                 ...(selectedEntry ? { entry_id: selectedEntry.id ?? undefined } : {}),
                 harvest_date: harvestDate,
                 indicative_mass_g: indicativeMassValue,
+                measured_sample_mass_g: hasMeasuredSampleMass ? measuredSampleMassValue : null,
                 orchard_name: orchardName,
               })
             }
@@ -268,7 +310,7 @@ export function LimsWidget({
             {saveButtonLabel}
           </button>
           <button
-            className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-40"
+            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-800 disabled:opacity-40"
             disabled={!canPrintLabel}
             onClick={() =>
               onPrintLabel(
@@ -277,12 +319,12 @@ export function LimsWidget({
             }
             type="button"
           >
-            {selectedEntryView ? "Reprint label" : "Print label"}
+            Print label
           </button>
         </div>
         {displayedTicket ? (
           <div
-            className="cursor-grab rounded-[1rem] border border-dashed border-sky-300 bg-sky-50 px-3 py-2"
+            className="cursor-grab rounded-[0.9rem] border border-dashed border-sky-300 bg-sky-50 px-3 py-1.5"
             data-testid="lims-printed-ticket"
             draggable
             onDragEnd={onTicketDragEnd}

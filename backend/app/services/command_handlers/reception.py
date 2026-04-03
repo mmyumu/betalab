@@ -68,6 +68,8 @@ def create_lims_reception(
 ) -> None:
     if command.measured_gross_mass_g is not None and command.measured_gross_mass_g <= 0:
         raise ValueError("Gross reception mass must be greater than zero.")
+    if command.measured_sample_mass_g is not None and command.measured_sample_mass_g <= 0:
+        raise ValueError("Sample mass must be greater than zero.")
 
     measured_gross_mass_g = _resolve_measured_gross_mass_g(experiment, command.measured_gross_mass_g)
     if command.entry_id is None:
@@ -77,6 +79,11 @@ def create_lims_reception(
             harvest_date=command.harvest_date.strip(),
             indicative_mass_g=float(command.indicative_mass_g),
             measured_gross_mass_g=measured_gross_mass_g,
+            measured_sample_mass_g=(
+                float(command.measured_sample_mass_g)
+                if command.measured_sample_mass_g is not None
+                else None
+            ),
             lab_sample_code=_build_sample_code(experiment),
             status="awaiting_label_application",
         )
@@ -88,6 +95,11 @@ def create_lims_reception(
         entry.harvest_date = command.harvest_date.strip()
         entry.indicative_mass_g = float(command.indicative_mass_g)
         entry.measured_gross_mass_g = measured_gross_mass_g
+        entry.measured_sample_mass_g = (
+            float(command.measured_sample_mass_g)
+            if command.measured_sample_mass_g is not None
+            else None
+        )
         experiment.audit_log.append(f"LIMS reception updated for {entry.lab_sample_code}.")
 
     experiment.lims_reception = _clone_lims_entry(
@@ -237,6 +249,7 @@ def _clone_lims_entry(
         harvest_date=entry.harvest_date,
         indicative_mass_g=entry.indicative_mass_g,
         measured_gross_mass_g=entry.measured_gross_mass_g,
+        measured_sample_mass_g=entry.measured_sample_mass_g,
         lab_sample_code=entry.lab_sample_code,
         status=entry.status,
         printed_label_ticket=printed_label_ticket,

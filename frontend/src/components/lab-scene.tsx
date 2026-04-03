@@ -131,7 +131,7 @@ type WidgetId = (typeof widgetIds)[number];
 type WorkspaceEquipmentWidgetId = (typeof workspaceEquipmentItemToWidgetId)[keyof typeof workspaceEquipmentItemToWidgetId];
 
 const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
-  lims: { x: 24, y: 886, width: 320, fallbackHeight: 320 },
+  lims: { x: 24, y: 886, width: 500, fallbackHeight: 320 },
   workbench: { x: 24, y: 24, width: 1105, fallbackHeight: 860 },
   trash: { x: 1276, y: 24, width: 164, fallbackHeight: 214 },
   rack: { x: 234, y: 886, width: 500, fallbackHeight: 392 },
@@ -2155,6 +2155,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     entry_id?: string;
     harvest_date: string;
     indicative_mass_g: number;
+    measured_sample_mass_g: number | null;
     orchard_name: string;
   }) => {
     void experimentApi.createLimsReception({
@@ -2163,6 +2164,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       harvest_date: payload.harvest_date,
       indicative_mass_g: payload.indicative_mass_g,
       measured_gross_mass_g: state.experiment.limsReception.measuredGrossMassG,
+      measured_sample_mass_g: payload.measured_sample_mass_g,
     });
   };
 

@@ -256,6 +256,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
             indicative_mass_g=schema.lims_reception.indicative_mass_g,
             id=schema.lims_reception.id,
             measured_gross_mass_g=schema.lims_reception.measured_gross_mass_g,
+            measured_sample_mass_g=schema.lims_reception.measured_sample_mass_g,
             lab_sample_code=schema.lims_reception.lab_sample_code,
             status=schema.lims_reception.status,
             printed_label_ticket=
@@ -280,6 +281,7 @@ def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:
                 indicative_mass_g=entry.indicative_mass_g,
                 id=entry.id,
                 measured_gross_mass_g=entry.measured_gross_mass_g,
+                measured_sample_mass_g=entry.measured_sample_mass_g,
                 lab_sample_code=entry.lab_sample_code,
                 status=entry.status,
                 printed_label_ticket=
@@ -300,6 +302,7 @@ def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:
             indicative_mass_g=schema.lims_reception.indicative_mass_g,
             id=schema.lims_reception.id,
             measured_gross_mass_g=schema.lims_reception.measured_gross_mass_g,
+            measured_sample_mass_g=schema.lims_reception.measured_sample_mass_g,
             lab_sample_code=schema.lims_reception.lab_sample_code,
             status=schema.lims_reception.status,
             printed_label_ticket=None,

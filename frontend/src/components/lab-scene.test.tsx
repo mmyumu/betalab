@@ -261,6 +261,7 @@ function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReceptio
     harvestDate: "",
     indicativeMassG: 0,
     measuredGrossMassG: null,
+    measuredSampleMassG: null,
     labSampleCode: null,
     status: "awaiting_reception",
     printedLabelTicket: null,
@@ -2524,6 +2525,54 @@ describe("LabScene", () => {
           harvest_date: "2026-03-29",
           indicative_mass_g: 2041.1,
           measured_gross_mass_g: null,
+          measured_sample_mass_g: null,
+        },
+      );
+    });
+  });
+
+  it("allows creating a LIMS record with a manually entered sample mass", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          orchardName: "Martin Orchard",
+          harvestDate: "2026-03-29",
+          indicativeMassG: 2041.1,
+          measuredSampleMassG: 10,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.change(await screen.findByLabelText("Orchard / producer"), {
+      target: { value: "Martin Orchard" },
+    });
+    fireEvent.change(screen.getByLabelText("Harvest date"), {
+      target: { value: "2026-03-29" },
+    });
+    fireEvent.change(screen.getByLabelText("Indicative field mass (g)"), {
+      target: { value: "2041.1" },
+    });
+    fireEvent.change(screen.getByLabelText("Sample mass (g)"), {
+      target: { value: "10.00" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Create LIMS record" }));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "create_lims_reception",
+        {
+          orchard_name: "Martin Orchard",
+          harvest_date: "2026-03-29",
+          indicative_mass_g: 2041.1,
+          measured_gross_mass_g: null,
+          measured_sample_mass_g: 10,
         },
       );
     });

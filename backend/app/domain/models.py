@@ -25,6 +25,7 @@ class LimsReception:
     indicative_mass_g: float
     id: str | None = None
     measured_gross_mass_g: float | None = None
+    measured_sample_mass_g: float | None = None
     lab_sample_code: str | None = None
     status: str = "awaiting_reception"
     printed_label_ticket: PrintedLabelTicket | None = None

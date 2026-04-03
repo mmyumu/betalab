@@ -128,6 +128,7 @@ def create_lims_reception(
             request.harvest_date,
             request.indicative_mass_g,
             request.measured_gross_mass_g,
+            request.measured_sample_mass_g,
             request.entry_id,
         )
     )

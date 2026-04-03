@@ -706,6 +706,10 @@ export async function createLimsReception(experimentId: string, payload: Mutatio
         body.measured_gross_mass_g === undefined || body.measured_gross_mass_g === null
           ? null
           : requireNumber(body, "measured_gross_mass_g"),
+      measured_sample_mass_g:
+        body.measured_sample_mass_g === undefined || body.measured_sample_mass_g === null
+          ? null
+          : requireNumber(body, "measured_sample_mass_g"),
     },
   });
 }
@@ -1158,6 +1162,12 @@ function normalizeLimsReception(
         ? Number(reception.measuredGrossMassG)
       : reception?.measured_gross_mass_g !== undefined && reception.measured_gross_mass_g !== null
           ? Number(reception.measured_gross_mass_g)
+          : null,
+    measuredSampleMassG:
+      reception?.measuredSampleMassG !== undefined && reception.measuredSampleMassG !== null
+        ? Number(reception.measuredSampleMassG)
+      : reception?.measured_sample_mass_g !== undefined && reception.measured_sample_mass_g !== null
+          ? Number(reception.measured_sample_mass_g)
           : null,
     labSampleCode:
       reception?.labSampleCode !== undefined

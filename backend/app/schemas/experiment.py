@@ -40,6 +40,7 @@ class LimsReceptionSchema(BaseModel):
     indicative_mass_g: float
     id: str | None = None
     measured_gross_mass_g: float | None = None
+    measured_sample_mass_g: float | None = None
     lab_sample_code: str | None = None
     status: str
     printed_label_ticket: PrintedLabelTicketSchema | None = None
@@ -52,6 +53,7 @@ def build_default_lims_reception_schema() -> LimsReceptionSchema:
         indicative_mass_g=0.0,
         id=None,
         measured_gross_mass_g=None,
+        measured_sample_mass_g=None,
         lab_sample_code=None,
         status="awaiting_reception",
         printed_label_ticket=None,
@@ -322,6 +324,7 @@ class LimsReceptionCreateSchema(BaseModel):
     harvest_date: str
     indicative_mass_g: float
     measured_gross_mass_g: float | None = None
+    measured_sample_mass_g: float | None = None
 
 
 class LimsLabelPrintSchema(BaseModel):

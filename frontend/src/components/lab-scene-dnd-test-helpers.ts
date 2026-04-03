@@ -329,6 +329,7 @@ function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReceptio
     harvestDate: "",
     indicativeMassG: 0,
     measuredGrossMassG: null,
+    measuredSampleMassG: null,
     labSampleCode: null,
     status: "awaiting_reception",
     printedLabelTicket: null,

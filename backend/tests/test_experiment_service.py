@@ -94,6 +94,7 @@ def apply_command(
             payload["harvest_date"],
             payload["indicative_mass_g"],
             payload.get("measured_gross_mass_g"),
+            payload.get("measured_sample_mass_g"),
         ),
         "print_lims_label": lambda: service.print_lims_label(experiment_id),
         "discard_printed_lims_label": lambda: service.discard_printed_lims_label(experiment_id),
@@ -347,11 +348,13 @@ def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
             "harvest_date": "2026-03-29",
             "indicative_mass_g": 2500.0,
             "measured_gross_mass_g": expected_gross_mass_g,
+            "measured_sample_mass_g": 10.0,
         },
     )
     assert updated.lims_reception.lab_sample_code is not None
     assert updated.lims_reception.lab_sample_code.startswith("APP-2026-")
     assert updated.lims_reception.status == "awaiting_label_application"
+    assert updated.lims_reception.measured_sample_mass_g == pytest.approx(10.0)
 
     updated = apply_command(service, experiment.id, "print_lims_label", {})
     assert updated.lims_reception.printed_label_ticket is not None
@@ -398,6 +401,26 @@ def test_create_lims_reception_allows_manual_entry_before_gross_weight() -> None
     assert updated.lims_reception.lab_sample_code is not None
     assert updated.lims_reception.status == "awaiting_label_application"
     assert updated.lims_reception.measured_gross_mass_g is None
+
+
+def test_create_lims_reception_records_precise_sample_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "create_lims_reception",
+        {
+            "orchard_name": "Martin Orchard",
+            "harvest_date": "2026-03-29",
+            "indicative_mass_g": 2500.0,
+            "measured_sample_mass_g": 10.0,
+        },
+    )
+
+    assert updated.lims_reception.measured_gross_mass_g is None
+    assert updated.lims_reception.measured_sample_mass_g == pytest.approx(10.0)
 
 
 def test_printed_lims_label_can_be_applied_to_basket_bag() -> None:
