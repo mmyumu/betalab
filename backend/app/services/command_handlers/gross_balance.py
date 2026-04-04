@@ -8,6 +8,7 @@ from app.services.command_handlers.support import (
     find_workbench_slot,
     find_workspace_widget,
 )
+from app.services.command_handlers.workbench import build_workbench_tool
 from app.services.commands import (
     CloseGrossBalanceToolCommand,
     DiscardGrossBalanceProduceLotCommand,
@@ -39,7 +40,6 @@ from app.services.produce_lot_transfer import (
     WorkspaceProduceLotSource,
 )
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
-from app.services.command_handlers.workbench import build_workbench_tool
 
 produce_lot_transfer_service = ProduceLotTransferService()
 

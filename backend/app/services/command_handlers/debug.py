@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment, ProduceLot, new_id
+from app.services.command_handlers.gross_balance import GrossBalanceProduceLotTarget
 from app.services.commands import (
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
 )
-from app.services.command_handlers.gross_balance import GrossBalanceProduceLotTarget
 from app.services.produce_lot_transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
 
 

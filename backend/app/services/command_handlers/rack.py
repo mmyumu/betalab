@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment
+from app.services.command_handlers.support import find_rack_slot, find_workbench_slot
+from app.services.command_handlers.workbench import build_workbench_tool
 from app.services.commands import (
     MoveRackToolBetweenSlotsCommand,
     PlaceWorkbenchToolInRackSlotCommand,
-    RackSlotCommand,
     RackSlotToolCommand,
     RemoveRackToolToWorkbenchSlotCommand,
 )
-from app.services.command_handlers.support import find_rack_slot, find_workbench_slot
-from app.services.command_handlers.workbench import build_workbench_tool
 
 
 def place_tool_in_rack_slot(experiment: Experiment, command: RackSlotToolCommand) -> None:

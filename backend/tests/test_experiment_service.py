@@ -1,13 +1,14 @@
-import pytest
-from datetime import date, datetime, timedelta, timezone
 import re
+from datetime import date, datetime, timedelta, timezone
 
+import pytest
+
+from app.services.experiment_repository import SqliteExperimentRepository
+from app.services.experiment_service import ExperimentService
 from app.services.received_sample_generation import (
     SAMPLE_BAG_TARE_MASS_G,
     resolve_received_bag_gross_mass_g,
 )
-from app.services.experiment_repository import SqliteExperimentRepository
-from app.services.experiment_service import ExperimentService
 
 
 def apply_command(
@@ -1250,7 +1251,7 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
             "produce_lot_id": produce_lot_id,
         },
     )
-    cooled = apply_command(service,
+    apply_command(service,
         experiment.id,
         "add_liquid_to_workspace_widget",
         {
@@ -1259,7 +1260,6 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
             "volume_ml": 400,
         },
     )
-    grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
     service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -75.0
 
     apply_command(service,
@@ -3085,7 +3085,7 @@ def test_open_workbench_tool_unseals_a_jar() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    sealed = apply_command(
+    apply_command(
         service,
         experiment.id,
         "place_tool_on_workbench",
@@ -3094,7 +3094,7 @@ def test_open_workbench_tool_unseals_a_jar() -> None:
             "tool_id": "hdpe_storage_jar_2l",
         },
     )
-    sealed = apply_command(
+    apply_command(
         service,
         experiment.id,
         "close_workbench_tool",
@@ -3691,7 +3691,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
             "tool_id": "sample_vial_lcms",
         },
     )
-    updated = apply_command(service, 
+    apply_command(service, 
         experiment.id,
         "add_liquid_to_workbench_tool",
         {

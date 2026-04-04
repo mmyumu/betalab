@@ -11,12 +11,12 @@ from app.domain.models import (
     TrashProduceLotEntry,
     TrashSampleLabelEntry,
     TrashToolEntry,
-    Workspace,
-    WorkspaceWidget,
     Workbench,
     WorkbenchLiquid,
     WorkbenchSlot,
     WorkbenchTool,
+    Workspace,
+    WorkspaceWidget,
     new_id,
 )
 

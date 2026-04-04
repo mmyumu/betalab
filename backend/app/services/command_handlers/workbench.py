@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
 from app.domain.models import (
     ContainerLabel,
     Experiment,
-    ProduceLot,
     TrashProduceLotEntry,
     TrashSampleLabelEntry,
     WorkbenchLiquid,
@@ -14,33 +12,10 @@ from app.domain.models import (
     WorkbenchTool,
     new_id,
 )
-from app.domain.workbench_catalog import get_workbench_liquid_definition, get_workbench_tool_definition
-from app.services.commands import (
-    AddLiquidToWorkbenchToolCommand,
-    AddProduceLotToWorkbenchToolCommand,
-    ApplySampleLabelToWorkbenchToolCommand,
-    CloseWorkbenchToolCommand,
-    LoadSpatulaFromWorkbenchToolCommand,
-    OpenWorkbenchToolCommand,
-    MoveProduceLotBetweenWorkbenchToolsCommand,
-    MoveSampleLabelBetweenWorkbenchToolsCommand,
-    MoveToolBetweenWorkbenchSlotsCommand,
-    PlaceToolOnWorkbenchCommand,
-    PourSpatulaIntoWorkbenchToolCommand,
-    RestoreTrashedSampleLabelToWorkbenchToolCommand,
-    UpdateWorkbenchLiquidVolumeCommand,
-    UpdateWorkbenchToolSampleLabelTextCommand,
-    WorkbenchLiquidCommand,
-    WorkbenchSampleLabelCommand,
-    WorkbenchProduceLotCommand,
-    WorkbenchSlotCommand,
-)
-from app.services.physical_simulation_service import PhysicalSimulationService
-from app.services.produce_lot_transfer import (
-    ProduceLotTransferService,
-    WorkbenchProduceLotSource,
-    WorkbenchProduceLotTarget,
-    WorkspaceProduceLotSource,
+from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
+from app.domain.workbench_catalog import (
+    get_workbench_liquid_definition,
+    get_workbench_tool_definition,
 )
 from app.services.command_handlers.support import (
     build_manual_label,
@@ -49,6 +24,33 @@ from app.services.command_handlers.support import (
     find_workbench_slot,
     format_volume,
     round_volume,
+)
+from app.services.commands import (
+    AddLiquidToWorkbenchToolCommand,
+    AddProduceLotToWorkbenchToolCommand,
+    ApplySampleLabelToWorkbenchToolCommand,
+    CloseWorkbenchToolCommand,
+    LoadSpatulaFromWorkbenchToolCommand,
+    MoveProduceLotBetweenWorkbenchToolsCommand,
+    MoveSampleLabelBetweenWorkbenchToolsCommand,
+    MoveToolBetweenWorkbenchSlotsCommand,
+    OpenWorkbenchToolCommand,
+    PlaceToolOnWorkbenchCommand,
+    PourSpatulaIntoWorkbenchToolCommand,
+    RestoreTrashedSampleLabelToWorkbenchToolCommand,
+    UpdateWorkbenchLiquidVolumeCommand,
+    UpdateWorkbenchToolSampleLabelTextCommand,
+    WorkbenchLiquidCommand,
+    WorkbenchProduceLotCommand,
+    WorkbenchSampleLabelCommand,
+    WorkbenchSlotCommand,
+)
+from app.services.physical_simulation_service import PhysicalSimulationService
+from app.services.produce_lot_transfer import (
+    ProduceLotTransferService,
+    WorkbenchProduceLotSource,
+    WorkbenchProduceLotTarget,
+    WorkspaceProduceLotSource,
 )
 
 produce_lot_transfer_service = ProduceLotTransferService()

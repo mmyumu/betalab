@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import random
 
 from app.domain.models import ProduceLot, WorkbenchTool, new_id
 

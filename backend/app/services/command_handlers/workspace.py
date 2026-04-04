@@ -1,33 +1,38 @@
 from __future__ import annotations
 
-from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
 from app.domain.models import (
     Experiment,
-    LimsReception,
     ProduceLot,
     TrashProduceLotEntry,
     WorkbenchLiquid,
-    WorkbenchTool,
     new_id,
 )
+from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
 from app.domain.workbench_catalog import get_workbench_liquid_definition
-from app.services.physical_simulation_service import PhysicalSimulationService
+from app.services.command_handlers.support import (
+    find_produce_basket_lot,
+    find_workspace_widget,
+    find_workspace_widget_liquid,
+    format_volume,
+    round_volume,
+)
 from app.services.commands import (
     AddLiquidToWorkspaceWidgetCommand,
     AddWorkspaceProduceLotToWidgetCommand,
     AdvanceWorkspaceCryogenicsCommand,
-    CreateReceivedSamplingBagCommand,
     CreateProduceLotCommand,
+    CreateReceivedSamplingBagCommand,
     DiscardWidgetProduceLotCommand,
     DiscardWorkspaceProduceLotCommand,
-    MoveWorkbenchProduceLotToWidgetCommand,
     MoveWidgetProduceLotToWorkbenchToolCommand,
+    MoveWorkbenchProduceLotToWidgetCommand,
     RestoreTrashedProduceLotToWidgetCommand,
     UpdateWorkspaceWidgetLiquidVolumeCommand,
     WorkspaceWidgetCommand,
     WorkspaceWidgetLayoutCommand,
     WorkspaceWidgetLiquidCommand,
 )
+from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.produce_lot_transfer import (
     GrinderProduceLotSource,
     GrinderProduceLotTarget,
@@ -36,13 +41,6 @@ from app.services.produce_lot_transfer import (
     WorkbenchProduceLotSource,
     WorkbenchProduceLotTarget,
     WorkspaceProduceLotSource,
-)
-from app.services.command_handlers.support import (
-    find_produce_basket_lot,
-    find_workspace_widget_liquid,
-    format_volume,
-    find_workspace_widget,
-    round_volume,
 )
 from app.services.received_sample_generation import build_received_sampling_bag
 

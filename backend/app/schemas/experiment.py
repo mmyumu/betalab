@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 
+
 class WorkbenchLiquidSchema(BaseModel):
     id: str
     liquid_id: str

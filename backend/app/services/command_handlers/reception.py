@@ -10,11 +10,15 @@ from app.domain.models import (
     WorkbenchTool,
     new_id,
 )
-from app.services.command_handlers.support import build_lims_label, find_workbench_slot
+from app.services.command_handlers.support import (
+    build_lims_label,
+    find_workbench_slot,
+    find_workspace_widget,
+)
 from app.services.commands import (
-    ApplyPrintedLimsLabelToGrossBalanceBagCommand,
-    ApplyPrintedLimsLabelToBasketBagCommand,
     ApplyPrintedLimsLabelCommand,
+    ApplyPrintedLimsLabelToBasketBagCommand,
+    ApplyPrintedLimsLabelToGrossBalanceBagCommand,
     CreateLimsReceptionCommand,
     DiscardPrintedLimsLabelCommand,
     PlaceReceivedBagOnWorkbenchCommand,
@@ -23,7 +27,6 @@ from app.services.commands import (
     SetGrossMassOffsetCommand,
 )
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
-from app.services.command_handlers.support import find_workspace_widget
 
 
 def place_received_bag_on_workbench(

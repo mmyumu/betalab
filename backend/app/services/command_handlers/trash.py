@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 from app.domain.models import Experiment, TrashSampleLabelEntry, TrashToolEntry, new_id
+from app.services.command_handlers.support import (
+    build_manual_label,
+    find_rack_slot,
+    find_trash_tool,
+    find_workbench_slot,
+)
+from app.services.command_handlers.workbench import build_workbench_tool
 from app.services.commands import (
     DiscardBasketToolCommand,
     DiscardSampleLabelFromPaletteCommand,
@@ -16,14 +23,6 @@ from app.services.produce_lot_transfer import (
     TrashProduceLotSource,
     WorkbenchProduceLotTarget,
 )
-from app.services.command_handlers.support import (
-    find_rack_slot,
-    find_trash_produce_lot,
-    find_trash_tool,
-    find_workbench_slot,
-)
-from app.services.command_handlers.workbench import build_workbench_tool
-from app.services.command_handlers.support import build_manual_label
 
 produce_lot_transfer_service = ProduceLotTransferService()
 

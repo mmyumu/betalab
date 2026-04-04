@@ -6,9 +6,9 @@ from typing import Protocol
 from app.domain.models import EntityOrigin, Experiment, ProduceLot
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.command_handlers.support import (
+    find_produce_basket_lot,
     find_trash_produce_lot,
     find_workbench_slot,
-    find_produce_basket_lot,
     find_workspace_widget,
 )
 

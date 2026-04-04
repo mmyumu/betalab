@@ -1,9 +1,9 @@
-import app.api.experiments as experiments_api
 from datetime import datetime, timedelta, timezone
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
+import app.api.experiments as experiments_api
 from app.core.config import Settings, settings
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository

@@ -3,6 +3,7 @@ from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
+from app.core.config import settings
 from app.schemas.experiment import (
     DebugProducePresetSpawnToWidgetSchema,
     DebugProducePresetSpawnToWorkbenchSchema,
@@ -17,9 +18,9 @@ from app.schemas.experiment import (
     RackSlotReferenceSchema,
     RackToolMoveSchema,
     RackToolMoveToWorkbenchSchema,
-    ReceivedBagPlacementSchema,
     RackToolPlacementSchema,
     RackWorkbenchPlacementSchema,
+    ReceivedBagPlacementSchema,
     TargetWorkbenchSlotSchema,
     TrashProduceLotRestoreToWidgetSchema,
     TrashProduceLotRestoreToWorkbenchSchema,
@@ -31,8 +32,8 @@ from app.schemas.experiment import (
     WorkbenchToolLiquidCreateSchema,
     WorkbenchToolLiquidUpdateSchema,
     WorkbenchToolMoveSchema,
-    WorkbenchToolPowderPourSchema,
     WorkbenchToolPlacementSchema,
+    WorkbenchToolPowderPourSchema,
     WorkbenchToolProduceLotCreateSchema,
     WorkbenchToolSampleLabelMoveSchema,
     WorkbenchToolSampleLabelUpdateSchema,
@@ -40,12 +41,11 @@ from app.schemas.experiment import (
     WorkspaceWidgetCreateSchema,
     WorkspaceWidgetLiquidCreateSchema,
     WorkspaceWidgetLiquidUpdateSchema,
-    WorkspaceWidgetMoveSchema,
     WorkspaceWidgetMoveProduceLotToWorkbenchSchema,
+    WorkspaceWidgetMoveSchema,
     WorkspaceWidgetMoveWorkbenchProduceLotSchema,
     WorkspaceWidgetProduceLotCreateSchema,
 )
-from app.core.config import settings
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentNotFoundError, ExperimentService
 

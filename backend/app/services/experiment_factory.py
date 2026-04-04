@@ -10,10 +10,10 @@ from app.domain.models import (
     RackSlot,
     SpatulaState,
     Trash,
-    Workspace,
-    WorkspaceWidget,
     Workbench,
     WorkbenchSlot,
+    Workspace,
+    WorkspaceWidget,
     new_id,
 )
 from app.services.received_sample_generation import build_received_sampling_bag
