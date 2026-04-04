@@ -14,6 +14,7 @@ dev = [
   "pytest>=8.3.0",
   "pytest-cov>=6.0.0",
   "httpx>=0.28.0",
+  "pyright>=1.1.400",
   "ruff>=0.11.0",
 ]
 
@@ -26,6 +27,13 @@ select = [
   "F",
   "I",
 ]
+
+[tool.pyright]
+include = ["app", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingImports = true
+reportMissingTypeStubs = false
 
 [build-system]
 requires = ["setuptools>=68"]

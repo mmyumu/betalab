@@ -332,6 +332,7 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
         )
 
         experiment_state = experiment_service._experiments[experiment_id]
+        assert experiment_state.workbench.slots[0].tool is not None
         stored_lot = experiment_state.workbench.slots[0].tool.produce_lots[0]
         stored_lot.cut_state = "ground"
         stored_lot.total_mass_g = 1000.0
@@ -368,6 +369,7 @@ def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
         )
 
         experiment_state = experiment_service._experiments[experiment_id]
+        assert experiment_state.workbench.slots[0].tool is not None
         stored_lot = experiment_state.workbench.slots[0].tool.produce_lots[0]
         stored_lot.cut_state = "ground"
         stored_lot.total_mass_g = 1000.0

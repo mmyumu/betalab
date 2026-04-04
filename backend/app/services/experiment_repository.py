@@ -252,7 +252,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                 TrashToolEntry(
                     id=entry.id,
                     origin_label=entry.origin_label,
-                    tool=_deserialize_workbench_tool(entry.tool),
+                    tool=_deserialize_non_null_workbench_tool(entry.tool),
                 )
                 for entry in schema.trash.tools
             ],
@@ -324,7 +324,7 @@ def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
                 for widget in schema.workspace.widgets
         ],
     )
-    workspace.produce_basket_lots = [
+    workspace.produce_lots = [
         _deserialize_produce_lot(lot) for lot in schema.workspace.produce_lots
     ]
     return workspace
@@ -389,6 +389,13 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
         powder_mass_g=tool_schema.powder_mass_g,
     )
+
+
+def _deserialize_non_null_workbench_tool(tool_schema) -> WorkbenchTool:
+    tool = _deserialize_workbench_tool(tool_schema)
+    if tool is None:
+        raise ValueError("Expected workbench tool payload.")
+    return tool
 
 
 def _deserialize_container_label(label_schema) -> ContainerLabel:

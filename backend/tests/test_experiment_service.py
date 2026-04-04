@@ -738,6 +738,7 @@ def test_workbench_liquid_is_removed_when_volume_is_updated_to_zero() -> None:
         },
     )
 
+    assert added.workbench.slots[0].tool is not None
     liquid_id = added.workbench.slots[0].tool.liquids[0].id
     updated = apply_command(service,
         experiment.id,
@@ -2433,7 +2434,9 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
         },
     )
 
-    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
+    assert stored_tool is not None
+    stored_lot = stored_tool.produce_lots[0]
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
@@ -2476,7 +2479,9 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
         {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
     )
 
-    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
+    assert stored_tool is not None
+    stored_lot = stored_tool.produce_lots[0]
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
@@ -2526,7 +2531,9 @@ def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
         },
     )
 
-    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
+    assert stored_tool is not None
+    stored_lot = stored_tool.produce_lots[0]
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 0.0
 
@@ -2701,7 +2708,11 @@ def test_create_debug_powder_preset_on_gross_balance() -> None:
 def test_move_basket_tool_to_gross_balance_updates_measured_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
-    expected_mass_g = resolve_received_bag_gross_mass_g(experiment.basket_tool)
+    assert experiment.basket_tool is not None
+    expected_mass_g = round(
+        experiment.basket_tool.produce_lots[0].total_mass_g + SAMPLE_BAG_TARE_MASS_G,
+        1,
+    )
 
     updated = service.move_basket_tool_to_gross_balance(experiment.id)
 
@@ -3131,7 +3142,9 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
         {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
     )
 
-    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
+    assert stored_tool is not None
+    stored_lot = stored_tool.produce_lots[0]
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
@@ -3172,7 +3185,9 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
         {"slot_id": "station_1", "produce_lot_id": produce_lot_id},
     )
 
-    stored_lot = service._experiments[experiment.id].workbench.slots[0].tool.produce_lots[0]
+    stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
+    assert stored_tool is not None
+    stored_lot = stored_tool.produce_lots[0]
     stored_lot.cut_state = "ground"
     stored_lot.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
@@ -3407,6 +3422,7 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
         },
     )
 
+    assert updated.workbench.slots[0].tool is not None
     liquid_id = updated.workbench.slots[0].tool.liquids[0].id
     updated = apply_command(service, 
         experiment.id,
@@ -4141,6 +4157,7 @@ def test_update_volume_rounds_float_noise_in_audit_log() -> None:
         },
     )
 
+    assert updated.workbench.slots[0].tool is not None
     liquid_id = updated.workbench.slots[0].tool.liquids[0].id
     updated = apply_command(service, 
         experiment.id,
