@@ -67,6 +67,7 @@ export const closeGrossBalanceTool = vi.fn((experimentId: string) =>
 export const recordGrossWeight = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
   sendExperimentCommand(experimentId, "record_gross_weight", payload ?? {}),
 );
+export const setGrossBalanceContainerOffset = wrapCommand("set_gross_balance_container_offset");
 export const moveWorkspaceProduceLotToGrossBalance = wrapCommand("move_workspace_produce_lot_to_gross_balance");
 export const moveWorkbenchProduceLotToGrossBalance = wrapCommand("move_workbench_produce_lot_to_gross_balance");
 export const moveWidgetProduceLotToGrossBalance = wrapCommand("move_widget_produce_lot_to_gross_balance");

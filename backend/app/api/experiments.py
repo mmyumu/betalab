@@ -8,6 +8,7 @@ from app.schemas.experiment import (
     DebugProducePresetSpawnToWorkbenchSchema,
     ExperimentListEntrySchema,
     ExperimentSchema,
+    GrossMassOffsetUpdateSchema,
     GrossWeightRecordSchema,
     LimsLabelPrintSchema,
     LimsReceptionCreateSchema,
@@ -113,6 +114,19 @@ def record_gross_weight(
         lambda: experiment_service.record_gross_weight(
             experiment_id,
             request.measured_gross_mass_g if request is not None else None,
+        )
+    )
+
+
+@router.post("/{experiment_id}/gross-balance/container-offset", response_model=ExperimentSchema)
+def set_gross_balance_container_offset(
+    experiment_id: str,
+    request: GrossMassOffsetUpdateSchema,
+) -> ExperimentSchema:
+    return _handle_service_errors(
+        lambda: experiment_service.set_gross_mass_offset(
+            experiment_id,
+            request.gross_mass_offset_g,
         )
     )
 

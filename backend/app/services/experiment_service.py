@@ -55,6 +55,7 @@ from app.services.command_handlers.reception import (
     place_received_bag_on_workbench,
     print_lims_label,
     record_gross_weight,
+    set_gross_mass_offset,
 )
 from app.services.command_handlers.workbench import (
     add_workbench_slot,
@@ -148,6 +149,7 @@ from app.services.commands import (
     RackSlotCommand,
     RackSlotToolCommand,
     RecordGrossWeightCommand,
+    SetGrossMassOffsetCommand,
     RemoveRackToolToWorkbenchSlotCommand,
     RestoreTrashedProduceLotToGrossBalanceCommand,
     RestoreTrashedProduceLotToWidgetCommand,
@@ -404,6 +406,17 @@ class ExperimentService:
             experiment_id,
             record_gross_weight,
             RecordGrossWeightCommand(measured_gross_mass_g=measured_gross_mass_g),
+        )
+
+    def set_gross_mass_offset(
+        self,
+        experiment_id: str,
+        gross_mass_offset_g: int,
+    ) -> ExperimentSchema:
+        return self._apply_command(
+            experiment_id,
+            set_gross_mass_offset,
+            SetGrossMassOffsetCommand(gross_mass_offset_g=gross_mass_offset_g),
         )
 
     def move_workbench_tool_to_gross_balance(self, experiment_id: str, source_slot_id: str) -> ExperimentSchema:

@@ -266,6 +266,7 @@ function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReceptio
     harvestDate: "",
     indicativeMassG: 0,
     measuredGrossMassG: null,
+    grossMassOffsetG: 0,
     measuredSampleMassG: null,
     labSampleCode: null,
     status: "awaiting_reception",
@@ -2537,7 +2538,47 @@ describe("LabScene", () => {
     });
     expect(screen.getByTestId("gross-balance-staged-item")).toBeInTheDocument();
     expect(screen.queryByTestId("bench-tool-card-bench_tool_1")).not.toBeInTheDocument();
-    expect(screen.getByText("2486.0 g")).toBeInTheDocument();
+    expect(screen.getAllByText("2486.0 g")).toHaveLength(2);
+  });
+
+  it("adjusts the gross balance container offset with +/- buttons and updates the net display", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          grossMassOffsetG: -35,
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          grossMassOffsetG: -36,
+        }),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    expect(await screen.findByText("2486.0 g")).toBeInTheDocument();
+    expect(screen.getByText("-35 g")).toBeInTheDocument();
+    expect(screen.getByText("2451.0 g")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Decrease gross balance offset" }));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "set_gross_balance_container_offset",
+        { gross_mass_offset_g: -36 },
+      );
+    });
+
+    expect(await screen.findByText("-36 g")).toBeInTheDocument();
+    expect(screen.getByText("2450.0 g")).toBeInTheDocument();
   });
 
   it("allows creating a LIMS record from manual entry without a gross weight", async () => {

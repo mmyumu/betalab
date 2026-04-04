@@ -218,6 +218,19 @@ def test_record_gross_weight_route_accepts_explicit_mass_over_http() -> None:
     assert weighed.json()["lims_reception"]["measured_gross_mass_g"] == pytest.approx(36.0)
 
 
+def test_set_gross_balance_container_offset_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        updated = client.post(
+            f"/experiments/{experiment_id}/gross-balance/container-offset",
+            json={"gross_mass_offset_g": -35},
+        )
+
+    assert updated.status_code == 200
+    assert updated.json()["lims_reception"]["gross_mass_offset_g"] == -35
+
+
 def test_list_experiments_returns_saved_sessions_over_http() -> None:
     with TestClient(app) as client:
         first_id = _create_experiment(client)

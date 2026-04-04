@@ -287,6 +287,11 @@ class RecordGrossWeightCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class SetGrossMassOffsetCommand:
+    gross_mass_offset_g: int
+
+
+@dataclass(frozen=True, slots=True)
 class MoveWorkspaceProduceLotToGrossBalanceCommand:
     produce_lot_id: str
 

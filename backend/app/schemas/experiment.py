@@ -54,6 +54,7 @@ class LimsReceptionSchema(BaseModel):
     indicative_mass_g: float
     id: str | None = None
     measured_gross_mass_g: float | None = None
+    gross_mass_offset_g: int = 0
     measured_sample_mass_g: float | None = None
     lab_sample_code: str | None = None
     status: str
@@ -67,6 +68,7 @@ def build_default_lims_reception_schema() -> LimsReceptionSchema:
         indicative_mass_g=0.0,
         id=None,
         measured_gross_mass_g=None,
+        gross_mass_offset_g=0,
         measured_sample_mass_g=None,
         lab_sample_code=None,
         status="awaiting_reception",
@@ -396,6 +398,10 @@ class ReceivedBagPlacementSchema(BaseModel):
 
 class GrossWeightRecordSchema(BaseModel):
     measured_gross_mass_g: float | None = None
+
+
+class GrossMassOffsetUpdateSchema(BaseModel):
+    gross_mass_offset_g: int
 
 
 class LimsReceptionCreateSchema(BaseModel):

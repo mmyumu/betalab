@@ -603,6 +603,20 @@ export async function recordGrossWeight(experimentId: string, _payload?: Mutatio
   });
 }
 
+export async function setGrossBalanceContainerOffset(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/container-offset`,
+    body: {
+      gross_mass_offset_g: requireNumber(body, "gross_mass_offset_g"),
+    },
+  });
+}
+
 export async function moveWorkspaceProduceLotToGrossBalance(
   experimentId: string,
   payload: MutationPayload,
@@ -1238,6 +1252,12 @@ function normalizeLimsReception(
       : reception?.measured_gross_mass_g !== undefined && reception.measured_gross_mass_g !== null
           ? Number(reception.measured_gross_mass_g)
           : null,
+    grossMassOffsetG:
+      reception?.grossMassOffsetG !== undefined && reception.grossMassOffsetG !== null
+        ? Number(reception.grossMassOffsetG)
+        : reception?.gross_mass_offset_g !== undefined && reception.gross_mass_offset_g !== null
+          ? Number(reception.gross_mass_offset_g)
+          : 0,
     measuredSampleMassG:
       reception?.measuredSampleMassG !== undefined && reception.measuredSampleMassG !== null
         ? Number(reception.measuredSampleMassG)

@@ -1662,6 +1662,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     state.experiment.workspace.widgets.find((widget) => widget.id === "grinder") ?? null;
   const grossBalanceWidget =
     state.experiment.workspace.widgets.find((widget) => widget.id === "gross_balance") ?? null;
+  const grossBalanceNetMassG =
+    state.experiment.limsReception.measuredGrossMassG === null
+      ? null
+      : state.experiment.limsReception.measuredGrossMassG + state.experiment.limsReception.grossMassOffsetG;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
   );
@@ -2348,7 +2352,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       orchard_name: payload.orchard_name,
       harvest_date: payload.harvest_date,
       indicative_mass_g: payload.indicative_mass_g,
-      measured_gross_mass_g: state.experiment.limsReception.measuredGrossMassG,
+      measured_gross_mass_g: grossBalanceNetMassG,
       measured_sample_mass_g: payload.measured_sample_mass_g,
     });
   };
@@ -2844,9 +2848,21 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                   ) : widgetId === "gross_balance" ? (
                     <GrossBalanceWidget
                       isDropHighlighted={isDropTargetHighlighted("gross_balance_widget")}
+                      grossMassOffsetG={state.experiment.limsReception.grossMassOffsetG}
                       measuredGrossMassG={state.experiment.limsReception.measuredGrossMassG}
+                      netMassG={grossBalanceNetMassG}
+                      onDecrementOffset={() => {
+                        void experimentApi.setGrossBalanceContainerOffset({
+                          gross_mass_offset_g: state.experiment.limsReception.grossMassOffsetG - 1,
+                        });
+                      }}
                       onDragOver={handleGrossBalanceDragOver}
                       onDrop={handleGrossBalanceDrop}
+                      onIncrementOffset={() => {
+                        void experimentApi.setGrossBalanceContainerOffset({
+                          gross_mass_offset_g: state.experiment.limsReception.grossMassOffsetG + 1,
+                        });
+                      }}
                       stagedContent={grossBalanceStagedContent}
                     />
                   ) : widgetId === "rack" ? (

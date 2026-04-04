@@ -13,6 +13,7 @@ from app.services.commands import (
     PlaceReceivedBagOnWorkbenchCommand,
     PrintLimsLabelCommand,
     RecordGrossWeightCommand,
+    SetGrossMassOffsetCommand,
 )
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
 from app.services.command_handlers.support import find_workspace_widget
@@ -62,6 +63,16 @@ def record_gross_weight(experiment: Experiment, command: RecordGrossWeightComman
     )
 
 
+def set_gross_mass_offset(experiment: Experiment, command: SetGrossMassOffsetCommand) -> None:
+    if command.gross_mass_offset_g < -100 or command.gross_mass_offset_g > 0:
+        raise ValueError("Gross balance offset must stay between -100 g and 0 g.")
+
+    experiment.lims_reception.gross_mass_offset_g = int(command.gross_mass_offset_g)
+    experiment.audit_log.append(
+        f"Gross balance container offset set to {command.gross_mass_offset_g:+d} g."
+    )
+
+
 def create_lims_reception(
     experiment: Experiment,
     command: CreateLimsReceptionCommand,
@@ -79,6 +90,7 @@ def create_lims_reception(
             harvest_date=command.harvest_date.strip(),
             indicative_mass_g=float(command.indicative_mass_g),
             measured_gross_mass_g=measured_gross_mass_g,
+            gross_mass_offset_g=experiment.lims_reception.gross_mass_offset_g,
             measured_sample_mass_g=(
                 float(command.measured_sample_mass_g)
                 if command.measured_sample_mass_g is not None
@@ -95,6 +107,7 @@ def create_lims_reception(
         entry.harvest_date = command.harvest_date.strip()
         entry.indicative_mass_g = float(command.indicative_mass_g)
         entry.measured_gross_mass_g = measured_gross_mass_g
+        entry.gross_mass_offset_g = experiment.lims_reception.gross_mass_offset_g
         entry.measured_sample_mass_g = (
             float(command.measured_sample_mass_g)
             if command.measured_sample_mass_g is not None
@@ -238,7 +251,9 @@ def _resolve_measured_gross_mass_g(
     if measured_gross_mass_g is not None:
         return float(measured_gross_mass_g)
     if experiment.lims_reception.measured_gross_mass_g is not None:
-        return float(experiment.lims_reception.measured_gross_mass_g)
+        return float(experiment.lims_reception.measured_gross_mass_g) + float(
+            experiment.lims_reception.gross_mass_offset_g
+        )
     return None
 
 
@@ -268,6 +283,7 @@ def _clone_lims_entry(
         harvest_date=entry.harvest_date,
         indicative_mass_g=entry.indicative_mass_g,
         measured_gross_mass_g=entry.measured_gross_mass_g,
+        gross_mass_offset_g=entry.gross_mass_offset_g,
         measured_sample_mass_g=entry.measured_sample_mass_g,
         lab_sample_code=entry.lab_sample_code,
         status=entry.status,

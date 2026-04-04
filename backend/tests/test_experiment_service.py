@@ -88,6 +88,10 @@ def apply_command(
             experiment_id,
             payload.get("measured_gross_mass_g"),
         ),
+        "set_gross_mass_offset": lambda: service.set_gross_mass_offset(
+            experiment_id,
+            payload["gross_mass_offset_g"],
+        ),
         "create_lims_reception": lambda: service.create_lims_reception(
             experiment_id,
             payload["orchard_name"],
@@ -460,6 +464,21 @@ def test_record_gross_weight_uses_explicit_measured_mass() -> None:
     )
 
     assert updated.lims_reception.measured_gross_mass_g == pytest.approx(36.0)
+
+
+def test_set_gross_mass_offset_updates_reception_state() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "set_gross_mass_offset",
+        {"gross_mass_offset_g": -35},
+    )
+
+    assert updated.lims_reception.gross_mass_offset_g == -35
+    assert updated.audit_log[-1] == "Gross balance container offset set to -35 g."
 
 
 def test_print_lims_label_requires_reception_entry() -> None:
