@@ -94,7 +94,7 @@ def find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidg
     return widget
 
 
-def find_workspace_produce_lot(workspace: Workspace, produce_lot_id: str) -> ProduceLot:
+def find_produce_basket_lot(workspace: Workspace, produce_lot_id: str) -> ProduceLot:
     produce_lot = next((entry for entry in workspace.produce_lots if entry.id == produce_lot_id), None)
     if produce_lot is None:
         raise ValueError("Unknown produce lot")

@@ -2785,6 +2785,26 @@ def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
     assert updated.audit_log[-1] == "Apple powder lot discarded from Gross balance."
 
 
+def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
+    service.open_gross_balance_tool(experiment.id)
+    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+    updated = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+
+    trashed_entry = updated.trash.produce_lots[0]
+    assert trashed_entry.origin_label == "Gross balance"
+    assert trashed_entry.origin is not None
+    assert trashed_entry.origin.kind == "gross_balance_tool"
+    assert trashed_entry.origin.location_id == "gross_balance"
+    assert trashed_entry.origin.container_label == "Wide-neck HDPE jar"
+
+
 def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

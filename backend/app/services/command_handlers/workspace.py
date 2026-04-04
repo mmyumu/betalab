@@ -38,7 +38,7 @@ from app.services.produce_lot_transfer import (
     WorkspaceProduceLotSource,
 )
 from app.services.command_handlers.support import (
-    find_workspace_produce_lot,
+    find_produce_basket_lot,
     find_workspace_widget_liquid,
     format_volume,
     find_workspace_widget,
@@ -367,7 +367,7 @@ def discard_workspace_produce_lot(
     experiment: Experiment,
     command: DiscardWorkspaceProduceLotCommand,
 ) -> None:
-    produce_lot = find_workspace_produce_lot(experiment.workspace, command.produce_lot_id)
+    produce_lot = find_produce_basket_lot(experiment.workspace, command.produce_lot_id)
     experiment.workspace.produce_lots = [
         lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
     ]

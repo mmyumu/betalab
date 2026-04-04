@@ -36,6 +36,23 @@ Frontend:
 
 Use TypeScript for frontend code and Python 3.11+ for backend code. Prefer 2-space indentation in frontend files and 4 spaces in Python. Use `snake_case` for Python modules/functions, `PascalCase` for React components, and `kebab-case` for component filenames (for example `flask-card.tsx`). Keep domain logic out of React components; put workflow orchestration in `backend/app/services/`, domain concepts in `backend/app/domain/`, and API contracts in `backend/app/schemas/`.
 
+### Backend State And Command Design
+
+- Treat reads as pure by default. A `GET` or read-oriented service method must not mutate domain state, increment versions, append audit logs, or persist snapshots unless a real simulation advance or explicit write action occurred.
+- Keep serialization pure. Converting a domain object to an API schema must not have side effects such as bumping `snapshot_version`, clearing tickets, or updating timestamps.
+- Separate simulation advance from persistence. Advancing elapsed time may mutate the in-memory experiment, but persisting that advance should happen in one explicit write path rather than as a hidden side effect of schema conversion.
+- Keep commands single-intention. A command handler should do one domain action only; it must not silently recreate adjacent state, reset other subsystems, or perform convenience orchestration under the same name.
+- If the UI needs a “smart” action that chains several domain steps, put that orchestration in the service layer, not inside a low-level command handler.
+- Provenance is a first-class domain concept, not just display text. When an entity is moved, discarded, or restored, preserve a structured origin record and derive human-readable labels from that record.
+- Do not use free-form `origin_label` strings as the source of truth for workflow decisions. Use structured provenance for logic, and keep labels as presentation only.
+- When the same entity can be removed from several storage locations, implement one canonical remove path and reuse it for move, discard, and restore flows. Do not maintain parallel removal logic for the same entity kind.
+- When a summary view such as the experiments home page only needs metadata, do not rebuild or fully validate the entire persisted snapshot just to render that list. Persist and read a denormalized summary instead.
+- Name collections after their real domain role, not after an implementation convenience. If a collection behaves like basket inventory, staging inventory, or trash retention, its name and helpers should reflect that role clearly.
+- Prefer small shared helpers for repeated move patterns such as “take entity from source”, “place entity on target”, and “recompute derived state”. Do not copy/paste near-identical move flows across handlers.
+- Any handler that changes a container or widget with derived state must update that derived state through one shared helper, not by reimplementing the recomputation ad hoc in each command.
+- Do not leave compatibility shims or transitional aliases in the codebase unless they are part of an explicit migration plan with a near-term removal step. If a rename or architectural merge is complete, remove the old alias instead of preserving both names.
+- Avoid “works by accident” Python patterns. Import annotated types explicitly, remove dead tokens and stale compatibility shims once replaced, and prefer code that is valid without relying on postponed-annotation quirks.
+
 ### Physical Simulation Architecture
 
 - Treat time-based lab physics as a single backend subsystem rooted in `PhysicalSimulationService`.

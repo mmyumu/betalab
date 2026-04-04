@@ -274,34 +274,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                 for entry in schema.trash.sample_labels
             ],
         ),
-        workspace=Workspace(
-            widgets=[
-                WorkspaceWidget(
-                    id=widget.id,
-                    widget_type=widget.widget_type,
-                    label=widget.label,
-                    anchor=widget.anchor,
-                    offset_x=widget.offset_x,
-                    offset_y=widget.offset_y,
-                    is_present=widget.is_present,
-                    is_trashed=widget.is_trashed,
-                    grinder_run_duration_ms=widget.grinder_run_duration_ms,
-                    grinder_run_remaining_ms=widget.grinder_run_remaining_ms,
-                    grinder_fault=widget.grinder_fault,
-                    tool=_deserialize_workbench_tool(widget.tool),
-                    produce_lots=[
-                        _deserialize_produce_lot(lot) for lot in widget.produce_lots
-                    ],
-                    liquids=[
-                        WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids
-                    ],
-                )
-                for widget in schema.workspace.widgets
-            ],
-            produce_lots=[
-                _deserialize_produce_lot(lot) for lot in schema.workspace.produce_lots
-            ],
-        ),
+        workspace=_deserialize_workspace(schema),
         lims_reception=LimsReception(
             orchard_name=schema.lims_reception.orchard_name,
             harvest_date=schema.lims_reception.harvest_date,
@@ -323,6 +296,38 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
     )
+
+
+def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
+    workspace = Workspace(
+        widgets=[
+                WorkspaceWidget(
+                    id=widget.id,
+                    widget_type=widget.widget_type,
+                    label=widget.label,
+                    anchor=widget.anchor,
+                    offset_x=widget.offset_x,
+                    offset_y=widget.offset_y,
+                    is_present=widget.is_present,
+                    is_trashed=widget.is_trashed,
+                    grinder_run_duration_ms=widget.grinder_run_duration_ms,
+                    grinder_run_remaining_ms=widget.grinder_run_remaining_ms,
+                    grinder_fault=widget.grinder_fault,
+                    tool=_deserialize_workbench_tool(widget.tool),
+                    produce_lots=[
+                        _deserialize_produce_lot(lot) for lot in widget.produce_lots
+                    ],
+                    liquids=[
+                        WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids
+                    ],
+                )
+                for widget in schema.workspace.widgets
+        ],
+    )
+    workspace.produce_basket_lots = [
+        _deserialize_produce_lot(lot) for lot in schema.workspace.produce_lots
+    ]
+    return workspace
 
 
 def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:

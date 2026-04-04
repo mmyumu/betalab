@@ -48,104 +48,84 @@ def move_workbench_tool_to_gross_balance(
     experiment: Experiment,
     command: MoveWorkbenchToolToGrossBalanceCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     source_slot = find_workbench_slot(experiment.workbench, command.source_slot_id)
     if source_slot.tool is None:
         raise ValueError(f"{source_slot.label} does not contain a tool.")
-    _validate_balance_empty(widget)
-    widget.tool = source_slot.tool
+    moved_tool = source_slot.tool
     source_slot.tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{widget.tool.label} placed on {widget.label}.")
+    _place_tool_on_balance(experiment, moved_tool)
 
 
 def move_basket_tool_to_gross_balance(
     experiment: Experiment,
     _command: MoveBasketToolToGrossBalanceCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     if experiment.basket_tool is None:
         raise ValueError("The produce basket does not contain a tool.")
-    _validate_balance_empty(widget)
-    widget.tool = experiment.basket_tool
+    moved_tool = experiment.basket_tool
     experiment.basket_tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{widget.tool.label} placed on {widget.label}.")
+    _place_tool_on_balance(experiment, moved_tool)
 
 
 def place_tool_on_gross_balance(
     experiment: Experiment,
     command: PlaceToolOnGrossBalanceCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
-    _validate_balance_empty(widget)
-    widget.tool = build_workbench_tool(command.tool_id)
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{widget.tool.label} placed on {widget.label}.")
+    _place_tool_on_balance(experiment, build_workbench_tool(command.tool_id))
 
 
 def move_rack_tool_to_gross_balance(
     experiment: Experiment,
     command: MoveRackToolToGrossBalanceCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     rack_slot = find_rack_slot(experiment.rack, command.rack_slot_id)
     if rack_slot.tool is None:
         raise ValueError(f"{rack_slot.label} does not contain a tool.")
-    _validate_balance_empty(widget)
-    widget.tool = rack_slot.tool
+    moved_tool = rack_slot.tool
     rack_slot.tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{widget.tool.label} placed on {widget.label}.")
+    _place_tool_on_balance(experiment, moved_tool)
 
 
 def restore_trashed_tool_to_gross_balance(
     experiment: Experiment,
     command: RestoreTrashedToolToGrossBalanceCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     trashed_tool = find_trash_tool(experiment.trash, command.trash_tool_id)
-    _validate_balance_empty(widget)
-    widget.tool = trashed_tool.tool
+    restored_tool = trashed_tool.tool
     experiment.trash.tools = [
         entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
     ]
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{widget.tool.label} restored onto {widget.label}.")
+    _place_tool_on_balance(
+        experiment,
+        restored_tool,
+        action_verb="restored onto",
+    )
 
 
 def move_gross_balance_tool_to_workbench(
     experiment: Experiment,
     command: MoveGrossBalanceToolToWorkbenchCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
-    if widget.tool is None:
-        raise ValueError(f"{widget.label} does not contain a tool.")
     if target_slot.tool is not None or target_slot.surface_produce_lots:
         raise ValueError(f"{target_slot.label} already contains a tool")
-    target_slot.tool = widget.tool
-    widget.tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{target_slot.tool.label} moved from {widget.label} to {target_slot.label}.")
+    moved_tool = _take_tool_from_balance(experiment)
+    target_slot.tool = moved_tool
+    _append_tool_moved_from_balance_audit(experiment, moved_tool.label, target_slot.label)
 
 
 def move_gross_balance_tool_to_rack(
     experiment: Experiment,
     command: MoveGrossBalanceToolToRackCommand,
 ) -> None:
-    widget = _find_gross_balance_widget(experiment)
     rack_slot = find_rack_slot(experiment.rack, command.rack_slot_id)
-    if widget.tool is None:
-        raise ValueError(f"{widget.label} does not contain a tool.")
-    if widget.tool.tool_type != "sample_vial":
-        raise ValueError(f"{widget.tool.label} does not fit in the rack.")
+    moved_tool = _require_gross_balance_tool(experiment)
+    if moved_tool.tool_type != "sample_vial":
+        raise ValueError(f"{moved_tool.label} does not fit in the rack.")
     if rack_slot.tool is not None:
         raise ValueError(f"{rack_slot.label} already contains a tool.")
-    rack_slot.tool = widget.tool
-    widget.tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{rack_slot.tool.label} moved from {widget.label} to {rack_slot.label}.")
+    rack_slot.tool = _take_tool_from_balance(experiment)
+    _append_tool_moved_from_balance_audit(experiment, rack_slot.tool.label, rack_slot.label)
 
 
 def discard_gross_balance_tool(
@@ -153,19 +133,15 @@ def discard_gross_balance_tool(
     _command: DiscardGrossBalanceToolCommand,
 ) -> None:
     widget = _find_gross_balance_widget(experiment)
-    if widget.tool is None:
-        raise ValueError(f"{widget.label} does not contain a tool.")
+    removed_tool = _take_tool_from_balance(experiment)
     experiment.trash.tools.append(
         TrashToolEntry(
-            id=f"trash_tool_{widget.tool.id}",
+            id=f"trash_tool_{removed_tool.id}",
             origin_label=widget.label,
-            tool=widget.tool,
+            tool=removed_tool,
         )
     )
-    removed_label = widget.tool.label
-    widget.tool = None
-    _update_balance_measured_mass(experiment)
-    experiment.audit_log.append(f"{removed_label} discarded from {widget.label}.")
+    experiment.audit_log.append(f"{removed_tool.label} discarded from {widget.label}.")
 
 
 def open_gross_balance_tool(experiment: Experiment, _command: OpenGrossBalanceToolCommand) -> None:
@@ -334,6 +310,38 @@ def _require_gross_balance_tool(experiment: Experiment):
     if widget.tool is None:
         raise ValueError(f"{widget.label} does not contain a tool.")
     return widget.tool
+
+
+def _place_tool_on_balance(
+    experiment: Experiment,
+    tool,
+    *,
+    action_verb: str = "placed on",
+) -> None:
+    widget = _find_gross_balance_widget(experiment)
+    _validate_balance_empty(widget)
+    widget.tool = tool
+    _update_balance_measured_mass(experiment)
+    experiment.audit_log.append(f"{tool.label} {action_verb} {widget.label}.")
+
+
+def _take_tool_from_balance(experiment: Experiment):
+    widget = _find_gross_balance_widget(experiment)
+    if widget.tool is None:
+        raise ValueError(f"{widget.label} does not contain a tool.")
+    removed_tool = widget.tool
+    widget.tool = None
+    _update_balance_measured_mass(experiment)
+    return removed_tool
+
+
+def _append_tool_moved_from_balance_audit(
+    experiment: Experiment,
+    tool_label: str,
+    target_label: str,
+) -> None:
+    widget = _find_gross_balance_widget(experiment)
+    experiment.audit_log.append(f"{tool_label} moved from {widget.label} to {target_label}.")
 
 
 def _update_balance_measured_mass(experiment: Experiment) -> None:
