@@ -698,6 +698,35 @@ describe("LabScene", () => {
     expect(screen.getByLabelText("Debug powder residual CO2")).toHaveValue(18);
   });
 
+  it("shows the debug produce draft when dropped directly onto the gross balance", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("widget-debug-inventory")).toBeInTheDocument();
+    });
+
+    const preset = screen.getByTestId("debug-palette-preset-apple_powder_residual_co2");
+    const balance = screen.getByTestId("gross-balance-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(preset, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(balance, { dataTransfer: transfer });
+    fireEvent(balance, dragOverEvent);
+    fireEvent.drop(balance, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(await screen.findByLabelText("Debug powder mass")).toHaveValue(2450);
+    expect(screen.getByLabelText("Debug powder temperature")).toHaveValue(-62);
+    expect(screen.getByLabelText("Debug powder residual CO2")).toHaveValue(18);
+  });
+
   it("shows the backend error state and retries experiment creation", async () => {
     vi.mocked(createExperiment)
       .mockRejectedValueOnce(new Error("Backend unavailable"))
@@ -3091,6 +3120,127 @@ describe("LabScene", () => {
         "move_gross_balance_produce_lot_to_workbench",
         {
           target_slot_id: "station_1",
+          produce_lot_id: "produce_1",
+        },
+      );
+    });
+  });
+
+  it("allows dragging loose produce from the gross balance surface onto the workbench", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple powder 1",
+              produceType: "apple",
+              totalMassG: 10,
+              cutState: "ground",
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            surfaceProduceLots: [
+              {
+                id: "produce_1",
+                label: "Apple powder 1",
+                produceType: "apple",
+                totalMassG: 10,
+                cutState: "ground",
+              },
+            ],
+          },
+        ]),
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          produceLots: [],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const produceCard = await screen.findByTestId("gross-balance-produce-produce_1");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(produceCard, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "move_gross_balance_produce_lot_to_workbench",
+        {
+          target_slot_id: "station_1",
+          produce_lot_id: "produce_1",
+        },
+      );
+    });
+  });
+
+  it("allows discarding loose produce from the gross balance surface into the trash", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          produceLots: [
+            {
+              id: "produce_1",
+              label: "Apple powder 1",
+              produceType: "apple",
+              totalMassG: 10,
+              cutState: "ground",
+            },
+          ],
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        trashProduceLots: [
+          {
+            id: "trash_produce_1",
+            originLabel: "Gross balance",
+            produceLot: {
+              id: "produce_1",
+              label: "Apple powder 1",
+              produceType: "apple",
+              totalMassG: 10,
+              cutState: "ground",
+            },
+          },
+        ],
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          produceLots: [],
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const produceCard = await screen.findByTestId("gross-balance-produce-produce_1");
+    const trash = screen.getByTestId("trash-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(produceCard, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(trash, { dataTransfer: transfer });
+    fireEvent(trash, dragOverEvent);
+    fireEvent.drop(trash, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "discard_gross_balance_produce_lot",
+        {
           produce_lot_id: "produce_1",
         },
       );

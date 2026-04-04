@@ -659,6 +659,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     if (!payload.sourceSlotId || !payload.label) {
       return;
     }
+    if (payload.sourceSlotId === targetSlotId) {
+      clearDropTargets();
+      return;
+    }
 
     clearDropTargets();
     void experimentApi.moveSampleLabelBetweenWorkbenchTools( {
@@ -1306,10 +1310,17 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         });
         return;
       }
-      if (producePayload.sourceKind === "debug_palette" && measuredMassG !== null) {
-        void experimentApi.recordGrossWeight({
-          measured_gross_mass_g: measuredMassG,
+      if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
+        setPendingDropDraft({
+          commandType: "create_debug_produce_lot_to_widget",
+          confirmLabel: "Spawn",
+          fields: buildDebugProduceDraftFields(),
+          presetId: producePayload.debugProducePresetId,
+          targetId: "gross_balance",
+          targetKind: "workspace_widget",
+          title: "Configure Apple powder",
         });
+        return;
       }
     }
   };
@@ -1970,6 +1981,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       />
     );
   };
+  const pendingGrossBalanceDropDraft =
+    pendingDropDraft?.targetKind === "workspace_widget" &&
+    pendingDropDraft.targetId === "gross_balance"
+      ? pendingDropDraft
+      : null;
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -2621,7 +2637,18 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const displayBalanceProduceLot = grossBalanceProduceLot;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const grossBalanceStagedContent =
-    displayBalanceTool ? (
+    pendingGrossBalanceDropDraft ? (
+      <DropDraftCard
+        confirmLabel={pendingGrossBalanceDropDraft.confirmLabel}
+        fields={pendingGrossBalanceDropDraft.fields}
+        onCancel={() => {
+          setPendingDropDraft(null);
+        }}
+        onChangeField={handleUpdateDropDraftField}
+        onConfirm={handleConfirmDropDraft}
+        title={pendingGrossBalanceDropDraft.title}
+      />
+    ) : displayBalanceTool ? (
       <div
         data-testid="gross-balance-staged-item"
         onDragOver={handleBalanceStagedToolDragOver}
@@ -2648,17 +2675,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         />
       </div>
     ) : displayBalanceProduceLot ? (
-      <div data-testid="gross-balance-staged-item">
+      <div
+        className="cursor-grab rounded-[1rem] border border-amber-200 bg-amber-50/80 p-2.5 shadow-sm active:cursor-grabbing"
+        data-testid="gross-balance-staged-item"
+        draggable
+        onDragEnd={() => {
+          clearDropTargets();
+        }}
+        onDragStart={(event) => {
+          handleBalanceItemDragStart(event.dataTransfer);
+        }}
+      >
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+          Loose material on pan
+        </p>
         <ProduceLotCard
           dataTestId={`gross-balance-produce-${displayBalanceProduceLot.id}`}
-          draggable
+          draggable={false}
           metadata={formatProduceLotMetadata(displayBalanceProduceLot)}
-          onDragEnd={() => {
-            clearDropTargets();
-          }}
-          onDragStart={(event) => {
-            handleBalanceItemDragStart(event.dataTransfer);
-          }}
           produceLot={{ ...displayBalanceProduceLot, id: `balance-${displayBalanceProduceLot.id}` }}
           variant="expanded"
         />

@@ -758,6 +758,27 @@ def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
     assert _find_widget(moved.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
 
 
+def test_move_gross_balance_produce_lot_to_workbench_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "gross_balance", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+        )
+        produced = client.post(
+            f"/experiments/{experiment_id}/debug/produce-presets/apple_powder_residual_co2/spawn-on-widget",
+            json={"widget_id": "gross_balance", "total_mass_g": 10},
+        )
+        produce_lot_id = _find_widget(produced.json(), "gross_balance")["produce_lots"][0]["id"]
+        moved = client.post(
+            f"/experiments/{experiment_id}/gross-balance/move-produce-lot-to-workbench",
+            json={"target_slot_id": "station_1", "produce_lot_id": produce_lot_id},
+        )
+
+    assert moved.status_code == 200
+    assert moved.json()["workbench"]["slots"][0]["surface_produce_lots"][0]["id"] == produce_lot_id
+
+
 def test_new_routes_return_expected_http_errors() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)

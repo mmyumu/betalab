@@ -14,6 +14,7 @@ vi.mock("@/lib/api", async () => await import("@/test-support/api-mock"));
 import { createExperiment, sendExperimentCommand } from "@/test-support/api-mock";
 
 async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[number]) {
+  vi.stubEnv("NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY", "true");
   const experiment = sourceCase.buildExperiment();
   vi.mocked(createExperiment).mockResolvedValue(experiment);
   vi.mocked(sendExperimentCommand).mockResolvedValue(experiment);
@@ -69,6 +70,7 @@ function isAvailableTarget(
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("LabScene DnD actions", () => {

@@ -319,8 +319,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
     discardBasketTool: () =>
       executeMutation(mutationFns.discardBasketTool),
-    discardGrossBalanceProduceLot: () =>
-      executeMutation(mutationFns.discardGrossBalanceProduceLot),
+    discardGrossBalanceProduceLot: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.discardGrossBalanceProduceLot, payload),
     discardGrossBalanceTool: () =>
       executeMutation(mutationFns.discardGrossBalanceTool),
     discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
@@ -347,8 +347,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.moveBasketToolToGrossBalance),
     placeToolOnGrossBalance: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.placeToolOnGrossBalance, payload),
-    moveGrossBalanceProduceLotToWidget: () =>
-      executeMutation(mutationFns.moveGrossBalanceProduceLotToWidget),
+    moveGrossBalanceProduceLotToWidget: (payload: Record<string, unknown>) =>
+      executeMutation(mutationFns.moveGrossBalanceProduceLotToWidget, payload),
     moveGrossBalanceProduceLotToWorkbench: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.moveGrossBalanceProduceLotToWorkbench, payload),
     moveGrossBalanceToolToRack: (payload: Record<string, unknown>) =>

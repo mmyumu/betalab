@@ -392,6 +392,11 @@ class WorkspaceWidgetMoveProduceLotToWorkbenchSchema(BaseModel):
     target_slot_id: str
 
 
+class GrossBalanceMoveProduceLotToWorkbenchSchema(BaseModel):
+    target_slot_id: str
+    produce_lot_id: str
+
+
 class ReceivedBagPlacementSchema(BaseModel):
     target_slot_id: str
 

@@ -38,6 +38,10 @@ export type DndTargetId =
   | "widget-workspace"
   | "trash-dropzone";
 
+export type DndCoverageScenario =
+  | "inventory"
+  | "surface-and-balance-produce";
+
 export type ExpectedCommand = {
   payload: unknown;
   type: string;
@@ -240,6 +244,25 @@ function makeWorkspaceWidgets(
 }
 
 function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
+  const legacySampleLabelText = (overrides as Partial<BenchToolInstance> & { sampleLabelText?: string | null })
+    .sampleLabelText;
+  const legacySampleLabelReceivedDate = (
+    overrides as Partial<BenchToolInstance> & { sampleLabelReceivedDate?: string | null }
+  ).sampleLabelReceivedDate;
+  const derivedLabels =
+    overrides.labels ??
+    (legacySampleLabelText
+      ? [
+          {
+            id: `${overrides.id ?? "bench_tool_1"}-legacy-label`,
+            labelKind: legacySampleLabelReceivedDate ? "lims" : "manual",
+            text: legacySampleLabelText,
+            receivedDate: legacySampleLabelReceivedDate ?? null,
+            sampleCode: legacySampleLabelReceivedDate ? legacySampleLabelText : null,
+          },
+        ]
+      : []);
+
   return {
     id: "bench_tool_1",
     toolId: item.id,
@@ -248,6 +271,7 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
     accent: item.accent,
     toolType: item.toolType,
     capacity_ml: item.capacity_ml,
+    labels: derivedLabels,
     produceLots: [],
     liquids: [],
     ...overrides,
@@ -281,7 +305,13 @@ function makeTrashSampleLabelEntry(): TrashSampleLabelEntry {
   return {
     id: "trash_sample_label_1",
     originLabel: "Sealed sampling bag",
-    sampleLabelText: "LOT-2026-041",
+    label: {
+      id: "trash_sample_label_label_1",
+      labelKind: "manual",
+      text: "LOT-2026-041",
+      receivedDate: null,
+      sampleCode: null,
+    },
   };
 }
 
@@ -334,6 +364,7 @@ function makeLimsReception(overrides: Partial<LimsReception> = {}): LimsReceptio
     harvestDate: "",
     indicativeMassG: 0,
     measuredGrossMassG: null,
+    grossMassOffsetG: 0,
     measuredSampleMassG: null,
     labSampleCode: null,
     status: "awaiting_reception",
@@ -425,7 +456,9 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
             : null,
       },
       "trash-dropzone": {
-        compatible: item.allowedDropTargets.includes("trash_bin"),
+        compatible:
+          item.itemType === "tool" ||
+          (item.itemType === "workspace_widget" && item.allowedDropTargets.includes("trash_bin")),
         command:
           item.itemType === "tool"
             ? {
@@ -434,7 +467,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
                   tool_id: item.id,
                 },
               }
-            : item.itemType === "workspace_widget" && widgetId
+            : item.itemType === "workspace_widget" && widgetId && item.allowedDropTargets.includes("trash_bin")
               ? {
                   type: "discard_workspace_widget",
                   payload: {
@@ -472,8 +505,11 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
       }),
     targetExpectations: {
       "bench-slot-station_1": {
-        compatible: false,
-        command: null,
+        compatible: true,
+        command: {
+          type: "apply_sample_label_to_workbench_tool",
+          payload: { slot_id: "station_1" },
+        },
       },
       "bench-slot-station_2": {
         compatible: true,
@@ -502,6 +538,60 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
             sample_label_id: "sampling_bag_label",
           },
         },
+      },
+    },
+  };
+}
+
+function createDebugProducePresetSourceCase(): DndSourceCase {
+  return {
+    id: "debug-palette-apple_powder_residual_co2",
+    label: "debug palette apple powder preset",
+    sourceTestId: "debug-palette-preset-apple_powder_residual_co2",
+    openBasket: false,
+    openTrash: false,
+    expectRackWidget: true,
+    availableTargets: [
+      "bench-slot-station_1",
+      "bench-slot-station_2",
+      "grinder-dropzone",
+      "gross-balance-dropzone",
+      "rack-illustration-slot-1",
+      "widget-workspace",
+      "trash-dropzone",
+    ],
+    buildExperiment: () =>
+      makeExperiment({
+        slots: makeSlots([{ tool: makeTool(sampleVialItem) }]),
+      }),
+    targetExpectations: {
+      "bench-slot-station_1": {
+        compatible: false,
+        command: null,
+      },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: null,
+      },
+      "grinder-dropzone": {
+        compatible: true,
+        command: null,
+      },
+      "gross-balance-dropzone": {
+        compatible: true,
+        command: null,
+      },
+      "rack-illustration-slot-1": {
+        compatible: false,
+        command: null,
+      },
+      "widget-workspace": {
+        compatible: false,
+        command: null,
+      },
+      "trash-dropzone": {
+        compatible: false,
+        command: null,
       },
     },
   };
@@ -580,7 +670,7 @@ function createRackSourceCase(): DndSourceCase {
   return {
     id: "rack-sample_vial",
     label: "rack autosampler vial",
-    sourceTestId: "rack-slot-tool-1",
+    sourceTestId: "rack-illustration-slot-1",
     openBasket: false,
     openTrash: false,
     expectRackWidget: true,
@@ -1325,12 +1415,13 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         ]),
       }),
     targetExpectations: {
-      "bench-slot-station_1": { compatible: false, command: null },
+      "bench-slot-station_1": { compatible: true, command: null },
       "bench-slot-station_2": {
         compatible: true,
         command: {
           type: "move_sample_label_between_workbench_tools",
           payload: {
+            label_id: "bench_tool_bag-legacy-label",
             source_slot_id: "station_1",
             target_slot_id: "station_2",
           },
@@ -1389,7 +1480,16 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
         },
       },
       "grinder-dropzone": { compatible: false, command: null },
-      "bench-slot-station_2": { compatible: false, command: null },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "restore_trashed_sample_label_to_workbench_tool",
+          payload: {
+            target_slot_id: "station_2",
+            trash_sample_label_id: "trash_sample_label_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
       "trash-dropzone": { compatible: true, command: null },
@@ -1439,7 +1539,15 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           },
         },
       },
-      "bench-slot-station_2": { compatible: false, command: null },
+      "bench-slot-station_2": {
+        compatible: true,
+        command: {
+          type: "apply_printed_lims_label",
+          payload: {
+            slot_id: "station_2",
+          },
+        },
+      },
       "grinder-dropzone": { compatible: false, command: null },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
@@ -1572,6 +1680,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
         command: {
           type: "move_gross_balance_produce_lot_to_workbench",
           payload: {
+            produce_lot_id: "produce_1",
             target_slot_id: "station_1",
           },
         },
@@ -1581,6 +1690,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
         command: {
           type: "move_gross_balance_produce_lot_to_workbench",
           payload: {
+            produce_lot_id: "produce_1",
             target_slot_id: "station_2",
           },
         },
@@ -1589,7 +1699,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "move_gross_balance_produce_lot_to_widget",
-          payload: {},
+          payload: { produce_lot_id: "produce_1" },
         },
       },
       "gross-balance-dropzone": { compatible: true, command: null },
@@ -1599,7 +1709,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "discard_gross_balance_produce_lot",
-          payload: {},
+          payload: { produce_lot_id: "produce_1" },
         },
       },
     },
@@ -1609,6 +1719,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
 const baseDndSourceCases: DndSourceCase[] = [
   ...paletteItems.map(createPaletteSourceCase),
   createPaletteSampleLabelSourceCase(),
+  createDebugProducePresetSourceCase(),
   ...toolItems.map(createWorkbenchToolSourceCase),
   createBasketReceivedBagSourceCase(),
   createBasketProduceSourceCase(),
@@ -1645,6 +1756,22 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
         type: "place_tool_on_gross_balance",
         payload: {
           tool_id: toolId,
+        },
+      },
+    };
+  }
+
+  if (
+    sourceCase.id === "workbench-produce-lot-apple" ||
+    sourceCase.id === "workbench-surface-produce-lot-apple"
+  ) {
+    return {
+      compatible: true,
+      command: {
+        type: "move_workbench_produce_lot_to_gross_balance",
+        payload: {
+          source_slot_id: "station_1",
+          produce_lot_id: "produce_1",
         },
       },
     };
@@ -1690,22 +1817,6 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
       command: {
         type: "move_workspace_produce_lot_to_gross_balance",
         payload: {
-          produce_lot_id: "produce_1",
-        },
-      },
-    };
-  }
-
-  if (
-    sourceCase.id === "workbench-produce-lot-apple" ||
-    sourceCase.id === "workbench-surface-produce-lot-apple"
-  ) {
-    return {
-      compatible: true,
-      command: {
-        type: "move_workbench_produce_lot_to_gross_balance",
-        payload: {
-          source_slot_id: "station_1",
           produce_lot_id: "produce_1",
         },
       },
@@ -1766,3 +1877,143 @@ export const dndSourceCases: DndSourceCase[] = baseDndSourceCases.map((sourceCas
       getGrossBalanceTargetExpectation(sourceCase),
   },
 }));
+
+export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Experiment {
+  if (scenario === "surface-and-balance-produce") {
+    return makeExperiment({
+      slots: makeSlots([
+        {
+          tool: makeTool(sampleVialItem),
+        },
+        {
+          surfaceProduceLots: [
+            {
+              id: "produce_1",
+              isContaminated: true,
+              label: "Apple powder 1",
+              produceType: "apple",
+              totalMassG: 10,
+              cutState: "ground",
+            },
+          ],
+        },
+      ]),
+      workspaceWidgets: makeWorkspaceWidgets([
+        {},
+        {
+          isPresent: true,
+          produceLots: [
+            {
+              id: "produce_1",
+              isContaminated: false,
+              label: "Apple powder 2",
+              produceType: "apple",
+              totalMassG: 12,
+              cutState: "ground",
+            },
+          ],
+        },
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+      ]),
+    });
+  }
+
+  return makeExperiment({
+    basketTool: makeTool(sampleBagItem, {
+      id: "basket_bag_1",
+    }),
+    slots: makeSlots([
+      {
+        tool: makeTool(sampleVialItem, {
+          id: "bench_tool_1",
+        }),
+      },
+      {
+        tool: makeTool(sampleBagItem, {
+          id: "bench_tool_bag",
+          labels: [
+            {
+              id: "bench_tool_bag-legacy-label",
+              labelKind: "manual",
+              text: "LOT-2026-041",
+              receivedDate: null,
+              sampleCode: null,
+            },
+          ],
+          produceLots: [
+            {
+              id: "produce_1",
+              isContaminated: false,
+              label: "Apple lot 1",
+              produceType: "apple",
+              totalMassG: 2450,
+              unitCount: 12,
+            },
+          ],
+        }),
+      },
+    ]),
+    rackSlots: makeRackSlots([
+      { tool: makeTool(sampleVialItem) },
+    ]),
+    trashProduceLots: [makeTrashProduceLotEntry()],
+    trashSampleLabels: [makeTrashSampleLabelEntry()],
+    trashTools: [makeTrashToolEntry(sampleVialItem)],
+    produceLots: [
+      {
+        id: "produce_1",
+        isContaminated: false,
+        label: "Apple lot 1",
+        produceType: "apple",
+        totalMassG: 2450,
+        unitCount: 12,
+      },
+    ],
+    workspaceWidgets: makeWorkspaceWidgets([
+      {},
+      { isPresent: true, tool: makeTool(sampleVialItem) },
+      {},
+      {},
+      {},
+      { isPresent: false, isTrashed: true },
+      {},
+      {
+        isPresent: true,
+        liquids: [
+          {
+            id: "workspace_liquid_1",
+            liquidId: "dry_ice_pellets",
+            name: "Dry ice pellets",
+            volume_ml: 1000,
+            accent: "sky",
+          },
+        ],
+        produceLots: [
+          {
+            id: "produce_1",
+            isContaminated: false,
+            label: "Apple powder 1",
+            produceType: "apple",
+            totalMassG: 2450,
+            unitCount: 12,
+            cutState: "ground",
+          },
+        ],
+      },
+    ]),
+    limsReception: makeLimsReception({
+      orchardName: "Martin Orchard",
+      harvestDate: "2026-03-29",
+      indicativeMassG: 2500,
+      measuredGrossMassG: null,
+      labSampleCode: "APP-2026-0001",
+      status: "awaiting_label_application",
+      printedLabelTicket: makePrintedLimsTicket(),
+    }),
+  });
+}

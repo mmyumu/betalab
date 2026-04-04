@@ -2633,6 +2633,28 @@ def test_create_debug_powder_preset_in_grinder() -> None:
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Cryogenic grinder."
 
 
+def test_create_debug_powder_preset_on_gross_balance() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "create_debug_produce_lot_to_widget",
+        {
+            "preset_id": "apple_powder_residual_co2",
+            "widget_id": "gross_balance",
+        },
+    )
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.produce_lots[0].cut_state == "ground"
+    assert gross_balance.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
+    assert gross_balance.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert gross_balance.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Gross balance."
+
+
 def test_open_workbench_tool_unseals_a_jar() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()

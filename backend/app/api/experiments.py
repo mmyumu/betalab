@@ -8,6 +8,7 @@ from app.schemas.experiment import (
     DebugProducePresetSpawnToWorkbenchSchema,
     ExperimentListEntrySchema,
     ExperimentSchema,
+    GrossBalanceMoveProduceLotToWorkbenchSchema,
     GrossMassOffsetUpdateSchema,
     GrossWeightRecordSchema,
     LimsLabelPrintSchema,
@@ -333,7 +334,7 @@ def restore_trashed_produce_lot_to_gross_balance(
 @router.post("/{experiment_id}/gross-balance/move-produce-lot-to-workbench", response_model=ExperimentSchema)
 def move_gross_balance_produce_lot_to_workbench(
     experiment_id: str,
-    request: WorkspaceWidgetMoveProduceLotToWorkbenchSchema,
+    request: GrossBalanceMoveProduceLotToWorkbenchSchema,
 ) -> ExperimentSchema:
     return _handle_service_errors(
         lambda: experiment_service.move_gross_balance_produce_lot_to_workbench(

@@ -13,14 +13,15 @@ describe("tool drop targets", () => {
       "workbench_slot",
       "rack_slot",
       "trash_bin",
+      "gross_balance_widget",
     ]);
   });
 
   it("keeps non-vial tools off the rack", () => {
-    expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin"]);
-    expect(getToolDropTargets("cutting_board")).toEqual(["workbench_slot", "trash_bin"]);
-    expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot", "trash_bin"]);
-    expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin"]);
+    expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
+    expect(getToolDropTargets("cutting_board")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
+    expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
+    expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
   });
 
   it("keeps produce lot compatibility independent from origin and includes the grinder", () => {
@@ -28,6 +29,7 @@ describe("tool drop targets", () => {
       "workbench_slot",
       "grinder_widget",
       "trash_bin",
+      "gross_balance_widget",
     ]);
   });
 

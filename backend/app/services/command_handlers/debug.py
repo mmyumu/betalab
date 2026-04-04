@@ -5,6 +5,7 @@ from app.services.commands import (
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
 )
+from app.services.command_handlers.gross_balance import GrossBalanceProduceLotTarget
 from app.services.produce_lot_transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
 
 
@@ -36,7 +37,10 @@ def create_debug_produce_lot_to_widget(
         temperature_c=command.temperature_c,
         residual_co2_mass_g=command.residual_co2_mass_g,
     )
-    target = GrinderProduceLotTarget(widget_id=command.widget_id)
+    if command.widget_id == "gross_balance":
+        target = GrossBalanceProduceLotTarget()
+    else:
+        target = GrinderProduceLotTarget(widget_id=command.widget_id)
     target.validate(experiment)
     placement = target.place(experiment, produce_lot)
     experiment.audit_log.append(
