@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -172,7 +173,7 @@ class SqliteExperimentRepository:
             self._ensure_schema(connection)
 
     @contextmanager
-    def _connect(self) -> sqlite3.Connection:
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         self._ensure_parent_directory()
         with sqlite3.connect(self._db_path) as connection:
             self._ensure_schema(connection)

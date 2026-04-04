@@ -71,10 +71,12 @@ def _prepare_label_source(service: ExperimentService, experiment_id: str, source
     if source == "workbench_sample_label":
         service.place_tool_on_workbench(experiment_id, "station_1", "sealed_sampling_bag")
         labeled = service.apply_sample_label_to_workbench_tool(experiment_id, "station_1")
+        assert labeled.workbench.slots[0].tool is not None
         return labeled.workbench.slots[0].tool.labels[0].id, None
     if source == "trash_sample_label":
         service.place_tool_on_workbench(experiment_id, "station_1", "sealed_sampling_bag")
         labeled = service.apply_sample_label_to_workbench_tool(experiment_id, "station_1")
+        assert labeled.workbench.slots[0].tool is not None
         discarded = service.discard_sample_label_from_workbench_tool(
             experiment_id,
             "station_1",
