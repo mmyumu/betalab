@@ -16,6 +16,7 @@ from app.services.commands import (
     AddLiquidToWorkspaceWidgetCommand,
     AddWorkspaceProduceLotToWidgetCommand,
     AdvanceWorkspaceCryogenicsCommand,
+    CreateReceivedSamplingBagCommand,
     CreateProduceLotCommand,
     DiscardWidgetProduceLotCommand,
     DiscardWorkspaceProduceLotCommand,
@@ -47,6 +48,18 @@ from app.services.received_sample_generation import build_received_sampling_bag
 
 physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
+
+
+def create_received_sampling_bag(
+    experiment: Experiment,
+    _command: CreateReceivedSamplingBagCommand,
+) -> None:
+    if experiment.basket_tool is not None:
+        raise ValueError("The produce basket already contains the received sampling bag.")
+    experiment.basket_tool = build_received_sampling_bag(label="Received sampling bag")
+    experiment.audit_log.append(
+        f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag."
+    )
 
 
 def _apply_widget_layout_command(widget, command: WorkspaceWidgetLayoutCommand) -> None:
@@ -102,17 +115,6 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
     apple_lot_count = sum(
         1 for lot in experiment.workspace.produce_lots if lot.produce_type == produce_type
     )
-    if experiment.basket_tool is None:
-        experiment.basket_tool = build_received_sampling_bag(label="Received sampling bag")
-        experiment.lims_reception = LimsReception(
-            orchard_name="",
-            harvest_date="",
-            indicative_mass_g=0.0,
-        )
-        experiment.audit_log.append(
-            f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag."
-        )
-        return
 
     produce_lot = ProduceLot(
         id=new_id("produce"),

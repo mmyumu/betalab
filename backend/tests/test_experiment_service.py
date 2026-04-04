@@ -1,8 +1,11 @@
 import pytest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 import re
 
-from app.services.received_sample_generation import SAMPLE_BAG_TARE_MASS_G
+from app.services.received_sample_generation import (
+    SAMPLE_BAG_TARE_MASS_G,
+    resolve_received_bag_gross_mass_g,
+)
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentService
 
@@ -2259,6 +2262,46 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
     assert updated.audit_log[-1] == "Apple lot 1 discarded from Produce basket."
 
 
+def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(
+        service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    placed_on_surface = apply_command(
+        service,
+        experiment.id,
+        "add_produce_lot_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": created.workspace.produce_lots[0].id,
+        },
+    )
+    discarded = apply_command(
+        service,
+        experiment.id,
+        "discard_produce_lot_from_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "produce_lot_id": placed_on_surface.workbench.slots[0].surface_produce_lots[0].id,
+        },
+    )
+
+    trashed_entry = discarded.trash.produce_lots[0]
+    assert trashed_entry.origin_label == "Station 1"
+    assert trashed_entry.origin is not None
+    assert trashed_entry.origin.kind == "workbench_surface"
+    assert trashed_entry.origin.location_id == "station_1"
+    assert trashed_entry.origin.location_label == "Station 1"
+    assert trashed_entry.origin.container_id is None
+
+
 def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -2655,6 +2698,369 @@ def test_create_debug_powder_preset_on_gross_balance() -> None:
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Gross balance."
 
 
+def test_move_basket_tool_to_gross_balance_updates_measured_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+    expected_mass_g = resolve_received_bag_gross_mass_g(experiment.basket_tool)
+
+    updated = service.move_basket_tool_to_gross_balance(experiment.id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.tool_type == "sample_bag"
+    assert updated.basket_tool is None
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(expected_mass_g, abs=0.01)
+    assert updated.audit_log[-1] == "Sealed sampling bag placed on Gross balance."
+
+
+def test_place_tool_on_gross_balance_estimates_mass_for_empty_vial() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    updated = service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.tool_type == "sample_vial"
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(1.5, abs=0.01)
+    assert updated.audit_log[-1] == "Autosampler vial placed on Gross balance."
+
+
+def test_move_gross_balance_tool_to_rack_rejects_non_vials() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "beaker_rinse")
+
+    with pytest.raises(ValueError, match="does not fit in the rack"):
+        service.move_gross_balance_tool_to_rack(experiment.id, "rack_slot_1")
+
+
+def test_apply_printed_lims_label_to_gross_balance_bag_consumes_ticket() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.move_basket_tool_to_gross_balance(experiment.id)
+    created = service.create_lims_reception(
+        experiment.id,
+        orchard_name="Martin Orchard",
+        harvest_date="2026-03-29",
+        indicative_mass_g=2500,
+        measured_gross_mass_g=None,
+        measured_sample_mass_g=None,
+    )
+    service.print_lims_label(experiment.id, created.lims_reception.id)
+
+    updated = service.apply_printed_lims_label_to_gross_balance_bag(experiment.id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert len(gross_balance.tool.labels) == 1
+    assert gross_balance.tool.labels[0].label_kind == "lims"
+    assert gross_balance.tool.labels[0].sample_code == updated.lims_entries[0].lab_sample_code
+    assert updated.lims_reception.printed_label_ticket is None
+    assert updated.lims_entries[0].status == "received"
+    assert updated.audit_log[-1] == f"LIMS label {updated.lims_entries[0].lab_sample_code} applied to Sealed sampling bag."
+
+
+def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_debug_produce_lot_to_widget(
+        experiment.id,
+        "apple_powder_residual_co2",
+        "gross_balance",
+        total_mass_g=10.0,
+    )
+    produce_lot_id = next(widget for widget in created.workspace.widgets if widget.id == "gross_balance").produce_lots[0].id
+
+    updated = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.produce_lots == []
+    assert updated.trash.produce_lots[0].produce_lot.id == produce_lot_id
+    assert updated.trash.produce_lots[0].origin_label == "Gross balance"
+    assert updated.lims_reception.measured_gross_mass_g is None
+    assert updated.audit_log[-1] == "Apple powder lot discarded from Gross balance."
+
+
+def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_debug_produce_lot_to_widget(
+        experiment.id,
+        "apple_powder_residual_co2",
+        "gross_balance",
+        total_mass_g=12.3,
+    )
+    produce_lot_id = next(widget for widget in created.workspace.widgets if widget.id == "gross_balance").produce_lots[0].id
+    discarded = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+    trash_produce_lot_id = discarded.trash.produce_lots[0].id
+
+    updated = service.restore_trashed_produce_lot_to_gross_balance(experiment.id, trash_produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.produce_lots[0].id == produce_lot_id
+    assert updated.trash.produce_lots == []
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(12.3, abs=0.01)
+    assert updated.audit_log[-1] == "Apple powder lot moved from Gross balance to Gross balance."
+
+
+def test_move_workbench_tool_to_gross_balance_moves_tool_and_clears_source_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_workbench(experiment.id, "station_1", "centrifuge_tube_50ml")
+
+    updated = service.move_workbench_tool_to_gross_balance(experiment.id, "station_1")
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.tool_type == "centrifuge_tube"
+    assert updated.workbench.slots[0].tool is None
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(12.0, abs=0.01)
+    assert updated.audit_log[-1] == "50 mL centrifuge tube placed on Gross balance."
+
+
+def test_move_workbench_tool_to_gross_balance_requires_tool_in_source_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Station 1 does not contain a tool"):
+        service.move_workbench_tool_to_gross_balance(experiment.id, "station_1")
+
+
+def test_move_rack_tool_to_gross_balance_moves_tool_and_clears_rack_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_in_rack_slot(experiment.id, "rack_slot_1", "sample_vial_lcms")
+
+    updated = service.move_rack_tool_to_gross_balance(experiment.id, "rack_slot_1")
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.tool_type == "sample_vial"
+    assert updated.rack.slots[0].tool is None
+    assert updated.audit_log[-1] == "Autosampler vial placed on Gross balance."
+
+
+def test_restore_trashed_tool_to_gross_balance_restores_tool_and_clears_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.discard_tool_from_palette(experiment.id, "sample_vial_lcms")
+    trash_tool_id = service.get_experiment(experiment.id).trash.tools[0].id
+
+    updated = service.restore_trashed_tool_to_gross_balance(experiment.id, trash_tool_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.tool_type == "sample_vial"
+    assert updated.trash.tools == []
+    assert updated.audit_log[-1] == "Autosampler vial restored onto Gross balance."
+
+
+def test_move_gross_balance_tool_to_workbench_moves_tool_to_empty_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+
+    updated = service.move_gross_balance_tool_to_workbench(experiment.id, "station_1")
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is None
+    assert updated.workbench.slots[0].tool is not None
+    assert updated.workbench.slots[0].tool.tool_type == "sample_vial"
+    assert updated.lims_reception.measured_gross_mass_g is None
+    assert updated.audit_log[-1] == "Autosampler vial moved from Gross balance to Station 1."
+
+
+def test_move_gross_balance_tool_to_workbench_rejects_occupied_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_workbench(experiment.id, "station_1", "sample_vial_lcms")
+    service.place_tool_on_gross_balance(experiment.id, "centrifuge_tube_50ml")
+
+    with pytest.raises(ValueError, match="Station 1 already contains a tool"):
+        service.move_gross_balance_tool_to_workbench(experiment.id, "station_1")
+
+
+def test_move_gross_balance_tool_to_rack_moves_vial_and_clears_balance() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+
+    updated = service.move_gross_balance_tool_to_rack(experiment.id, "rack_slot_1")
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is None
+    assert updated.rack.slots[0].tool is not None
+    assert updated.rack.slots[0].tool.tool_type == "sample_vial"
+    assert updated.audit_log[-1] == "Autosampler vial moved from Gross balance to Position 1."
+
+
+def test_discard_gross_balance_tool_moves_tool_to_trash() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+
+    updated = service.discard_gross_balance_tool(experiment.id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is None
+    assert updated.trash.tools[0].tool.tool_type == "sample_vial"
+    assert updated.trash.tools[0].origin_label == "Gross balance"
+    assert updated.audit_log[-1] == "Autosampler vial discarded from Gross balance."
+
+
+def test_open_gross_balance_tool_rejects_non_sealable_tool() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "beaker_rinse")
+
+    with pytest.raises(ValueError, match="Bench beaker does not support sealing"):
+        service.open_gross_balance_tool(experiment.id)
+
+
+def test_close_and_open_gross_balance_tool_toggle_seal_state() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    closed = service.close_gross_balance_tool(experiment.id)
+    reopened = service.open_gross_balance_tool(experiment.id)
+
+    gross_balance_closed = next(widget for widget in closed.workspace.widgets if widget.id == "gross_balance")
+    gross_balance_open = next(widget for widget in reopened.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance_closed.tool is not None
+    assert gross_balance_closed.tool.is_sealed is True
+    assert gross_balance_open.tool is not None
+    assert gross_balance_open.tool.is_sealed is False
+    assert reopened.audit_log[-1] == "Autosampler vial opened on Gross balance."
+
+
+def test_move_workspace_produce_lot_to_gross_balance_places_loose_produce_and_updates_mass() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+
+    updated = service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert updated.workspace.produce_lots == []
+    assert gross_balance.produce_lots[0].id == produce_lot_id
+    assert updated.lims_reception.measured_gross_mass_g == pytest.approx(2450.0, abs=0.01)
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Produce basket to Gross balance."
+
+
+def test_move_workspace_produce_lot_to_gross_balance_rejects_existing_loose_produce() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    first = service.create_produce_lot(experiment.id, "apple")
+    first_id = first.workspace.produce_lots[0].id
+    service.move_workspace_produce_lot_to_gross_balance(experiment.id, first_id)
+    second = service.create_produce_lot(experiment.id, "apple")
+    second_id = second.workspace.produce_lots[0].id
+
+    with pytest.raises(ValueError, match="Gross balance already contains a produce lot"):
+        service.move_workspace_produce_lot_to_gross_balance(experiment.id, second_id)
+
+
+def test_move_workspace_produce_lot_to_gross_balance_rejects_sealed_balance_bag() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.move_basket_tool_to_gross_balance(experiment.id)
+
+    with pytest.raises(ValueError, match="Open Sealed sampling bag before adding produce"):
+        service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+
+def test_move_workspace_produce_lot_to_gross_balance_rejects_tool_without_produce_capacity() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+
+    with pytest.raises(ValueError, match="Autosampler vial does not accept produce"):
+        service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+
+def test_move_workspace_produce_lot_to_gross_balance_places_produce_into_open_balance_jar() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
+    service.open_gross_balance_tool(experiment.id)
+
+    updated = service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.tool is not None
+    assert gross_balance.tool.produce_lots[0].id == produce_lot_id
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Produce basket to Wide-neck HDPE jar."
+
+
+def test_move_gross_balance_produce_lot_to_workbench_moves_loose_produce_to_target_slot() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+    service.place_tool_on_workbench(experiment.id, "station_1", "cutting_board_hdpe")
+
+    updated = service.move_gross_balance_produce_lot_to_workbench(experiment.id, "station_1", produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    assert gross_balance.produce_lots == []
+    assert updated.workbench.slots[0].tool is not None
+    assert updated.workbench.slots[0].tool.produce_lots[0].id == produce_lot_id
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Gross balance to Cutting board."
+
+
+def test_move_gross_balance_produce_lot_to_widget_moves_loose_produce_into_grinder() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = service.create_produce_lot(experiment.id, "apple")
+    produce_lot_id = created.workspace.produce_lots[0].id
+    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+
+    updated = service.move_gross_balance_produce_lot_to_widget(experiment.id, "grinder", produce_lot_id)
+
+    gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    assert gross_balance.produce_lots == []
+    assert grinder.produce_lots[0].id == produce_lot_id
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Gross balance to Cryogenic grinder."
+
+
+def test_discard_gross_balance_tool_requires_tool() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    with pytest.raises(ValueError, match="Gross balance does not contain a tool"):
+        service.discard_gross_balance_tool(experiment.id)
+
+
 def test_open_workbench_tool_unseals_a_jar() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -2765,6 +3171,8 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
 def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> None:
     repository = SqliteExperimentRepository(str(tmp_path / "experiments.sqlite3"))
     first_service = ExperimentService(repository=repository)
+    fixed_now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    first_service._now_fn = lambda: fixed_now
 
     experiment = first_service.create_experiment()
     updated = apply_command(
@@ -2778,13 +3186,14 @@ def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> N
     )
 
     second_service = ExperimentService(repository=repository)
+    second_service._now_fn = lambda: fixed_now
     reloaded = second_service.get_experiment(experiment.id)
 
     slot = next(slot for slot in reloaded.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.tool_id == "hdpe_storage_jar_2l"
     assert reloaded.id == updated.id
-    assert reloaded.snapshot_version > updated.snapshot_version
+    assert reloaded.snapshot_version == updated.snapshot_version
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:

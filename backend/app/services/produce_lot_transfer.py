@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.domain.models import Experiment, ProduceLot
+from app.domain.models import EntityOrigin, Experiment, ProduceLot
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.command_handlers.support import (
     find_trash_produce_lot,
@@ -17,6 +17,7 @@ from app.services.command_handlers.support import (
 class ProduceLotRemoval:
     produce_lot: ProduceLot
     source_label: str
+    origin: EntityOrigin
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +34,7 @@ class ProduceLotTransferResult:
     target_label: str
     location_label: str
     contamination_applied: bool = False
+    origin: EntityOrigin | None = None
 
 
 class ProduceLotSource(Protocol):
@@ -61,6 +63,7 @@ class ProduceLotTransferService:
             target_label=placement.target_label,
             location_label=placement.location_label,
             contamination_applied=placement.contamination_applied,
+            origin=removal.origin,
         )
 
 
@@ -73,7 +76,14 @@ class WorkspaceProduceLotSource:
         experiment.workspace.produce_lots = [
             lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
         ]
-        return ProduceLotRemoval(produce_lot=produce_lot, source_label="Produce basket")
+        return ProduceLotRemoval(
+            produce_lot=produce_lot,
+            source_label="Produce basket",
+            origin=EntityOrigin(
+                kind="produce_basket",
+                location_label="Produce basket",
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,7 +108,17 @@ class WorkbenchProduceLotSource:
                 raise ValueError("Unknown produce lot")
             slot.surface_produce_lots = [lot for lot in slot.surface_produce_lots if lot.id != produce_lot.id]
 
-        return ProduceLotRemoval(produce_lot=produce_lot, source_label=source_label)
+        return ProduceLotRemoval(
+            produce_lot=produce_lot,
+            source_label=source_label,
+            origin=EntityOrigin(
+                kind="workbench_tool" if slot.tool is not None and source_label == slot.tool.label else "workbench_surface",
+                location_id=slot.id,
+                location_label=slot.label,
+                container_id=slot.tool.id if slot.tool is not None and source_label == slot.tool.label else None,
+                container_label=slot.tool.label if slot.tool is not None and source_label == slot.tool.label else None,
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,7 +133,15 @@ class GrinderProduceLotSource:
             raise ValueError("Unknown produce lot")
 
         widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot.id]
-        return ProduceLotRemoval(produce_lot=produce_lot, source_label=widget.label)
+        return ProduceLotRemoval(
+            produce_lot=produce_lot,
+            source_label=widget.label,
+            origin=EntityOrigin(
+                kind="workspace_widget",
+                location_id=widget.id,
+                location_label=widget.label,
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +156,12 @@ class TrashProduceLotSource:
         return ProduceLotRemoval(
             produce_lot=trashed_produce_lot.produce_lot,
             source_label=trashed_produce_lot.origin_label,
+            origin=trashed_produce_lot.origin
+            or EntityOrigin(
+                kind="trash",
+                location_id=trashed_produce_lot.id,
+                location_label=trashed_produce_lot.origin_label,
+            ),
         )
 
 

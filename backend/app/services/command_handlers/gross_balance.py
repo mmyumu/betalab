@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.domain.models import Experiment, TrashProduceLotEntry, TrashToolEntry
+from app.domain.models import EntityOrigin, Experiment, TrashProduceLotEntry, TrashToolEntry
 from app.domain.rules import can_tool_accept_produce, can_tool_be_sealed, can_tool_receive_contents
 from app.services.command_handlers.support import (
     find_rack_slot,
@@ -23,6 +23,7 @@ from app.services.commands import (
     MoveWorkbenchToolToGrossBalanceCommand,
     MoveWorkspaceProduceLotToGrossBalanceCommand,
     OpenGrossBalanceToolCommand,
+    PlaceToolOnGrossBalanceCommand,
     RestoreTrashedProduceLotToGrossBalanceCommand,
     RestoreTrashedToolToGrossBalanceCommand,
 )
@@ -218,11 +219,11 @@ class GrossBalanceProduceLotSource:
         self.produce_lot_id = produce_lot_id
 
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
-        produce_lot, source_label = _remove_gross_balance_produce_lot(
+        produce_lot, source_label, origin = _remove_gross_balance_produce_lot(
             experiment,
             self.produce_lot_id,
         )
-        return ProduceLotRemoval(produce_lot=produce_lot, source_label=source_label)
+        return ProduceLotRemoval(produce_lot=produce_lot, source_label=source_label, origin=origin)
 
 
 def move_workspace_produce_lot_to_gross_balance(
@@ -301,7 +302,7 @@ def discard_gross_balance_produce_lot(
     experiment: Experiment,
     command: DiscardGrossBalanceProduceLotCommand,
 ) -> None:
-    produce_lot, source_label = _remove_gross_balance_produce_lot(
+    produce_lot, source_label, origin = _remove_gross_balance_produce_lot(
         experiment,
         command.produce_lot_id,
     )
@@ -310,6 +311,7 @@ def discard_gross_balance_produce_lot(
             id=f"trash_produce_{produce_lot.id}",
             origin_label=source_label,
             produce_lot=produce_lot,
+            origin=origin,
         )
     )
     experiment.audit_log.append(f"{produce_lot.label} discarded from {source_label}.")
@@ -373,12 +375,21 @@ def _remove_gross_balance_produce_lot(experiment: Experiment, produce_lot_id: st
                 lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id
             ]
             _update_balance_measured_mass(experiment)
-            return produce_lot, widget.label
+            return produce_lot, widget.label, EntityOrigin(
+                kind="gross_balance_tool",
+                location_id=widget.id,
+                location_label=widget.label,
+                container_id=widget.tool.id,
+                container_label=widget.tool.label,
+            )
 
     produce_lot = next((lot for lot in widget.produce_lots if lot.id == produce_lot_id), None)
     if produce_lot is None:
         raise ValueError(f"{widget.label} does not contain produce lot {produce_lot_id}.")
     widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot_id]
     _update_balance_measured_mass(experiment)
-    return produce_lot, widget.label
-    PlaceToolOnGrossBalanceCommand,
+    return produce_lot, widget.label, EntityOrigin(
+        kind="gross_balance_surface",
+        location_id=widget.id,
+        location_label=widget.label,
+    )

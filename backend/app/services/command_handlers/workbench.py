@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
 from app.domain.models import (
+    ContainerLabel,
     Experiment,
+    ProduceLot,
     TrashProduceLotEntry,
     TrashSampleLabelEntry,
     WorkbenchLiquid,
@@ -50,6 +54,7 @@ from app.services.command_handlers.support import (
 produce_lot_transfer_service = ProduceLotTransferService()
 physical_simulation_service = PhysicalSimulationService()
 spatula_capacity_g = 2.0
+LabelT = TypeVar("LabelT", bound=ContainerLabel)
 
 
 def place_tool_on_workbench(experiment: Experiment, command: PlaceToolOnWorkbenchCommand) -> None:
@@ -110,30 +115,29 @@ def add_liquid_to_workbench_tool(
     command: AddLiquidToWorkbenchToolCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before adding liquids.")
-    if not can_tool_accept_liquids(slot.tool.tool_type):
-        raise ValueError(f"{slot.tool.label} does not accept liquids.")
-    if not can_tool_receive_contents(slot.tool.tool_type, slot.tool.is_sealed):
-        raise ValueError(f"Open {slot.tool.label} before adding liquids.")
+    tool = _require_slot_tool(slot, "adding liquids")
+    if not can_tool_accept_liquids(tool.tool_type):
+        raise ValueError(f"{tool.label} does not accept liquids.")
+    if not can_tool_receive_contents(tool.tool_type, tool.is_sealed):
+        raise ValueError(f"Open {tool.label} before adding liquids.")
 
     liquid_definition = get_workbench_liquid_definition(command.liquid_id)
-    current_volume = round_volume(sum(liquid.volume_ml for liquid in slot.tool.liquids))
-    remaining_capacity = round_volume(max(slot.tool.capacity_ml - current_volume, 0.0))
+    current_volume = round_volume(sum(liquid.volume_ml for liquid in tool.liquids))
+    remaining_capacity = round_volume(max(tool.capacity_ml - current_volume, 0.0))
     if remaining_capacity <= 0:
-        raise ValueError(f"{slot.tool.label} is already full.")
+        raise ValueError(f"{tool.label} is already full.")
 
     requested_volume = round_volume(
         max(float(command.volume_ml or liquid_definition.transfer_volume_ml), 0.0)
     )
     volume_to_add = round_volume(min(requested_volume, remaining_capacity))
     existing_liquid = next(
-        (liquid for liquid in slot.tool.liquids if liquid.liquid_id == liquid_definition.id),
+        (liquid for liquid in tool.liquids if liquid.liquid_id == liquid_definition.id),
         None,
     )
 
     if existing_liquid is None:
-        slot.tool.liquids.append(
+        tool.liquids.append(
             WorkbenchLiquid(
                 id=new_id("bench_liquid"),
                 liquid_id=liquid_definition.id,
@@ -152,21 +156,21 @@ def add_liquid_to_workbench_tool(
     if volume_to_add < requested_volume:
         if existing_liquid_was_present:
             experiment.audit_log.append(
-                f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {slot.tool.label} (remaining capacity)."
+                f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label} (remaining capacity)."
             )
         else:
             experiment.audit_log.append(
-                f"{liquid_definition.name} added to {slot.tool.label} at {format_volume(updated_volume)} mL (remaining capacity)."
+                f"{liquid_definition.name} added to {tool.label} at {format_volume(updated_volume)} mL (remaining capacity)."
             )
         return
 
     if existing_liquid_was_present:
         experiment.audit_log.append(
-            f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {slot.tool.label}."
+            f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label}."
         )
         return
 
-    experiment.audit_log.append(f"{liquid_definition.name} added to {slot.tool.label}.")
+    experiment.audit_log.append(f"{liquid_definition.name} added to {tool.label}.")
 
 
 def add_produce_lot_to_workbench_tool(
@@ -190,42 +194,39 @@ def apply_sample_label_to_workbench_tool(
     command: ApplySampleLabelToWorkbenchToolCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before adding a sample label.")
-    slot.tool.labels.append(build_manual_label())
-    experiment.audit_log.append(f"Manual label applied to {slot.tool.label} on {slot.label}.")
+    tool = _require_slot_tool(slot, "adding a sample label")
+    tool.labels.append(build_manual_label())
+    experiment.audit_log.append(f"Manual label applied to {tool.label} on {slot.label}.")
 
 
 def close_workbench_tool(experiment: Experiment, command: CloseWorkbenchToolCommand) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before sealing it.")
-    if not can_tool_be_sealed(slot.tool.tool_type):
-        raise ValueError(f"{slot.tool.label} cannot be sealed.")
+    tool = _require_slot_tool(slot, "sealing it")
+    if not can_tool_be_sealed(tool.tool_type):
+        raise ValueError(f"{tool.label} cannot be sealed.")
 
-    slot.tool.is_sealed = True
-    slot.tool.closure_fault = None
-    slot.tool.internal_pressure_bar = max(slot.tool.internal_pressure_bar, 1.0)
-    experiment.audit_log.append(f"{slot.tool.label} sealed on {slot.label}.")
+    tool.is_sealed = True
+    tool.closure_fault = None
+    tool.internal_pressure_bar = max(tool.internal_pressure_bar, 1.0)
+    experiment.audit_log.append(f"{tool.label} sealed on {slot.label}.")
 
 
 def open_workbench_tool(experiment: Experiment, command: OpenWorkbenchToolCommand) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before opening it.")
-    if not can_tool_be_sealed(slot.tool.tool_type):
-        raise ValueError(f"{slot.tool.label} cannot be opened.")
+    tool = _require_slot_tool(slot, "opening it")
+    if not can_tool_be_sealed(tool.tool_type):
+        raise ValueError(f"{tool.label} cannot be opened.")
 
-    vent_event = physical_simulation_service.vent_opened_tool(slot.tool)
-    slot.tool.is_sealed = False
-    slot.tool.closure_fault = None
+    vent_event = physical_simulation_service.vent_opened_tool(tool)
+    tool.is_sealed = False
+    tool.closure_fault = None
     if vent_event is not None and vent_event.lost_mass_g > 0:
         experiment.audit_log.append(
-            f"{slot.tool.label} vented at {format_volume(vent_event.pressure_bar)} bar on {slot.label}; {format_volume(vent_event.lost_mass_g)} g of powder was lost."
+            f"{tool.label} vented at {format_volume(vent_event.pressure_bar)} bar on {slot.label}; {format_volume(vent_event.lost_mass_g)} g of powder was lost."
         )
         return
 
-    experiment.audit_log.append(f"{slot.tool.label} opened on {slot.label}.")
+    experiment.audit_log.append(f"{tool.label} opened on {slot.label}.")
 
 
 def load_spatula_from_workbench_tool(
@@ -233,28 +234,27 @@ def load_spatula_from_workbench_tool(
     command: LoadSpatulaFromWorkbenchToolCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before loading the spatula.")
-    if slot.tool.tool_type != "storage_jar":
+    tool = _require_slot_tool(slot, "loading the spatula")
+    if tool.tool_type != "storage_jar":
         raise ValueError("The spatula can only be loaded from a storage jar.")
-    if slot.tool.is_sealed:
-        raise ValueError(f"Open {slot.tool.label} before loading the spatula.")
+    if tool.is_sealed:
+        raise ValueError(f"Open {tool.label} before loading the spatula.")
     if experiment.spatula.is_loaded and experiment.spatula.loaded_powder_mass_g > 0:
         raise ValueError("Empty the spatula before loading it again.")
-    if slot.tool.powder_mass_g <= 0:
-        raise ValueError(f"{slot.tool.label} is empty.")
+    if tool.powder_mass_g <= 0:
+        raise ValueError(f"{tool.label} is empty.")
 
-    available_mass_g = max(slot.tool.powder_mass_g, 0.0)
+    available_mass_g = max(tool.powder_mass_g, 0.0)
     fill_ratio = 0.45 + ((experiment.snapshot_version % 11) * 0.045)
     loaded_mass_g = min(spatula_capacity_g, available_mass_g, round(spatula_capacity_g * fill_ratio, 3))
     if loaded_mass_g <= 0:
-        raise ValueError(f"{slot.tool.label} is empty.")
+        raise ValueError(f"{tool.label} is empty.")
 
-    slot.tool.powder_mass_g = round(max(slot.tool.powder_mass_g - loaded_mass_g, 0.0), 3)
+    tool.powder_mass_g = round(max(tool.powder_mass_g - loaded_mass_g, 0.0), 3)
     experiment.spatula.is_loaded = True
     experiment.spatula.loaded_powder_mass_g = loaded_mass_g
-    experiment.spatula.source_tool_id = slot.tool.id
-    experiment.audit_log.append(f"Spatula loaded from {slot.tool.label}.")
+    experiment.spatula.source_tool_id = tool.id
+    experiment.audit_log.append(f"Spatula loaded from {tool.label}.")
 
 
 def pour_spatula_into_workbench_tool(
@@ -262,12 +262,11 @@ def pour_spatula_into_workbench_tool(
     command: PourSpatulaIntoWorkbenchToolCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before receiving powder.")
-    if slot.tool.tool_type != "sample_vial":
+    tool = _require_slot_tool(slot, "receiving powder")
+    if tool.tool_type != "sample_vial":
         raise ValueError("The spatula can only pour into an autosampler vial.")
-    if slot.tool.is_sealed:
-        raise ValueError(f"Open {slot.tool.label} before adding powder.")
+    if tool.is_sealed:
+        raise ValueError(f"Open {tool.label} before adding powder.")
     if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
         raise ValueError("Load the spatula before pouring.")
 
@@ -276,7 +275,7 @@ def pour_spatula_into_workbench_tool(
         return
 
     transferred_mass_g = min(requested_mass_g, experiment.spatula.loaded_powder_mass_g)
-    slot.tool.powder_mass_g = round(slot.tool.powder_mass_g + transferred_mass_g, 3)
+    tool.powder_mass_g = round(tool.powder_mass_g + transferred_mass_g, 3)
     experiment.spatula.loaded_powder_mass_g = round(
         max(experiment.spatula.loaded_powder_mass_g - transferred_mass_g, 0.0),
         3,
@@ -286,7 +285,7 @@ def pour_spatula_into_workbench_tool(
         experiment.spatula.loaded_powder_mass_g = 0.0
         experiment.spatula.source_tool_id = None
 
-    experiment.audit_log.append(f"Powder transferred into {slot.tool.label}.")
+    experiment.audit_log.append(f"Powder transferred into {tool.label}.")
 
 
 def update_workbench_tool_sample_label_text(
@@ -294,9 +293,8 @@ def update_workbench_tool_sample_label_text(
     command: UpdateWorkbenchToolSampleLabelTextCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before editing its sample label.")
-    label = find_tool_label(slot.tool, command.label_id)
+    tool = _require_slot_tool(slot, "editing its sample label")
+    label = find_tool_label(tool, command.label_id)
     if label.label_kind != "manual":
         raise ValueError("Only manual labels can be edited.")
 
@@ -304,11 +302,11 @@ def update_workbench_tool_sample_label_text(
     label.text = next_text
     if next_text:
         experiment.audit_log.append(
-            f"Sample label updated to {next_text} on {slot.tool.label}."
+            f"Sample label updated to {next_text} on {tool.label}."
         )
         return
 
-    experiment.audit_log.append(f"Sample label cleared on {slot.tool.label}.")
+    experiment.audit_log.append(f"Sample label cleared on {tool.label}.")
 
 
 def move_sample_label_between_workbench_tools(
@@ -320,16 +318,12 @@ def move_sample_label_between_workbench_tools(
 
     if source_slot.id == target_slot.id:
         return
-    if source_slot.tool is None:
-        raise ValueError(f"Place a tool on {source_slot.label} before moving its sample label.")
-    if target_slot.tool is None:
-        raise ValueError(f"Place a tool on {target_slot.label} before adding a sample label.")
-    label = find_tool_label(source_slot.tool, command.label_id)
-
-    source_slot.tool.labels = [entry for entry in source_slot.tool.labels if entry.id != label.id]
-    target_slot.tool.labels.append(label)
+    source_tool = _require_slot_tool(source_slot, "moving its sample label")
+    target_tool = _require_slot_tool(target_slot, "adding a sample label")
+    label = _pop_tool_label(source_tool, command.label_id)
+    target_tool.labels.append(label)
     experiment.audit_log.append(
-        f"Label moved from {source_slot.tool.label} on {source_slot.label} to {target_slot.tool.label} on {target_slot.label}."
+        f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on {target_slot.label}."
     )
 
 
@@ -338,18 +332,16 @@ def discard_sample_label_from_workbench_tool(
     command: WorkbenchSampleLabelCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before removing its sample label.")
-    label = find_tool_label(slot.tool, command.label_id)
-    slot.tool.labels = [entry for entry in slot.tool.labels if entry.id != label.id]
+    tool = _require_slot_tool(slot, "removing its sample label")
+    label = _pop_tool_label(tool, command.label_id)
     experiment.trash.sample_labels.append(
         TrashSampleLabelEntry(
             id=new_id("trash_sample_label"),
-            origin_label=slot.tool.label,
+            origin_label=tool.label,
             label=label,
         )
     )
-    experiment.audit_log.append(f"Label discarded from {slot.tool.label}.")
+    experiment.audit_log.append(f"Label discarded from {tool.label}.")
 
 
 def restore_trashed_sample_label_to_workbench_tool(
@@ -361,16 +353,11 @@ def restore_trashed_sample_label_to_workbench_tool(
     )
     target_slot = find_workbench_slot(experiment.workbench, command.target_slot_id)
 
-    if target_slot.tool is None:
-        raise ValueError(f"Place a tool on {target_slot.label} before adding a sample label.")
-    target_slot.tool.labels.append(trashed_sample_label.label)
-    experiment.trash.sample_labels = [
-        entry
-        for entry in experiment.trash.sample_labels
-        if entry.id != trashed_sample_label.id
-    ]
+    target_tool = _require_slot_tool(target_slot, "adding a sample label")
+    target_tool.labels.append(trashed_sample_label.label)
+    _remove_trashed_sample_label(experiment, trashed_sample_label.id)
     experiment.audit_log.append(
-        f"Label restored from trash to {target_slot.tool.label} on {target_slot.label}."
+        f"Label restored from trash to {target_tool.label} on {target_slot.label}."
     )
 
 
@@ -398,17 +385,21 @@ def discard_produce_lot_from_workbench_tool(
     experiment: Experiment,
     command: WorkbenchProduceLotCommand,
 ) -> None:
-    slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    produce_lot_id = command.produce_lot_id
-    produce_lot, origin_label = _remove_produce_lot_from_slot(slot, produce_lot_id)
+    removal = WorkbenchProduceLotSource(
+        slot_id=command.slot_id,
+        produce_lot_id=command.produce_lot_id,
+    ).remove(experiment)
     experiment.trash.produce_lots.append(
         TrashProduceLotEntry(
             id=new_id("trash_produce_lot"),
-            origin_label=origin_label,
-            produce_lot=produce_lot,
+            origin_label=removal.source_label,
+            produce_lot=removal.produce_lot,
+            origin=removal.origin,
         )
     )
-    experiment.audit_log.append(f"{produce_lot.label} discarded from {origin_label}.")
+    experiment.audit_log.append(
+        f"{removal.produce_lot.label} discarded from {removal.source_label}."
+    )
 
 
 def cut_workbench_produce_lot(experiment: Experiment, command: WorkbenchProduceLotCommand) -> None:
@@ -423,20 +414,6 @@ def cut_workbench_produce_lot(experiment: Experiment, command: WorkbenchProduceL
 
     produce_lot.cut_state = "cut"
     experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
-
-
-def _remove_produce_lot_from_slot(slot: WorkbenchSlot, produce_lot_id: str):
-    produce_lot, origin_label = _find_produce_lot_in_slot(slot, produce_lot_id)
-    if slot.tool is not None and origin_label == slot.tool.label:
-        slot.tool.produce_lots = [
-            lot for lot in slot.tool.produce_lots if lot.id != produce_lot_id
-        ]
-        return produce_lot, origin_label
-
-    slot.surface_produce_lots = [
-        lot for lot in slot.surface_produce_lots if lot.id != produce_lot_id
-    ]
-    return produce_lot, origin_label
 
 
 def _find_produce_lot_in_slot(slot: WorkbenchSlot, produce_lot_id: str):
@@ -463,20 +440,12 @@ def remove_liquid_from_workbench_tool(
     command: WorkbenchLiquidCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before editing liquids.")
-
-    liquid_entry = next(
-        (liquid for liquid in slot.tool.liquids if liquid.id == command.liquid_entry_id),
-        None,
-    )
-    if liquid_entry is None:
-        raise ValueError("Unknown workbench liquid")
-
-    slot.tool.liquids = [
-        liquid for liquid in slot.tool.liquids if liquid.id != command.liquid_entry_id
+    tool = _require_slot_tool(slot, "editing liquids")
+    liquid_entry = _find_tool_liquid(tool, command.liquid_entry_id)
+    tool.liquids = [
+        liquid for liquid in tool.liquids if liquid.id != command.liquid_entry_id
     ]
-    experiment.audit_log.append(f"{liquid_entry.name} removed from {slot.tool.label}.")
+    experiment.audit_log.append(f"{liquid_entry.name} removed from {tool.label}.")
 
 
 def update_workbench_liquid_volume(
@@ -484,32 +453,55 @@ def update_workbench_liquid_volume(
     command: UpdateWorkbenchLiquidVolumeCommand,
 ) -> None:
     slot = find_workbench_slot(experiment.workbench, command.slot_id)
-    if slot.tool is None:
-        raise ValueError(f"Place a tool on {slot.label} before editing liquids.")
+    tool = _require_slot_tool(slot, "editing liquids")
+    liquid_entry = _find_tool_liquid(tool, command.liquid_entry_id)
 
+    requested_volume = round_volume(max(float(command.volume_ml), 0.0))
+    occupied_by_others = sum(
+        liquid.volume_ml for liquid in tool.liquids if liquid.id != liquid_entry.id
+    )
+    max_allowed_volume = round_volume(max(tool.capacity_ml - occupied_by_others, 0.0))
+    liquid_entry.volume_ml = round_volume(min(requested_volume, max_allowed_volume))
+    if liquid_entry.volume_ml <= 0:
+        tool.liquids = [
+            liquid for liquid in tool.liquids if liquid.id != command.liquid_entry_id
+        ]
+        experiment.audit_log.append(f"{liquid_entry.name} removed from {tool.label}.")
+        return
+
+    experiment.audit_log.append(
+        f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {tool.label}."
+    )
+
+
+def _require_slot_tool(slot: WorkbenchSlot, action: str) -> WorkbenchTool:
+    if slot.tool is None:
+        raise ValueError(f"Place a tool on {slot.label} before {action}.")
+    return slot.tool
+
+
+def _find_tool_liquid(tool: WorkbenchTool, liquid_entry_id: str) -> WorkbenchLiquid:
     liquid_entry = next(
-        (liquid for liquid in slot.tool.liquids if liquid.id == command.liquid_entry_id),
+        (liquid for liquid in tool.liquids if liquid.id == liquid_entry_id),
         None,
     )
     if liquid_entry is None:
         raise ValueError("Unknown workbench liquid")
+    return liquid_entry
 
-    requested_volume = round_volume(max(float(command.volume_ml), 0.0))
-    occupied_by_others = sum(
-        liquid.volume_ml for liquid in slot.tool.liquids if liquid.id != liquid_entry.id
-    )
-    max_allowed_volume = round_volume(max(slot.tool.capacity_ml - occupied_by_others, 0.0))
-    liquid_entry.volume_ml = round_volume(min(requested_volume, max_allowed_volume))
-    if liquid_entry.volume_ml <= 0:
-        slot.tool.liquids = [
-            liquid for liquid in slot.tool.liquids if liquid.id != command.liquid_entry_id
-        ]
-        experiment.audit_log.append(f"{liquid_entry.name} removed from {slot.tool.label}.")
-        return
 
-    experiment.audit_log.append(
-        f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {slot.tool.label}."
-    )
+def _pop_tool_label(tool: WorkbenchTool, label_id: str) -> ContainerLabel:
+    label = find_tool_label(tool, label_id)
+    tool.labels = [entry for entry in tool.labels if entry.id != label.id]
+    return label
+
+
+def _remove_trashed_sample_label(experiment: Experiment, trash_sample_label_id: str) -> None:
+    experiment.trash.sample_labels = [
+        entry
+        for entry in experiment.trash.sample_labels
+        if entry.id != trash_sample_label_id
+    ]
 
 
 def _get_next_workbench_slot_index(experiment: Experiment) -> int:

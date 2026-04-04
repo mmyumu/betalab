@@ -84,6 +84,7 @@ from app.services.command_handlers.workspace import (
     add_workspace_produce_lot_to_widget,
     add_workspace_widget,
     advance_workspace_cryogenics,
+    create_received_sampling_bag,
     create_produce_lot,
     complete_grinder_cycle,
     start_grinder_cycle,
@@ -112,6 +113,7 @@ from app.services.commands import (
     CreateLimsReceptionCommand,
     CreateDebugProduceLotOnWorkbenchCommand,
     CreateDebugProduceLotToWidgetCommand,
+    CreateReceivedSamplingBagCommand,
     CreateProduceLotCommand,
     DiscardBasketToolCommand,
     DiscardGrossBalanceProduceLotCommand,
@@ -186,8 +188,9 @@ class ExperimentService:
 
     def create_experiment(self) -> ExperimentSchema:
         experiment = build_experiment()
+        experiment.last_simulation_at = self._now_fn()
         self._experiments[experiment.id] = experiment
-        return self._persist_and_to_schema(experiment)
+        return self._persist_mutation_and_to_schema(experiment)
 
     def list_experiments(self) -> list[ExperimentListEntrySchema]:
         return self._repository.list()
@@ -200,14 +203,16 @@ class ExperimentService:
 
     def get_experiment(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
-        self._advance_experiment_to_now(experiment)
-        return self._persist_and_to_schema(experiment)
+        did_advance = self._advance_experiment_to_now(experiment)
+        if did_advance:
+            return self._persist_mutation_and_to_schema(experiment)
+        return self._to_schema(experiment)
 
     def add_workbench_slot(self, experiment_id: str) -> ExperimentSchema:
         experiment = self._require_experiment(experiment_id)
         self._advance_experiment_to_now(experiment)
         add_workbench_slot(experiment)
-        return self._persist_and_to_schema(experiment)
+        return self._persist_mutation_and_to_schema(experiment)
 
     def remove_workbench_slot(self, experiment_id: str, slot_id: str) -> ExperimentSchema:
         return self._apply_command(
@@ -384,6 +389,11 @@ class ExperimentService:
         )
 
     def create_produce_lot(self, experiment_id: str, produce_type: str) -> ExperimentSchema:
+        experiment = self._require_experiment(experiment_id)
+        self._advance_experiment_to_now(experiment)
+        if experiment.basket_tool is None:
+            create_received_sampling_bag(experiment, CreateReceivedSamplingBagCommand())
+            return self._persist_mutation_and_to_schema(experiment)
         return self._apply_command(
             experiment_id,
             create_produce_lot,
@@ -954,17 +964,16 @@ class ExperimentService:
         experiment = self._require_experiment(experiment_id)
         self._advance_experiment_to_now(experiment)
         handler(experiment, command)
-        return self._persist_and_to_schema(experiment)
+        return self._persist_mutation_and_to_schema(experiment)
 
-    def _advance_experiment_to_now(self, experiment: Experiment) -> None:
+    def _advance_experiment_to_now(self, experiment: Experiment) -> bool:
         now = self._now_fn()
         if now.tzinfo is None:
             now = now.replace(tzinfo=timezone.utc)
 
         elapsed_ms = (now - experiment.last_simulation_at).total_seconds() * 1000.0
         if elapsed_ms <= 0:
-            experiment.last_simulation_at = now
-            return
+            return False
 
         remaining_ms = elapsed_ms
         while remaining_ms > 0:
@@ -976,9 +985,9 @@ class ExperimentService:
             remaining_ms -= step_ms
 
         experiment.last_simulation_at = now
+        return True
 
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema:
-        experiment.snapshot_version += 1
         return ExperimentSchema.model_validate(
             {
                 "id": experiment.id,
@@ -997,7 +1006,7 @@ class ExperimentService:
             }
         )
 
-    def _persist_and_to_schema(self, experiment: Experiment) -> ExperimentSchema:
-        schema = self._to_schema(experiment)
+    def _persist_mutation_and_to_schema(self, experiment: Experiment) -> ExperimentSchema:
+        experiment.snapshot_version += 1
         self._repository.save(experiment)
-        return schema
+        return self._to_schema(experiment)

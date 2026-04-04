@@ -9,6 +9,7 @@ from typing import Protocol
 
 from app.domain.models import (
     ContainerLabel,
+    EntityOrigin,
     Experiment,
     ExperimentStatus,
     LimsLabel,
@@ -66,14 +67,27 @@ class SqliteExperimentRepository:
     def save(self, experiment: Experiment) -> None:
         payload = json.dumps(_serialize_experiment(experiment), sort_keys=True)
         now = datetime.now(timezone.utc).isoformat()
+        last_audit_entry = experiment.audit_log[-1] if experiment.audit_log else None
         with sqlite3.connect(self._db_path) as connection:
             connection.execute(
                 """
-                INSERT INTO experiments (id, created_at, updated_at, snapshot_version, payload)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO experiments (
+                    id,
+                    created_at,
+                    updated_at,
+                    snapshot_version,
+                    status,
+                    last_simulation_at,
+                    last_audit_entry,
+                    payload
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     updated_at = excluded.updated_at,
                     snapshot_version = excluded.snapshot_version,
+                    status = excluded.status,
+                    last_simulation_at = excluded.last_simulation_at,
+                    last_audit_entry = excluded.last_audit_entry,
                     payload = excluded.payload
                 """,
                 (
@@ -81,6 +95,9 @@ class SqliteExperimentRepository:
                     now,
                     now,
                     experiment.snapshot_version,
+                    experiment.status.value,
+                    experiment.last_simulation_at.isoformat(),
+                    last_audit_entry,
                     payload,
                 ),
             )
@@ -103,24 +120,36 @@ class SqliteExperimentRepository:
         with sqlite3.connect(self._db_path) as connection:
             rows = connection.execute(
                 """
-                SELECT id, updated_at, snapshot_version, payload
+                SELECT id, updated_at, snapshot_version, status, last_simulation_at, last_audit_entry, payload
                 FROM experiments
                 ORDER BY updated_at DESC, id DESC
                 """
             ).fetchall()
 
         entries: list[ExperimentListEntrySchema] = []
-        for experiment_id, updated_at, snapshot_version, payload_json in rows:
-            payload = json.loads(payload_json)
-            schema = ExperimentSchema.model_validate(payload)
+        for (
+            experiment_id,
+            updated_at,
+            snapshot_version,
+            status,
+            last_simulation_at,
+            last_audit_entry,
+            payload_json,
+        ) in rows:
+            if status is None or last_simulation_at is None:
+                payload = json.loads(payload_json)
+                schema = ExperimentSchema.model_validate(payload)
+                status = schema.status
+                last_simulation_at = schema.last_simulation_at.isoformat()
+                last_audit_entry = schema.audit_log[-1] if schema.audit_log else None
             entries.append(
                 ExperimentListEntrySchema(
                     id=experiment_id,
-                    status=schema.status,
-                    last_simulation_at=schema.last_simulation_at,
+                    status=status,
+                    last_simulation_at=datetime.fromisoformat(last_simulation_at),
                     snapshot_version=snapshot_version,
                     updated_at=datetime.fromisoformat(updated_at),
-                    last_audit_entry=schema.audit_log[-1] if schema.audit_log else None,
+                    last_audit_entry=last_audit_entry,
                 )
             )
         return entries
@@ -146,11 +175,28 @@ class SqliteExperimentRepository:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
                     snapshot_version INTEGER NOT NULL,
+                    status TEXT,
+                    last_simulation_at TEXT,
+                    last_audit_entry TEXT,
                     payload TEXT NOT NULL
                 )
                 """
             )
+            self._ensure_column(connection, "status", "TEXT")
+            self._ensure_column(connection, "last_simulation_at", "TEXT")
+            self._ensure_column(connection, "last_audit_entry", "TEXT")
             connection.commit()
+
+    def _ensure_column(self, connection: sqlite3.Connection, column_name: str, column_type: str) -> None:
+        existing_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(experiments)").fetchall()
+        }
+        if column_name in existing_columns:
+            return
+        connection.execute(
+            f"ALTER TABLE experiments ADD COLUMN {column_name} {column_type}"
+        )
 
 
 def _serialize_experiment(experiment: Experiment) -> dict:
@@ -215,6 +261,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     id=entry.id,
                     origin_label=entry.origin_label,
                     produce_lot=_deserialize_produce_lot(entry.produce_lot),
+                    origin=_deserialize_entity_origin(entry.origin),
                 )
                 for entry in schema.trash.produce_lots
             ],
@@ -354,6 +401,12 @@ def _deserialize_container_label(label_schema) -> ContainerLabel:
         text=label_schema.text,
         label_kind="manual",
     )
+
+
+def _deserialize_entity_origin(origin_schema) -> EntityOrigin | None:
+    if origin_schema is None:
+        return None
+    return EntityOrigin(**origin_schema.model_dump())
 
 
 def _deserialize_produce_lot(lot_schema) -> ProduceLot:

@@ -119,10 +119,20 @@ class TrashToolEntry:
 
 
 @dataclass
+class EntityOrigin:
+    kind: str
+    location_id: str | None = None
+    location_label: str | None = None
+    container_id: str | None = None
+    container_label: str | None = None
+
+
+@dataclass
 class TrashProduceLotEntry:
     id: str
     origin_label: str
     produce_lot: "ProduceLot"
+    origin: EntityOrigin | None = None
 
 
 @dataclass

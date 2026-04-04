@@ -48,6 +48,14 @@ class ContainerLabelSchema(BaseModel):
     received_date: str | None = None
 
 
+class EntityOriginSchema(BaseModel):
+    kind: str
+    location_id: str | None = None
+    location_label: str | None = None
+    container_id: str | None = None
+    container_label: str | None = None
+
+
 class LimsReceptionSchema(BaseModel):
     orchard_name: str
     harvest_date: str
@@ -164,6 +172,7 @@ class TrashProduceLotEntrySchema(BaseModel):
     id: str
     origin_label: str
     produce_lot: ProduceLotSchema
+    origin: EntityOriginSchema | None = None
 
 
 class TrashSampleLabelEntrySchema(BaseModel):

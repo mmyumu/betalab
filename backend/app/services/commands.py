@@ -212,6 +212,11 @@ class CreateProduceLotCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class CreateReceivedSamplingBagCommand:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class PlaceReceivedBagOnWorkbenchCommand:
     target_slot_id: str
 
