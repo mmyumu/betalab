@@ -7,7 +7,6 @@ from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentService
 from app.services.received_sample_generation import (
     SAMPLE_BAG_TARE_MASS_G,
-    resolve_received_bag_gross_mass_g,
 )
 
 

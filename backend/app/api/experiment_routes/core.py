@@ -1,0 +1,51 @@
+import asyncio
+
+from fastapi import HTTPException, WebSocket, WebSocketDisconnect
+
+from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
+from app.services.experiment_service import ExperimentNotFoundError
+
+from .common import (
+    experiment_service,
+    experiment_stream_interval_seconds,
+    handle_service_errors,
+    router,
+)
+
+
+@router.post("", response_model=ExperimentSchema)
+def create_experiment() -> ExperimentSchema:
+    return experiment_service.create_experiment()
+
+
+@router.get("", response_model=list[ExperimentListEntrySchema])
+def list_experiments() -> list[ExperimentListEntrySchema]:
+    return experiment_service.list_experiments()
+
+
+@router.delete("/{experiment_id}", status_code=204)
+def delete_experiment(experiment_id: str) -> None:
+    try:
+        experiment_service.delete_experiment(experiment_id)
+    except ExperimentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Experiment not found") from exc
+
+
+@router.get("/{experiment_id}", response_model=ExperimentSchema)
+def get_experiment(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(lambda: experiment_service.get_experiment(experiment_id))
+
+
+@router.websocket("/{experiment_id}/stream")
+async def stream_experiment(experiment_id: str, websocket: WebSocket) -> None:
+    await websocket.accept()
+
+    try:
+        while True:
+            experiment = experiment_service.get_experiment(experiment_id)
+            await websocket.send_json(experiment.model_dump(mode="json"))
+            await asyncio.sleep(experiment_stream_interval_seconds)
+    except ExperimentNotFoundError:
+        await websocket.close(code=4404, reason="Experiment not found")
+    except WebSocketDisconnect:
+        return

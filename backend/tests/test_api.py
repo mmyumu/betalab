@@ -4,6 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.api.experiments as experiments_api
+from app.api.experiment_routes import common as experiment_routes_common
+from app.api.experiment_routes import core as experiment_routes_core
+from app.api.experiment_routes import gross_balance as experiment_routes_gross_balance
+from app.api.experiment_routes import rack as experiment_routes_rack
+from app.api.experiment_routes import reception as experiment_routes_reception
+from app.api.experiment_routes import trash as experiment_routes_trash
+from app.api.experiment_routes import workbench as experiment_routes_workbench
+from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
@@ -15,6 +23,18 @@ def isolated_api_experiment_service(tmp_path, monkeypatch):
     isolated_service = ExperimentService(
         repository=SqliteExperimentRepository(str(tmp_path / "api-tests.sqlite3"))
     )
+    monkeypatch.setattr(experiment_routes_common, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_core, "experiment_service", isolated_service)
+    monkeypatch.setattr(
+        experiment_routes_gross_balance,
+        "experiment_service",
+        isolated_service,
+    )
+    monkeypatch.setattr(experiment_routes_rack, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_reception, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_trash, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_workbench, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_workspace, "experiment_service", isolated_service)
     monkeypatch.setattr(experiments_api, "experiment_service", isolated_service)
     globals()["experiment_service"] = isolated_service
     return isolated_service
