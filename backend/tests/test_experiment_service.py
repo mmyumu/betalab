@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -2352,6 +2353,64 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Sealed sampling bag."
 
 
+def test_move_grinder_ground_produce_lot_to_open_storage_jar() -> None:
+    service = ExperimentService()
+    experiment = service.create_experiment()
+
+    created = apply_command(
+        service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
+    apply_command(
+        service,
+        experiment.id,
+        "add_workspace_produce_lot_to_widget",
+        {
+            "widget_id": "grinder",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+    experiment_state = service._experiments[experiment.id]
+    experiment_state.workspace.widgets[-1].produce_lots[0].cut_state = "ground"
+    experiment_state.workspace.widgets[-1].produce_lots[0].residual_co2_mass_g = 18.0
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "hdpe_storage_jar_2l",
+        },
+    )
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "move_widget_produce_lot_to_workbench_tool",
+        {
+            "widget_id": "grinder",
+            "target_slot_id": "station_1",
+            "produce_lot_id": produce_lot_id,
+        },
+    )
+
+    grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
+    station_1 = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+
+    assert grinder.produce_lots == []
+    assert station_1.tool is not None
+    assert station_1.tool.tool_id == "hdpe_storage_jar_2l"
+    assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
+    assert station_1.tool.produce_lots[0].cut_state == "ground"
+    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.03)
+    assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Wide-neck HDPE jar."
+
+
 def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
@@ -3228,6 +3287,23 @@ def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> N
     assert slot.tool.tool_id == "hdpe_storage_jar_2l"
     assert reloaded.id == updated.id
     assert reloaded.snapshot_version == updated.snapshot_version
+
+
+def test_service_recovers_if_sqlite_file_is_deleted_while_running(tmp_path) -> None:
+    db_path = tmp_path / "experiments.sqlite3"
+    service = ExperimentService(repository=SqliteExperimentRepository(str(db_path)))
+
+    created_before_deletion = service.create_experiment()
+    assert db_path.exists()
+
+    Path(db_path).unlink()
+
+    created_after_deletion = service.create_experiment()
+    listed = service.list_experiments()
+
+    assert db_path.exists()
+    assert created_before_deletion.id != created_after_deletion.id
+    assert [entry.id for entry in listed] == [created_after_deletion.id]
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:

@@ -780,6 +780,36 @@ def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
     assert _find_widget(moved.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
 
 
+def test_workspace_move_grinder_produce_lot_to_storage_jar_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+        )
+        client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
+            json={"tool_id": "hdpe_storage_jar_2l"},
+        )
+        produced = client.post(
+            f"/experiments/{experiment_id}/debug/produce-presets/apple_powder_residual_co2/spawn-on-widget",
+            json={"widget_id": "grinder", "total_mass_g": 10},
+        )
+        produce_lot_id = _find_widget(produced.json(), "grinder")["produce_lots"][0]["id"]
+
+        moved = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{produce_lot_id}/move-to-workbench-tool",
+            json={"target_slot_id": "station_1"},
+        )
+
+    assert moved.status_code == 200
+    assert moved.json()["workbench"]["slots"][0]["tool"]["tool_id"] == "hdpe_storage_jar_2l"
+    assert moved.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == produce_lot_id
+    assert moved.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "ground"
+    assert _find_widget(moved.json(), "grinder")["produce_lots"] == []
+
+
 def test_move_gross_balance_produce_lot_to_workbench_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)

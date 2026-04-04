@@ -345,10 +345,7 @@ def move_widget_produce_lot_to_workbench_tool(
             widget_id=command.widget_id,
             produce_lot_id=command.produce_lot_id,
         ),
-        WorkbenchProduceLotTarget(
-            slot_id=command.target_slot_id,
-            allowed_tool_types=frozenset({"sample_bag"}),
-        ),
+        WorkbenchProduceLotTarget(slot_id=command.target_slot_id),
     )
     if transfer.contamination_applied:
         experiment.audit_log.append(

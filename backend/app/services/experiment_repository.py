@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -68,7 +69,7 @@ class SqliteExperimentRepository:
         payload = json.dumps(_serialize_experiment(experiment), sort_keys=True)
         now = datetime.now(timezone.utc).isoformat()
         last_audit_entry = experiment.audit_log[-1] if experiment.audit_log else None
-        with sqlite3.connect(self._db_path) as connection:
+        with self._connect() as connection:
             connection.execute(
                 """
                 INSERT INTO experiments (
@@ -104,7 +105,7 @@ class SqliteExperimentRepository:
             connection.commit()
 
     def load(self, experiment_id: str) -> Experiment | None:
-        with sqlite3.connect(self._db_path) as connection:
+        with self._connect() as connection:
             row = connection.execute(
                 "SELECT payload FROM experiments WHERE id = ?",
                 (experiment_id,),
@@ -117,7 +118,7 @@ class SqliteExperimentRepository:
         return _deserialize_experiment(payload)
 
     def list(self) -> list[ExperimentListEntrySchema]:
-        with sqlite3.connect(self._db_path) as connection:
+        with self._connect() as connection:
             rows = connection.execute(
                 """
                 SELECT id, updated_at, snapshot_version, status, last_simulation_at, last_audit_entry, payload
@@ -155,7 +156,7 @@ class SqliteExperimentRepository:
         return entries
 
     def delete(self, experiment_id: str) -> bool:
-        with sqlite3.connect(self._db_path) as connection:
+        with self._connect() as connection:
             cursor = connection.execute(
                 "DELETE FROM experiments WHERE id = ?",
                 (experiment_id,),
@@ -168,24 +169,34 @@ class SqliteExperimentRepository:
 
     def _initialize_schema(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS experiments (
-                    id TEXT PRIMARY KEY,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    snapshot_version INTEGER NOT NULL,
-                    status TEXT,
-                    last_simulation_at TEXT,
-                    last_audit_entry TEXT,
-                    payload TEXT NOT NULL
-                )
-                """
+            self._ensure_schema(connection)
+
+    @contextmanager
+    def _connect(self) -> sqlite3.Connection:
+        self._ensure_parent_directory()
+        with sqlite3.connect(self._db_path) as connection:
+            self._ensure_schema(connection)
+            yield connection
+
+    def _ensure_schema(self, connection: sqlite3.Connection) -> None:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS experiments (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                snapshot_version INTEGER NOT NULL,
+                status TEXT,
+                last_simulation_at TEXT,
+                last_audit_entry TEXT,
+                payload TEXT NOT NULL
             )
-            self._ensure_column(connection, "status", "TEXT")
-            self._ensure_column(connection, "last_simulation_at", "TEXT")
-            self._ensure_column(connection, "last_audit_entry", "TEXT")
-            connection.commit()
+            """
+        )
+        self._ensure_column(connection, "status", "TEXT")
+        self._ensure_column(connection, "last_simulation_at", "TEXT")
+        self._ensure_column(connection, "last_audit_entry", "TEXT")
+        connection.commit()
 
     def _ensure_column(self, connection: sqlite3.Connection, column_name: str, column_type: str) -> None:
         existing_columns = {
