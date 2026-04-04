@@ -61,11 +61,11 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
   }
 }
 
-function isAvailableTarget(
+function getExpectation(
   sourceCase: (typeof dndSourceCases)[number],
   targetId: DndTargetId,
 ) {
-  return sourceCase.availableTargets.includes(targetId);
+  return sourceCase.targetExpectations[targetId] ?? { compatible: false, command: null };
 }
 
 afterEach(() => {
@@ -96,11 +96,7 @@ describe("LabScene DnD actions", () => {
 
   dndSourceCases.forEach((sourceCase) => {
     dndTargetCases.forEach((targetCase) => {
-      if (!isAvailableTarget(sourceCase, targetCase.id)) {
-        return;
-      }
-
-      const expectation = sourceCase.targetExpectations[targetCase.id];
+      const expectation = getExpectation(sourceCase, targetCase.id);
 
       it(`routes ${sourceCase.label} -> ${targetCase.label} to ${
         expectation?.command?.type ?? "no backend command"
@@ -110,12 +106,19 @@ describe("LabScene DnD actions", () => {
         const dataTransfer = createDataTransfer();
         fireEvent.dragStart(screen.getByTestId(sourceCase.sourceTestId), { dataTransfer });
 
+        const target = screen.queryByTestId(targetCase.id);
+        if (target === null) {
+          expect(expectation.compatible).toBe(false);
+          expect(sendExperimentCommand).not.toHaveBeenCalled();
+          return;
+        }
+
         const dropPayload =
           targetCase.id === "widget-workspace"
             ? { clientX: 980, clientY: 420, dataTransfer }
             : { dataTransfer };
 
-        fireEvent.drop(screen.getByTestId(targetCase.id), dropPayload);
+        fireEvent.drop(target, dropPayload);
 
         if (!expectation?.command) {
           expect(sendExperimentCommand).not.toHaveBeenCalled();

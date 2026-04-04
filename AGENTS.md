@@ -111,6 +111,14 @@ TDD is the default workflow: write the failing test first, then implement. Backe
 - Do not rely on representative behavior groups alone when a concrete component exists in the UI. If the UI exposes a distinct draggable component, it must appear explicitly in the DnD matrix.
 - When adding a new draggable entity, explicitly test the full origin-to-target matrix that matters for that entity. For example, if a `sample_vial` can go to the rack, cover at least `palette -> rack`, `workbench -> rack`, and `trash -> rack`.
 - If a new origin is added for an existing entity, update the matrix so that the entity is tested from that origin against every relevant target, with the same compatibility expectations unless entity state intentionally differs.
+- Every time a new draggable object type is created, the DnD matrices must be updated in the same change.
+- Every time a new droppable object type or drop surface is created, the DnD matrices must be updated in the same change.
+- Do not merge a new draggable or droppable type without explicitly adding its full cross-product coverage against all existing relevant targets or sources.
+- The expected outcome for each concrete draggable-to-droppable pair must be written down as an explicit boolean decision in the matrix: allowed or rejected. Do not leave new pairs implicit, untested, or covered only by representative cases.
+- This requirement applies to both frontend and backend whenever both layers participate in the DnD behavior. Frontend must assert the advertised compatibility and command routing; backend must assert the actual acceptance or rejection of the corresponding drop command.
+- When a DnD behavior changes for an existing object, update the matrices in the same change. Do not change compatibility logic without changing the expected matrix entries and the related assertions.
+- When an object gains a new state that can affect drag/drop behavior, update the matrices for that state in the same change. State-specific compatibility is part of the DnD contract.
+- Treat missing matrix updates as a bug in the change itself, not as optional follow-up cleanup.
 - Drag-and-drop tests should verify all of these when relevant:
   - highlighted targets during drag
   - `dragover` acceptance / rejection

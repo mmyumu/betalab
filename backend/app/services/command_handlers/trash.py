@@ -150,10 +150,7 @@ def restore_trashed_produce_lot_to_workbench_tool(
     transfer = produce_lot_transfer_service.transfer(
         experiment,
         TrashProduceLotSource(trash_produce_lot_id=command.trash_produce_lot_id),
-        WorkbenchProduceLotTarget(
-            slot_id=command.target_slot_id,
-            allowed_tool_types=frozenset({"sample_bag", "cutting_board"}),
-        ),
+        WorkbenchProduceLotTarget(slot_id=command.target_slot_id),
     )
     experiment.audit_log.append(
         f"{transfer.produce_lot.label} restored from trash to {transfer.location_label}."

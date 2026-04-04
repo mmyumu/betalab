@@ -69,11 +69,11 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
   }
 }
 
-function isAvailableTarget(
+function getExpectation(
   sourceCase: (typeof dndSourceCases)[number],
   targetId: DndTargetId,
 ) {
-  return sourceCase.availableTargets.includes(targetId);
+  return sourceCase.targetExpectations[targetId] ?? { compatible: false, command: null };
 }
 
 afterEach(() => {
@@ -84,11 +84,7 @@ afterEach(() => {
 describe("LabScene DnD matrix", () => {
   dndSourceCases.forEach((sourceCase) => {
     dndTargetCases.forEach((targetCase) => {
-      if (!isAvailableTarget(sourceCase, targetCase.id)) {
-        return;
-      }
-
-      const expectation = sourceCase.targetExpectations[targetCase.id];
+      const expectation = getExpectation(sourceCase, targetCase.id);
 
       it(`marks ${sourceCase.label} ${expectation?.compatible ? "compatible" : "incompatible"} with ${targetCase.label}`, async () => {
         await renderWorkbenchForSource(sourceCase);
@@ -96,10 +92,15 @@ describe("LabScene DnD matrix", () => {
         const dataTransfer = createDataTransfer();
         fireEvent.dragStart(screen.getByTestId(sourceCase.sourceTestId), { dataTransfer });
 
-        const target = screen.getByTestId(targetCase.id);
+        const target = screen.queryByTestId(targetCase.id);
+        if (target === null) {
+          expect(expectation.compatible).toBe(false);
+          return;
+        }
+
         expect(target).toHaveAttribute(
           "data-drop-highlighted",
-          expectation?.compatible ? "true" : "false",
+          expectation.compatible ? "true" : "false",
         );
 
         if (!targetCase.assertDragOver) {
@@ -108,7 +109,7 @@ describe("LabScene DnD matrix", () => {
 
         const dragOverEvent = createEvent.dragOver(target, { dataTransfer });
         fireEvent(target, dragOverEvent);
-        expect(dragOverEvent.defaultPrevented).toBe(expectation?.compatible ?? false);
+        expect(dragOverEvent.defaultPrevented).toBe(expectation.compatible);
       });
     });
   });
