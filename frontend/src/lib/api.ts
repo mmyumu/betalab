@@ -1083,8 +1083,12 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       tools: experiment.trash.tools.map(normalizeTrashTool),
     },
     workspace: {
-      produceLots:
-        (experiment.workspace.produceLots ?? experiment.workspace.produce_lots ?? []).map(
+      produceBasketLots:
+        (
+          experiment.workspace.produceBasketLots ??
+          (experiment.workspace as Experiment["workspace"] & Record<string, unknown>).produce_basket_lots ??
+          []
+        ).map(
           normalizeProduceLot,
         ),
       widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),

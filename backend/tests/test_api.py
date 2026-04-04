@@ -340,7 +340,7 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
         placed = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "hdpe_storage_jar_2l"},
@@ -377,7 +377,7 @@ def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
         placed = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "hdpe_storage_jar_2l"},
@@ -590,7 +590,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
                 f"/experiments/{experiment_id}/workspace/produce-lots",
                 json={"produce_type": "apple"},
             )
-            produce_lot_id = produce_created.json()["workspace"]["produce_lots"][0]["id"]
+            produce_lot_id = produce_created.json()["workspace"]["produce_basket_lots"][0]["id"]
             produce_loaded = client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
                 json={"produce_lot_id": produce_lot_id},
@@ -622,7 +622,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
         "anchor"
     ] == "top-left"
     assert produce_loaded.status_code == 200
-    assert produce_loaded.json()["workspace"]["produce_lots"] == []
+    assert produce_loaded.json()["workspace"]["produce_basket_lots"] == []
     assert updated_liquid.status_code == 200
     assert _find_widget(updated_liquid.json(), "grinder")["liquids"][0]["volume_ml"] == 125.5
     assert advanced.status_code == 200
@@ -652,7 +652,7 @@ def test_experiment_stream_pushes_updated_snapshots() -> None:
                 f"/experiments/{experiment_id}/workspace/produce-lots",
                 json={"produce_type": "apple"},
             )
-            produce_lot_id = produced.json()["workspace"]["produce_lots"][0]["id"]
+            produce_lot_id = produced.json()["workspace"]["produce_basket_lots"][0]["id"]
             client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
                 json={"produce_lot_id": produce_lot_id},
@@ -681,7 +681,7 @@ def test_produce_lot_routes_round_trip_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        first_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        first_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
         placed_board = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "cutting_board_hdpe"},
@@ -757,7 +757,7 @@ def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_lots"][0]["id"]
+        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
         placed_board = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "cutting_board_hdpe"},

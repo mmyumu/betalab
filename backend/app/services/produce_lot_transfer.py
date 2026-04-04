@@ -73,8 +73,8 @@ class WorkspaceProduceLotSource:
 
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
         produce_lot = find_produce_basket_lot(experiment.workspace, self.produce_lot_id)
-        experiment.workspace.produce_lots = [
-            lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
+        experiment.workspace.produce_basket_lots = [
+            lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id
         ]
         return ProduceLotRemoval(
             produce_lot=produce_lot,

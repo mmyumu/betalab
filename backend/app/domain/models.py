@@ -187,7 +187,7 @@ class ProduceLot:
 @dataclass
 class Workspace:
     widgets: list[WorkspaceWidget] = field(default_factory=list)
-    produce_lots: list[ProduceLot] = field(default_factory=list)
+    produce_basket_lots: list[ProduceLot] = field(default_factory=list)
 
 
 @dataclass

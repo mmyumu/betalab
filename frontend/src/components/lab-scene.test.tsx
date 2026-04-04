@@ -246,7 +246,7 @@ function makeWorkbenchExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
-    workspace: { produceLots: basketProduceLots, widgets: workspaceWidgets },
+    workspace: { produceBasketLots: basketProduceLots, widgets: workspaceWidgets },
     basketTool,
     spatula: {
       isLoaded: false,

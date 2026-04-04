@@ -228,7 +228,7 @@ class WorkspaceWidgetSchema(BaseModel):
 
 class WorkspaceSchema(BaseModel):
     widgets: list[WorkspaceWidgetSchema]
-    produce_lots: list[ProduceLotSchema]
+    produce_basket_lots: list[ProduceLotSchema]
 
 
 class ExperimentSchema(BaseModel):

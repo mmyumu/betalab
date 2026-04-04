@@ -1788,7 +1788,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
   const resolveProduceMassFromPayload = (payload: ProduceDragPayload) => {
     if (payload.sourceKind === "basket") {
-      const produceLot = state.experiment.workspace.produceLots.find((lot) => lot.id === payload.produceLotId);
+      const produceLot = state.experiment.workspace.produceBasketLots.find((lot) => lot.id === payload.produceLotId);
       return produceLot ? getApproximateProduceMassG(produceLot) : null;
     }
     if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
@@ -1822,7 +1822,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   };
   const resolveProduceFromPayload = (payload: ProduceDragPayload) => {
     if (payload.sourceKind === "basket") {
-      return state.experiment.workspace.produceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
+      return state.experiment.workspace.produceBasketLots.find((lot) => lot.id === payload.produceLotId) ?? null;
     }
     if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
       const slot = slots.find((entry) => entry.id === payload.sourceSlotId) ?? null;
@@ -2625,7 +2625,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashedProduceLots.length === 0 &&
     trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
-  const basketProduceLots = state.experiment.workspace.produceLots;
+  const basketProduceLots = state.experiment.workspace.produceBasketLots;
   const displayBasketTool = basketTool;
   const displayBasketProduceLots = basketProduceLots;
   const displaySlots = slots;

@@ -31,7 +31,7 @@ const makeExperiment = (): Experiment => ({
     tools: [],
   },
   workspace: {
-    produceLots: [],
+    produceBasketLots: [],
     widgets: [],
   },
   limsReception: {
@@ -459,7 +459,7 @@ describe("api client", () => {
           ],
         },
         workspace: {
-          produce_lots: [
+          produce_basket_lots: [
             {
               id: "produce_1",
               label: "Apple lot 1",
@@ -503,12 +503,12 @@ describe("api client", () => {
     expect(experiment.workspace.widgets[0]?.anchor).toBe("top-left");
     expect(experiment.workspace.widgets[0]?.offsetX).toBe(234);
     expect(experiment.workspace.widgets[0]?.isTrashed).toBe(true);
-    expect(experiment.workspace.produceLots[0]?.produceType).toBe("apple");
-    expect(experiment.workspace.produceLots[0]?.label).toBe("Apple lot 1");
-    expect(experiment.workspace.produceLots[0]?.unitCount).toBe(12);
-    expect(experiment.workspace.produceLots[0]?.totalMassG).toBe(2450);
-    expect(experiment.workspace.produceLots[0]?.grindQualityLabel).toBe("powder_fine");
-    expect(experiment.workspace.produceLots[0]?.homogeneityScore).toBe(0.94);
+    expect(experiment.workspace.produceBasketLots[0]?.produceType).toBe("apple");
+    expect(experiment.workspace.produceBasketLots[0]?.label).toBe("Apple lot 1");
+    expect(experiment.workspace.produceBasketLots[0]?.unitCount).toBe(12);
+    expect(experiment.workspace.produceBasketLots[0]?.totalMassG).toBe(2450);
+    expect(experiment.workspace.produceBasketLots[0]?.grindQualityLabel).toBe("powder_fine");
+    expect(experiment.workspace.produceBasketLots[0]?.homogeneityScore).toBe(0.94);
   });
 
   it("throws when experiment creation fails", async () => {

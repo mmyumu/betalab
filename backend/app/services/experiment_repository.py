@@ -324,8 +324,8 @@ def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
                 for widget in schema.workspace.widgets
         ],
     )
-    workspace.produce_lots = [
-        _deserialize_produce_lot(lot) for lot in schema.workspace.produce_lots
+    workspace.produce_basket_lots = [
+        _deserialize_produce_lot(lot) for lot in schema.workspace.produce_basket_lots
     ]
     return workspace
 

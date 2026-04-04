@@ -111,7 +111,7 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
         raise ValueError("Unsupported produce type")
 
     apple_lot_count = sum(
-        1 for lot in experiment.workspace.produce_lots if lot.produce_type == produce_type
+        1 for lot in experiment.workspace.produce_basket_lots if lot.produce_type == produce_type
     )
 
     produce_lot = ProduceLot(
@@ -122,7 +122,7 @@ def create_produce_lot(experiment: Experiment, command: CreateProduceLotCommand)
         total_mass_g=2450.0,
     )
 
-    experiment.workspace.produce_lots.append(produce_lot)
+    experiment.workspace.produce_basket_lots.append(produce_lot)
     experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 
 
@@ -366,8 +366,8 @@ def discard_workspace_produce_lot(
     command: DiscardWorkspaceProduceLotCommand,
 ) -> None:
     produce_lot = find_produce_basket_lot(experiment.workspace, command.produce_lot_id)
-    experiment.workspace.produce_lots = [
-        lot for lot in experiment.workspace.produce_lots if lot.id != produce_lot.id
+    experiment.workspace.produce_basket_lots = [
+        lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id
     ]
     experiment.trash.produce_lots.append(
         TrashProduceLotEntry(

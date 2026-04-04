@@ -323,7 +323,7 @@ function makeExperiment({
   trashProduceLots = [],
   trashSampleLabels = [],
   trashTools = [],
-  produceLots = [],
+  produceBasketLots = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
   basketTool?: BenchToolInstance | null;
@@ -333,7 +333,7 @@ function makeExperiment({
   trashProduceLots?: TrashProduceLotEntry[];
   trashSampleLabels?: TrashSampleLabelEntry[];
   trashTools?: TrashToolEntry[];
-  produceLots?: Experiment["workspace"]["produceLots"];
+  produceBasketLots?: Experiment["workspace"]["produceBasketLots"];
   workspaceWidgets?: ExperimentWorkspaceWidget[];
 } = {}): Experiment {
   return {
@@ -344,7 +344,7 @@ function makeExperiment({
     workbench: { slots },
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
-    workspace: { produceLots, widgets: workspaceWidgets },
+    workspace: { produceBasketLots, widgets: workspaceWidgets },
     basketTool,
     spatula: {
       isLoaded: false,
@@ -890,7 +890,7 @@ function createBasketProduceSourceCase(): DndSourceCase {
         slots: makeSlots([
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag" }) },
         ]),
-        produceLots: [
+        produceBasketLots: [
           {
             id: "produce_1",
             isContaminated: false,
@@ -1964,7 +1964,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
     trashProduceLots: [makeTrashProduceLotEntry()],
     trashSampleLabels: [makeTrashSampleLabelEntry()],
     trashTools: [makeTrashToolEntry(sampleVialItem)],
-    produceLots: [
+    produceBasketLots: [
       {
         id: "produce_1",
         isContaminated: false,

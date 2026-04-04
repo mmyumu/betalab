@@ -26,7 +26,7 @@ export type ExperimentTrash = {
 };
 
 export type ExperimentWorkspace = {
-  produceLots: ExperimentProduceLot[];
+  produceBasketLots: ExperimentProduceLot[];
   widgets: ExperimentWorkspaceWidget[];
 };
 

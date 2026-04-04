@@ -120,7 +120,7 @@ def build_experiment() -> Experiment:
                     is_trashed=False,
                 ),
             ],
-            produce_lots=[],
+            produce_basket_lots=[],
         ),
         lims_reception=LimsReception(
             orchard_name="",

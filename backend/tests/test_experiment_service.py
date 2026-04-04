@@ -251,7 +251,7 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
     assert experiment.workspace.widgets[3].offset_x == 1276
     assert experiment.workspace.widgets[3].offset_y == 24
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
-    assert experiment.workspace.produce_lots == []
+    assert experiment.workspace.produce_basket_lots == []
     assert experiment.basket_tool is not None
     assert experiment.basket_tool.tool_type == "sample_bag"
     assert experiment.basket_tool.is_sealed is True
@@ -801,7 +801,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
         "add_workspace_produce_lot_to_widget",
         {
             "widget_id": "grinder",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     updated = apply_command(service, 
@@ -814,7 +814,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
     )
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-    assert moved.workspace.produce_lots == []
+    assert moved.workspace.produce_basket_lots == []
     assert len(grinder.produce_lots) == 1
     assert grinder.produce_lots[0].produce_type == "apple"
     assert len(grinder.liquids) == 1
@@ -982,7 +982,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
@@ -1061,7 +1061,7 @@ def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1150,7 +1150,7 @@ def test_start_grinder_cycle_rejects_produce_above_minus_twenty_c() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1217,7 +1217,7 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1315,7 +1315,7 @@ def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1399,7 +1399,7 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1488,7 +1488,7 @@ def test_jammed_grinder_waste_can_be_moved_to_a_workbench_tool() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -1633,7 +1633,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
         "add_workspace_produce_lot_to_widget",
         {
             "widget_id": "grinder",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     apply_command(service, 
@@ -1685,7 +1685,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
         "add_workspace_produce_lot_to_widget",
         {
             "widget_id": "grinder",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     apply_command(service, 
@@ -1745,7 +1745,7 @@ def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> No
         "add_workspace_produce_lot_to_widget",
         {
             "widget_id": "grinder",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     apply_command(service,
@@ -1828,7 +1828,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
         "add_workspace_produce_lot_to_widget",
         {
             "widget_id": "grinder",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     apply_command(service, 
@@ -2027,7 +2027,7 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2037,7 +2037,7 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
     assert slot.tool.produce_lots[0].label == "Apple lot 1"
     assert slot.tool.produce_lots[0].unit_count == 12
     assert slot.tool.produce_lots[0].total_mass_g == 2450.0
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert updated.audit_log[-1] == "Apple lot 1 added to Sealed sampling bag."
 
 
@@ -2066,7 +2066,7 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2075,7 +2075,7 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
     assert len(slot.tool.produce_lots) == 1
     assert slot.tool.produce_lots[0].label == "Apple lot 1"
     assert slot.tool.produce_lots[0].is_contaminated is False
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert updated.audit_log[-1] == "Apple lot 1 added to Cutting board."
 
 
@@ -2096,7 +2096,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2105,7 +2105,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
     assert len(slot.surface_produce_lots) == 1
     assert slot.surface_produce_lots[0].label == "Apple lot 1"
     assert slot.surface_produce_lots[0].is_contaminated is True
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert (
         updated.audit_log[-1]
         == "Apple lot 1 placed directly on Station 1 and marked contaminated."
@@ -2138,7 +2138,7 @@ def test_add_produce_lot_requires_a_sampling_bag() -> None:
             "add_produce_lot_to_workbench_tool",
             {
                 "slot_id": "station_1",
-                "produce_lot_id": created.workspace.produce_lots[0].id,
+                "produce_lot_id": created.workspace.produce_basket_lots[0].id,
             },
         )
 
@@ -2174,7 +2174,7 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": first_lot.workspace.produce_lots[0].id,
+            "produce_lot_id": first_lot.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2184,7 +2184,7 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
             "add_produce_lot_to_workbench_tool",
             {
                 "slot_id": "station_1",
-                "produce_lot_id": second_lot.workspace.produce_lots[0].id,
+                "produce_lot_id": second_lot.workspace.produce_basket_lots[0].id,
             },
         )
 
@@ -2213,7 +2213,7 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2222,14 +2222,14 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
         "discard_produce_lot_from_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.produce_lots == []
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert len(updated.trash.produce_lots) == 1
     assert updated.trash.produce_lots[0].origin_label == "Sealed sampling bag"
     assert updated.trash.produce_lots[0].produce_lot.label == "Apple lot 1"
@@ -2252,11 +2252,11 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
         experiment.id,
         "discard_workspace_produce_lot",
         {
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert len(updated.trash.produce_lots) == 1
     assert updated.trash.produce_lots[0].origin_label == "Produce basket"
     assert updated.audit_log[-1] == "Apple lot 1 discarded from Produce basket."
@@ -2280,7 +2280,7 @@ def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> 
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     discarded = apply_command(
@@ -2313,7 +2313,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
@@ -2363,7 +2363,7 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "add_workspace_produce_lot_to_widget",
@@ -2415,7 +2415,7 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service,
         experiment.id,
         "place_tool_on_workbench",
@@ -2464,7 +2464,7 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(
         service,
         experiment.id,
@@ -2526,7 +2526,7 @@ def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
         "add_produce_lot_to_workbench_tool",
         {
             "slot_id": "station_1",
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
 
@@ -2622,7 +2622,7 @@ def test_add_produce_to_sealed_storage_jar_fails() -> None:
             "add_produce_lot_to_workbench_tool",
             {
                 "slot_id": "station_1",
-                "produce_lot_id": created.workspace.produce_lots[0].id,
+                "produce_lot_id": created.workspace.produce_basket_lots[0].id,
             },
         )
 
@@ -2800,7 +2800,7 @@ def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() ->
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
     service.open_gross_balance_tool(experiment.id)
     service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
@@ -2982,12 +2982,12 @@ def test_move_workspace_produce_lot_to_gross_balance_places_loose_produce_and_up
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
 
     updated = service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
-    assert updated.workspace.produce_lots == []
+    assert updated.workspace.produce_basket_lots == []
     assert gross_balance.produce_lots[0].id == produce_lot_id
     assert updated.lims_reception.measured_gross_mass_g == pytest.approx(2450.0, abs=0.01)
     assert updated.audit_log[-1] == "Apple lot 1 moved from Produce basket to Gross balance."
@@ -2998,10 +2998,10 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_existing_loose_prod
     experiment = service.create_experiment()
 
     first = service.create_produce_lot(experiment.id, "apple")
-    first_id = first.workspace.produce_lots[0].id
+    first_id = first.workspace.produce_basket_lots[0].id
     service.move_workspace_produce_lot_to_gross_balance(experiment.id, first_id)
     second = service.create_produce_lot(experiment.id, "apple")
-    second_id = second.workspace.produce_lots[0].id
+    second_id = second.workspace.produce_basket_lots[0].id
 
     with pytest.raises(ValueError, match="Gross balance already contains a produce lot"):
         service.move_workspace_produce_lot_to_gross_balance(experiment.id, second_id)
@@ -3012,7 +3012,7 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_sealed_balance_bag(
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.move_basket_tool_to_gross_balance(experiment.id)
 
     with pytest.raises(ValueError, match="Open Sealed sampling bag before adding produce"):
@@ -3024,7 +3024,7 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_tool_without_produc
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
 
     with pytest.raises(ValueError, match="Autosampler vial does not accept produce"):
@@ -3036,7 +3036,7 @@ def test_move_workspace_produce_lot_to_gross_balance_places_produce_into_open_ba
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
     service.open_gross_balance_tool(experiment.id)
 
@@ -3053,7 +3053,7 @@ def test_move_gross_balance_produce_lot_to_workbench_moves_loose_produce_to_targ
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
     service.place_tool_on_workbench(experiment.id, "station_1", "cutting_board_hdpe")
 
@@ -3071,7 +3071,7 @@ def test_move_gross_balance_produce_lot_to_widget_moves_loose_produce_into_grind
     experiment = service.create_experiment()
 
     created = service.create_produce_lot(experiment.id, "apple")
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
 
     updated = service.move_gross_balance_produce_lot_to_widget(experiment.id, "grinder", produce_lot_id)
@@ -3127,7 +3127,7 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(
         service,
         experiment.id,
@@ -3170,7 +3170,7 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(
         service,
         experiment.id,
@@ -3241,7 +3241,7 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service, 
         experiment.id,
         "add_workspace_produce_lot_to_widget",
@@ -3283,7 +3283,7 @@ def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
         experiment.id,
         "discard_workspace_produce_lot",
         {
-            "produce_lot_id": created.workspace.produce_lots[0].id,
+            "produce_lot_id": created.workspace.produce_basket_lots[0].id,
         },
     )
     apply_command(service, 
@@ -3572,12 +3572,12 @@ def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
         },
     )
 
-    assert len(updated.workspace.produce_lots) == 1
-    assert updated.workspace.produce_lots[0].produce_type == "apple"
-    assert updated.workspace.produce_lots[0].label == "Apple lot 1"
-    assert updated.workspace.produce_lots[0].unit_count == 12
-    assert updated.workspace.produce_lots[0].total_mass_g == 2450.0
-    assert updated.workspace.produce_lots[0].cut_state == "whole"
+    assert len(updated.workspace.produce_basket_lots) == 1
+    assert updated.workspace.produce_basket_lots[0].produce_type == "apple"
+    assert updated.workspace.produce_basket_lots[0].label == "Apple lot 1"
+    assert updated.workspace.produce_basket_lots[0].unit_count == 12
+    assert updated.workspace.produce_basket_lots[0].total_mass_g == 2450.0
+    assert updated.workspace.produce_basket_lots[0].cut_state == "whole"
     assert updated.audit_log[-1] == "Apple lot 1 created in Produce basket."
 
 
@@ -3592,7 +3592,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service, 
         experiment.id,
         "place_tool_on_workbench",
@@ -3636,7 +3636,7 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
             "produce_type": "apple",
         },
     )
-    produce_lot_id = created.workspace.produce_lots[0].id
+    produce_lot_id = created.workspace.produce_basket_lots[0].id
     apply_command(service, 
         experiment.id,
         "add_produce_lot_to_workbench_tool",

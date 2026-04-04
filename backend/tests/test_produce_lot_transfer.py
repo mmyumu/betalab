@@ -77,7 +77,7 @@ def test_transfer_service_moves_basket_produce_lot_to_workbench_tool() -> None:
         total_mass_g=120.0,
         unit_count=2,
     )
-    experiment.workspace.produce_lots.append(produce_lot)
+    experiment.workspace.produce_basket_lots.append(produce_lot)
     experiment.workbench.slots[0].tool = build_workbench_tool("sealed_sampling_bag")
 
     result = service.transfer(
@@ -88,5 +88,5 @@ def test_transfer_service_moves_basket_produce_lot_to_workbench_tool() -> None:
 
     assert result.source_label == "Produce basket"
     assert result.location_label == "Sealed sampling bag on Station 1"
-    assert experiment.workspace.produce_lots == []
+    assert experiment.workspace.produce_basket_lots == []
     assert [lot.id for lot in experiment.workbench.slots[0].tool.produce_lots] == ["produce_1"]
