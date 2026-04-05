@@ -14,6 +14,7 @@ import {
   applyPrintedLimsLabel,
   applyPrintedLimsLabelToBasketBag,
   applySampleLabelToWorkbenchTool,
+  closeAnalyticalBalanceTool,
   closeGrossBalanceTool,
   closeWorkbenchTool,
   completeGrinderCycle,
@@ -57,6 +58,7 @@ import {
   moveWorkbenchToolToGrossBalance,
   moveWidgetProduceLotToGrossBalance,
   moveWorkspaceProduceLotToGrossBalance,
+  openAnalyticalBalanceTool,
   openGrossBalanceTool,
   moveSampleLabelBetweenWorkbenchTools,
   moveToolBetweenWorkbenchSlots,
@@ -118,6 +120,7 @@ const mutationFns = {
   applyPrintedLimsLabel,
   applyPrintedLimsLabelToBasketBag,
   applySampleLabelToWorkbenchTool,
+  closeAnalyticalBalanceTool,
   closeGrossBalanceTool,
   closeWorkbenchTool,
   completeGrinderCycle,
@@ -159,6 +162,7 @@ const mutationFns = {
   moveWorkbenchToolToGrossBalance,
   moveWidgetProduceLotToGrossBalance,
   moveWorkspaceProduceLotToGrossBalance,
+  openAnalyticalBalanceTool,
   openGrossBalanceTool,
   moveSampleLabelBetweenWorkbenchTools,
   moveToolBetweenWorkbenchSlots,
@@ -368,6 +372,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
     closeGrossBalanceTool: () =>
       executeMutation(mutationFns.closeGrossBalanceTool),
+    closeAnalyticalBalanceTool: () =>
+      executeMutation(mutationFns.closeAnalyticalBalanceTool),
     closeWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.closeWorkbenchTool, payload),
     completeGrinderCycle: (payload: Record<string, unknown>) =>
@@ -466,6 +472,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.loadSpatulaFromWorkbenchTool, payload),
     openGrossBalanceTool: () =>
       executeMutation(mutationFns.openGrossBalanceTool),
+    openAnalyticalBalanceTool: () =>
+      executeMutation(mutationFns.openAnalyticalBalanceTool),
     openWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.openWorkbenchTool, payload),
     placeToolInRackSlot: (payload: Record<string, unknown>) =>

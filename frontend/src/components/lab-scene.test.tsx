@@ -4695,4 +4695,58 @@ describe("LabScene", () => {
       );
     });
   });
+
+  it("closes a tube from the analytical balance card", async () => {
+    const analyticalTube = makeTool({
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "QuEChERS extraction",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      isSealed: false,
+    });
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }) as Experiment,
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(makeWorkbenchExperiment() as Experiment);
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Close 50 mL centrifuge tube" }));
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "close_analytical_balance_tool",
+      {},
+    );
+  });
+
+  it("opens a sealed tube from the analytical balance card", async () => {
+    const analyticalTube = makeTool({
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "QuEChERS extraction",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      isSealed: true,
+    });
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }) as Experiment,
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(makeWorkbenchExperiment() as Experiment);
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open 50 mL centrifuge tube" }));
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "open_analytical_balance_tool",
+      {},
+    );
+  });
 });

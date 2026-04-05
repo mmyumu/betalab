@@ -650,6 +650,17 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     void experimentApi.closeGrossBalanceTool();
   };
 
+  const handleAnalyticalBalanceToolSealToggle = () => {
+    if (!analyticalBalanceTool) {
+      return;
+    }
+    if (analyticalBalanceTool.isSealed) {
+      void experimentApi.openAnalyticalBalanceTool();
+      return;
+    }
+    void experimentApi.closeAnalyticalBalanceTool();
+  };
+
   const handleMoveSampleLabel = (
     targetSlotId: string,
     payload: { label?: BenchLabel; sourceSlotId?: string },
@@ -2841,6 +2852,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         onDragStart={(event) => {
           handleAnalyticalBalanceItemDragStart(event.dataTransfer);
         }}
+        onToggleSeal={handleAnalyticalBalanceToolSealToggle}
         onRemoveLiquid={() => {}}
         tool={{ ...displayAnalyticalBalanceTool, id: `analytical-${displayAnalyticalBalanceTool.id}` }}
       />

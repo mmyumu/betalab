@@ -6,6 +6,7 @@ from app.schemas.experiment import (
     WorkbenchToolPlacementSchema,
 )
 from app.services.domain_services.analytical_balance import (
+    CloseAnalyticalBalanceToolService,
     DiscardAnalyticalBalanceToolService,
     EmptyRequest,
     MoveAnalyticalBalanceToolToRackRequest,
@@ -18,6 +19,7 @@ from app.services.domain_services.analytical_balance import (
     MoveRackToolToAnalyticalBalanceService,
     MoveWorkbenchToolToAnalyticalBalanceRequest,
     MoveWorkbenchToolToAnalyticalBalanceService,
+    OpenAnalyticalBalanceToolService,
     PlaceToolOnAnalyticalBalanceRequest,
     PlaceToolOnAnalyticalBalanceService,
     RecordAnalyticalSampleMassService,
@@ -126,6 +128,24 @@ def move_analytical_balance_tool_to_rack(
 def discard_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
         lambda: DiscardAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id, EmptyRequest()
+        )
+    )
+
+
+@router.post("/{experiment_id}/analytical-balance/open-tool", response_model=ExperimentSchema)
+def open_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: OpenAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id, EmptyRequest()
+        )
+    )
+
+
+@router.post("/{experiment_id}/analytical-balance/close-tool", response_model=ExperimentSchema)
+def close_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: CloseAnalyticalBalanceToolService(experiment_service).run(
             experiment_id, EmptyRequest()
         )
     )

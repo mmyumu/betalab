@@ -79,6 +79,12 @@ export const openGrossBalanceTool = vi.fn((experimentId: string) =>
 export const closeGrossBalanceTool = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "close_gross_balance_tool", {}),
 );
+export const openAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "open_analytical_balance_tool", {}),
+);
+export const closeAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "close_analytical_balance_tool", {}),
+);
 export const recordGrossWeight = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
   sendExperimentCommand(experimentId, "record_gross_weight", payload ?? {}),
 );

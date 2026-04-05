@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.domain.rules import can_tool_be_sealed
 from app.domain.models import Experiment, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
+from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.helpers.lookups import (
     find_rack_slot,
     find_trash_tool,
@@ -16,6 +18,7 @@ _ANALYTICAL_BALANCE_MAX_G = 220.0
 _ANALYTICAL_BALANCE_TARE_LIMIT_G = 12.0
 _ANALYTICAL_BALANCE_TARGET_MIN_G = 9.8
 _ANALYTICAL_BALANCE_TARGET_MAX_G = 10.2
+physical_simulation_service = PhysicalSimulationService()
 _TARE_BY_TOOL_TYPE_G: dict[str, float] = {
     "volumetric_flask": 140.0,
     "amber_bottle": 95.0,
@@ -227,6 +230,37 @@ class TareAnalyticalBalanceService(AnalyticalBalanceServiceBase):
         experiment.analytical_balance.tare_mass_g = measured_mass_g
         experiment.analytical_balance.tared_tool_id = tool.id
         experiment.audit_log.append(f"Analytical balance tared at {measured_mass_g:.3f} g.")
+
+
+class OpenAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
+        tool = self._require_balance_tool(experiment)
+        if not can_tool_be_sealed(tool.tool_type):
+            raise ValueError(f"{tool.label} does not support sealing.")
+
+        vent_event = physical_simulation_service.vent_opened_tool(tool)
+        tool.is_sealed = False
+        tool.closure_fault = None
+        if vent_event is not None and vent_event.lost_mass_g > 0:
+            experiment.audit_log.append(
+                f"{tool.label} vented at {vent_event.pressure_bar:.3f} bar on Analytical balance; "
+                f"{vent_event.lost_mass_g:.3f} g of powder was lost."
+            )
+            return
+
+        experiment.audit_log.append(f"{tool.label} opened on Analytical balance.")
+
+
+class CloseAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
+        tool = self._require_balance_tool(experiment)
+        if not can_tool_be_sealed(tool.tool_type):
+            raise ValueError(f"{tool.label} does not support sealing.")
+
+        tool.is_sealed = True
+        tool.closure_fault = None
+        tool.internal_pressure_bar = max(tool.internal_pressure_bar, 1.0)
+        experiment.audit_log.append(f"{tool.label} sealed on Analytical balance.")
 
 
 class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):

@@ -680,6 +680,26 @@ export async function tareAnalyticalBalance(
   });
 }
 
+export async function openAnalyticalBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/open-tool`,
+  });
+}
+
+export async function closeAnalyticalBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/close-tool`,
+  });
+}
+
 export async function recordAnalyticalSampleMass(
   experimentId: string,
   _payload?: MutationPayload,

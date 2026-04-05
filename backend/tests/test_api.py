@@ -291,6 +291,25 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
     assert "ERR_RANGE" in recorded.json()["detail"]
 
 
+def test_analytical_balance_tool_can_be_closed_and_opened_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        experiment = experiment_service._require_experiment(experiment_id)
+        analytical_balance = next(
+            widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance"
+        )
+        analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
+        experiment_service._persist_mutation_and_to_schema(experiment)
+
+        closed = client.post(f"/experiments/{experiment_id}/analytical-balance/close-tool")
+        opened = client.post(f"/experiments/{experiment_id}/analytical-balance/open-tool")
+
+    assert closed.status_code == 200
+    assert closed.json()["workspace"]["widgets"][2]["tool"]["is_sealed"] is True
+    assert opened.status_code == 200
+    assert opened.json()["workspace"]["widgets"][2]["tool"]["is_sealed"] is False
+
+
 def test_list_experiments_returns_saved_sessions_over_http() -> None:
     with TestClient(app) as client:
         first_id = _create_experiment(client)
