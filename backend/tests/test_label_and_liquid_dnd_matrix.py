@@ -38,7 +38,7 @@ from app.services.domain_services.workspace import (
     RemoveLiquidFromWorkspaceWidgetService,
     WorkspaceWidgetLiquidRequest,
 )
-from app.services.experiment_service import ExperimentService
+from app.services.experiment_service import ExperimentRuntimeService
 
 LabelSource = Literal["palette_sample_label", "workbench_sample_label", "trash_sample_label", "lims_ticket"]
 LabelTarget = Literal["workbench_tool", "empty_workbench", "trash"]
@@ -93,14 +93,14 @@ LIQUID_DND_CASES: tuple[LiquidDndCase, ...] = (
 )
 
 
-def _prepare_label_target(service: ExperimentService, experiment_id: str, target: LabelTarget) -> None:
+def _prepare_label_target(service: ExperimentRuntimeService, experiment_id: str, target: LabelTarget) -> None:
     if target == "workbench_tool":
         PlaceToolOnWorkbenchService(service).run(
             experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
         )
 
 
-def _prepare_label_source(service: ExperimentService, experiment_id: str, source: LabelSource) -> tuple[str | None, str | None]:
+def _prepare_label_source(service: ExperimentRuntimeService, experiment_id: str, source: LabelSource) -> tuple[str | None, str | None]:
     if source == "palette_sample_label":
         return None, None
     if source == "workbench_sample_label":
@@ -148,7 +148,7 @@ def _prepare_label_source(service: ExperimentService, experiment_id: str, source
 
 
 def _execute_label_drop(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     source: LabelSource,
     target: LabelTarget,
@@ -226,7 +226,7 @@ def _execute_label_drop(
     ids=[f"{case.source}_to_{case.target}_{'allow' if case.allowed else 'reject'}" for case in LABEL_DND_CASES],
 )
 def test_label_dnd_matrix(source: LabelSource, target: LabelTarget, allowed: bool) -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     _prepare_label_target(service, experiment.id, target)
@@ -247,7 +247,7 @@ def test_label_dnd_matrix(source: LabelSource, target: LabelTarget, allowed: boo
         assert updated.trash.sample_labels
 
 
-def _prepare_liquid_target(service: ExperimentService, experiment_id: str, target: LiquidTarget) -> None:
+def _prepare_liquid_target(service: ExperimentRuntimeService, experiment_id: str, target: LiquidTarget) -> None:
     if target == "open_tube":
         PlaceToolOnWorkbenchService(service).run(
             experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="centrifuge_tube_50ml")
@@ -265,7 +265,7 @@ def _prepare_liquid_target(service: ExperimentService, experiment_id: str, targe
         )
 
 
-def _prepare_liquid_source(service: ExperimentService, experiment_id: str, source: LiquidSource) -> str | None:
+def _prepare_liquid_source(service: ExperimentRuntimeService, experiment_id: str, source: LiquidSource) -> str | None:
     if source == "grinder_liquid":
         updated = AddLiquidToWorkspaceWidgetService(service).run(
             experiment_id,
@@ -277,7 +277,7 @@ def _prepare_liquid_source(service: ExperimentService, experiment_id: str, sourc
 
 
 def _execute_liquid_drop(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     source: LiquidSource,
     target: LiquidTarget,
@@ -308,7 +308,7 @@ def _execute_liquid_drop(
     ids=[f"{case.source}_to_{case.target}_{'allow' if case.allowed else 'reject'}" for case in LIQUID_DND_CASES],
 )
 def test_liquid_dnd_matrix(source: LiquidSource, target: LiquidTarget, allowed: bool) -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     _prepare_liquid_target(service, experiment.id, target)

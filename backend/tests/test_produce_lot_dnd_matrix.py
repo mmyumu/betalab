@@ -55,7 +55,7 @@ from app.services.domain_services.workspace import (
     RestoreTrashedProduceLotToWidgetRequest,
     RestoreTrashedProduceLotToWidgetService,
 )
-from app.services.experiment_service import ExperimentService
+from app.services.experiment_service import ExperimentRuntimeService
 
 SourceKind = Literal["basket", "workbench_surface", "workbench_tool", "grinder", "trash", "gross_balance"]
 TargetKind = Literal[
@@ -151,14 +151,14 @@ PRODUCE_LOT_DND_CASES: tuple[ProduceLotDndCase, ...] = (
 )
 
 
-def _create_basket_lot(service: ExperimentService, experiment_id: str) -> str:
+def _create_basket_lot(service: ExperimentRuntimeService, experiment_id: str) -> str:
     created = CreateOrInitProduceLotService(service).run(
         experiment_id, CreateProduceLotRequest(produce_type="apple")
     )
     return created.workspace.produce_basket_lots[0].id
 
 
-def _prepare_target(service: ExperimentService, experiment_id: str, target: TargetKind) -> None:
+def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, target: TargetKind) -> None:
     if target == "open_sample_bag":
         PlaceToolOnWorkbenchService(service).run(
             experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
@@ -204,7 +204,7 @@ def _prepare_target(service: ExperimentService, experiment_id: str, target: Targ
         CloseGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
-def _prepare_source(service: ExperimentService, experiment_id: str, source: SourceKind) -> tuple[str, str | None]:
+def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, source: SourceKind) -> tuple[str, str | None]:
     produce_lot_id = _create_basket_lot(service, experiment_id)
 
     if source == "basket":
@@ -242,7 +242,7 @@ def _prepare_source(service: ExperimentService, experiment_id: str, source: Sour
 
 
 def _execute_drop(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     source: SourceKind,
     target: TargetKind,
@@ -380,7 +380,7 @@ def _execute_drop(
     ids=[f"{case.source}_to_{case.target}_{'allow' if case.allowed else 'reject'}" for case in PRODUCE_LOT_DND_CASES],
 )
 def test_produce_lot_dnd_matrix(source: SourceKind, target: TargetKind, allowed: bool) -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     _prepare_target(service, experiment.id, target)

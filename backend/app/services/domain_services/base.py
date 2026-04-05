@@ -19,12 +19,12 @@ class ExperimentRuntime(Protocol):
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema: ...
 
 
-class ExperimentServiceBase(ABC, Generic[ArgumentT]):
+class DomainService(ABC, Generic[ArgumentT]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         self._runtime = runtime
 
 
-class ExperimentWriteService(ExperimentServiceBase[ArgumentT], ABC):
+class WriteDomainService(DomainService[ArgumentT], ABC):
     def run(self, experiment_id: str, arguments: ArgumentT) -> ExperimentSchema:
         experiment = self._runtime._require_experiment(experiment_id)
         self._runtime._advance_experiment_to_now(experiment)
@@ -35,7 +35,7 @@ class ExperimentWriteService(ExperimentServiceBase[ArgumentT], ABC):
     def _run(self, experiment: Experiment, arguments: ArgumentT) -> None: ...
 
 
-class ExperimentReadService(ExperimentServiceBase[ArgumentT], ABC):
+class ReadDomainService(DomainService[ArgumentT], ABC):
     def run(self, experiment_id: str, arguments: ArgumentT) -> ExperimentSchema:
         experiment = self._runtime._require_experiment(experiment_id)
         did_advance = self._runtime._advance_experiment_to_now(experiment)

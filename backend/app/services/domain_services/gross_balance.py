@@ -12,7 +12,7 @@ from app.domain.models import (
     WorkspaceWidget,
 )
 from app.domain.rules import can_tool_accept_produce, can_tool_be_sealed, can_tool_receive_contents
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     find_rack_slot,
     find_trash_tool,
@@ -122,7 +122,7 @@ class DiscardGrossBalanceProduceLotRequest:
     produce_lot_id: str
 
 
-class GrossBalanceServiceBase(ExperimentWriteService[object]):
+class GrossBalanceServiceBase(WriteDomainService[object]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

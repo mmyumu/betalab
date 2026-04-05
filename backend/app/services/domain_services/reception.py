@@ -11,7 +11,7 @@ from app.domain.models import (
     WorkbenchTool,
     new_id,
 )
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     build_lims_label,
     find_workbench_slot,
@@ -60,7 +60,7 @@ class EmptyReceptionRequest:
     pass
 
 
-class PlaceReceivedBagOnWorkbenchService(ExperimentWriteService[PlaceReceivedBagOnWorkbenchRequest]):
+class PlaceReceivedBagOnWorkbenchService(WriteDomainService[PlaceReceivedBagOnWorkbenchRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -76,7 +76,7 @@ class PlaceReceivedBagOnWorkbenchService(ExperimentWriteService[PlaceReceivedBag
         experiment.audit_log.append(f"Received sampling bag moved from basket to {slot.label}.")
 
 
-class RecordGrossWeightService(ExperimentWriteService[RecordGrossWeightRequest]):
+class RecordGrossWeightService(WriteDomainService[RecordGrossWeightRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -93,7 +93,7 @@ class RecordGrossWeightService(ExperimentWriteService[RecordGrossWeightRequest])
         experiment.audit_log.append(f"Gross reception weight recorded at {measured_mass_g:.1f} g.")
 
 
-class SetGrossMassOffsetService(ExperimentWriteService[SetGrossMassOffsetRequest]):
+class SetGrossMassOffsetService(WriteDomainService[SetGrossMassOffsetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -107,7 +107,7 @@ class SetGrossMassOffsetService(ExperimentWriteService[SetGrossMassOffsetRequest
         )
 
 
-class CreateLimsReceptionService(ExperimentWriteService[CreateLimsReceptionRequest]):
+class CreateLimsReceptionService(WriteDomainService[CreateLimsReceptionRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -143,7 +143,7 @@ class CreateLimsReceptionService(ExperimentWriteService[CreateLimsReceptionReque
         experiment.lims_reception = _clone_lims_entry(entry, printed_label_ticket=entry.printed_label_ticket)
 
 
-class PrintLimsLabelService(ExperimentWriteService[PrintLimsLabelRequest]):
+class PrintLimsLabelService(WriteDomainService[PrintLimsLabelRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -166,7 +166,7 @@ class PrintLimsLabelService(ExperimentWriteService[PrintLimsLabelRequest]):
         experiment.audit_log.append(f"LIMS label printed for {sample_code}.")
 
 
-class DiscardPrintedLimsLabelService(ExperimentWriteService[EmptyReceptionRequest]):
+class DiscardPrintedLimsLabelService(WriteDomainService[EmptyReceptionRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -191,7 +191,7 @@ class DiscardPrintedLimsLabelService(ExperimentWriteService[EmptyReceptionReques
         experiment.audit_log.append(f"LIMS label {ticket.sample_code} discarded from terminal.")
 
 
-class ApplyPrintedLimsLabelService(ExperimentWriteService[ApplyPrintedLimsLabelRequest]):
+class ApplyPrintedLimsLabelService(WriteDomainService[ApplyPrintedLimsLabelRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -206,7 +206,7 @@ class ApplyPrintedLimsLabelService(ExperimentWriteService[ApplyPrintedLimsLabelR
         experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {slot.tool.label}.")
 
 
-class ApplyPrintedLimsLabelToBasketBagService(ExperimentWriteService[EmptyReceptionRequest]):
+class ApplyPrintedLimsLabelToBasketBagService(WriteDomainService[EmptyReceptionRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -221,7 +221,7 @@ class ApplyPrintedLimsLabelToBasketBagService(ExperimentWriteService[EmptyRecept
         experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {basket_tool.label}.")
 
 
-class ApplyPrintedLimsLabelToGrossBalanceBagService(ExperimentWriteService[EmptyReceptionRequest]):
+class ApplyPrintedLimsLabelToGrossBalanceBagService(WriteDomainService[EmptyReceptionRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

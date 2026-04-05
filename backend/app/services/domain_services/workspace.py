@@ -12,7 +12,7 @@ from app.domain.models import (
 )
 from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
 from app.domain.workbench_catalog import get_workbench_liquid_definition
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     find_produce_basket_lot,
     find_workspace_widget,
@@ -121,7 +121,7 @@ class CreateReceivedSamplingBagRequest:
     pass
 
 
-class AddWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetLayoutRequest]):
+class AddWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetLayoutRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -138,7 +138,7 @@ class AddWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetLayoutRequ
         experiment.audit_log.append(f"{widget.label} repositioned in workspace.")
 
 
-class MoveWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetLayoutRequest]):
+class MoveWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetLayoutRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -151,7 +151,7 @@ class MoveWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetLayoutReq
         experiment.audit_log.append(f"{widget.label} moved in workspace.")
 
 
-class DiscardWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetRequest]):
+class DiscardWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -172,7 +172,7 @@ class DiscardWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetReques
         experiment.audit_log.append(f"{widget.label} removed from workspace.")
 
 
-class CreateReceivedSamplingBagService(ExperimentWriteService[CreateReceivedSamplingBagRequest]):
+class CreateReceivedSamplingBagService(WriteDomainService[CreateReceivedSamplingBagRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -185,7 +185,7 @@ class CreateReceivedSamplingBagService(ExperimentWriteService[CreateReceivedSamp
         )
 
 
-class CreateProduceLotService(ExperimentWriteService[CreateProduceLotRequest]):
+class CreateProduceLotService(WriteDomainService[CreateProduceLotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -210,7 +210,7 @@ class CreateProduceLotService(ExperimentWriteService[CreateProduceLotRequest]):
         experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 
 
-class CreateOrInitProduceLotService(ExperimentWriteService[CreateProduceLotRequest]):
+class CreateOrInitProduceLotService(WriteDomainService[CreateProduceLotRequest]):
     """Creates a produce lot, or initialises the received sampling bag first if none exists yet."""
 
     def __init__(self, runtime: ExperimentRuntime) -> None:
@@ -223,7 +223,7 @@ class CreateOrInitProduceLotService(ExperimentWriteService[CreateProduceLotReque
             CreateProduceLotService(self._runtime)._run(experiment, request)
 
 
-class AddLiquidToWorkspaceWidgetService(ExperimentWriteService[AddLiquidToWorkspaceWidgetRequest]):
+class AddLiquidToWorkspaceWidgetService(WriteDomainService[AddLiquidToWorkspaceWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -257,7 +257,7 @@ class AddLiquidToWorkspaceWidgetService(ExperimentWriteService[AddLiquidToWorksp
         experiment.audit_log.append(f"{liquid_definition.name} increased in {widget.label}.")
 
 
-class UpdateWorkspaceWidgetLiquidVolumeService(ExperimentWriteService[UpdateWorkspaceWidgetLiquidVolumeRequest]):
+class UpdateWorkspaceWidgetLiquidVolumeService(WriteDomainService[UpdateWorkspaceWidgetLiquidVolumeRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -276,7 +276,7 @@ class UpdateWorkspaceWidgetLiquidVolumeService(ExperimentWriteService[UpdateWork
         )
 
 
-class RemoveLiquidFromWorkspaceWidgetService(ExperimentWriteService[WorkspaceWidgetLiquidRequest]):
+class RemoveLiquidFromWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetLiquidRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -287,7 +287,7 @@ class RemoveLiquidFromWorkspaceWidgetService(ExperimentWriteService[WorkspaceWid
         experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
 
 
-class StartGrinderCycleService(ExperimentWriteService[WorkspaceWidgetRequest]):
+class StartGrinderCycleService(WriteDomainService[WorkspaceWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -317,7 +317,7 @@ class StartGrinderCycleService(ExperimentWriteService[WorkspaceWidgetRequest]):
         experiment.audit_log.append(f"{produce_lot.label} grinding started in {widget.label}.")
 
 
-class CompleteGrinderCycleService(ExperimentWriteService[WorkspaceWidgetRequest]):
+class CompleteGrinderCycleService(WriteDomainService[WorkspaceWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -325,7 +325,7 @@ class CompleteGrinderCycleService(ExperimentWriteService[WorkspaceWidgetRequest]
         complete_grinder_cycle(experiment, request.widget_id)
 
 
-class AdvanceWorkspaceCryogenicsService(ExperimentWriteService[AdvanceWorkspaceCryogenicsRequest]):
+class AdvanceWorkspaceCryogenicsService(WriteDomainService[AdvanceWorkspaceCryogenicsRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -333,7 +333,7 @@ class AdvanceWorkspaceCryogenicsService(ExperimentWriteService[AdvanceWorkspaceC
         advance_workspace_cryogenics_state(experiment, request.elapsed_ms)
 
 
-class AddWorkspaceProduceLotToWidgetService(ExperimentWriteService[AddWorkspaceProduceLotToWidgetRequest]):
+class AddWorkspaceProduceLotToWidgetService(WriteDomainService[AddWorkspaceProduceLotToWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -346,7 +346,7 @@ class AddWorkspaceProduceLotToWidgetService(ExperimentWriteService[AddWorkspaceP
         experiment.audit_log.append(f"{transfer.entity.label} added to {transfer.location_label}.")
 
 
-class MoveWorkbenchProduceLotToWidgetService(ExperimentWriteService[MoveWorkbenchProduceLotToWidgetRequest]):
+class MoveWorkbenchProduceLotToWidgetService(WriteDomainService[MoveWorkbenchProduceLotToWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -362,7 +362,7 @@ class MoveWorkbenchProduceLotToWidgetService(ExperimentWriteService[MoveWorkbenc
         experiment.audit_log.append(f"{transfer.entity.label} moved to {transfer.location_label}.")
 
 
-class RestoreTrashedProduceLotToWidgetService(ExperimentWriteService[RestoreTrashedProduceLotToWidgetRequest]):
+class RestoreTrashedProduceLotToWidgetService(WriteDomainService[RestoreTrashedProduceLotToWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -377,7 +377,7 @@ class RestoreTrashedProduceLotToWidgetService(ExperimentWriteService[RestoreTras
         )
 
 
-class MoveWidgetProduceLotToWorkbenchToolService(ExperimentWriteService[MoveWidgetProduceLotToWorkbenchToolRequest]):
+class MoveWidgetProduceLotToWorkbenchToolService(WriteDomainService[MoveWidgetProduceLotToWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -401,7 +401,7 @@ class MoveWidgetProduceLotToWorkbenchToolService(ExperimentWriteService[MoveWidg
         )
 
 
-class DiscardWorkspaceProduceLotService(ExperimentWriteService[DiscardWorkspaceProduceLotRequest]):
+class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProduceLotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -420,7 +420,7 @@ class DiscardWorkspaceProduceLotService(ExperimentWriteService[DiscardWorkspaceP
         experiment.audit_log.append(f"{produce_lot.label} discarded from Produce basket.")
 
 
-class DiscardWidgetProduceLotService(ExperimentWriteService[DiscardWidgetProduceLotRequest]):
+class DiscardWidgetProduceLotService(WriteDomainService[DiscardWidgetProduceLotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

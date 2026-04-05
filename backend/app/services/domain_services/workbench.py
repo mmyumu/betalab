@@ -13,7 +13,7 @@ from app.domain.models import (
 )
 from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
 from app.domain.workbench_catalog import get_workbench_liquid_definition
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     build_manual_label,
     find_tool_label,
@@ -160,7 +160,7 @@ class PourSpatulaIntoWorkbenchToolRequest:
     delta_mass_g: float
 
 
-class AddWorkbenchSlotService(ExperimentWriteService[EmptyWorkbenchRequest]):
+class AddWorkbenchSlotService(WriteDomainService[EmptyWorkbenchRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -175,7 +175,7 @@ class AddWorkbenchSlotService(ExperimentWriteService[EmptyWorkbenchRequest]):
         experiment.audit_log.append(f"Station {next_index} added to workbench.")
 
 
-class RemoveWorkbenchSlotService(ExperimentWriteService[WorkbenchSlotRequest]):
+class RemoveWorkbenchSlotService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -190,7 +190,7 @@ class RemoveWorkbenchSlotService(ExperimentWriteService[WorkbenchSlotRequest]):
         experiment.audit_log.append(f"{slot.label} removed from workbench.")
 
 
-class PlaceToolOnWorkbenchService(ExperimentWriteService[PlaceToolOnWorkbenchRequest]):
+class PlaceToolOnWorkbenchService(WriteDomainService[PlaceToolOnWorkbenchRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -203,7 +203,7 @@ class PlaceToolOnWorkbenchService(ExperimentWriteService[PlaceToolOnWorkbenchReq
         experiment.audit_log.append(f"{slot.tool.label} placed on {slot.label}.")
 
 
-class MoveToolBetweenWorkbenchSlotsService(ExperimentWriteService[MoveToolBetweenWorkbenchSlotsRequest]):
+class MoveToolBetweenWorkbenchSlotsService(WriteDomainService[MoveToolBetweenWorkbenchSlotsRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -226,7 +226,7 @@ class MoveToolBetweenWorkbenchSlotsService(ExperimentWriteService[MoveToolBetwee
         )
 
 
-class DiscardWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
+class DiscardWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -247,7 +247,7 @@ class DiscardWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
         experiment.audit_log.append(f"{discarded_tool.label} discarded from {slot.label}.")
 
 
-class DiscardToolFromPaletteService(ExperimentWriteService[DiscardToolFromPaletteRequest]):
+class DiscardToolFromPaletteService(WriteDomainService[DiscardToolFromPaletteRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -263,7 +263,7 @@ class DiscardToolFromPaletteService(ExperimentWriteService[DiscardToolFromPalett
         experiment.audit_log.append(f"{discarded_tool.label} discarded from Palette.")
 
 
-class DiscardSampleLabelFromPaletteService(ExperimentWriteService[DiscardSampleLabelFromPaletteRequest]):
+class DiscardSampleLabelFromPaletteService(WriteDomainService[DiscardSampleLabelFromPaletteRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -278,7 +278,7 @@ class DiscardSampleLabelFromPaletteService(ExperimentWriteService[DiscardSampleL
         experiment.audit_log.append("Manual label discarded from Palette.")
 
 
-class RestoreTrashedToolToWorkbenchSlotService(ExperimentWriteService[RestoreTrashedToolToWorkbenchSlotRequest]):
+class RestoreTrashedToolToWorkbenchSlotService(WriteDomainService[RestoreTrashedToolToWorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -298,7 +298,7 @@ class RestoreTrashedToolToWorkbenchSlotService(ExperimentWriteService[RestoreTra
         )
 
 
-class AddLiquidToWorkbenchToolService(ExperimentWriteService[AddLiquidToWorkbenchToolRequest]):
+class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -362,7 +362,7 @@ class AddLiquidToWorkbenchToolService(ExperimentWriteService[AddLiquidToWorkbenc
         experiment.audit_log.append(f"{liquid_definition.name} added to {tool.label}.")
 
 
-class RemoveLiquidFromWorkbenchToolService(ExperimentWriteService[WorkbenchLiquidRequest]):
+class RemoveLiquidFromWorkbenchToolService(WriteDomainService[WorkbenchLiquidRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -374,7 +374,7 @@ class RemoveLiquidFromWorkbenchToolService(ExperimentWriteService[WorkbenchLiqui
         experiment.audit_log.append(f"{liquid_entry.name} removed from {tool.label}.")
 
 
-class UpdateWorkbenchLiquidVolumeService(ExperimentWriteService[UpdateWorkbenchLiquidVolumeRequest]):
+class UpdateWorkbenchLiquidVolumeService(WriteDomainService[UpdateWorkbenchLiquidVolumeRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -397,7 +397,7 @@ class UpdateWorkbenchLiquidVolumeService(ExperimentWriteService[UpdateWorkbenchL
         )
 
 
-class AddProduceLotToWorkbenchToolService(ExperimentWriteService[AddProduceLotToWorkbenchToolRequest]):
+class AddProduceLotToWorkbenchToolService(WriteDomainService[AddProduceLotToWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -414,7 +414,7 @@ class AddProduceLotToWorkbenchToolService(ExperimentWriteService[AddProduceLotTo
         )
 
 
-class MoveProduceLotBetweenWorkbenchToolsService(ExperimentWriteService[MoveProduceLotBetweenWorkbenchToolsRequest]):
+class MoveProduceLotBetweenWorkbenchToolsService(WriteDomainService[MoveProduceLotBetweenWorkbenchToolsRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -435,7 +435,7 @@ class MoveProduceLotBetweenWorkbenchToolsService(ExperimentWriteService[MoveProd
         )
 
 
-class DiscardProduceLotFromWorkbenchToolService(ExperimentWriteService[WorkbenchProduceLotRequest]):
+class DiscardProduceLotFromWorkbenchToolService(WriteDomainService[WorkbenchProduceLotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -455,7 +455,7 @@ class DiscardProduceLotFromWorkbenchToolService(ExperimentWriteService[Workbench
         experiment.audit_log.append(f"{removal.entity.label} discarded from {removal.source_label}.")
 
 
-class CutWorkbenchProduceLotService(ExperimentWriteService[WorkbenchProduceLotRequest]):
+class CutWorkbenchProduceLotService(WriteDomainService[WorkbenchProduceLotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -472,7 +472,7 @@ class CutWorkbenchProduceLotService(ExperimentWriteService[WorkbenchProduceLotRe
         experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
 
 
-class RestoreTrashedProduceLotToWorkbenchToolService(ExperimentWriteService[RestoreTrashedProduceLotToWorkbenchToolRequest]):
+class RestoreTrashedProduceLotToWorkbenchToolService(WriteDomainService[RestoreTrashedProduceLotToWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -487,7 +487,7 @@ class RestoreTrashedProduceLotToWorkbenchToolService(ExperimentWriteService[Rest
         )
 
 
-class ApplySampleLabelToWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
+class ApplySampleLabelToWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -498,7 +498,7 @@ class ApplySampleLabelToWorkbenchToolService(ExperimentWriteService[WorkbenchSlo
         experiment.audit_log.append(f"Manual label applied to {tool.label} on {slot.label}.")
 
 
-class UpdateWorkbenchToolSampleLabelTextService(ExperimentWriteService[UpdateWorkbenchToolSampleLabelTextRequest]):
+class UpdateWorkbenchToolSampleLabelTextService(WriteDomainService[UpdateWorkbenchToolSampleLabelTextRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -518,7 +518,7 @@ class UpdateWorkbenchToolSampleLabelTextService(ExperimentWriteService[UpdateWor
         experiment.audit_log.append(f"Sample label cleared on {tool.label}.")
 
 
-class MoveSampleLabelBetweenWorkbenchToolsService(ExperimentWriteService[MoveSampleLabelBetweenWorkbenchToolsRequest]):
+class MoveSampleLabelBetweenWorkbenchToolsService(WriteDomainService[MoveSampleLabelBetweenWorkbenchToolsRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -537,7 +537,7 @@ class MoveSampleLabelBetweenWorkbenchToolsService(ExperimentWriteService[MoveSam
         )
 
 
-class DiscardSampleLabelFromWorkbenchToolService(ExperimentWriteService[WorkbenchSampleLabelRequest]):
+class DiscardSampleLabelFromWorkbenchToolService(WriteDomainService[WorkbenchSampleLabelRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -555,7 +555,7 @@ class DiscardSampleLabelFromWorkbenchToolService(ExperimentWriteService[Workbenc
         experiment.audit_log.append(f"Label discarded from {tool.label}.")
 
 
-class RestoreTrashedSampleLabelToWorkbenchToolService(ExperimentWriteService[RestoreTrashedSampleLabelToWorkbenchToolRequest]):
+class RestoreTrashedSampleLabelToWorkbenchToolService(WriteDomainService[RestoreTrashedSampleLabelToWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -573,7 +573,7 @@ class RestoreTrashedSampleLabelToWorkbenchToolService(ExperimentWriteService[Res
         )
 
 
-class CloseWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
+class CloseWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -589,7 +589,7 @@ class CloseWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
         experiment.audit_log.append(f"{tool.label} sealed on {slot.label}.")
 
 
-class OpenWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
+class OpenWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -611,7 +611,7 @@ class OpenWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
         experiment.audit_log.append(f"{tool.label} opened on {slot.label}.")
 
 
-class LoadSpatulaFromWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRequest]):
+class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -645,7 +645,7 @@ class LoadSpatulaFromWorkbenchToolService(ExperimentWriteService[WorkbenchSlotRe
         experiment.audit_log.append(f"Spatula loaded from {tool.label}.")
 
 
-class PourSpatulaIntoWorkbenchToolService(ExperimentWriteService[PourSpatulaIntoWorkbenchToolRequest]):
+class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWorkbenchToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

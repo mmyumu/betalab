@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.domain.models import Experiment, TrashToolEntry, new_id
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,7 +11,7 @@ class EmptyTrashRequest:
     pass
 
 
-class DiscardBasketToolService(ExperimentWriteService[EmptyTrashRequest]):
+class DiscardBasketToolService(WriteDomainService[EmptyTrashRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

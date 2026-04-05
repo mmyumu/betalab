@@ -15,7 +15,7 @@ class ExperimentNotFoundError(KeyError):
     pass
 
 
-class ExperimentService:
+class ExperimentRuntimeService:
     def __init__(self, repository: ExperimentRepository | None = None) -> None:
         self._experiments: dict[str, Experiment] = {}
         self._repository = repository or InMemoryExperimentRepository()

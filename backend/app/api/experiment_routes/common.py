@@ -5,10 +5,10 @@ from fastapi import APIRouter, HTTPException
 from app.core.config import settings
 from app.schemas.experiment import ExperimentSchema
 from app.services.experiment_repository import SqliteExperimentRepository
-from app.services.experiment_service import ExperimentNotFoundError, ExperimentService
+from app.services.experiment_service import ExperimentNotFoundError, ExperimentRuntimeService
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
-experiment_service = ExperimentService(
+experiment_service = ExperimentRuntimeService(
     repository=SqliteExperimentRepository(settings.experiments_db_path)
 )
 experiment_stream_interval_seconds = 0.25

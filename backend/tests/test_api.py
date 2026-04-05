@@ -15,12 +15,12 @@ from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
-from app.services.experiment_service import ExperimentService
+from app.services.experiment_service import ExperimentRuntimeService
 
 
 @pytest.fixture(autouse=True)
 def isolated_api_experiment_service(tmp_path, monkeypatch):
-    isolated_service = ExperimentService(
+    isolated_service = ExperimentRuntimeService(
         repository=SqliteExperimentRepository(str(tmp_path / "api-tests.sqlite3"))
     )
     monkeypatch.setattr(experiment_routes_common, "experiment_service", isolated_service)

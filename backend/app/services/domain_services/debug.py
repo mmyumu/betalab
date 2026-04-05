@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.domain.models import Experiment, ProduceLot, new_id
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.domain_services.gross_balance import GrossBalanceProduceLotTarget
 from app.services.transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
 
@@ -27,7 +27,7 @@ class CreateDebugProduceLotToWidgetRequest:
 
 
 class CreateDebugProduceLotOnWorkbenchService(
-    ExperimentWriteService[CreateDebugProduceLotOnWorkbenchRequest]
+    WriteDomainService[CreateDebugProduceLotOnWorkbenchRequest]
 ):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
@@ -45,7 +45,7 @@ class CreateDebugProduceLotOnWorkbenchService(
         experiment.audit_log.append(f"Debug preset {produce_lot.label} spawned on {placement.target_label}.")
 
 
-class CreateDebugProduceLotToWidgetService(ExperimentWriteService[CreateDebugProduceLotToWidgetRequest]):
+class CreateDebugProduceLotToWidgetService(WriteDomainService[CreateDebugProduceLotToWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

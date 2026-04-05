@@ -53,7 +53,7 @@ from app.services.domain_services.workbench import (
     RestoreTrashedToolToWorkbenchSlotService,
     WorkbenchSlotRequest,
 )
-from app.services.experiment_service import ExperimentService
+from app.services.experiment_service import ExperimentRuntimeService
 
 ToolSource = Literal[
     "palette_vial",
@@ -141,7 +141,7 @@ def _tool_id_for_source(source: ToolSource) -> str:
     raise AssertionError(f"Unhandled source: {source}")
 
 
-def _prepare_target(service: ExperimentService, experiment_id: str, target: ToolTarget) -> None:
+def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, target: ToolTarget) -> None:
     if target == "occupied_workbench":
         PlaceToolOnWorkbenchService(service).run(
             experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sample_vial_lcms")
@@ -153,7 +153,7 @@ def _prepare_target(service: ExperimentService, experiment_id: str, target: Tool
         )
 
 
-def _prepare_source(service: ExperimentService, experiment_id: str, source: ToolSource) -> str | None:
+def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, source: ToolSource) -> str | None:
     tool_id = _tool_id_for_source(source)
     if source.startswith("palette_"):
         return None
@@ -186,7 +186,7 @@ def _prepare_source(service: ExperimentService, experiment_id: str, source: Tool
 
 
 def _execute_drop(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     source: ToolSource,
     target: ToolTarget,
@@ -293,7 +293,7 @@ def _execute_drop(
     ids=[f"{case.source}_to_{case.target}_{'allow' if case.allowed else 'reject'}" for case in TOOL_DND_CASES],
 )
 def test_tool_dnd_matrix(source: ToolSource, target: ToolTarget, allowed: bool) -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     _prepare_target(service, experiment.id, target)

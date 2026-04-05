@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.domain.models import Experiment, TrashToolEntry, new_id
-from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
+from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     find_rack_slot,
     find_trash_tool,
@@ -47,7 +47,7 @@ class RestoreTrashedToolToRackSlotRequest:
     rack_slot_id: str
 
 
-class PlaceToolInRackSlotService(ExperimentWriteService[PlaceToolInRackSlotRequest]):
+class PlaceToolInRackSlotService(WriteDomainService[PlaceToolInRackSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -64,7 +64,7 @@ class PlaceToolInRackSlotService(ExperimentWriteService[PlaceToolInRackSlotReque
         experiment.audit_log.append(f"{rack_slot.tool.label} placed in {rack_slot.label}.")
 
 
-class PlaceWorkbenchToolInRackSlotService(ExperimentWriteService[PlaceWorkbenchToolInRackSlotRequest]):
+class PlaceWorkbenchToolInRackSlotService(WriteDomainService[PlaceWorkbenchToolInRackSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -86,7 +86,7 @@ class PlaceWorkbenchToolInRackSlotService(ExperimentWriteService[PlaceWorkbenchT
         )
 
 
-class MoveRackToolBetweenSlotsService(ExperimentWriteService[MoveRackToolBetweenSlotsRequest]):
+class MoveRackToolBetweenSlotsService(WriteDomainService[MoveRackToolBetweenSlotsRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -106,7 +106,7 @@ class MoveRackToolBetweenSlotsService(ExperimentWriteService[MoveRackToolBetween
         )
 
 
-class RemoveRackToolToWorkbenchSlotService(ExperimentWriteService[RemoveRackToolToWorkbenchSlotRequest]):
+class RemoveRackToolToWorkbenchSlotService(WriteDomainService[RemoveRackToolToWorkbenchSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -126,7 +126,7 @@ class RemoveRackToolToWorkbenchSlotService(ExperimentWriteService[RemoveRackTool
         )
 
 
-class DiscardRackToolService(ExperimentWriteService[DiscardRackToolRequest]):
+class DiscardRackToolService(WriteDomainService[DiscardRackToolRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -147,7 +147,7 @@ class DiscardRackToolService(ExperimentWriteService[DiscardRackToolRequest]):
         experiment.audit_log.append(f"{discarded_tool.label} discarded from {rack_slot.label}.")
 
 
-class RestoreTrashedToolToRackSlotService(ExperimentWriteService[RestoreTrashedToolToRackSlotRequest]):
+class RestoreTrashedToolToRackSlotService(WriteDomainService[RestoreTrashedToolToRackSlotRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 

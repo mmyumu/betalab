@@ -147,26 +147,26 @@ from app.services.domain_services.workspace import (
     WorkspaceWidgetRequest,
 )
 from app.services.experiment_repository import SqliteExperimentRepository
-from app.services.experiment_service import ExperimentService
+from app.services.experiment_service import ExperimentRuntimeService
 from app.services.received_sample_generation import (
     SAMPLE_BAG_TARE_MASS_G,
 )
 
 
 def print_lims_label(
-    service: ExperimentService, experiment_id: str, entry_id: str | None = None
+    service: ExperimentRuntimeService, experiment_id: str, entry_id: str | None = None
 ):
     return PrintLimsLabelService(service).run(
         experiment_id, PrintLimsLabelRequest(entry_id=entry_id)
     )
 
 
-def move_basket_tool_to_gross_balance(service: ExperimentService, experiment_id: str):
+def move_basket_tool_to_gross_balance(service: ExperimentRuntimeService, experiment_id: str):
     return MoveBasketToolToGrossBalanceService(service).run(experiment_id, EmptyRequest())
 
 
 def place_tool_on_gross_balance(
-    service: ExperimentService, experiment_id: str, tool_id: str
+    service: ExperimentRuntimeService, experiment_id: str, tool_id: str
 ):
     return PlaceToolOnGrossBalanceService(service).run(
         experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id)
@@ -174,7 +174,7 @@ def place_tool_on_gross_balance(
 
 
 def move_gross_balance_tool_to_rack(
-    service: ExperimentService, experiment_id: str, rack_slot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, rack_slot_id: str
 ):
     return MoveGrossBalanceToolToRackService(service).run(
         experiment_id, MoveGrossBalanceToolToRackRequest(rack_slot_id=rack_slot_id)
@@ -182,7 +182,7 @@ def move_gross_balance_tool_to_rack(
 
 
 def create_debug_produce_lot_to_widget(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     preset_id: str,
     widget_id: str,
@@ -202,14 +202,14 @@ def create_debug_produce_lot_to_widget(
     )
 
 
-def create_produce_lot(service: ExperimentService, experiment_id: str, produce_type: str):
+def create_produce_lot(service: ExperimentRuntimeService, experiment_id: str, produce_type: str):
     return CreateOrInitProduceLotService(service).run(
         experiment_id, CreateProduceLotRequest(produce_type=produce_type)
     )
 
 
 def create_lims_reception(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     orchard_name: str,
     harvest_date: str,
@@ -232,7 +232,7 @@ def create_lims_reception(
 
 
 def place_tool_on_workbench(
-    service: ExperimentService, experiment_id: str, slot_id: str, tool_id: str
+    service: ExperimentRuntimeService, experiment_id: str, slot_id: str, tool_id: str
 ):
     return PlaceToolOnWorkbenchService(service).run(
         experiment_id, PlaceToolOnWorkbenchRequest(slot_id=slot_id, tool_id=tool_id)
@@ -240,7 +240,7 @@ def place_tool_on_workbench(
 
 
 def move_workbench_tool_to_gross_balance(
-    service: ExperimentService, experiment_id: str, source_slot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, source_slot_id: str
 ):
     return MoveWorkbenchToolToGrossBalanceService(service).run(
         experiment_id,
@@ -249,7 +249,7 @@ def move_workbench_tool_to_gross_balance(
 
 
 def place_tool_in_rack_slot(
-    service: ExperimentService, experiment_id: str, rack_slot_id: str, tool_id: str
+    service: ExperimentRuntimeService, experiment_id: str, rack_slot_id: str, tool_id: str
 ):
     return PlaceToolInRackSlotService(service).run(
         experiment_id,
@@ -258,7 +258,7 @@ def place_tool_in_rack_slot(
 
 
 def discard_tool_from_palette(
-    service: ExperimentService, experiment_id: str, tool_id: str
+    service: ExperimentRuntimeService, experiment_id: str, tool_id: str
 ):
     return DiscardToolFromPaletteService(service).run(
         experiment_id, DiscardToolFromPaletteRequest(tool_id=tool_id)
@@ -266,7 +266,7 @@ def discard_tool_from_palette(
 
 
 def move_gross_balance_tool_to_workbench(
-    service: ExperimentService, experiment_id: str, target_slot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, target_slot_id: str
 ):
     return MoveGrossBalanceToolToWorkbenchService(service).run(
         experiment_id,
@@ -274,28 +274,28 @@ def move_gross_balance_tool_to_workbench(
     )
 
 
-def discard_gross_balance_tool(service: ExperimentService, experiment_id: str):
+def discard_gross_balance_tool(service: ExperimentRuntimeService, experiment_id: str):
     return DiscardGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
 def open_workbench_tool(
-    service: ExperimentService, experiment_id: str, slot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, slot_id: str
 ):
     return OpenWorkbenchToolService(service).run(
         experiment_id, WorkbenchSlotRequest(slot_id=slot_id)
     )
 
 
-def open_gross_balance_tool(service: ExperimentService, experiment_id: str):
+def open_gross_balance_tool(service: ExperimentRuntimeService, experiment_id: str):
     return OpenGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
-def close_gross_balance_tool(service: ExperimentService, experiment_id: str):
+def close_gross_balance_tool(service: ExperimentRuntimeService, experiment_id: str):
     return CloseGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
 def apply_printed_lims_label_to_gross_balance_bag(
-    service: ExperimentService, experiment_id: str
+    service: ExperimentRuntimeService, experiment_id: str
 ):
     return ApplyPrintedLimsLabelToGrossBalanceBagService(service).run(
         experiment_id, EmptyReceptionRequest()
@@ -303,7 +303,7 @@ def apply_printed_lims_label_to_gross_balance_bag(
 
 
 def discard_gross_balance_produce_lot(
-    service: ExperimentService, experiment_id: str, produce_lot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, produce_lot_id: str
 ):
     return DiscardGrossBalanceProduceLotService(service).run(
         experiment_id,
@@ -312,7 +312,7 @@ def discard_gross_balance_produce_lot(
 
 
 def move_workspace_produce_lot_to_gross_balance(
-    service: ExperimentService, experiment_id: str, produce_lot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, produce_lot_id: str
 ):
     return MoveWorkspaceProduceLotToGrossBalanceService(service).run(
         experiment_id,
@@ -321,7 +321,7 @@ def move_workspace_produce_lot_to_gross_balance(
 
 
 def restore_trashed_produce_lot_to_gross_balance(
-    service: ExperimentService, experiment_id: str, trash_produce_lot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, trash_produce_lot_id: str
 ):
     return RestoreTrashedProduceLotToGrossBalanceService(service).run(
         experiment_id,
@@ -332,7 +332,7 @@ def restore_trashed_produce_lot_to_gross_balance(
 
 
 def restore_trashed_tool_to_gross_balance(
-    service: ExperimentService, experiment_id: str, trash_tool_id: str
+    service: ExperimentRuntimeService, experiment_id: str, trash_tool_id: str
 ):
     return RestoreTrashedToolToGrossBalanceService(service).run(
         experiment_id,
@@ -341,7 +341,7 @@ def restore_trashed_tool_to_gross_balance(
 
 
 def move_rack_tool_to_gross_balance(
-    service: ExperimentService, experiment_id: str, rack_slot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, rack_slot_id: str
 ):
     return MoveRackToolToGrossBalanceService(service).run(
         experiment_id,
@@ -350,7 +350,7 @@ def move_rack_tool_to_gross_balance(
 
 
 def move_gross_balance_produce_lot_to_workbench(
-    service: ExperimentService, experiment_id: str, target_slot_id: str, produce_lot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, target_slot_id: str, produce_lot_id: str
 ):
     return MoveGrossBalanceProduceLotToWorkbenchService(service).run(
         experiment_id,
@@ -361,7 +361,7 @@ def move_gross_balance_produce_lot_to_workbench(
 
 
 def move_gross_balance_produce_lot_to_widget(
-    service: ExperimentService, experiment_id: str, widget_id: str, produce_lot_id: str
+    service: ExperimentRuntimeService, experiment_id: str, widget_id: str, produce_lot_id: str
 ):
     return MoveGrossBalanceProduceLotToWidgetService(service).run(
         experiment_id,
@@ -371,7 +371,7 @@ def move_gross_balance_produce_lot_to_widget(
     )
 
 
-def _get_first_label_id(service: ExperimentService, experiment_id: str, slot_id: str) -> str:
+def _get_first_label_id(service: ExperimentRuntimeService, experiment_id: str, slot_id: str) -> str:
     experiment = service._require_experiment(experiment_id)
     slot = next((s for s in experiment.workbench.slots if s.id == slot_id), None)
     if slot is None or slot.tool is None or not slot.tool.labels:
@@ -380,7 +380,7 @@ def _get_first_label_id(service: ExperimentService, experiment_id: str, slot_id:
 
 
 def apply_command(
-    service: ExperimentService,
+    service: ExperimentRuntimeService,
     experiment_id: str,
     command_type: str,
     payload: dict,
@@ -711,7 +711,7 @@ def apply_command(
 
 
 def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
 
     experiment = service.create_experiment()
 
@@ -778,7 +778,7 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
 
 
 def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -833,7 +833,7 @@ def test_workbench_commands_place_tool_merge_liquid_and_edit_volume() -> None:
 
 
 def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -899,7 +899,7 @@ def test_reception_flow_moves_bag_registers_lims_and_applies_ticket() -> None:
 
 
 def test_create_lims_reception_allows_manual_entry_before_gross_weight() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -919,7 +919,7 @@ def test_create_lims_reception_allows_manual_entry_before_gross_weight() -> None
 
 
 def test_create_lims_reception_records_precise_sample_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -939,7 +939,7 @@ def test_create_lims_reception_records_precise_sample_mass() -> None:
 
 
 def test_printed_lims_label_can_be_applied_to_basket_bag() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -964,7 +964,7 @@ def test_printed_lims_label_can_be_applied_to_basket_bag() -> None:
 
 
 def test_record_gross_weight_uses_explicit_measured_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -978,7 +978,7 @@ def test_record_gross_weight_uses_explicit_measured_mass() -> None:
 
 
 def test_set_gross_mass_offset_updates_reception_state() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -993,7 +993,7 @@ def test_set_gross_mass_offset_updates_reception_state() -> None:
 
 
 def test_print_lims_label_requires_reception_entry() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Create the LIMS reception entry before printing a label."):
@@ -1001,7 +1001,7 @@ def test_print_lims_label_requires_reception_entry() -> None:
 
 
 def test_print_lims_label_requires_current_ticket_to_be_removed_first() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -1027,7 +1027,7 @@ def test_print_lims_label_requires_current_ticket_to_be_removed_first() -> None:
 
 
 def test_print_lims_label_can_reprint_after_ticket_leaves_lims() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(
@@ -1060,7 +1060,7 @@ def test_print_lims_label_can_reprint_after_ticket_leaves_lims() -> None:
 
 
 def test_print_lims_label_can_reprint_after_ticket_is_discarded_from_lims() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(
@@ -1078,7 +1078,7 @@ def test_print_lims_label_can_reprint_after_ticket_is_discarded_from_lims() -> N
 
 
 def test_discard_printed_lims_label_moves_ticket_to_trash_sample_labels() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(
@@ -1102,7 +1102,7 @@ def test_discard_printed_lims_label_moves_ticket_to_trash_sample_labels() -> Non
 
 
 def test_print_lims_label_can_target_a_selected_existing_entry() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     first = apply_command(
@@ -1138,7 +1138,7 @@ def test_print_lims_label_can_target_a_selected_existing_entry() -> None:
 
 
 def test_discard_basket_tool_moves_received_sampling_bag_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, experiment.id, "discard_basket_tool", {})
@@ -1151,7 +1151,7 @@ def test_discard_basket_tool_moves_received_sampling_bag_to_trash() -> None:
 
 
 def test_create_produce_lot_recreates_a_sealed_received_sampling_bag_when_basket_is_empty() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, experiment.id, "discard_basket_tool", {})
@@ -1163,7 +1163,7 @@ def test_create_produce_lot_recreates_a_sealed_received_sampling_bag_when_basket
 
 
 def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -1204,7 +1204,7 @@ def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
 
 
 def test_place_sealed_sampling_bag_on_workbench() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -1225,7 +1225,7 @@ def test_place_sealed_sampling_bag_on_workbench() -> None:
 
 
 def test_workbench_liquid_is_removed_when_volume_is_updated_to_zero() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1264,7 +1264,7 @@ def test_workbench_liquid_is_removed_when_volume_is_updated_to_zero() -> None:
 
 
 def test_place_cutting_board_on_workbench() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -1283,7 +1283,7 @@ def test_place_cutting_board_on_workbench() -> None:
 
 
 def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -1332,7 +1332,7 @@ def test_grinder_accepts_workspace_produce_lot_and_dry_ice_pellets() -> None:
 
 
 def test_grinder_dry_ice_mass_can_be_edited() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -1371,7 +1371,7 @@ def test_grinder_dry_ice_mass_can_be_edited() -> None:
 
 
 def test_grinder_dry_ice_is_removed_when_volume_is_updated_to_zero() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1410,7 +1410,7 @@ def test_grinder_dry_ice_is_removed_when_volume_is_updated_to_zero() -> None:
 
 
 def test_grinder_dry_ice_can_be_removed() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -1448,7 +1448,7 @@ def test_grinder_dry_ice_can_be_removed() -> None:
 
 
 def test_grinder_dry_ice_disappears_after_sublimation_reaches_zero() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1480,7 +1480,7 @@ def test_grinder_dry_ice_disappears_after_sublimation_reaches_zero() -> None:
 
 
 def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -1549,7 +1549,7 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
 
 
 def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1638,7 +1638,7 @@ def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
 
 
 def test_start_grinder_cycle_rejects_produce_above_minus_twenty_c() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1705,7 +1705,7 @@ def test_start_grinder_cycle_rejects_produce_above_minus_twenty_c() -> None:
 
 
 def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_completion() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1803,7 +1803,7 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
 
 
 def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1887,7 +1887,7 @@ def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
 
 
 def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -1976,7 +1976,7 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
 
 
 def test_jammed_grinder_waste_can_be_moved_to_a_workbench_tool() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -2075,7 +2075,7 @@ def test_jammed_grinder_waste_can_be_moved_to_a_workbench_tool() -> None:
 
 
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2116,7 +2116,7 @@ def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
 
 
 def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2168,7 +2168,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
 
 
 def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2228,7 +2228,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
 
 
 def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -2311,7 +2311,7 @@ def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> No
 
 
 def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2369,7 +2369,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
 
 
 def test_sampling_bag_label_can_be_applied_and_edited() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2407,7 +2407,7 @@ def test_sampling_bag_label_can_be_applied_and_edited() -> None:
 
 
 def test_sampling_bag_label_can_be_discarded_to_trash_and_restored() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2457,7 +2457,7 @@ def test_sampling_bag_label_can_be_discarded_to_trash_and_restored() -> None:
 
 
 def test_sampling_bag_label_can_be_discarded_from_palette() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -2472,7 +2472,7 @@ def test_sampling_bag_label_can_be_discarded_from_palette() -> None:
 
 
 def test_sampling_bag_label_can_move_between_sampling_bags() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -2511,7 +2511,7 @@ def test_sampling_bag_label_can_move_between_sampling_bags() -> None:
 
 
 def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2550,7 +2550,7 @@ def test_add_produce_lot_to_sampling_bag_moves_it_out_of_basket() -> None:
 
 
 def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2588,7 +2588,7 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
 
 
 def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2621,7 +2621,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
 
 
 def test_add_produce_lot_requires_a_sampling_bag() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2652,7 +2652,7 @@ def test_add_produce_lot_requires_a_sampling_bag() -> None:
 
 
 def test_sampling_bag_accepts_only_one_produce_lot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     first_lot = apply_command(service, 
@@ -2698,7 +2698,7 @@ def test_sampling_bag_accepts_only_one_produce_lot() -> None:
 
 
 def test_discard_produce_lot_from_sampling_bag() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2745,7 +2745,7 @@ def test_discard_produce_lot_from_sampling_bag() -> None:
 
 
 def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2771,7 +2771,7 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
 
 
 def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(
@@ -2811,7 +2811,7 @@ def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> 
 
 
 def test_move_grinder_produce_lot_to_workbench_tool() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -2861,7 +2861,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
 
 
 def test_move_grinder_ground_produce_lot_to_open_storage_jar() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(
@@ -2919,7 +2919,7 @@ def test_move_grinder_ground_produce_lot_to_open_storage_jar() -> None:
 
 
 def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service,
@@ -2971,7 +2971,7 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
 
 
 def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service,
@@ -3026,7 +3026,7 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
 
 
 def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
@@ -3069,7 +3069,7 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
 
 
 def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service,
@@ -3118,7 +3118,7 @@ def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
 
 
 def test_add_liquid_to_sealed_centrifuge_tube_fails() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(
@@ -3152,7 +3152,7 @@ def test_add_liquid_to_sealed_centrifuge_tube_fails() -> None:
 
 
 def test_add_produce_to_sealed_storage_jar_fails() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(
@@ -3194,7 +3194,7 @@ def test_add_produce_to_sealed_storage_jar_fails() -> None:
 
 
 def test_create_debug_powder_preset_on_workbench() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service,
@@ -3228,7 +3228,7 @@ def test_create_debug_powder_preset_on_workbench() -> None:
 
 
 def test_create_debug_powder_preset_in_grinder() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service,
@@ -3249,7 +3249,7 @@ def test_create_debug_powder_preset_in_grinder() -> None:
 
 
 def test_create_debug_powder_preset_on_gross_balance() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(
@@ -3271,7 +3271,7 @@ def test_create_debug_powder_preset_on_gross_balance() -> None:
 
 
 def test_move_basket_tool_to_gross_balance_updates_measured_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     assert experiment.basket_tool is not None
     expected_mass_g = round(
@@ -3290,7 +3290,7 @@ def test_move_basket_tool_to_gross_balance_updates_measured_mass() -> None:
 
 
 def test_place_tool_on_gross_balance_estimates_mass_for_empty_vial() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
@@ -3303,7 +3303,7 @@ def test_place_tool_on_gross_balance_estimates_mass_for_empty_vial() -> None:
 
 
 def test_move_gross_balance_tool_to_rack_rejects_non_vials() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "beaker_rinse")
@@ -3313,7 +3313,7 @@ def test_move_gross_balance_tool_to_rack_rejects_non_vials() -> None:
 
 
 def test_apply_printed_lims_label_to_gross_balance_bag_consumes_ticket() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     move_basket_tool_to_gross_balance(service, experiment.id)
@@ -3340,7 +3340,7 @@ def test_apply_printed_lims_label_to_gross_balance_bag_consumes_ticket() -> None
 
 
 def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_debug_produce_lot_to_widget(service, 
@@ -3362,7 +3362,7 @@ def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
 
 
 def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3382,7 +3382,7 @@ def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() ->
 
 
 def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_debug_produce_lot_to_widget(service, 
@@ -3405,7 +3405,7 @@ def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
 
 
 def test_move_workbench_tool_to_gross_balance_moves_tool_and_clears_source_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_workbench(service, experiment.id, "station_1", "centrifuge_tube_50ml")
@@ -3421,7 +3421,7 @@ def test_move_workbench_tool_to_gross_balance_moves_tool_and_clears_source_slot(
 
 
 def test_move_workbench_tool_to_gross_balance_requires_tool_in_source_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Station 1 does not contain a tool"):
@@ -3429,7 +3429,7 @@ def test_move_workbench_tool_to_gross_balance_requires_tool_in_source_slot() -> 
 
 
 def test_move_rack_tool_to_gross_balance_moves_tool_and_clears_rack_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_in_rack_slot(service, experiment.id, "rack_slot_1", "sample_vial_lcms")
@@ -3444,7 +3444,7 @@ def test_move_rack_tool_to_gross_balance_moves_tool_and_clears_rack_slot() -> No
 
 
 def test_restore_trashed_tool_to_gross_balance_restores_tool_and_clears_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     discard_tool_from_palette(service, experiment.id, "sample_vial_lcms")
@@ -3460,7 +3460,7 @@ def test_restore_trashed_tool_to_gross_balance_restores_tool_and_clears_trash() 
 
 
 def test_move_gross_balance_tool_to_workbench_moves_tool_to_empty_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
@@ -3476,7 +3476,7 @@ def test_move_gross_balance_tool_to_workbench_moves_tool_to_empty_slot() -> None
 
 
 def test_move_gross_balance_tool_to_workbench_rejects_occupied_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_workbench(service, experiment.id, "station_1", "sample_vial_lcms")
@@ -3487,7 +3487,7 @@ def test_move_gross_balance_tool_to_workbench_rejects_occupied_slot() -> None:
 
 
 def test_move_gross_balance_tool_to_rack_moves_vial_and_clears_balance() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
@@ -3502,7 +3502,7 @@ def test_move_gross_balance_tool_to_rack_moves_vial_and_clears_balance() -> None
 
 
 def test_discard_gross_balance_tool_moves_tool_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
@@ -3517,7 +3517,7 @@ def test_discard_gross_balance_tool_moves_tool_to_trash() -> None:
 
 
 def test_open_gross_balance_tool_rejects_non_sealable_tool() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "beaker_rinse")
@@ -3527,7 +3527,7 @@ def test_open_gross_balance_tool_rejects_non_sealable_tool() -> None:
 
 
 def test_close_and_open_gross_balance_tool_toggle_seal_state() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
@@ -3544,7 +3544,7 @@ def test_close_and_open_gross_balance_tool_toggle_seal_state() -> None:
 
 
 def test_move_workspace_produce_lot_to_gross_balance_places_loose_produce_and_updates_mass() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3560,7 +3560,7 @@ def test_move_workspace_produce_lot_to_gross_balance_places_loose_produce_and_up
 
 
 def test_move_workspace_produce_lot_to_gross_balance_rejects_existing_loose_produce() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     first = create_produce_lot(service, experiment.id, "apple")
@@ -3574,7 +3574,7 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_existing_loose_prod
 
 
 def test_move_workspace_produce_lot_to_gross_balance_rejects_sealed_balance_bag() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3586,7 +3586,7 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_sealed_balance_bag(
 
 
 def test_move_workspace_produce_lot_to_gross_balance_rejects_tool_without_produce_capacity() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3598,7 +3598,7 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_tool_without_produc
 
 
 def test_move_workspace_produce_lot_to_gross_balance_places_produce_into_open_balance_jar() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3615,7 +3615,7 @@ def test_move_workspace_produce_lot_to_gross_balance_places_produce_into_open_ba
 
 
 def test_move_gross_balance_produce_lot_to_workbench_moves_loose_produce_to_target_slot() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3633,7 +3633,7 @@ def test_move_gross_balance_produce_lot_to_workbench_moves_loose_produce_to_targ
 
 
 def test_move_gross_balance_produce_lot_to_widget_moves_loose_produce_into_grinder() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = create_produce_lot(service, experiment.id, "apple")
@@ -3650,7 +3650,7 @@ def test_move_gross_balance_produce_lot_to_widget_moves_loose_produce_into_grind
 
 
 def test_discard_gross_balance_tool_requires_tool() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Gross balance does not contain a tool"):
@@ -3658,7 +3658,7 @@ def test_discard_gross_balance_tool_requires_tool() -> None:
 
 
 def test_open_workbench_tool_unseals_a_jar() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(
@@ -3689,7 +3689,7 @@ def test_open_workbench_tool_unseals_a_jar() -> None:
 
 
 def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
@@ -3732,7 +3732,7 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
 
 
 def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, experiment.id, "create_produce_lot", {"produce_type": "apple"})
@@ -3770,7 +3770,7 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
 
 def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> None:
     repository = SqliteExperimentRepository(str(tmp_path / "experiments.sqlite3"))
-    first_service = ExperimentService(repository=repository)
+    first_service = ExperimentRuntimeService(repository=repository)
     fixed_now = datetime(2026, 1, 1, tzinfo=timezone.utc)
     first_service._now_fn = lambda: fixed_now
 
@@ -3785,7 +3785,7 @@ def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> N
         },
     )
 
-    second_service = ExperimentService(repository=repository)
+    second_service = ExperimentRuntimeService(repository=repository)
     second_service._now_fn = lambda: fixed_now
     reloaded = second_service.get_experiment(experiment.id)
 
@@ -3798,7 +3798,7 @@ def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> N
 
 def test_service_recovers_if_sqlite_file_is_deleted_while_running(tmp_path) -> None:
     db_path = tmp_path / "experiments.sqlite3"
-    service = ExperimentService(repository=SqliteExperimentRepository(str(db_path)))
+    service = ExperimentRuntimeService(repository=SqliteExperimentRepository(str(db_path)))
 
     created_before_deletion = service.create_experiment()
     assert db_path.exists()
@@ -3814,7 +3814,7 @@ def test_service_recovers_if_sqlite_file_is_deleted_while_running(tmp_path) -> N
 
 
 def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -3852,7 +3852,7 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
 
 
 def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -3894,7 +3894,7 @@ def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
 
 
 def test_discard_tool_from_palette_adds_it_to_trash() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -3911,7 +3911,7 @@ def test_discard_tool_from_palette_adds_it_to_trash() -> None:
 
 
 def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -3929,7 +3929,7 @@ def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
 
 
 def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     added = apply_command(service, 
@@ -3961,7 +3961,7 @@ def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
 
 
 def test_remove_workbench_slot_requires_an_empty_station() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -3984,7 +3984,7 @@ def test_remove_workbench_slot_requires_an_empty_station() -> None:
 
 
 def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4021,10 +4021,10 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
 
 
 def test_move_tool_between_workbench_slots_updates_positions() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(service, 
         experiment.id,
@@ -4051,7 +4051,7 @@ def test_move_tool_between_workbench_slots_updates_positions() -> None:
 
 
 def test_discard_workbench_tool_removes_it_from_station() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4079,7 +4079,7 @@ def test_discard_workbench_tool_removes_it_from_station() -> None:
 
 
 def test_workspace_widget_commands_manage_presence_and_position() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     added = apply_command(service, 
@@ -4130,7 +4130,7 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
 
 
 def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Produce basket cannot be discarded."):
@@ -4144,7 +4144,7 @@ def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
 
 
 def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -4165,7 +4165,7 @@ def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
 
 
 def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -4209,7 +4209,7 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
 
 
 def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     created = apply_command(service, 
@@ -4245,7 +4245,7 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
 
 
 def test_create_produce_lot_rejects_unknown_produce_type() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Unsupported produce type"):
@@ -4259,7 +4259,7 @@ def test_create_produce_lot_rejects_unknown_produce_type() -> None:
 
 
 def test_place_tool_in_rack_slot_creates_a_vial_directly_from_the_palette() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     updated = apply_command(service, 
@@ -4278,7 +4278,7 @@ def test_place_tool_in_rack_slot_creates_a_vial_directly_from_the_palette() -> N
 
 
 def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4322,7 +4322,7 @@ def test_restore_trashed_tool_to_workbench_slot_restores_saved_tool_state() -> N
 
 
 def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4350,7 +4350,7 @@ def test_place_workbench_tool_in_rack_slot_moves_vial_into_rack() -> None:
 
 
 def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4386,7 +4386,7 @@ def test_remove_rack_tool_to_workbench_slot_moves_vial_back_to_bench() -> None:
 
 
 def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4422,7 +4422,7 @@ def test_move_rack_tool_between_slots_moves_vial_within_rack() -> None:
 
 
 def test_discard_rack_tool_removes_it_from_rack() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4458,7 +4458,7 @@ def test_discard_rack_tool_removes_it_from_rack() -> None:
 
 
 def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     apply_command(service, 
@@ -4501,7 +4501,7 @@ def test_restore_trashed_tool_to_rack_slot_restores_vial_to_rack() -> None:
 
 
 def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(service, 
         experiment.id,
@@ -4531,21 +4531,21 @@ def test_add_liquid_uses_remaining_capacity_for_small_tools() -> None:
 
 
 def test_get_experiment_raises_for_unknown_id() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
 
     with pytest.raises(KeyError):
         service.get_experiment("missing")
 
 
 def test_apply_command_raises_for_unknown_experiment() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
 
     with pytest.raises(KeyError):
         apply_command(service, "missing", "place_tool_on_workbench", {})
 
 
 def test_add_liquid_requires_a_placed_tool() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before adding liquids."):
@@ -4560,7 +4560,7 @@ def test_add_liquid_requires_a_placed_tool() -> None:
 
 
 def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before editing liquids."):
@@ -4594,7 +4594,7 @@ def test_remove_liquid_requires_a_known_tool_and_liquid() -> None:
 
 
 def test_move_tool_requires_a_source_tool_and_empty_target() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it."):
@@ -4609,7 +4609,7 @@ def test_move_tool_requires_a_source_tool_and_empty_target() -> None:
 
 
 def test_rack_commands_require_vials_present_and_compatible() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Place a tool on Station 1 before moving it into the rack."):
@@ -4640,7 +4640,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             },
         )
 
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(service, 
         experiment.id,
@@ -4689,7 +4689,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
             },
         )
 
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(service, 
         experiment.id,
@@ -4720,7 +4720,7 @@ def test_rack_commands_require_vials_present_and_compatible() -> None:
 
 
 def test_update_volume_rounds_float_noise_in_audit_log() -> None:
-    service = ExperimentService()
+    service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(service, 
         experiment.id,
