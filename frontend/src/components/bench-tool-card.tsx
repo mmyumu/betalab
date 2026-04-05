@@ -447,11 +447,7 @@ export function BenchToolCard({
                 </div>
               </div>
             ))
-          ) : (
-            <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
-              Drop liquid here
-            </span>
-          )}
+          ) : null}
         </div>
       </div>
     </article>
