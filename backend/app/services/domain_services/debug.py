@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from app.domain.models import Experiment, ProduceLot, new_id
 from app.services.domain_services.base import ExperimentRuntime, ExperimentWriteService
 from app.services.domain_services.gross_balance import GrossBalanceProduceLotTarget
-from app.services.produce_lot_transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
+from app.services.transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
 
 
 @dataclass(frozen=True, slots=True)

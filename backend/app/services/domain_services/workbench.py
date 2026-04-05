@@ -32,7 +32,7 @@ from app.services.helpers.workbench import (
     require_slot_tool,
 )
 from app.services.physical_simulation_service import PhysicalSimulationService
-from app.services.produce_lot_transfer import (
+from app.services.transfer import (
     ProduceLotTransferService,
     TrashProduceLotSource,
     WorkbenchProduceLotSource,
@@ -408,9 +408,9 @@ class AddProduceLotToWorkbenchToolService(ExperimentWriteService[AddProduceLotTo
             WorkbenchProduceLotTarget(slot_id=request.slot_id),
         )
         experiment.audit_log.append(
-            f"{transfer.produce_lot.label} added to {transfer.target_label}."
+            f"{transfer.entity.label} added to {transfer.target_label}."
             if not transfer.contamination_applied
-            else f"{transfer.produce_lot.label} placed directly on {transfer.target_label} and marked contaminated."
+            else f"{transfer.entity.label} placed directly on {transfer.target_label} and marked contaminated."
         )
 
 
@@ -431,7 +431,7 @@ class MoveProduceLotBetweenWorkbenchToolsService(ExperimentWriteService[MoveProd
             WorkbenchProduceLotTarget(slot_id=request.target_slot_id),
         )
         experiment.audit_log.append(
-            f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label}."
+            f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}."
         )
 
 
@@ -448,11 +448,11 @@ class DiscardProduceLotFromWorkbenchToolService(ExperimentWriteService[Workbench
             TrashProduceLotEntry(
                 id=new_id("trash_produce_lot"),
                 origin_label=removal.source_label,
-                produce_lot=removal.produce_lot,
+                produce_lot=removal.entity,
                 origin=removal.origin,
             )
         )
-        experiment.audit_log.append(f"{removal.produce_lot.label} discarded from {removal.source_label}.")
+        experiment.audit_log.append(f"{removal.entity.label} discarded from {removal.source_label}.")
 
 
 class CutWorkbenchProduceLotService(ExperimentWriteService[WorkbenchProduceLotRequest]):
@@ -483,7 +483,7 @@ class RestoreTrashedProduceLotToWorkbenchToolService(ExperimentWriteService[Rest
             WorkbenchProduceLotTarget(slot_id=request.target_slot_id),
         )
         experiment.audit_log.append(
-            f"{transfer.produce_lot.label} restored from trash to {transfer.location_label}."
+            f"{transfer.entity.label} restored from trash to {transfer.location_label}."
         )
 
 

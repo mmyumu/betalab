@@ -21,7 +21,8 @@ from app.services.helpers.lookups import (
     round_volume,
 )
 from app.services.physical_simulation_service import PhysicalSimulationService
-from app.services.produce_lot_transfer import (
+from app.services.received_sample_generation import build_received_sampling_bag
+from app.services.transfer import (
     GrinderProduceLotSource,
     GrinderProduceLotTarget,
     ProduceLotTransferService,
@@ -30,7 +31,6 @@ from app.services.produce_lot_transfer import (
     WorkbenchProduceLotTarget,
     WorkspaceProduceLotSource,
 )
-from app.services.received_sample_generation import build_received_sampling_bag
 
 physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
@@ -343,7 +343,7 @@ class AddWorkspaceProduceLotToWidgetService(ExperimentWriteService[AddWorkspaceP
             WorkspaceProduceLotSource(produce_lot_id=request.produce_lot_id),
             GrinderProduceLotTarget(widget_id=request.widget_id),
         )
-        experiment.audit_log.append(f"{transfer.produce_lot.label} added to {transfer.location_label}.")
+        experiment.audit_log.append(f"{transfer.entity.label} added to {transfer.location_label}.")
 
 
 class MoveWorkbenchProduceLotToWidgetService(ExperimentWriteService[MoveWorkbenchProduceLotToWidgetRequest]):
@@ -359,7 +359,7 @@ class MoveWorkbenchProduceLotToWidgetService(ExperimentWriteService[MoveWorkbenc
             ),
             GrinderProduceLotTarget(widget_id=request.widget_id),
         )
-        experiment.audit_log.append(f"{transfer.produce_lot.label} moved to {transfer.location_label}.")
+        experiment.audit_log.append(f"{transfer.entity.label} moved to {transfer.location_label}.")
 
 
 class RestoreTrashedProduceLotToWidgetService(ExperimentWriteService[RestoreTrashedProduceLotToWidgetRequest]):
@@ -373,7 +373,7 @@ class RestoreTrashedProduceLotToWidgetService(ExperimentWriteService[RestoreTras
             GrinderProduceLotTarget(widget_id=request.widget_id),
         )
         experiment.audit_log.append(
-            f"{transfer.produce_lot.label} restored from trash to {transfer.location_label}."
+            f"{transfer.entity.label} restored from trash to {transfer.location_label}."
         )
 
 
@@ -392,12 +392,12 @@ class MoveWidgetProduceLotToWorkbenchToolService(ExperimentWriteService[MoveWidg
         )
         if transfer.contamination_applied:
             experiment.audit_log.append(
-                f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label} and marked contaminated."
+                f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label} and marked contaminated."
             )
             return
 
         experiment.audit_log.append(
-            f"{transfer.produce_lot.label} moved from {transfer.source_label} to {transfer.target_label}."
+            f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}."
         )
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Generic, Protocol, TypeAlias, TypeVar
 
 from app.domain.models import EntityOrigin, Experiment, ProduceLot
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
@@ -12,24 +12,28 @@ from app.services.helpers.lookups import (
     find_workspace_widget,
 )
 
+EntityT = TypeVar("EntityT")
+SourceEntityT = TypeVar("SourceEntityT")
+TargetEntityT = TypeVar("TargetEntityT", contravariant=True)
+
 
 @dataclass(frozen=True, slots=True)
-class ProduceLotRemoval:
-    produce_lot: ProduceLot
+class TransferRemoval(Generic[EntityT]):
+    entity: EntityT
     source_label: str
     origin: EntityOrigin
 
 
 @dataclass(frozen=True, slots=True)
-class ProduceLotPlacement:
+class TransferPlacement:
     target_label: str
     location_label: str
     contamination_applied: bool = False
 
 
 @dataclass(frozen=True, slots=True)
-class ProduceLotTransferResult:
-    produce_lot: ProduceLot
+class TransferResult(Generic[EntityT]):
+    entity: EntityT
     source_label: str
     target_label: str
     location_label: str
@@ -37,34 +41,45 @@ class ProduceLotTransferResult:
     origin: EntityOrigin | None = None
 
 
-class ProduceLotSource(Protocol):
-    def remove(self, experiment: Experiment) -> ProduceLotRemoval: ...
+class TransferSource(Protocol[SourceEntityT]):
+    def remove(self, experiment: Experiment) -> TransferRemoval[SourceEntityT]: ...
 
 
-class ProduceLotTarget(Protocol):
+class TransferTarget(Protocol[TargetEntityT]):
     def validate(self, experiment: Experiment) -> None: ...
 
-    def place(self, experiment: Experiment, produce_lot: ProduceLot) -> ProduceLotPlacement: ...
+    def place(self, experiment: Experiment, entity: TargetEntityT) -> TransferPlacement: ...
 
 
-class ProduceLotTransferService:
+class TransferService(Generic[EntityT]):
     def transfer(
         self,
         experiment: Experiment,
-        source: ProduceLotSource,
-        target: ProduceLotTarget,
-    ) -> ProduceLotTransferResult:
+        source: TransferSource[EntityT],
+        target: TransferTarget[EntityT],
+    ) -> TransferResult[EntityT]:
         target.validate(experiment)
         removal = source.remove(experiment)
-        placement = target.place(experiment, removal.produce_lot)
-        return ProduceLotTransferResult(
-            produce_lot=removal.produce_lot,
+        placement = target.place(experiment, removal.entity)
+        return TransferResult(
+            entity=removal.entity,
             source_label=removal.source_label,
             target_label=placement.target_label,
             location_label=placement.location_label,
             contamination_applied=placement.contamination_applied,
             origin=removal.origin,
         )
+
+
+ProduceLotRemoval: TypeAlias = TransferRemoval[ProduceLot]
+ProduceLotPlacement: TypeAlias = TransferPlacement
+ProduceLotTransferResult: TypeAlias = TransferResult[ProduceLot]
+ProduceLotSource: TypeAlias = TransferSource[ProduceLot]
+ProduceLotTarget: TypeAlias = TransferTarget[ProduceLot]
+
+
+class ProduceLotTransferService(TransferService[ProduceLot]):
+    pass
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,8 +91,8 @@ class WorkspaceProduceLotSource:
         experiment.workspace.produce_basket_lots = [
             lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id
         ]
-        return ProduceLotRemoval(
-            produce_lot=produce_lot,
+        return TransferRemoval(
+            entity=produce_lot,
             source_label="Produce basket",
             origin=EntityOrigin(
                 kind="produce_basket",
@@ -108,8 +123,8 @@ class WorkbenchProduceLotSource:
                 raise ValueError("Unknown produce lot")
             slot.surface_produce_lots = [lot for lot in slot.surface_produce_lots if lot.id != produce_lot.id]
 
-        return ProduceLotRemoval(
-            produce_lot=produce_lot,
+        return TransferRemoval(
+            entity=produce_lot,
             source_label=source_label,
             origin=EntityOrigin(
                 kind="workbench_tool" if slot.tool is not None and source_label == slot.tool.label else "workbench_surface",
@@ -133,8 +148,8 @@ class GrinderProduceLotSource:
             raise ValueError("Unknown produce lot")
 
         widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot.id]
-        return ProduceLotRemoval(
-            produce_lot=produce_lot,
+        return TransferRemoval(
+            entity=produce_lot,
             source_label=widget.label,
             origin=EntityOrigin(
                 kind="workspace_widget",
@@ -153,8 +168,8 @@ class TrashProduceLotSource:
         experiment.trash.produce_lots = [
             entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
         ]
-        return ProduceLotRemoval(
-            produce_lot=trashed_produce_lot.produce_lot,
+        return TransferRemoval(
+            entity=trashed_produce_lot.produce_lot,
             source_label=trashed_produce_lot.origin_label,
             origin=trashed_produce_lot.origin
             or EntityOrigin(
@@ -174,10 +189,10 @@ class GrinderProduceLotTarget:
         if widget.produce_lots:
             raise ValueError(f"{widget.label} already contains a produce lot.")
 
-    def place(self, experiment: Experiment, produce_lot: ProduceLot) -> ProduceLotPlacement:
+    def place(self, experiment: Experiment, entity: ProduceLot) -> ProduceLotPlacement:
         widget = _find_grinder_widget(experiment, self.widget_id)
-        widget.produce_lots.append(produce_lot)
-        return ProduceLotPlacement(target_label=widget.label, location_label=widget.label)
+        widget.produce_lots.append(entity)
+        return TransferPlacement(target_label=widget.label, location_label=widget.label)
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,19 +219,19 @@ class WorkbenchProduceLotTarget:
         if slot.tool.produce_lots:
             raise ValueError(f"{slot.tool.label} already contains a produce lot.")
 
-    def place(self, experiment: Experiment, produce_lot: ProduceLot) -> ProduceLotPlacement:
+    def place(self, experiment: Experiment, entity: ProduceLot) -> ProduceLotPlacement:
         slot = find_workbench_slot(experiment.workbench, self.slot_id)
         if slot.tool is None:
-            slot.surface_produce_lots.append(produce_lot)
-            produce_lot.is_contaminated = True
-            return ProduceLotPlacement(
+            slot.surface_produce_lots.append(entity)
+            entity.is_contaminated = True
+            return TransferPlacement(
                 target_label=slot.label,
                 location_label=slot.label,
                 contamination_applied=True,
             )
 
-        slot.tool.produce_lots.append(produce_lot)
-        return ProduceLotPlacement(
+        slot.tool.produce_lots.append(entity)
+        return TransferPlacement(
             target_label=slot.tool.label,
             location_label=f"{slot.tool.label} on {slot.label}",
         )
