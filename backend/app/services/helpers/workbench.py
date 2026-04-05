@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.domain.models import ContainerLabel, WorkbenchLiquid, WorkbenchSlot, WorkbenchTool, new_id
 from app.domain.workbench_catalog import get_workbench_tool_definition
-from app.services.command_handlers.support import find_tool_label
+from app.services.helpers.lookups import find_tool_label
 
 
 def require_slot_tool(slot: WorkbenchSlot, action: str) -> WorkbenchTool:

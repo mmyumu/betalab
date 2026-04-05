@@ -14,6 +14,52 @@ from app.schemas.experiment import (
     WorkbenchToolSampleLabelMoveSchema,
     WorkbenchToolSampleLabelUpdateSchema,
 )
+from app.services.domain_services.debug import (
+    CreateDebugProduceLotOnWorkbenchRequest,
+    CreateDebugProduceLotOnWorkbenchService,
+)
+from app.services.domain_services.workbench import (
+    AddLiquidToWorkbenchToolRequest,
+    AddLiquidToWorkbenchToolService,
+    AddProduceLotToWorkbenchToolRequest,
+    AddProduceLotToWorkbenchToolService,
+    AddWorkbenchSlotService,
+    ApplySampleLabelToWorkbenchToolService,
+    CloseWorkbenchToolService,
+    CutWorkbenchProduceLotService,
+    DiscardProduceLotFromWorkbenchToolService,
+    DiscardSampleLabelFromPaletteRequest,
+    DiscardSampleLabelFromPaletteService,
+    DiscardSampleLabelFromWorkbenchToolService,
+    DiscardToolFromPaletteRequest,
+    DiscardToolFromPaletteService,
+    DiscardWorkbenchToolService,
+    EmptyWorkbenchRequest,
+    LoadSpatulaFromWorkbenchToolService,
+    MoveProduceLotBetweenWorkbenchToolsRequest,
+    MoveProduceLotBetweenWorkbenchToolsService,
+    MoveSampleLabelBetweenWorkbenchToolsRequest,
+    MoveSampleLabelBetweenWorkbenchToolsService,
+    MoveToolBetweenWorkbenchSlotsRequest,
+    MoveToolBetweenWorkbenchSlotsService,
+    OpenWorkbenchToolService,
+    PlaceToolOnWorkbenchRequest,
+    PlaceToolOnWorkbenchService,
+    PourSpatulaIntoWorkbenchToolRequest,
+    PourSpatulaIntoWorkbenchToolService,
+    RemoveLiquidFromWorkbenchToolService,
+    RemoveWorkbenchSlotService,
+    RestoreTrashedSampleLabelToWorkbenchToolRequest,
+    RestoreTrashedSampleLabelToWorkbenchToolService,
+    UpdateWorkbenchLiquidVolumeRequest,
+    UpdateWorkbenchLiquidVolumeService,
+    UpdateWorkbenchToolSampleLabelTextRequest,
+    UpdateWorkbenchToolSampleLabelTextService,
+    WorkbenchLiquidRequest,
+    WorkbenchProduceLotRequest,
+    WorkbenchSampleLabelRequest,
+    WorkbenchSlotRequest,
+)
 
 from .common import (
     experiment_service,
@@ -26,13 +72,19 @@ from .common import (
 
 @router.post("/{experiment_id}/workbench/slots", response_model=ExperimentSchema)
 def add_workbench_slot(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(lambda: experiment_service.add_workbench_slot(experiment_id))
+    return handle_service_errors(
+        lambda: AddWorkbenchSlotService(experiment_service).run(
+            experiment_id, EmptyWorkbenchRequest()
+        )
+    )
 
 
 @router.delete("/{experiment_id}/workbench/slots/{slot_id}", response_model=ExperimentSchema)
 def remove_workbench_slot(experiment_id: str, slot_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.remove_workbench_slot(experiment_id, slot_id)
+        lambda: RemoveWorkbenchSlotService(experiment_service).run(
+            experiment_id, WorkbenchSlotRequest(slot_id=slot_id)
+        )
     )
 
 
@@ -43,7 +95,10 @@ def place_tool_on_workbench(
     request: WorkbenchToolPlacementSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.place_tool_on_workbench(experiment_id, slot_id, request.tool_id)
+        lambda: PlaceToolOnWorkbenchService(experiment_service).run(
+            experiment_id,
+            PlaceToolOnWorkbenchRequest(slot_id=slot_id, tool_id=request.tool_id),
+        )
     )
 
 
@@ -54,10 +109,12 @@ def move_tool_between_workbench_slots(
     request: WorkbenchToolMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_tool_between_workbench_slots(
+        lambda: MoveToolBetweenWorkbenchSlotsService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            request.target_slot_id,
+            MoveToolBetweenWorkbenchSlotsRequest(
+                source_slot_id=find_tool_slot(experiment_id, tool_id),
+                target_slot_id=request.target_slot_id,
+            ),
         )
     )
 
@@ -65,9 +122,9 @@ def move_tool_between_workbench_slots(
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/discard", response_model=ExperimentSchema)
 def discard_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_workbench_tool(
+        lambda: DiscardWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
+            WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -79,11 +136,13 @@ def add_liquid_to_workbench_tool(
     request: WorkbenchToolLiquidCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_liquid_to_workbench_tool(
+        lambda: AddLiquidToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            request.liquid_id,
-            request.volume_ml,
+            AddLiquidToWorkbenchToolRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                liquid_id=request.liquid_id,
+                volume_ml=request.volume_ml,
+            ),
         )
     )
 
@@ -99,11 +158,13 @@ def update_workbench_liquid_volume(
     request: WorkbenchToolLiquidUpdateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.update_workbench_liquid_volume(
+        lambda: UpdateWorkbenchLiquidVolumeService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            liquid_id,
-            request.volume_ml,
+            UpdateWorkbenchLiquidVolumeRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                liquid_entry_id=liquid_id,
+                volume_ml=request.volume_ml,
+            ),
         )
     )
 
@@ -118,10 +179,12 @@ def remove_liquid_from_workbench_tool(
     liquid_id: str,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.remove_liquid_from_workbench_tool(
+        lambda: RemoveLiquidFromWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            liquid_id,
+            WorkbenchLiquidRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                liquid_entry_id=liquid_id,
+            ),
         )
     )
 
@@ -129,9 +192,9 @@ def remove_liquid_from_workbench_tool(
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/sample-label", response_model=ExperimentSchema)
 def apply_sample_label_to_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.apply_sample_label_to_workbench_tool(
+        lambda: ApplySampleLabelToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
+            WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -139,9 +202,9 @@ def apply_sample_label_to_workbench_tool(experiment_id: str, tool_id: str) -> Ex
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/close", response_model=ExperimentSchema)
 def close_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.close_workbench_tool(
+        lambda: CloseWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
+            WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -149,9 +212,9 @@ def close_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/open", response_model=ExperimentSchema)
 def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.open_workbench_tool(
+        lambda: OpenWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
+            WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -159,9 +222,9 @@ def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/spatula/load", response_model=ExperimentSchema)
 def load_spatula_from_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.load_spatula_from_workbench_tool(
+        lambda: LoadSpatulaFromWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
+            WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -173,10 +236,12 @@ def pour_spatula_into_workbench_tool(
     request: WorkbenchToolPowderPourSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.pour_spatula_into_workbench_tool(
+        lambda: PourSpatulaIntoWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            request.delta_mass_g,
+            PourSpatulaIntoWorkbenchToolRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                delta_mass_g=request.delta_mass_g,
+            ),
         )
     )
 
@@ -192,11 +257,13 @@ def update_workbench_tool_sample_label_text(
     request: WorkbenchToolSampleLabelUpdateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.update_workbench_tool_sample_label_text(
+        lambda: UpdateWorkbenchToolSampleLabelTextService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            label_id,
-            request.sample_label_text,
+            UpdateWorkbenchToolSampleLabelTextRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                label_id=label_id,
+                sample_label_text=request.sample_label_text,
+            ),
         )
     )
 
@@ -208,11 +275,13 @@ def update_workbench_tool_primary_sample_label_text(
     request: WorkbenchToolSampleLabelUpdateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.update_workbench_tool_sample_label_text(
+        lambda: UpdateWorkbenchToolSampleLabelTextService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            find_default_tool_label_id(experiment_id, tool_id),
-            request.sample_label_text,
+            UpdateWorkbenchToolSampleLabelTextRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                label_id=find_default_tool_label_id(experiment_id, tool_id),
+                sample_label_text=request.sample_label_text,
+            ),
         )
     )
 
@@ -228,11 +297,13 @@ def move_sample_label_between_workbench_tools(
     request: WorkbenchToolSampleLabelMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_sample_label_between_workbench_tools(
+        lambda: MoveSampleLabelBetweenWorkbenchToolsService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            find_tool_slot(experiment_id, request.target_tool_id),
-            label_id,
+            MoveSampleLabelBetweenWorkbenchToolsRequest(
+                source_slot_id=find_tool_slot(experiment_id, tool_id),
+                target_slot_id=find_tool_slot(experiment_id, request.target_tool_id),
+                label_id=label_id,
+            ),
         )
     )
 
@@ -247,11 +318,13 @@ def move_primary_sample_label_between_workbench_tools(
     request: WorkbenchToolSampleLabelMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_sample_label_between_workbench_tools(
+        lambda: MoveSampleLabelBetweenWorkbenchToolsService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            find_tool_slot(experiment_id, request.target_tool_id),
-            find_default_tool_label_id(experiment_id, tool_id),
+            MoveSampleLabelBetweenWorkbenchToolsRequest(
+                source_slot_id=find_tool_slot(experiment_id, tool_id),
+                target_slot_id=find_tool_slot(experiment_id, request.target_tool_id),
+                label_id=find_default_tool_label_id(experiment_id, tool_id),
+            ),
         )
     )
 
@@ -266,10 +339,12 @@ def discard_sample_label_from_workbench_tool(
     label_id: str,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_sample_label_from_workbench_tool(
+        lambda: DiscardSampleLabelFromWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            label_id,
+            WorkbenchSampleLabelRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                label_id=label_id,
+            ),
         )
     )
 
@@ -280,10 +355,12 @@ def discard_primary_sample_label_from_workbench_tool(
     tool_id: str,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_sample_label_from_workbench_tool(
+        lambda: DiscardSampleLabelFromWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            find_default_tool_label_id(experiment_id, tool_id),
+            WorkbenchSampleLabelRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                label_id=find_default_tool_label_id(experiment_id, tool_id),
+            ),
         )
     )
 
@@ -295,10 +372,12 @@ def add_produce_lot_to_workbench_tool(
     request: WorkbenchToolProduceLotCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_produce_lot_to_workbench_tool(
+        lambda: AddProduceLotToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            find_tool_slot(experiment_id, tool_id),
-            request.produce_lot_id,
+            AddProduceLotToWorkbenchToolRequest(
+                slot_id=find_tool_slot(experiment_id, tool_id),
+                produce_lot_id=request.produce_lot_id,
+            ),
         )
     )
 
@@ -310,10 +389,12 @@ def add_produce_lot_to_workbench_slot(
     request: WorkbenchToolProduceLotCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_produce_lot_to_workbench_tool(
+        lambda: AddProduceLotToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            slot_id,
-            request.produce_lot_id,
+            AddProduceLotToWorkbenchToolRequest(
+                slot_id=slot_id,
+                produce_lot_id=request.produce_lot_id,
+            ),
         )
     )
 
@@ -328,13 +409,15 @@ def create_debug_produce_lot_on_workbench(
     request: DebugProducePresetSpawnToWorkbenchSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.create_debug_produce_lot_on_workbench(
+        lambda: CreateDebugProduceLotOnWorkbenchService(experiment_service).run(
             experiment_id,
-            preset_id,
-            request.target_slot_id,
-            request.total_mass_g,
-            request.temperature_c,
-            request.residual_co2_mass_g,
+            CreateDebugProduceLotOnWorkbenchRequest(
+                preset_id=preset_id,
+                target_slot_id=request.target_slot_id,
+                total_mass_g=request.total_mass_g,
+                temperature_c=request.temperature_c,
+                residual_co2_mass_g=request.residual_co2_mass_g,
+            ),
         )
     )
 
@@ -349,11 +432,13 @@ def move_produce_lot_between_workbench_tools(
     request: WorkbenchProduceLotMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_produce_lot_between_workbench_tools(
+        lambda: MoveProduceLotBetweenWorkbenchToolsService(experiment_service).run(
             experiment_id,
-            request.source_slot_id,
-            request.target_slot_id,
-            produce_lot_id,
+            MoveProduceLotBetweenWorkbenchToolsRequest(
+                source_slot_id=request.source_slot_id,
+                target_slot_id=request.target_slot_id,
+                produce_lot_id=produce_lot_id,
+            ),
         )
     )
 
@@ -365,10 +450,9 @@ def cut_workbench_produce_lot(
     request: WorkbenchSlotReferenceSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.cut_workbench_produce_lot(
+        lambda: CutWorkbenchProduceLotService(experiment_service).run(
             experiment_id,
-            request.slot_id,
-            produce_lot_id,
+            WorkbenchProduceLotRequest(slot_id=request.slot_id, produce_lot_id=produce_lot_id),
         )
     )
 
@@ -383,10 +467,9 @@ def discard_produce_lot_from_workbench_tool(
     request: WorkbenchSlotReferenceSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_produce_lot_from_workbench_tool(
+        lambda: DiscardProduceLotFromWorkbenchToolService(experiment_service).run(
             experiment_id,
-            request.slot_id,
-            produce_lot_id,
+            WorkbenchProduceLotRequest(slot_id=request.slot_id, produce_lot_id=produce_lot_id),
         )
     )
 
@@ -397,16 +480,19 @@ def discard_tool_from_palette(
     request: PaletteToolDiscardSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_tool_from_palette(experiment_id, request.tool_id)
+        lambda: DiscardToolFromPaletteService(experiment_service).run(
+            experiment_id,
+            DiscardToolFromPaletteRequest(tool_id=request.tool_id),
+        )
     )
 
 
 @router.post("/{experiment_id}/palette/sample-labels/discard", response_model=ExperimentSchema)
 def discard_sample_label_from_palette(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_sample_label_from_palette(
+        lambda: DiscardSampleLabelFromPaletteService(experiment_service).run(
             experiment_id,
-            "sampling_bag_label",
+            DiscardSampleLabelFromPaletteRequest(sample_label_id="sampling_bag_label"),
         )
     )
 
@@ -421,9 +507,11 @@ def restore_trashed_sample_label_to_workbench_tool(
     request: TrashSampleLabelRestoreSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.restore_trashed_sample_label_to_workbench_tool(
+        lambda: RestoreTrashedSampleLabelToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            entry_id,
-            find_tool_slot(experiment_id, request.target_tool_id),
+            RestoreTrashedSampleLabelToWorkbenchToolRequest(
+                trash_sample_label_id=entry_id,
+                target_slot_id=find_tool_slot(experiment_id, request.target_tool_id),
+            ),
         )
     )

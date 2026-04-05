@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from math import exp
 
 from app.domain.models import ProduceLot, WorkbenchTool, WorkspaceWidget
-from app.services.command_handlers.support import round_volume
+from app.services.helpers.lookups import round_volume
 
 
 @dataclass(frozen=True, slots=True)

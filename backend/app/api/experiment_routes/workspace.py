@@ -10,6 +10,37 @@ from app.schemas.experiment import (
     WorkspaceWidgetMoveWorkbenchProduceLotSchema,
     WorkspaceWidgetProduceLotCreateSchema,
 )
+from app.services.domain_services.debug import (
+    CreateDebugProduceLotToWidgetRequest,
+    CreateDebugProduceLotToWidgetService,
+)
+from app.services.domain_services.workspace import (
+    AddLiquidToWorkspaceWidgetRequest,
+    AddLiquidToWorkspaceWidgetService,
+    AddWorkspaceProduceLotToWidgetRequest,
+    AddWorkspaceProduceLotToWidgetService,
+    AddWorkspaceWidgetService,
+    CompleteGrinderCycleService,
+    CreateOrInitProduceLotService,
+    CreateProduceLotRequest,
+    DiscardWidgetProduceLotRequest,
+    DiscardWidgetProduceLotService,
+    DiscardWorkspaceProduceLotRequest,
+    DiscardWorkspaceProduceLotService,
+    DiscardWorkspaceWidgetService,
+    MoveWidgetProduceLotToWorkbenchToolRequest,
+    MoveWidgetProduceLotToWorkbenchToolService,
+    MoveWorkbenchProduceLotToWidgetRequest,
+    MoveWorkbenchProduceLotToWidgetService,
+    MoveWorkspaceWidgetService,
+    RemoveLiquidFromWorkspaceWidgetService,
+    StartGrinderCycleService,
+    UpdateWorkspaceWidgetLiquidVolumeRequest,
+    UpdateWorkspaceWidgetLiquidVolumeService,
+    WorkspaceWidgetLayoutRequest,
+    WorkspaceWidgetLiquidRequest,
+    WorkspaceWidgetRequest,
+)
 
 from .common import experiment_service, handle_service_errors, router
 
@@ -20,12 +51,14 @@ def add_workspace_widget(
     request: WorkspaceWidgetCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_workspace_widget(
+        lambda: AddWorkspaceWidgetService(experiment_service).run(
             experiment_id,
-            request.widget_id,
-            request.anchor,
-            request.offset_x,
-            request.offset_y,
+            WorkspaceWidgetLayoutRequest(
+                widget_id=request.widget_id,
+                anchor=request.anchor,
+                offset_x=request.offset_x,
+                offset_y=request.offset_y,
+            ),
         )
     )
 
@@ -37,12 +70,14 @@ def move_workspace_widget(
     request: WorkspaceWidgetMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_workspace_widget(
+        lambda: MoveWorkspaceWidgetService(experiment_service).run(
             experiment_id,
-            widget_id,
-            request.anchor,
-            request.offset_x,
-            request.offset_y,
+            WorkspaceWidgetLayoutRequest(
+                widget_id=widget_id,
+                anchor=request.anchor,
+                offset_x=request.offset_x,
+                offset_y=request.offset_y,
+            ),
         )
     )
 
@@ -50,7 +85,10 @@ def move_workspace_widget(
 @router.post("/{experiment_id}/workspace/widgets/{widget_id}/discard", response_model=ExperimentSchema)
 def discard_workspace_widget(experiment_id: str, widget_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_workspace_widget(experiment_id, widget_id)
+        lambda: DiscardWorkspaceWidgetService(experiment_service).run(
+            experiment_id,
+            WorkspaceWidgetRequest(widget_id=widget_id),
+        )
     )
 
 
@@ -61,11 +99,13 @@ def add_liquid_to_workspace_widget(
     request: WorkspaceWidgetLiquidCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_liquid_to_workspace_widget(
+        lambda: AddLiquidToWorkspaceWidgetService(experiment_service).run(
             experiment_id,
-            widget_id,
-            request.liquid_id,
-            request.volume_ml,
+            AddLiquidToWorkspaceWidgetRequest(
+                widget_id=widget_id,
+                liquid_id=request.liquid_id,
+                volume_ml=request.volume_ml,
+            ),
         )
     )
 
@@ -81,11 +121,13 @@ def update_workspace_widget_liquid_volume(
     request: WorkspaceWidgetLiquidUpdateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.update_workspace_widget_liquid_volume(
+        lambda: UpdateWorkspaceWidgetLiquidVolumeService(experiment_service).run(
             experiment_id,
-            widget_id,
-            liquid_id,
-            request.volume_ml,
+            UpdateWorkspaceWidgetLiquidVolumeRequest(
+                widget_id=widget_id,
+                liquid_entry_id=liquid_id,
+                volume_ml=request.volume_ml,
+            ),
         )
     )
 
@@ -100,10 +142,9 @@ def remove_liquid_from_workspace_widget(
     liquid_id: str,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.remove_liquid_from_workspace_widget(
+        lambda: RemoveLiquidFromWorkspaceWidgetService(experiment_service).run(
             experiment_id,
-            widget_id,
-            liquid_id,
+            WorkspaceWidgetLiquidRequest(widget_id=widget_id, liquid_entry_id=liquid_id),
         )
     )
 
@@ -114,7 +155,10 @@ def remove_liquid_from_workspace_widget(
 )
 def complete_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.complete_grinder_cycle(experiment_id, widget_id)
+        lambda: CompleteGrinderCycleService(experiment_service).run(
+            experiment_id,
+            WorkspaceWidgetRequest(widget_id=widget_id),
+        )
     )
 
 
@@ -124,7 +168,10 @@ def complete_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSche
 )
 def start_grinder_cycle(experiment_id: str, widget_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.start_grinder_cycle(experiment_id, widget_id)
+        lambda: StartGrinderCycleService(experiment_service).run(
+            experiment_id,
+            WorkspaceWidgetRequest(widget_id=widget_id),
+        )
     )
 
 
@@ -134,7 +181,10 @@ def create_produce_lot(
     request: WorkspaceProduceLotCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.create_produce_lot(experiment_id, request.produce_type)
+        lambda: CreateOrInitProduceLotService(experiment_service).run(
+            experiment_id,
+            CreateProduceLotRequest(produce_type=request.produce_type),
+        )
     )
 
 
@@ -148,10 +198,12 @@ def add_workspace_produce_lot_to_widget(
     request: WorkspaceWidgetProduceLotCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.add_workspace_produce_lot_to_widget(
+        lambda: AddWorkspaceProduceLotToWidgetService(experiment_service).run(
             experiment_id,
-            widget_id,
-            request.produce_lot_id,
+            AddWorkspaceProduceLotToWidgetRequest(
+                widget_id=widget_id,
+                produce_lot_id=request.produce_lot_id,
+            ),
         )
     )
 
@@ -166,11 +218,13 @@ def move_workbench_produce_lot_to_widget(
     request: WorkspaceWidgetMoveWorkbenchProduceLotSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_workbench_produce_lot_to_widget(
+        lambda: MoveWorkbenchProduceLotToWidgetService(experiment_service).run(
             experiment_id,
-            widget_id,
-            request.source_slot_id,
-            request.produce_lot_id,
+            MoveWorkbenchProduceLotToWidgetRequest(
+                widget_id=widget_id,
+                source_slot_id=request.source_slot_id,
+                produce_lot_id=request.produce_lot_id,
+            ),
         )
     )
 
@@ -181,7 +235,10 @@ def move_workbench_produce_lot_to_widget(
 )
 def discard_workspace_produce_lot(experiment_id: str, produce_lot_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_workspace_produce_lot(experiment_id, produce_lot_id)
+        lambda: DiscardWorkspaceProduceLotService(experiment_service).run(
+            experiment_id,
+            DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id),
+        )
     )
 
 
@@ -196,11 +253,13 @@ def move_widget_produce_lot_to_workbench_tool(
     request: WorkspaceWidgetMoveProduceLotToWorkbenchSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_widget_produce_lot_to_workbench_tool(
+        lambda: MoveWidgetProduceLotToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            widget_id,
-            produce_lot_id,
-            request.target_slot_id,
+            MoveWidgetProduceLotToWorkbenchToolRequest(
+                widget_id=widget_id,
+                produce_lot_id=produce_lot_id,
+                target_slot_id=request.target_slot_id,
+            ),
         )
     )
 
@@ -215,10 +274,9 @@ def discard_widget_produce_lot(
     produce_lot_id: str,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_widget_produce_lot(
+        lambda: DiscardWidgetProduceLotService(experiment_service).run(
             experiment_id,
-            widget_id,
-            produce_lot_id,
+            DiscardWidgetProduceLotRequest(widget_id=widget_id, produce_lot_id=produce_lot_id),
         )
     )
 
@@ -233,12 +291,14 @@ def create_debug_produce_lot_to_widget(
     request: DebugProducePresetSpawnToWidgetSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.create_debug_produce_lot_to_widget(
+        lambda: CreateDebugProduceLotToWidgetService(experiment_service).run(
             experiment_id,
-            preset_id,
-            request.widget_id,
-            request.total_mass_g,
-            request.temperature_c,
-            request.residual_co2_mass_g,
+            CreateDebugProduceLotToWidgetRequest(
+                preset_id=preset_id,
+                widget_id=request.widget_id,
+                total_mass_g=request.total_mass_g,
+                temperature_c=request.temperature_c,
+                residual_co2_mass_g=request.residual_co2_mass_g,
+            ),
         )
     )

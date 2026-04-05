@@ -5,6 +5,56 @@ from typing import Literal
 
 import pytest
 
+from app.services.domain_services.gross_balance import (
+    CloseGrossBalanceToolService,
+    DiscardGrossBalanceProduceLotRequest,
+    DiscardGrossBalanceProduceLotService,
+    EmptyRequest,
+    MoveGrossBalanceProduceLotToWidgetRequest,
+    MoveGrossBalanceProduceLotToWidgetService,
+    MoveGrossBalanceProduceLotToWorkbenchRequest,
+    MoveGrossBalanceProduceLotToWorkbenchService,
+    MoveWidgetProduceLotToGrossBalanceRequest,
+    MoveWidgetProduceLotToGrossBalanceService,
+    MoveWorkbenchProduceLotToGrossBalanceRequest,
+    MoveWorkbenchProduceLotToGrossBalanceService,
+    MoveWorkspaceProduceLotToGrossBalanceRequest,
+    MoveWorkspaceProduceLotToGrossBalanceService,
+    PlaceToolOnGrossBalanceRequest,
+    PlaceToolOnGrossBalanceService,
+    RestoreTrashedProduceLotToGrossBalanceRequest,
+    RestoreTrashedProduceLotToGrossBalanceService,
+)
+from app.services.domain_services.workbench import (
+    AddProduceLotToWorkbenchToolRequest,
+    AddProduceLotToWorkbenchToolService,
+    CloseWorkbenchToolService,
+    DiscardProduceLotFromWorkbenchToolService,
+    MoveProduceLotBetweenWorkbenchToolsRequest,
+    MoveProduceLotBetweenWorkbenchToolsService,
+    PlaceToolOnWorkbenchRequest,
+    PlaceToolOnWorkbenchService,
+    RestoreTrashedProduceLotToWorkbenchToolRequest,
+    RestoreTrashedProduceLotToWorkbenchToolService,
+    WorkbenchProduceLotRequest,
+    WorkbenchSlotRequest,
+)
+from app.services.domain_services.workspace import (
+    AddWorkspaceProduceLotToWidgetRequest,
+    AddWorkspaceProduceLotToWidgetService,
+    CreateOrInitProduceLotService,
+    CreateProduceLotRequest,
+    DiscardWidgetProduceLotRequest,
+    DiscardWidgetProduceLotService,
+    DiscardWorkspaceProduceLotRequest,
+    DiscardWorkspaceProduceLotService,
+    MoveWidgetProduceLotToWorkbenchToolRequest,
+    MoveWidgetProduceLotToWorkbenchToolService,
+    MoveWorkbenchProduceLotToWidgetRequest,
+    MoveWorkbenchProduceLotToWidgetService,
+    RestoreTrashedProduceLotToWidgetRequest,
+    RestoreTrashedProduceLotToWidgetService,
+)
 from app.services.experiment_service import ExperimentService
 
 SourceKind = Literal["basket", "workbench_surface", "workbench_tool", "grinder", "trash", "gross_balance"]
@@ -102,38 +152,56 @@ PRODUCE_LOT_DND_CASES: tuple[ProduceLotDndCase, ...] = (
 
 
 def _create_basket_lot(service: ExperimentService, experiment_id: str) -> str:
-    created = service.create_produce_lot(experiment_id, "apple")
+    created = CreateOrInitProduceLotService(service).run(
+        experiment_id, CreateProduceLotRequest(produce_type="apple")
+    )
     return created.workspace.produce_basket_lots[0].id
 
 
 def _prepare_target(service: ExperimentService, experiment_id: str, target: TargetKind) -> None:
     if target == "open_sample_bag":
-        service.place_tool_on_workbench(experiment_id, "station_2", "sealed_sampling_bag")
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
+        )
         return
     if target == "sealed_sample_bag":
-        service.place_tool_on_workbench(experiment_id, "station_2", "sealed_sampling_bag")
-        service.close_workbench_tool(experiment_id, "station_2")
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
+        )
+        CloseWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         return
     if target == "open_storage_jar":
-        service.place_tool_on_workbench(experiment_id, "station_2", "hdpe_storage_jar_2l")
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l")
+        )
         return
     if target == "sealed_storage_jar":
-        service.place_tool_on_workbench(experiment_id, "station_2", "hdpe_storage_jar_2l")
-        service.close_workbench_tool(experiment_id, "station_2")
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l")
+        )
+        CloseWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         return
     if target == "cutting_board":
-        service.place_tool_on_workbench(experiment_id, "station_2", "cutting_board_hdpe")
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="cutting_board_hdpe")
+        )
         return
     if target == "occupied_grinder":
         occupying_lot_id = _create_basket_lot(service, experiment_id)
-        service.add_workspace_produce_lot_to_widget(experiment_id, "grinder", occupying_lot_id)
+        AddWorkspaceProduceLotToWidgetService(service).run(
+            experiment_id, AddWorkspaceProduceLotToWidgetRequest(widget_id="grinder", produce_lot_id=occupying_lot_id)
+        )
         return
     if target == "gross_balance_bag":
-        service.place_tool_on_gross_balance(experiment_id, "sealed_sampling_bag")
+        PlaceToolOnGrossBalanceService(service).run(
+            experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag")
+        )
         return
     if target == "sealed_gross_balance_bag":
-        service.place_tool_on_gross_balance(experiment_id, "sealed_sampling_bag")
-        service.close_gross_balance_tool(experiment_id)
+        PlaceToolOnGrossBalanceService(service).run(
+            experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag")
+        )
+        CloseGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
 def _prepare_source(service: ExperimentService, experiment_id: str, source: SourceKind) -> tuple[str, str | None]:
@@ -142,20 +210,32 @@ def _prepare_source(service: ExperimentService, experiment_id: str, source: Sour
     if source == "basket":
         return produce_lot_id, None
     if source == "workbench_surface":
-        service.add_produce_lot_to_workbench_tool(experiment_id, "station_1", produce_lot_id)
+        AddProduceLotToWorkbenchToolService(service).run(
+            experiment_id, AddProduceLotToWorkbenchToolRequest(slot_id="station_1", produce_lot_id=produce_lot_id)
+        )
         return produce_lot_id, None
     if source == "workbench_tool":
-        service.place_tool_on_workbench(experiment_id, "station_1", "cutting_board_hdpe")
-        service.add_produce_lot_to_workbench_tool(experiment_id, "station_1", produce_lot_id)
+        PlaceToolOnWorkbenchService(service).run(
+            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="cutting_board_hdpe")
+        )
+        AddProduceLotToWorkbenchToolService(service).run(
+            experiment_id, AddProduceLotToWorkbenchToolRequest(slot_id="station_1", produce_lot_id=produce_lot_id)
+        )
         return produce_lot_id, None
     if source == "grinder":
-        service.add_workspace_produce_lot_to_widget(experiment_id, "grinder", produce_lot_id)
+        AddWorkspaceProduceLotToWidgetService(service).run(
+            experiment_id, AddWorkspaceProduceLotToWidgetRequest(widget_id="grinder", produce_lot_id=produce_lot_id)
+        )
         return produce_lot_id, None
     if source == "trash":
-        discarded = service.discard_workspace_produce_lot(experiment_id, produce_lot_id)
+        discarded = DiscardWorkspaceProduceLotService(service).run(
+            experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id)
+        )
         return produce_lot_id, discarded.trash.produce_lots[0].id
     if source == "gross_balance":
-        service.move_workspace_produce_lot_to_gross_balance(experiment_id, produce_lot_id)
+        MoveWorkspaceProduceLotToGrossBalanceService(service).run(
+            experiment_id, MoveWorkspaceProduceLotToGrossBalanceRequest(produce_lot_id=produce_lot_id)
+        )
         return produce_lot_id, None
 
     raise AssertionError(f"Unhandled source kind: {source}")
@@ -178,71 +258,118 @@ def _execute_drop(
         "cutting_board",
     }:
         if source == "basket":
-            return service.add_produce_lot_to_workbench_tool(experiment_id, "station_2", produce_lot_id)
-        if source in {"workbench_surface", "workbench_tool"}:
-            return service.move_produce_lot_between_workbench_tools(
+            return AddProduceLotToWorkbenchToolService(service).run(
                 experiment_id,
-                "station_1",
-                "station_2",
-                produce_lot_id,
+                AddProduceLotToWorkbenchToolRequest(slot_id="station_2", produce_lot_id=produce_lot_id),
+            )
+        if source in {"workbench_surface", "workbench_tool"}:
+            return MoveProduceLotBetweenWorkbenchToolsService(service).run(
+                experiment_id,
+                MoveProduceLotBetweenWorkbenchToolsRequest(
+                    source_slot_id="station_1",
+                    target_slot_id="station_2",
+                    produce_lot_id=produce_lot_id,
+                ),
             )
         if source == "grinder":
-            return service.move_widget_produce_lot_to_workbench_tool(
+            return MoveWidgetProduceLotToWorkbenchToolService(service).run(
                 experiment_id,
-                "grinder",
-                produce_lot_id,
-                "station_2",
+                MoveWidgetProduceLotToWorkbenchToolRequest(
+                    widget_id="grinder",
+                    produce_lot_id=produce_lot_id,
+                    target_slot_id="station_2",
+                ),
             )
         if source == "trash":
             assert trash_produce_lot_id is not None
-            return service.restore_trashed_produce_lot_to_workbench_tool(
+            return RestoreTrashedProduceLotToWorkbenchToolService(service).run(
                 experiment_id,
-                trash_produce_lot_id,
-                "station_2",
+                RestoreTrashedProduceLotToWorkbenchToolRequest(
+                    trash_produce_lot_id=trash_produce_lot_id,
+                    target_slot_id="station_2",
+                ),
             )
         if source == "gross_balance":
-            return service.move_gross_balance_produce_lot_to_workbench(
+            return MoveGrossBalanceProduceLotToWorkbenchService(service).run(
                 experiment_id,
-                "station_2",
-                produce_lot_id,
+                MoveGrossBalanceProduceLotToWorkbenchRequest(
+                    target_slot_id="station_2",
+                    produce_lot_id=produce_lot_id,
+                ),
             )
 
     if target in {"empty_grinder", "occupied_grinder"}:
         if source == "basket":
-            return service.add_workspace_produce_lot_to_widget(experiment_id, "grinder", produce_lot_id)
-        if source in {"workbench_surface", "workbench_tool"}:
-            return service.move_workbench_produce_lot_to_widget(
+            return AddWorkspaceProduceLotToWidgetService(service).run(
                 experiment_id,
-                "grinder",
-                "station_1",
-                produce_lot_id,
+                AddWorkspaceProduceLotToWidgetRequest(widget_id="grinder", produce_lot_id=produce_lot_id),
+            )
+        if source in {"workbench_surface", "workbench_tool"}:
+            return MoveWorkbenchProduceLotToWidgetService(service).run(
+                experiment_id,
+                MoveWorkbenchProduceLotToWidgetRequest(
+                    widget_id="grinder",
+                    source_slot_id="station_1",
+                    produce_lot_id=produce_lot_id,
+                ),
             )
         if source == "trash":
             assert trash_produce_lot_id is not None
-            return service.restore_trashed_produce_lot_to_widget(experiment_id, trash_produce_lot_id, "grinder")
+            return RestoreTrashedProduceLotToWidgetService(service).run(
+                experiment_id,
+                RestoreTrashedProduceLotToWidgetRequest(
+                    trash_produce_lot_id=trash_produce_lot_id,
+                    widget_id="grinder",
+                ),
+            )
         if source == "gross_balance":
-            return service.move_gross_balance_produce_lot_to_widget(experiment_id, "grinder", produce_lot_id)
+            return MoveGrossBalanceProduceLotToWidgetService(service).run(
+                experiment_id,
+                MoveGrossBalanceProduceLotToWidgetRequest(widget_id="grinder", produce_lot_id=produce_lot_id),
+            )
 
     if target in {"empty_gross_balance", "gross_balance_bag", "sealed_gross_balance_bag"}:
         if source == "basket":
-            return service.move_workspace_produce_lot_to_gross_balance(experiment_id, produce_lot_id)
+            return MoveWorkspaceProduceLotToGrossBalanceService(service).run(
+                experiment_id, MoveWorkspaceProduceLotToGrossBalanceRequest(produce_lot_id=produce_lot_id)
+            )
         if source in {"workbench_surface", "workbench_tool"}:
-            return service.move_workbench_produce_lot_to_gross_balance(experiment_id, "station_1", produce_lot_id)
+            return MoveWorkbenchProduceLotToGrossBalanceService(service).run(
+                experiment_id,
+                MoveWorkbenchProduceLotToGrossBalanceRequest(
+                    source_slot_id="station_1",
+                    produce_lot_id=produce_lot_id,
+                ),
+            )
         if source == "grinder":
-            return service.move_widget_produce_lot_to_gross_balance(experiment_id, "grinder", produce_lot_id)
+            return MoveWidgetProduceLotToGrossBalanceService(service).run(
+                experiment_id,
+                MoveWidgetProduceLotToGrossBalanceRequest(widget_id="grinder", produce_lot_id=produce_lot_id),
+            )
         if source == "trash":
             assert trash_produce_lot_id is not None
-            return service.restore_trashed_produce_lot_to_gross_balance(experiment_id, trash_produce_lot_id)
+            return RestoreTrashedProduceLotToGrossBalanceService(service).run(
+                experiment_id,
+                RestoreTrashedProduceLotToGrossBalanceRequest(trash_produce_lot_id=trash_produce_lot_id),
+            )
 
     if target == "trash":
         if source == "basket":
-            return service.discard_workspace_produce_lot(experiment_id, produce_lot_id)
+            return DiscardWorkspaceProduceLotService(service).run(
+                experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id)
+            )
         if source in {"workbench_surface", "workbench_tool"}:
-            return service.discard_produce_lot_from_workbench_tool(experiment_id, "station_1", produce_lot_id)
+            return DiscardProduceLotFromWorkbenchToolService(service).run(
+                experiment_id, WorkbenchProduceLotRequest(slot_id="station_1", produce_lot_id=produce_lot_id)
+            )
         if source == "grinder":
-            return service.discard_widget_produce_lot(experiment_id, "grinder", produce_lot_id)
+            return DiscardWidgetProduceLotService(service).run(
+                experiment_id, DiscardWidgetProduceLotRequest(widget_id="grinder", produce_lot_id=produce_lot_id)
+            )
         if source == "gross_balance":
-            return service.discard_gross_balance_produce_lot(experiment_id, produce_lot_id)
+            return DiscardGrossBalanceProduceLotService(service).run(
+                experiment_id, DiscardGrossBalanceProduceLotRequest(produce_lot_id=produce_lot_id)
+            )
 
     raise AssertionError(f"Unhandled drop case: {source} -> {target}")
 

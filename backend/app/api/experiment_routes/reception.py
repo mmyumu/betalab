@@ -7,6 +7,25 @@ from app.schemas.experiment import (
     ReceivedBagPlacementSchema,
     WorkbenchSlotReferenceSchema,
 )
+from app.services.domain_services.reception import (
+    ApplyPrintedLimsLabelRequest,
+    ApplyPrintedLimsLabelService,
+    ApplyPrintedLimsLabelToBasketBagService,
+    ApplyPrintedLimsLabelToGrossBalanceBagService,
+    CreateLimsReceptionRequest,
+    CreateLimsReceptionService,
+    DiscardPrintedLimsLabelService,
+    EmptyReceptionRequest,
+    PlaceReceivedBagOnWorkbenchRequest,
+    PlaceReceivedBagOnWorkbenchService,
+    PrintLimsLabelRequest,
+    PrintLimsLabelService,
+    RecordGrossWeightRequest,
+    RecordGrossWeightService,
+    SetGrossMassOffsetRequest,
+    SetGrossMassOffsetService,
+)
+from app.services.domain_services.trash import DiscardBasketToolService, EmptyTrashRequest
 
 from .common import experiment_service, handle_service_errors, router
 
@@ -17,16 +36,18 @@ def place_received_bag_on_workbench(
     request: ReceivedBagPlacementSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.place_received_bag_on_workbench(
+        lambda: PlaceReceivedBagOnWorkbenchService(experiment_service).run(
             experiment_id,
-            request.target_slot_id,
+            PlaceReceivedBagOnWorkbenchRequest(target_slot_id=request.target_slot_id),
         )
     )
 
 
 @router.post("/{experiment_id}/reception/bag/discard", response_model=ExperimentSchema)
 def discard_received_bag(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(lambda: experiment_service.discard_basket_tool(experiment_id))
+    return handle_service_errors(
+        lambda: DiscardBasketToolService(experiment_service).run(experiment_id, EmptyTrashRequest())
+    )
 
 
 @router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)
@@ -35,9 +56,11 @@ def record_gross_weight(
     request: GrossWeightRecordSchema | None = None,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.record_gross_weight(
+        lambda: RecordGrossWeightService(experiment_service).run(
             experiment_id,
-            request.measured_gross_mass_g if request is not None else None,
+            RecordGrossWeightRequest(
+                measured_gross_mass_g=request.measured_gross_mass_g if request is not None else None
+            ),
         )
     )
 
@@ -48,9 +71,9 @@ def set_gross_balance_container_offset(
     request: GrossMassOffsetUpdateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.set_gross_mass_offset(
+        lambda: SetGrossMassOffsetService(experiment_service).run(
             experiment_id,
-            request.gross_mass_offset_g,
+            SetGrossMassOffsetRequest(gross_mass_offset_g=request.gross_mass_offset_g),
         )
     )
 
@@ -61,14 +84,16 @@ def create_lims_reception(
     request: LimsReceptionCreateSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.create_lims_reception(
+        lambda: CreateLimsReceptionService(experiment_service).run(
             experiment_id,
-            request.orchard_name,
-            request.harvest_date,
-            request.indicative_mass_g,
-            request.measured_gross_mass_g,
-            request.measured_sample_mass_g,
-            request.entry_id,
+            CreateLimsReceptionRequest(
+                orchard_name=request.orchard_name,
+                harvest_date=request.harvest_date,
+                indicative_mass_g=request.indicative_mass_g,
+                measured_gross_mass_g=request.measured_gross_mass_g,
+                measured_sample_mass_g=request.measured_sample_mass_g,
+                entry_id=request.entry_id,
+            ),
         )
     )
 
@@ -79,9 +104,9 @@ def print_lims_label(
     request: LimsLabelPrintSchema | None = None,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.print_lims_label(
+        lambda: PrintLimsLabelService(experiment_service).run(
             experiment_id,
-            request.entry_id if request is not None else None,
+            PrintLimsLabelRequest(entry_id=request.entry_id if request is not None else None),
         )
     )
 
@@ -89,7 +114,9 @@ def print_lims_label(
 @router.delete("/{experiment_id}/lims/printed-label", response_model=ExperimentSchema)
 def discard_printed_lims_label(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_printed_lims_label(experiment_id)
+        lambda: DiscardPrintedLimsLabelService(experiment_service).run(
+            experiment_id, EmptyReceptionRequest()
+        )
     )
 
 
@@ -99,14 +126,19 @@ def apply_printed_lims_label(
     request: WorkbenchSlotReferenceSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.apply_printed_lims_label(experiment_id, request.slot_id)
+        lambda: ApplyPrintedLimsLabelService(experiment_service).run(
+            experiment_id,
+            ApplyPrintedLimsLabelRequest(slot_id=request.slot_id),
+        )
     )
 
 
 @router.post("/{experiment_id}/lims/apply-label-to-basket-bag", response_model=ExperimentSchema)
 def apply_printed_lims_label_to_basket_bag(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.apply_printed_lims_label_to_basket_bag(experiment_id)
+        lambda: ApplyPrintedLimsLabelToBasketBagService(experiment_service).run(
+            experiment_id, EmptyReceptionRequest()
+        )
     )
 
 
@@ -116,5 +148,7 @@ def apply_printed_lims_label_to_basket_bag(experiment_id: str) -> ExperimentSche
 )
 def apply_printed_lims_label_to_gross_balance_bag(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.apply_printed_lims_label_to_gross_balance_bag(experiment_id)
+        lambda: ApplyPrintedLimsLabelToGrossBalanceBagService(experiment_service).run(
+            experiment_id, EmptyReceptionRequest()
+        )
     )

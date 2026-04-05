@@ -3,6 +3,14 @@ from app.schemas.experiment import (
     TrashProduceLotRestoreToWidgetSchema,
     TrashProduceLotRestoreToWorkbenchSchema,
 )
+from app.services.domain_services.workbench import (
+    RestoreTrashedProduceLotToWorkbenchToolRequest,
+    RestoreTrashedProduceLotToWorkbenchToolService,
+)
+from app.services.domain_services.workspace import (
+    RestoreTrashedProduceLotToWidgetRequest,
+    RestoreTrashedProduceLotToWidgetService,
+)
 
 from .common import experiment_service, handle_service_errors, router
 
@@ -17,10 +25,12 @@ def restore_trashed_produce_lot_to_workbench_tool(
     request: TrashProduceLotRestoreToWorkbenchSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.restore_trashed_produce_lot_to_workbench_tool(
+        lambda: RestoreTrashedProduceLotToWorkbenchToolService(experiment_service).run(
             experiment_id,
-            entry_id,
-            request.target_slot_id,
+            RestoreTrashedProduceLotToWorkbenchToolRequest(
+                trash_produce_lot_id=entry_id,
+                target_slot_id=request.target_slot_id,
+            ),
         )
     )
 
@@ -35,9 +45,11 @@ def restore_trashed_produce_lot_to_widget(
     request: TrashProduceLotRestoreToWidgetSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.restore_trashed_produce_lot_to_widget(
+        lambda: RestoreTrashedProduceLotToWidgetService(experiment_service).run(
             experiment_id,
-            entry_id,
-            request.widget_id,
+            RestoreTrashedProduceLotToWidgetRequest(
+                trash_produce_lot_id=entry_id,
+                widget_id=request.widget_id,
+            ),
         )
     )

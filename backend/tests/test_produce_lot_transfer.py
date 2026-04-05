@@ -1,6 +1,6 @@
 from app.domain.models import ProduceLot
-from app.services.command_handlers.workbench import build_workbench_tool
 from app.services.experiment_factory import build_experiment
+from app.services.helpers.workbench import build_workbench_tool
 from app.services.produce_lot_transfer import (
     GrinderProduceLotSource,
     GrinderProduceLotTarget,

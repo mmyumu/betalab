@@ -4,11 +4,379 @@ from pathlib import Path
 
 import pytest
 
+from app.services.domain_services.debug import (
+    CreateDebugProduceLotOnWorkbenchRequest,
+    CreateDebugProduceLotOnWorkbenchService,
+    CreateDebugProduceLotToWidgetRequest,
+    CreateDebugProduceLotToWidgetService,
+)
+from app.services.domain_services.gross_balance import (
+    CloseGrossBalanceToolService,
+    DiscardGrossBalanceProduceLotRequest,
+    DiscardGrossBalanceProduceLotService,
+    DiscardGrossBalanceToolService,
+    EmptyRequest,
+    MoveBasketToolToGrossBalanceService,
+    MoveGrossBalanceProduceLotToWidgetRequest,
+    MoveGrossBalanceProduceLotToWidgetService,
+    MoveGrossBalanceProduceLotToWorkbenchRequest,
+    MoveGrossBalanceProduceLotToWorkbenchService,
+    MoveGrossBalanceToolToRackRequest,
+    MoveGrossBalanceToolToRackService,
+    MoveGrossBalanceToolToWorkbenchRequest,
+    MoveGrossBalanceToolToWorkbenchService,
+    MoveRackToolToGrossBalanceRequest,
+    MoveRackToolToGrossBalanceService,
+    MoveWorkbenchToolToGrossBalanceRequest,
+    MoveWorkbenchToolToGrossBalanceService,
+    MoveWorkspaceProduceLotToGrossBalanceRequest,
+    MoveWorkspaceProduceLotToGrossBalanceService,
+    OpenGrossBalanceToolService,
+    PlaceToolOnGrossBalanceRequest,
+    PlaceToolOnGrossBalanceService,
+    RestoreTrashedProduceLotToGrossBalanceRequest,
+    RestoreTrashedProduceLotToGrossBalanceService,
+    RestoreTrashedToolToGrossBalanceRequest,
+    RestoreTrashedToolToGrossBalanceService,
+)
+from app.services.domain_services.rack import (
+    DiscardRackToolRequest,
+    DiscardRackToolService,
+    MoveRackToolBetweenSlotsRequest,
+    MoveRackToolBetweenSlotsService,
+    PlaceToolInRackSlotRequest,
+    PlaceToolInRackSlotService,
+    PlaceWorkbenchToolInRackSlotRequest,
+    PlaceWorkbenchToolInRackSlotService,
+    RemoveRackToolToWorkbenchSlotRequest,
+    RemoveRackToolToWorkbenchSlotService,
+    RestoreTrashedToolToRackSlotRequest,
+    RestoreTrashedToolToRackSlotService,
+)
+from app.services.domain_services.reception import (
+    ApplyPrintedLimsLabelRequest,
+    ApplyPrintedLimsLabelService,
+    ApplyPrintedLimsLabelToBasketBagService,
+    ApplyPrintedLimsLabelToGrossBalanceBagService,
+    CreateLimsReceptionRequest,
+    CreateLimsReceptionService,
+    DiscardPrintedLimsLabelService,
+    EmptyReceptionRequest,
+    PlaceReceivedBagOnWorkbenchRequest,
+    PlaceReceivedBagOnWorkbenchService,
+    PrintLimsLabelRequest,
+    PrintLimsLabelService,
+    RecordGrossWeightRequest,
+    RecordGrossWeightService,
+    SetGrossMassOffsetRequest,
+    SetGrossMassOffsetService,
+)
+from app.services.domain_services.trash import DiscardBasketToolService, EmptyTrashRequest
+from app.services.domain_services.workbench import (
+    AddLiquidToWorkbenchToolRequest,
+    AddLiquidToWorkbenchToolService,
+    AddProduceLotToWorkbenchToolRequest,
+    AddProduceLotToWorkbenchToolService,
+    AddWorkbenchSlotService,
+    ApplySampleLabelToWorkbenchToolService,
+    CloseWorkbenchToolService,
+    CutWorkbenchProduceLotService,
+    DiscardProduceLotFromWorkbenchToolService,
+    DiscardSampleLabelFromPaletteRequest,
+    DiscardSampleLabelFromPaletteService,
+    DiscardSampleLabelFromWorkbenchToolService,
+    DiscardToolFromPaletteRequest,
+    DiscardToolFromPaletteService,
+    DiscardWorkbenchToolService,
+    EmptyWorkbenchRequest,
+    MoveProduceLotBetweenWorkbenchToolsRequest,
+    MoveProduceLotBetweenWorkbenchToolsService,
+    MoveSampleLabelBetweenWorkbenchToolsRequest,
+    MoveSampleLabelBetweenWorkbenchToolsService,
+    MoveToolBetweenWorkbenchSlotsRequest,
+    MoveToolBetweenWorkbenchSlotsService,
+    OpenWorkbenchToolService,
+    PlaceToolOnWorkbenchRequest,
+    PlaceToolOnWorkbenchService,
+    RemoveLiquidFromWorkbenchToolService,
+    RemoveWorkbenchSlotService,
+    RestoreTrashedProduceLotToWorkbenchToolRequest,
+    RestoreTrashedProduceLotToWorkbenchToolService,
+    RestoreTrashedSampleLabelToWorkbenchToolRequest,
+    RestoreTrashedSampleLabelToWorkbenchToolService,
+    RestoreTrashedToolToWorkbenchSlotRequest,
+    RestoreTrashedToolToWorkbenchSlotService,
+    UpdateWorkbenchLiquidVolumeRequest,
+    UpdateWorkbenchLiquidVolumeService,
+    UpdateWorkbenchToolSampleLabelTextRequest,
+    UpdateWorkbenchToolSampleLabelTextService,
+    WorkbenchLiquidRequest,
+    WorkbenchProduceLotRequest,
+    WorkbenchSampleLabelRequest,
+    WorkbenchSlotRequest,
+)
+from app.services.domain_services.workspace import (
+    AddLiquidToWorkspaceWidgetRequest,
+    AddLiquidToWorkspaceWidgetService,
+    AddWorkspaceProduceLotToWidgetRequest,
+    AddWorkspaceProduceLotToWidgetService,
+    AddWorkspaceWidgetService,
+    AdvanceWorkspaceCryogenicsRequest,
+    AdvanceWorkspaceCryogenicsService,
+    CompleteGrinderCycleService,
+    CreateOrInitProduceLotService,
+    CreateProduceLotRequest,
+    DiscardWidgetProduceLotRequest,
+    DiscardWidgetProduceLotService,
+    DiscardWorkspaceProduceLotRequest,
+    DiscardWorkspaceProduceLotService,
+    DiscardWorkspaceWidgetService,
+    MoveWidgetProduceLotToWorkbenchToolRequest,
+    MoveWidgetProduceLotToWorkbenchToolService,
+    MoveWorkbenchProduceLotToWidgetRequest,
+    MoveWorkbenchProduceLotToWidgetService,
+    MoveWorkspaceWidgetService,
+    RemoveLiquidFromWorkspaceWidgetService,
+    RestoreTrashedProduceLotToWidgetRequest,
+    RestoreTrashedProduceLotToWidgetService,
+    StartGrinderCycleService,
+    UpdateWorkspaceWidgetLiquidVolumeRequest,
+    UpdateWorkspaceWidgetLiquidVolumeService,
+    WorkspaceWidgetLayoutRequest,
+    WorkspaceWidgetLiquidRequest,
+    WorkspaceWidgetRequest,
+)
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentService
 from app.services.received_sample_generation import (
     SAMPLE_BAG_TARE_MASS_G,
 )
+
+
+def print_lims_label(
+    service: ExperimentService, experiment_id: str, entry_id: str | None = None
+):
+    return PrintLimsLabelService(service).run(
+        experiment_id, PrintLimsLabelRequest(entry_id=entry_id)
+    )
+
+
+def move_basket_tool_to_gross_balance(service: ExperimentService, experiment_id: str):
+    return MoveBasketToolToGrossBalanceService(service).run(experiment_id, EmptyRequest())
+
+
+def place_tool_on_gross_balance(
+    service: ExperimentService, experiment_id: str, tool_id: str
+):
+    return PlaceToolOnGrossBalanceService(service).run(
+        experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id)
+    )
+
+
+def move_gross_balance_tool_to_rack(
+    service: ExperimentService, experiment_id: str, rack_slot_id: str
+):
+    return MoveGrossBalanceToolToRackService(service).run(
+        experiment_id, MoveGrossBalanceToolToRackRequest(rack_slot_id=rack_slot_id)
+    )
+
+
+def create_debug_produce_lot_to_widget(
+    service: ExperimentService,
+    experiment_id: str,
+    preset_id: str,
+    widget_id: str,
+    total_mass_g: float | None = None,
+    temperature_c: float | None = None,
+    residual_co2_mass_g: float | None = None,
+):
+    return CreateDebugProduceLotToWidgetService(service).run(
+        experiment_id,
+        CreateDebugProduceLotToWidgetRequest(
+            preset_id=preset_id,
+            widget_id=widget_id,
+            total_mass_g=total_mass_g,
+            temperature_c=temperature_c,
+            residual_co2_mass_g=residual_co2_mass_g,
+        ),
+    )
+
+
+def create_produce_lot(service: ExperimentService, experiment_id: str, produce_type: str):
+    return CreateOrInitProduceLotService(service).run(
+        experiment_id, CreateProduceLotRequest(produce_type=produce_type)
+    )
+
+
+def create_lims_reception(
+    service: ExperimentService,
+    experiment_id: str,
+    orchard_name: str,
+    harvest_date: str,
+    indicative_mass_g: float,
+    measured_gross_mass_g: float | None,
+    measured_sample_mass_g: float | None = None,
+    entry_id: str | None = None,
+):
+    return CreateLimsReceptionService(service).run(
+        experiment_id,
+        CreateLimsReceptionRequest(
+            orchard_name=orchard_name,
+            harvest_date=harvest_date,
+            indicative_mass_g=indicative_mass_g,
+            measured_gross_mass_g=measured_gross_mass_g,
+            measured_sample_mass_g=measured_sample_mass_g,
+            entry_id=entry_id,
+        ),
+    )
+
+
+def place_tool_on_workbench(
+    service: ExperimentService, experiment_id: str, slot_id: str, tool_id: str
+):
+    return PlaceToolOnWorkbenchService(service).run(
+        experiment_id, PlaceToolOnWorkbenchRequest(slot_id=slot_id, tool_id=tool_id)
+    )
+
+
+def move_workbench_tool_to_gross_balance(
+    service: ExperimentService, experiment_id: str, source_slot_id: str
+):
+    return MoveWorkbenchToolToGrossBalanceService(service).run(
+        experiment_id,
+        MoveWorkbenchToolToGrossBalanceRequest(source_slot_id=source_slot_id),
+    )
+
+
+def place_tool_in_rack_slot(
+    service: ExperimentService, experiment_id: str, rack_slot_id: str, tool_id: str
+):
+    return PlaceToolInRackSlotService(service).run(
+        experiment_id,
+        PlaceToolInRackSlotRequest(rack_slot_id=rack_slot_id, tool_id=tool_id),
+    )
+
+
+def discard_tool_from_palette(
+    service: ExperimentService, experiment_id: str, tool_id: str
+):
+    return DiscardToolFromPaletteService(service).run(
+        experiment_id, DiscardToolFromPaletteRequest(tool_id=tool_id)
+    )
+
+
+def move_gross_balance_tool_to_workbench(
+    service: ExperimentService, experiment_id: str, target_slot_id: str
+):
+    return MoveGrossBalanceToolToWorkbenchService(service).run(
+        experiment_id,
+        MoveGrossBalanceToolToWorkbenchRequest(target_slot_id=target_slot_id),
+    )
+
+
+def discard_gross_balance_tool(service: ExperimentService, experiment_id: str):
+    return DiscardGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
+
+
+def open_workbench_tool(
+    service: ExperimentService, experiment_id: str, slot_id: str
+):
+    return OpenWorkbenchToolService(service).run(
+        experiment_id, WorkbenchSlotRequest(slot_id=slot_id)
+    )
+
+
+def open_gross_balance_tool(service: ExperimentService, experiment_id: str):
+    return OpenGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
+
+
+def close_gross_balance_tool(service: ExperimentService, experiment_id: str):
+    return CloseGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
+
+
+def apply_printed_lims_label_to_gross_balance_bag(
+    service: ExperimentService, experiment_id: str
+):
+    return ApplyPrintedLimsLabelToGrossBalanceBagService(service).run(
+        experiment_id, EmptyReceptionRequest()
+    )
+
+
+def discard_gross_balance_produce_lot(
+    service: ExperimentService, experiment_id: str, produce_lot_id: str
+):
+    return DiscardGrossBalanceProduceLotService(service).run(
+        experiment_id,
+        DiscardGrossBalanceProduceLotRequest(produce_lot_id=produce_lot_id),
+    )
+
+
+def move_workspace_produce_lot_to_gross_balance(
+    service: ExperimentService, experiment_id: str, produce_lot_id: str
+):
+    return MoveWorkspaceProduceLotToGrossBalanceService(service).run(
+        experiment_id,
+        MoveWorkspaceProduceLotToGrossBalanceRequest(produce_lot_id=produce_lot_id),
+    )
+
+
+def restore_trashed_produce_lot_to_gross_balance(
+    service: ExperimentService, experiment_id: str, trash_produce_lot_id: str
+):
+    return RestoreTrashedProduceLotToGrossBalanceService(service).run(
+        experiment_id,
+        RestoreTrashedProduceLotToGrossBalanceRequest(
+            trash_produce_lot_id=trash_produce_lot_id
+        ),
+    )
+
+
+def restore_trashed_tool_to_gross_balance(
+    service: ExperimentService, experiment_id: str, trash_tool_id: str
+):
+    return RestoreTrashedToolToGrossBalanceService(service).run(
+        experiment_id,
+        RestoreTrashedToolToGrossBalanceRequest(trash_tool_id=trash_tool_id),
+    )
+
+
+def move_rack_tool_to_gross_balance(
+    service: ExperimentService, experiment_id: str, rack_slot_id: str
+):
+    return MoveRackToolToGrossBalanceService(service).run(
+        experiment_id,
+        MoveRackToolToGrossBalanceRequest(rack_slot_id=rack_slot_id),
+    )
+
+
+def move_gross_balance_produce_lot_to_workbench(
+    service: ExperimentService, experiment_id: str, target_slot_id: str, produce_lot_id: str
+):
+    return MoveGrossBalanceProduceLotToWorkbenchService(service).run(
+        experiment_id,
+        MoveGrossBalanceProduceLotToWorkbenchRequest(
+            target_slot_id=target_slot_id, produce_lot_id=produce_lot_id
+        ),
+    )
+
+
+def move_gross_balance_produce_lot_to_widget(
+    service: ExperimentService, experiment_id: str, widget_id: str, produce_lot_id: str
+):
+    return MoveGrossBalanceProduceLotToWidgetService(service).run(
+        experiment_id,
+        MoveGrossBalanceProduceLotToWidgetRequest(
+            widget_id=widget_id, produce_lot_id=produce_lot_id
+        ),
+    )
+
+
+def _get_first_label_id(service: ExperimentService, experiment_id: str, slot_id: str) -> str:
+    experiment = service._require_experiment(experiment_id)
+    slot = next((s for s in experiment.workbench.slots if s.id == slot_id), None)
+    if slot is None or slot.tool is None or not slot.tool.labels:
+        raise ValueError(f"No label on slot {slot_id}")
+    return slot.tool.labels[0].id
 
 
 def apply_command(
@@ -18,186 +386,325 @@ def apply_command(
     payload: dict,
 ):
     handlers = {
-        "add_workbench_slot": lambda: service.add_workbench_slot(experiment_id),
-        "remove_workbench_slot": lambda: service.remove_workbench_slot(experiment_id, payload["slot_id"]),
-        "place_tool_on_workbench": lambda: service.place_tool_on_workbench(
-            experiment_id, payload["slot_id"], payload["tool_id"]
+        "add_workbench_slot": lambda: AddWorkbenchSlotService(service).run(
+            experiment_id, EmptyWorkbenchRequest()
         ),
-        "move_tool_between_workbench_slots": lambda: service.move_tool_between_workbench_slots(
-            experiment_id, payload["source_slot_id"], payload["target_slot_id"]
+        "remove_workbench_slot": lambda: RemoveWorkbenchSlotService(service).run(
+            experiment_id, WorkbenchSlotRequest(slot_id=payload["slot_id"])
         ),
-        "discard_workbench_tool": lambda: service.discard_workbench_tool(experiment_id, payload["slot_id"]),
-        "discard_tool_from_palette": lambda: service.discard_tool_from_palette(experiment_id, payload["tool_id"]),
-        "discard_sample_label_from_palette": lambda: service.discard_sample_label_from_palette(
-            experiment_id, payload["sample_label_id"]
-        ),
-        "restore_trashed_tool_to_workbench_slot": lambda: service.restore_trashed_tool_to_workbench_slot(
-            experiment_id, payload["trash_tool_id"], payload["target_slot_id"]
-        ),
-        "add_workspace_widget": lambda: service.add_workspace_widget(
+        "place_tool_on_workbench": lambda: PlaceToolOnWorkbenchService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["anchor"],
-            payload["offset_x"],
-            payload["offset_y"],
+            PlaceToolOnWorkbenchRequest(slot_id=payload["slot_id"], tool_id=payload["tool_id"]),
         ),
-        "move_workspace_widget": lambda: service.move_workspace_widget(
+        "move_tool_between_workbench_slots": lambda: MoveToolBetweenWorkbenchSlotsService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["anchor"],
-            payload["offset_x"],
-            payload["offset_y"],
+            MoveToolBetweenWorkbenchSlotsRequest(
+                source_slot_id=payload["source_slot_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
         ),
-        "discard_workspace_widget": lambda: service.discard_workspace_widget(experiment_id, payload["widget_id"]),
-        "add_liquid_to_workspace_widget": lambda: service.add_liquid_to_workspace_widget(
+        "discard_workbench_tool": lambda: DiscardWorkbenchToolService(service).run(
+            experiment_id, WorkbenchSlotRequest(slot_id=payload["slot_id"])
+        ),
+        "discard_tool_from_palette": lambda: DiscardToolFromPaletteService(service).run(
+            experiment_id, DiscardToolFromPaletteRequest(tool_id=payload["tool_id"])
+        ),
+        "discard_sample_label_from_palette": lambda: DiscardSampleLabelFromPaletteService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["liquid_id"],
-            payload.get("volume_ml"),
+            DiscardSampleLabelFromPaletteRequest(sample_label_id=payload["sample_label_id"]),
         ),
-        "update_workspace_widget_liquid_volume": lambda: service.update_workspace_widget_liquid_volume(
+        "restore_trashed_tool_to_workbench_slot": lambda: RestoreTrashedToolToWorkbenchSlotService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["liquid_entry_id"],
-            payload["volume_ml"],
+            RestoreTrashedToolToWorkbenchSlotRequest(
+                trash_tool_id=payload["trash_tool_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
         ),
-        "remove_liquid_from_workspace_widget": lambda: service.remove_liquid_from_workspace_widget(
+        "add_workspace_widget": lambda: AddWorkspaceWidgetService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["liquid_entry_id"],
+            WorkspaceWidgetLayoutRequest(
+                widget_id=payload["widget_id"],
+                anchor=payload["anchor"],
+                offset_x=payload["offset_x"],
+                offset_y=payload["offset_y"],
+            ),
         ),
-        "start_grinder_cycle": lambda: service.start_grinder_cycle(experiment_id, payload["widget_id"]),
-        "complete_grinder_cycle": lambda: service.complete_grinder_cycle(experiment_id, payload["widget_id"]),
-        "advance_workspace_cryogenics": lambda: service.advance_workspace_cryogenics(
-            experiment_id, payload["elapsed_ms"]
-        ),
-        "add_workspace_produce_lot_to_widget": lambda: service.add_workspace_produce_lot_to_widget(
-            experiment_id, payload["widget_id"], payload["produce_lot_id"]
-        ),
-        "move_workbench_produce_lot_to_widget": lambda: service.move_workbench_produce_lot_to_widget(
+        "move_workspace_widget": lambda: MoveWorkspaceWidgetService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["source_slot_id"],
-            payload["produce_lot_id"],
+            WorkspaceWidgetLayoutRequest(
+                widget_id=payload["widget_id"],
+                anchor=payload["anchor"],
+                offset_x=payload["offset_x"],
+                offset_y=payload["offset_y"],
+            ),
         ),
-        "restore_trashed_produce_lot_to_widget": lambda: service.restore_trashed_produce_lot_to_widget(
-            experiment_id, payload["trash_produce_lot_id"], payload["widget_id"]
+        "discard_workspace_widget": lambda: DiscardWorkspaceWidgetService(service).run(
+            experiment_id, WorkspaceWidgetRequest(widget_id=payload["widget_id"])
         ),
-        "create_produce_lot": lambda: service.create_produce_lot(experiment_id, payload["produce_type"]),
-        "place_received_bag_on_workbench": lambda: service.place_received_bag_on_workbench(
-            experiment_id, payload["target_slot_id"]
-        ),
-        "discard_basket_tool": lambda: service.discard_basket_tool(experiment_id),
-        "record_gross_weight": lambda: service.record_gross_weight(
+        "add_liquid_to_workspace_widget": lambda: AddLiquidToWorkspaceWidgetService(service).run(
             experiment_id,
-            payload.get("measured_gross_mass_g"),
+            AddLiquidToWorkspaceWidgetRequest(
+                widget_id=payload["widget_id"],
+                liquid_id=payload["liquid_id"],
+                volume_ml=payload.get("volume_ml"),
+            ),
         ),
-        "set_gross_mass_offset": lambda: service.set_gross_mass_offset(
+        "update_workspace_widget_liquid_volume": lambda: UpdateWorkspaceWidgetLiquidVolumeService(service).run(
             experiment_id,
-            payload["gross_mass_offset_g"],
+            UpdateWorkspaceWidgetLiquidVolumeRequest(
+                widget_id=payload["widget_id"],
+                liquid_entry_id=payload["liquid_entry_id"],
+                volume_ml=payload["volume_ml"],
+            ),
         ),
-        "create_lims_reception": lambda: service.create_lims_reception(
+        "remove_liquid_from_workspace_widget": lambda: RemoveLiquidFromWorkspaceWidgetService(service).run(
             experiment_id,
-            payload["orchard_name"],
-            payload["harvest_date"],
-            payload["indicative_mass_g"],
-            payload.get("measured_gross_mass_g"),
-            payload.get("measured_sample_mass_g"),
+            WorkspaceWidgetLiquidRequest(
+                widget_id=payload["widget_id"],
+                liquid_entry_id=payload["liquid_entry_id"],
+            ),
         ),
-        "print_lims_label": lambda: service.print_lims_label(experiment_id),
-        "discard_printed_lims_label": lambda: service.discard_printed_lims_label(experiment_id),
-        "apply_printed_lims_label": lambda: service.apply_printed_lims_label(
-            experiment_id, payload["slot_id"]
+        "start_grinder_cycle": lambda: StartGrinderCycleService(service).run(
+            experiment_id, WorkspaceWidgetRequest(widget_id=payload["widget_id"])
         ),
-        "apply_printed_lims_label_to_basket_bag": lambda: service.apply_printed_lims_label_to_basket_bag(
-            experiment_id
+        "complete_grinder_cycle": lambda: CompleteGrinderCycleService(service).run(
+            experiment_id, WorkspaceWidgetRequest(widget_id=payload["widget_id"])
         ),
-        "create_debug_produce_lot_on_workbench": lambda: service.create_debug_produce_lot_on_workbench(
+        "advance_workspace_cryogenics": lambda: AdvanceWorkspaceCryogenicsService(service).run(
+            experiment_id, AdvanceWorkspaceCryogenicsRequest(elapsed_ms=payload["elapsed_ms"])
+        ),
+        "add_workspace_produce_lot_to_widget": lambda: AddWorkspaceProduceLotToWidgetService(service).run(
             experiment_id,
-            payload["preset_id"],
-            payload["target_slot_id"],
-            payload.get("total_mass_g"),
-            payload.get("temperature_c"),
-            payload.get("residual_co2_mass_g"),
+            AddWorkspaceProduceLotToWidgetRequest(
+                widget_id=payload["widget_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
         ),
-        "create_debug_produce_lot_to_widget": lambda: service.create_debug_produce_lot_to_widget(
+        "move_workbench_produce_lot_to_widget": lambda: MoveWorkbenchProduceLotToWidgetService(service).run(
             experiment_id,
-            payload["preset_id"],
-            payload["widget_id"],
-            payload.get("total_mass_g"),
-            payload.get("temperature_c"),
-            payload.get("residual_co2_mass_g"),
+            MoveWorkbenchProduceLotToWidgetRequest(
+                widget_id=payload["widget_id"],
+                source_slot_id=payload["source_slot_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
         ),
-        "discard_workspace_produce_lot": lambda: service.discard_workspace_produce_lot(
-            experiment_id, payload["produce_lot_id"]
-        ),
-        "move_widget_produce_lot_to_workbench_tool": lambda: service.move_widget_produce_lot_to_workbench_tool(
+        "restore_trashed_produce_lot_to_widget": lambda: RestoreTrashedProduceLotToWidgetService(service).run(
             experiment_id,
-            payload["widget_id"],
-            payload["produce_lot_id"],
-            payload["target_slot_id"],
+            RestoreTrashedProduceLotToWidgetRequest(
+                trash_produce_lot_id=payload["trash_produce_lot_id"],
+                widget_id=payload["widget_id"],
+            ),
         ),
-        "discard_widget_produce_lot": lambda: service.discard_widget_produce_lot(
-            experiment_id, payload["widget_id"], payload["produce_lot_id"]
+        "create_produce_lot": lambda: CreateOrInitProduceLotService(service).run(
+            experiment_id, CreateProduceLotRequest(produce_type=payload["produce_type"])
         ),
-        "place_tool_in_rack_slot": lambda: service.place_tool_in_rack_slot(
-            experiment_id, payload["rack_slot_id"], payload["tool_id"]
-        ),
-        "place_workbench_tool_in_rack_slot": lambda: service.place_workbench_tool_in_rack_slot(
-            experiment_id, payload["source_slot_id"], payload["rack_slot_id"]
-        ),
-        "move_rack_tool_between_slots": lambda: service.move_rack_tool_between_slots(
-            experiment_id, payload["source_rack_slot_id"], payload["target_rack_slot_id"]
-        ),
-        "remove_rack_tool_to_workbench_slot": lambda: service.remove_rack_tool_to_workbench_slot(
-            experiment_id, payload["rack_slot_id"], payload["target_slot_id"]
-        ),
-        "discard_rack_tool": lambda: service.discard_rack_tool(experiment_id, payload["rack_slot_id"]),
-        "restore_trashed_tool_to_rack_slot": lambda: service.restore_trashed_tool_to_rack_slot(
-            experiment_id, payload["trash_tool_id"], payload["rack_slot_id"]
-        ),
-        "add_liquid_to_workbench_tool": lambda: service.add_liquid_to_workbench_tool(
-            experiment_id, payload["slot_id"], payload["liquid_id"], payload.get("volume_ml")
-        ),
-        "add_produce_lot_to_workbench_tool": lambda: service.add_produce_lot_to_workbench_tool(
-            experiment_id, payload["slot_id"], payload["produce_lot_id"]
-        ),
-        "discard_produce_lot_from_workbench_tool": lambda: service.discard_produce_lot_from_workbench_tool(
-            experiment_id, payload["slot_id"], payload["produce_lot_id"]
-        ),
-        "cut_workbench_produce_lot": lambda: service.cut_workbench_produce_lot(
-            experiment_id, payload["slot_id"], payload["produce_lot_id"]
-        ),
-        "move_produce_lot_between_workbench_tools": lambda: service.move_produce_lot_between_workbench_tools(
+        "place_received_bag_on_workbench": lambda: PlaceReceivedBagOnWorkbenchService(service).run(
             experiment_id,
-            payload["source_slot_id"],
-            payload["target_slot_id"],
-            payload["produce_lot_id"],
+            PlaceReceivedBagOnWorkbenchRequest(target_slot_id=payload["target_slot_id"]),
         ),
-        "restore_trashed_produce_lot_to_workbench_tool": lambda: service.restore_trashed_produce_lot_to_workbench_tool(
-            experiment_id, payload["trash_produce_lot_id"], payload["target_slot_id"]
+        "discard_basket_tool": lambda: DiscardBasketToolService(service).run(
+            experiment_id, EmptyTrashRequest()
         ),
-        "remove_liquid_from_workbench_tool": lambda: service.remove_liquid_from_workbench_tool(
-            experiment_id, payload["slot_id"], payload["liquid_entry_id"]
+        "record_gross_weight": lambda: RecordGrossWeightService(service).run(
+            experiment_id,
+            RecordGrossWeightRequest(measured_gross_mass_g=payload.get("measured_gross_mass_g")),
         ),
-        "update_workbench_liquid_volume": lambda: service.update_workbench_liquid_volume(
-            experiment_id, payload["slot_id"], payload["liquid_entry_id"], payload["volume_ml"]
+        "set_gross_mass_offset": lambda: SetGrossMassOffsetService(service).run(
+            experiment_id,
+            SetGrossMassOffsetRequest(gross_mass_offset_g=payload["gross_mass_offset_g"]),
         ),
-        "apply_sample_label_to_workbench_tool": lambda: service.apply_sample_label_to_workbench_tool(
-            experiment_id, payload["slot_id"]
+        "create_lims_reception": lambda: CreateLimsReceptionService(service).run(
+            experiment_id,
+            CreateLimsReceptionRequest(
+                orchard_name=payload["orchard_name"],
+                harvest_date=payload["harvest_date"],
+                indicative_mass_g=payload["indicative_mass_g"],
+                measured_gross_mass_g=payload.get("measured_gross_mass_g"),
+                measured_sample_mass_g=payload.get("measured_sample_mass_g"),
+            ),
         ),
-        "update_workbench_tool_sample_label_text": lambda: service.update_workbench_tool_sample_label_text(
-            experiment_id, payload["slot_id"], payload["sample_label_text"]
+        "print_lims_label": lambda: PrintLimsLabelService(service).run(
+            experiment_id, PrintLimsLabelRequest()
         ),
-        "close_workbench_tool": lambda: service.close_workbench_tool(experiment_id, payload["slot_id"]),
-        "move_sample_label_between_workbench_tools": lambda: service.move_sample_label_between_workbench_tools(
-            experiment_id, payload["source_slot_id"], payload["target_slot_id"]
+        "discard_printed_lims_label": lambda: DiscardPrintedLimsLabelService(service).run(
+            experiment_id, EmptyReceptionRequest()
         ),
-        "discard_sample_label_from_workbench_tool": lambda: service.discard_sample_label_from_workbench_tool(
-            experiment_id, payload["slot_id"]
+        "apply_printed_lims_label": lambda: ApplyPrintedLimsLabelService(service).run(
+            experiment_id, ApplyPrintedLimsLabelRequest(slot_id=payload["slot_id"])
         ),
-        "restore_trashed_sample_label_to_workbench_tool": lambda: service.restore_trashed_sample_label_to_workbench_tool(
-            experiment_id, payload["trash_sample_label_id"], payload["target_slot_id"]
+        "apply_printed_lims_label_to_basket_bag": lambda: ApplyPrintedLimsLabelToBasketBagService(service).run(
+            experiment_id, EmptyReceptionRequest()
+        ),
+        "create_debug_produce_lot_on_workbench": lambda: CreateDebugProduceLotOnWorkbenchService(service).run(
+            experiment_id,
+            CreateDebugProduceLotOnWorkbenchRequest(
+                preset_id=payload["preset_id"],
+                target_slot_id=payload["target_slot_id"],
+                total_mass_g=payload.get("total_mass_g"),
+                temperature_c=payload.get("temperature_c"),
+                residual_co2_mass_g=payload.get("residual_co2_mass_g"),
+            ),
+        ),
+        "create_debug_produce_lot_to_widget": lambda: CreateDebugProduceLotToWidgetService(service).run(
+            experiment_id,
+            CreateDebugProduceLotToWidgetRequest(
+                preset_id=payload["preset_id"],
+                widget_id=payload["widget_id"],
+                total_mass_g=payload.get("total_mass_g"),
+                temperature_c=payload.get("temperature_c"),
+                residual_co2_mass_g=payload.get("residual_co2_mass_g"),
+            ),
+        ),
+        "discard_workspace_produce_lot": lambda: DiscardWorkspaceProduceLotService(service).run(
+            experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=payload["produce_lot_id"])
+        ),
+        "move_widget_produce_lot_to_workbench_tool": lambda: MoveWidgetProduceLotToWorkbenchToolService(service).run(
+            experiment_id,
+            MoveWidgetProduceLotToWorkbenchToolRequest(
+                widget_id=payload["widget_id"],
+                produce_lot_id=payload["produce_lot_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
+        ),
+        "discard_widget_produce_lot": lambda: DiscardWidgetProduceLotService(service).run(
+            experiment_id,
+            DiscardWidgetProduceLotRequest(
+                widget_id=payload["widget_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
+        ),
+        "place_tool_in_rack_slot": lambda: PlaceToolInRackSlotService(service).run(
+            experiment_id,
+            PlaceToolInRackSlotRequest(
+                rack_slot_id=payload["rack_slot_id"],
+                tool_id=payload["tool_id"],
+            ),
+        ),
+        "place_workbench_tool_in_rack_slot": lambda: PlaceWorkbenchToolInRackSlotService(service).run(
+            experiment_id,
+            PlaceWorkbenchToolInRackSlotRequest(
+                source_slot_id=payload["source_slot_id"],
+                rack_slot_id=payload["rack_slot_id"],
+            ),
+        ),
+        "move_rack_tool_between_slots": lambda: MoveRackToolBetweenSlotsService(service).run(
+            experiment_id,
+            MoveRackToolBetweenSlotsRequest(
+                source_rack_slot_id=payload["source_rack_slot_id"],
+                target_rack_slot_id=payload["target_rack_slot_id"],
+            ),
+        ),
+        "remove_rack_tool_to_workbench_slot": lambda: RemoveRackToolToWorkbenchSlotService(service).run(
+            experiment_id,
+            RemoveRackToolToWorkbenchSlotRequest(
+                rack_slot_id=payload["rack_slot_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
+        ),
+        "discard_rack_tool": lambda: DiscardRackToolService(service).run(
+            experiment_id, DiscardRackToolRequest(rack_slot_id=payload["rack_slot_id"])
+        ),
+        "restore_trashed_tool_to_rack_slot": lambda: RestoreTrashedToolToRackSlotService(service).run(
+            experiment_id,
+            RestoreTrashedToolToRackSlotRequest(
+                trash_tool_id=payload["trash_tool_id"],
+                rack_slot_id=payload["rack_slot_id"],
+            ),
+        ),
+        "add_liquid_to_workbench_tool": lambda: AddLiquidToWorkbenchToolService(service).run(
+            experiment_id,
+            AddLiquidToWorkbenchToolRequest(
+                slot_id=payload["slot_id"],
+                liquid_id=payload["liquid_id"],
+                volume_ml=payload.get("volume_ml"),
+            ),
+        ),
+        "add_produce_lot_to_workbench_tool": lambda: AddProduceLotToWorkbenchToolService(service).run(
+            experiment_id,
+            AddProduceLotToWorkbenchToolRequest(
+                slot_id=payload["slot_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
+        ),
+        "discard_produce_lot_from_workbench_tool": lambda: DiscardProduceLotFromWorkbenchToolService(service).run(
+            experiment_id,
+            WorkbenchProduceLotRequest(
+                slot_id=payload["slot_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
+        ),
+        "cut_workbench_produce_lot": lambda: CutWorkbenchProduceLotService(service).run(
+            experiment_id,
+            WorkbenchProduceLotRequest(
+                slot_id=payload["slot_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
+        ),
+        "move_produce_lot_between_workbench_tools": lambda: MoveProduceLotBetweenWorkbenchToolsService(service).run(
+            experiment_id,
+            MoveProduceLotBetweenWorkbenchToolsRequest(
+                source_slot_id=payload["source_slot_id"],
+                target_slot_id=payload["target_slot_id"],
+                produce_lot_id=payload["produce_lot_id"],
+            ),
+        ),
+        "restore_trashed_produce_lot_to_workbench_tool": lambda: RestoreTrashedProduceLotToWorkbenchToolService(service).run(
+            experiment_id,
+            RestoreTrashedProduceLotToWorkbenchToolRequest(
+                trash_produce_lot_id=payload["trash_produce_lot_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
+        ),
+        "remove_liquid_from_workbench_tool": lambda: RemoveLiquidFromWorkbenchToolService(service).run(
+            experiment_id,
+            WorkbenchLiquidRequest(
+                slot_id=payload["slot_id"],
+                liquid_entry_id=payload["liquid_entry_id"],
+            ),
+        ),
+        "update_workbench_liquid_volume": lambda: UpdateWorkbenchLiquidVolumeService(service).run(
+            experiment_id,
+            UpdateWorkbenchLiquidVolumeRequest(
+                slot_id=payload["slot_id"],
+                liquid_entry_id=payload["liquid_entry_id"],
+                volume_ml=payload["volume_ml"],
+            ),
+        ),
+        "apply_sample_label_to_workbench_tool": lambda: ApplySampleLabelToWorkbenchToolService(service).run(
+            experiment_id, WorkbenchSlotRequest(slot_id=payload["slot_id"])
+        ),
+        "update_workbench_tool_sample_label_text": lambda: UpdateWorkbenchToolSampleLabelTextService(service).run(
+            experiment_id,
+            UpdateWorkbenchToolSampleLabelTextRequest(
+                slot_id=payload["slot_id"],
+                label_id=_get_first_label_id(service, experiment_id, payload["slot_id"]),
+                sample_label_text=payload["sample_label_text"],
+            ),
+        ),
+        "close_workbench_tool": lambda: CloseWorkbenchToolService(service).run(
+            experiment_id, WorkbenchSlotRequest(slot_id=payload["slot_id"])
+        ),
+        "move_sample_label_between_workbench_tools": lambda: MoveSampleLabelBetweenWorkbenchToolsService(service).run(
+            experiment_id,
+            MoveSampleLabelBetweenWorkbenchToolsRequest(
+                source_slot_id=payload["source_slot_id"],
+                target_slot_id=payload["target_slot_id"],
+                label_id=_get_first_label_id(service, experiment_id, payload["source_slot_id"]),
+            ),
+        ),
+        "discard_sample_label_from_workbench_tool": lambda: DiscardSampleLabelFromWorkbenchToolService(service).run(
+            experiment_id,
+            WorkbenchSampleLabelRequest(
+                slot_id=payload["slot_id"],
+                label_id=_get_first_label_id(service, experiment_id, payload["slot_id"]),
+            ),
+        ),
+        "restore_trashed_sample_label_to_workbench_tool": lambda: RestoreTrashedSampleLabelToWorkbenchToolService(service).run(
+            experiment_id,
+            RestoreTrashedSampleLabelToWorkbenchToolRequest(
+                trash_sample_label_id=payload["trash_sample_label_id"],
+                target_slot_id=payload["target_slot_id"],
+            ),
         ),
     }
     return handlers[command_type]()
@@ -623,7 +1130,7 @@ def test_print_lims_label_can_target_a_selected_existing_entry() -> None:
     assert first_entry_id is not None
     assert second.lims_reception.lab_sample_code == "APP-2026-0002"
 
-    updated = service.print_lims_label(experiment.id, first_entry_id)
+    updated = print_lims_label(service, experiment.id, first_entry_id)
 
     assert updated.lims_reception.lab_sample_code == "APP-2026-0001"
     assert updated.lims_reception.printed_label_ticket is not None
@@ -2772,7 +3279,7 @@ def test_move_basket_tool_to_gross_balance_updates_measured_mass() -> None:
         1,
     )
 
-    updated = service.move_basket_tool_to_gross_balance(experiment.id)
+    updated = move_basket_tool_to_gross_balance(service, experiment.id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2786,7 +3293,7 @@ def test_place_tool_on_gross_balance_estimates_mass_for_empty_vial() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    updated = service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    updated = place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2799,18 +3306,18 @@ def test_move_gross_balance_tool_to_rack_rejects_non_vials() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "beaker_rinse")
+    place_tool_on_gross_balance(service, experiment.id, "beaker_rinse")
 
     with pytest.raises(ValueError, match="does not fit in the rack"):
-        service.move_gross_balance_tool_to_rack(experiment.id, "rack_slot_1")
+        move_gross_balance_tool_to_rack(service, experiment.id, "rack_slot_1")
 
 
 def test_apply_printed_lims_label_to_gross_balance_bag_consumes_ticket() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.move_basket_tool_to_gross_balance(experiment.id)
-    created = service.create_lims_reception(
+    move_basket_tool_to_gross_balance(service, experiment.id)
+    created = create_lims_reception(service, 
         experiment.id,
         orchard_name="Martin Orchard",
         harvest_date="2026-03-29",
@@ -2818,9 +3325,9 @@ def test_apply_printed_lims_label_to_gross_balance_bag_consumes_ticket() -> None
         measured_gross_mass_g=None,
         measured_sample_mass_g=None,
     )
-    service.print_lims_label(experiment.id, created.lims_reception.id)
+    print_lims_label(service, experiment.id, created.lims_reception.id)
 
-    updated = service.apply_printed_lims_label_to_gross_balance_bag(experiment.id)
+    updated = apply_printed_lims_label_to_gross_balance_bag(service, experiment.id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2836,7 +3343,7 @@ def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_debug_produce_lot_to_widget(
+    created = create_debug_produce_lot_to_widget(service, 
         experiment.id,
         "apple_powder_residual_co2",
         "gross_balance",
@@ -2844,7 +3351,7 @@ def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
     )
     produce_lot_id = next(widget for widget in created.workspace.widgets if widget.id == "gross_balance").produce_lots[0].id
 
-    updated = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+    updated = discard_gross_balance_produce_lot(service, experiment.id, produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.produce_lots == []
@@ -2858,13 +3365,13 @@ def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() ->
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
-    service.open_gross_balance_tool(experiment.id)
-    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+    place_tool_on_gross_balance(service, experiment.id, "hdpe_storage_jar_2l")
+    open_gross_balance_tool(service, experiment.id)
+    move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
-    updated = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+    updated = discard_gross_balance_produce_lot(service, experiment.id, produce_lot_id)
 
     trashed_entry = updated.trash.produce_lots[0]
     assert trashed_entry.origin_label == "Gross balance"
@@ -2878,17 +3385,17 @@ def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_debug_produce_lot_to_widget(
+    created = create_debug_produce_lot_to_widget(service, 
         experiment.id,
         "apple_powder_residual_co2",
         "gross_balance",
         total_mass_g=12.3,
     )
     produce_lot_id = next(widget for widget in created.workspace.widgets if widget.id == "gross_balance").produce_lots[0].id
-    discarded = service.discard_gross_balance_produce_lot(experiment.id, produce_lot_id)
+    discarded = discard_gross_balance_produce_lot(service, experiment.id, produce_lot_id)
     trash_produce_lot_id = discarded.trash.produce_lots[0].id
 
-    updated = service.restore_trashed_produce_lot_to_gross_balance(experiment.id, trash_produce_lot_id)
+    updated = restore_trashed_produce_lot_to_gross_balance(service, experiment.id, trash_produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.produce_lots[0].id == produce_lot_id
@@ -2901,9 +3408,9 @@ def test_move_workbench_tool_to_gross_balance_moves_tool_and_clears_source_slot(
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_workbench(experiment.id, "station_1", "centrifuge_tube_50ml")
+    place_tool_on_workbench(service, experiment.id, "station_1", "centrifuge_tube_50ml")
 
-    updated = service.move_workbench_tool_to_gross_balance(experiment.id, "station_1")
+    updated = move_workbench_tool_to_gross_balance(service, experiment.id, "station_1")
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2918,16 +3425,16 @@ def test_move_workbench_tool_to_gross_balance_requires_tool_in_source_slot() -> 
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Station 1 does not contain a tool"):
-        service.move_workbench_tool_to_gross_balance(experiment.id, "station_1")
+        move_workbench_tool_to_gross_balance(service, experiment.id, "station_1")
 
 
 def test_move_rack_tool_to_gross_balance_moves_tool_and_clears_rack_slot() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_in_rack_slot(experiment.id, "rack_slot_1", "sample_vial_lcms")
+    place_tool_in_rack_slot(service, experiment.id, "rack_slot_1", "sample_vial_lcms")
 
-    updated = service.move_rack_tool_to_gross_balance(experiment.id, "rack_slot_1")
+    updated = move_rack_tool_to_gross_balance(service, experiment.id, "rack_slot_1")
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2940,10 +3447,10 @@ def test_restore_trashed_tool_to_gross_balance_restores_tool_and_clears_trash() 
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.discard_tool_from_palette(experiment.id, "sample_vial_lcms")
+    discard_tool_from_palette(service, experiment.id, "sample_vial_lcms")
     trash_tool_id = service.get_experiment(experiment.id).trash.tools[0].id
 
-    updated = service.restore_trashed_tool_to_gross_balance(experiment.id, trash_tool_id)
+    updated = restore_trashed_tool_to_gross_balance(service, experiment.id, trash_tool_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -2956,9 +3463,9 @@ def test_move_gross_balance_tool_to_workbench_moves_tool_to_empty_slot() -> None
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
 
-    updated = service.move_gross_balance_tool_to_workbench(experiment.id, "station_1")
+    updated = move_gross_balance_tool_to_workbench(service, experiment.id, "station_1")
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is None
@@ -2972,20 +3479,20 @@ def test_move_gross_balance_tool_to_workbench_rejects_occupied_slot() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_workbench(experiment.id, "station_1", "sample_vial_lcms")
-    service.place_tool_on_gross_balance(experiment.id, "centrifuge_tube_50ml")
+    place_tool_on_workbench(service, experiment.id, "station_1", "sample_vial_lcms")
+    place_tool_on_gross_balance(service, experiment.id, "centrifuge_tube_50ml")
 
     with pytest.raises(ValueError, match="Station 1 already contains a tool"):
-        service.move_gross_balance_tool_to_workbench(experiment.id, "station_1")
+        move_gross_balance_tool_to_workbench(service, experiment.id, "station_1")
 
 
 def test_move_gross_balance_tool_to_rack_moves_vial_and_clears_balance() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
 
-    updated = service.move_gross_balance_tool_to_rack(experiment.id, "rack_slot_1")
+    updated = move_gross_balance_tool_to_rack(service, experiment.id, "rack_slot_1")
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is None
@@ -2998,9 +3505,9 @@ def test_discard_gross_balance_tool_moves_tool_to_trash() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
 
-    updated = service.discard_gross_balance_tool(experiment.id)
+    updated = discard_gross_balance_tool(service, experiment.id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is None
@@ -3013,19 +3520,19 @@ def test_open_gross_balance_tool_rejects_non_sealable_tool() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "beaker_rinse")
+    place_tool_on_gross_balance(service, experiment.id, "beaker_rinse")
 
     with pytest.raises(ValueError, match="Bench beaker does not support sealing"):
-        service.open_gross_balance_tool(experiment.id)
+        open_gross_balance_tool(service, experiment.id)
 
 
 def test_close_and_open_gross_balance_tool_toggle_seal_state() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
-    closed = service.close_gross_balance_tool(experiment.id)
-    reopened = service.open_gross_balance_tool(experiment.id)
+    place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
+    closed = close_gross_balance_tool(service, experiment.id)
+    reopened = open_gross_balance_tool(service, experiment.id)
 
     gross_balance_closed = next(widget for widget in closed.workspace.widgets if widget.id == "gross_balance")
     gross_balance_open = next(widget for widget in reopened.workspace.widgets if widget.id == "gross_balance")
@@ -3040,10 +3547,10 @@ def test_move_workspace_produce_lot_to_gross_balance_places_loose_produce_and_up
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
 
-    updated = service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+    updated = move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert updated.workspace.produce_basket_lots == []
@@ -3056,50 +3563,50 @@ def test_move_workspace_produce_lot_to_gross_balance_rejects_existing_loose_prod
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    first = service.create_produce_lot(experiment.id, "apple")
+    first = create_produce_lot(service, experiment.id, "apple")
     first_id = first.workspace.produce_basket_lots[0].id
-    service.move_workspace_produce_lot_to_gross_balance(experiment.id, first_id)
-    second = service.create_produce_lot(experiment.id, "apple")
+    move_workspace_produce_lot_to_gross_balance(service, experiment.id, first_id)
+    second = create_produce_lot(service, experiment.id, "apple")
     second_id = second.workspace.produce_basket_lots[0].id
 
     with pytest.raises(ValueError, match="Gross balance already contains a produce lot"):
-        service.move_workspace_produce_lot_to_gross_balance(experiment.id, second_id)
+        move_workspace_produce_lot_to_gross_balance(service, experiment.id, second_id)
 
 
 def test_move_workspace_produce_lot_to_gross_balance_rejects_sealed_balance_bag() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.move_basket_tool_to_gross_balance(experiment.id)
+    move_basket_tool_to_gross_balance(service, experiment.id)
 
     with pytest.raises(ValueError, match="Open Sealed sampling bag before adding produce"):
-        service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+        move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
 
 def test_move_workspace_produce_lot_to_gross_balance_rejects_tool_without_produce_capacity() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.place_tool_on_gross_balance(experiment.id, "sample_vial_lcms")
+    place_tool_on_gross_balance(service, experiment.id, "sample_vial_lcms")
 
     with pytest.raises(ValueError, match="Autosampler vial does not accept produce"):
-        service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+        move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
 
 def test_move_workspace_produce_lot_to_gross_balance_places_produce_into_open_balance_jar() -> None:
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.place_tool_on_gross_balance(experiment.id, "hdpe_storage_jar_2l")
-    service.open_gross_balance_tool(experiment.id)
+    place_tool_on_gross_balance(service, experiment.id, "hdpe_storage_jar_2l")
+    open_gross_balance_tool(service, experiment.id)
 
-    updated = service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+    updated = move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.tool is not None
@@ -3111,12 +3618,12 @@ def test_move_gross_balance_produce_lot_to_workbench_moves_loose_produce_to_targ
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
-    service.place_tool_on_workbench(experiment.id, "station_1", "cutting_board_hdpe")
+    move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
+    place_tool_on_workbench(service, experiment.id, "station_1", "cutting_board_hdpe")
 
-    updated = service.move_gross_balance_produce_lot_to_workbench(experiment.id, "station_1", produce_lot_id)
+    updated = move_gross_balance_produce_lot_to_workbench(service, experiment.id, "station_1", produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     assert gross_balance.produce_lots == []
@@ -3129,11 +3636,11 @@ def test_move_gross_balance_produce_lot_to_widget_moves_loose_produce_into_grind
     service = ExperimentService()
     experiment = service.create_experiment()
 
-    created = service.create_produce_lot(experiment.id, "apple")
+    created = create_produce_lot(service, experiment.id, "apple")
     produce_lot_id = created.workspace.produce_basket_lots[0].id
-    service.move_workspace_produce_lot_to_gross_balance(experiment.id, produce_lot_id)
+    move_workspace_produce_lot_to_gross_balance(service, experiment.id, produce_lot_id)
 
-    updated = service.move_gross_balance_produce_lot_to_widget(experiment.id, "grinder", produce_lot_id)
+    updated = move_gross_balance_produce_lot_to_widget(service, experiment.id, "grinder", produce_lot_id)
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
@@ -3147,7 +3654,7 @@ def test_discard_gross_balance_tool_requires_tool() -> None:
     experiment = service.create_experiment()
 
     with pytest.raises(ValueError, match="Gross balance does not contain a tool"):
-        service.discard_gross_balance_tool(experiment.id)
+        discard_gross_balance_tool(service, experiment.id)
 
 
 def test_open_workbench_tool_unseals_a_jar() -> None:
@@ -3172,7 +3679,7 @@ def test_open_workbench_tool_unseals_a_jar() -> None:
         },
     )
 
-    updated = service.open_workbench_tool(experiment.id, "station_1")
+    updated = open_workbench_tool(service, experiment.id, "station_1")
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
@@ -3211,7 +3718,7 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
     service.get_experiment(experiment.id)
-    updated = service.open_workbench_tool(experiment.id, "station_1")
+    updated = open_workbench_tool(service, experiment.id, "station_1")
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
@@ -3254,7 +3761,7 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
     service.get_experiment(experiment.id)
-    vented = service.open_workbench_tool(experiment.id, "station_1")
+    vented = open_workbench_tool(service, experiment.id, "station_1")
 
     slot = next(slot for slot in vented.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None

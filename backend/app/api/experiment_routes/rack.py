@@ -7,6 +7,24 @@ from app.schemas.experiment import (
     TrashToolRestoreToRackSchema,
     TrashToolRestoreToWorkbenchSchema,
 )
+from app.services.domain_services.rack import (
+    DiscardRackToolRequest,
+    DiscardRackToolService,
+    MoveRackToolBetweenSlotsRequest,
+    MoveRackToolBetweenSlotsService,
+    PlaceToolInRackSlotRequest,
+    PlaceToolInRackSlotService,
+    PlaceWorkbenchToolInRackSlotRequest,
+    PlaceWorkbenchToolInRackSlotService,
+    RemoveRackToolToWorkbenchSlotRequest,
+    RemoveRackToolToWorkbenchSlotService,
+    RestoreTrashedToolToRackSlotRequest,
+    RestoreTrashedToolToRackSlotService,
+)
+from app.services.domain_services.workbench import (
+    RestoreTrashedToolToWorkbenchSlotRequest,
+    RestoreTrashedToolToWorkbenchSlotService,
+)
 
 from .common import (
     experiment_service,
@@ -26,10 +44,9 @@ def place_tool_in_rack_slot(
     request: RackToolPlacementSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.place_tool_in_rack_slot(
+        lambda: PlaceToolInRackSlotService(experiment_service).run(
             experiment_id,
-            rack_slot_id,
-            request.tool_id,
+            PlaceToolInRackSlotRequest(rack_slot_id=rack_slot_id, tool_id=request.tool_id),
         )
     )
 
@@ -44,10 +61,12 @@ def place_workbench_tool_in_rack_slot(
     request: RackWorkbenchPlacementSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.place_workbench_tool_in_rack_slot(
+        lambda: PlaceWorkbenchToolInRackSlotService(experiment_service).run(
             experiment_id,
-            request.source_slot_id,
-            rack_slot_id,
+            PlaceWorkbenchToolInRackSlotRequest(
+                source_slot_id=request.source_slot_id,
+                rack_slot_id=rack_slot_id,
+            ),
         )
     )
 
@@ -59,10 +78,12 @@ def move_rack_tool_between_slots(
     request: RackToolMoveSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.move_rack_tool_between_slots(
+        lambda: MoveRackToolBetweenSlotsService(experiment_service).run(
             experiment_id,
-            find_rack_tool_slot(experiment_id, tool_id),
-            request.target_rack_slot_id,
+            MoveRackToolBetweenSlotsRequest(
+                source_rack_slot_id=find_rack_tool_slot(experiment_id, tool_id),
+                target_rack_slot_id=request.target_rack_slot_id,
+            ),
         )
     )
 
@@ -77,10 +98,12 @@ def remove_rack_tool_to_workbench_slot(
     request: RackToolMoveToWorkbenchSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.remove_rack_tool_to_workbench_slot(
+        lambda: RemoveRackToolToWorkbenchSlotService(experiment_service).run(
             experiment_id,
-            find_rack_tool_slot(experiment_id, tool_id),
-            request.target_slot_id,
+            RemoveRackToolToWorkbenchSlotRequest(
+                rack_slot_id=find_rack_tool_slot(experiment_id, tool_id),
+                target_slot_id=request.target_slot_id,
+            ),
         )
     )
 
@@ -88,9 +111,9 @@ def remove_rack_tool_to_workbench_slot(
 @router.post("/{experiment_id}/rack/tools/{tool_id}/discard", response_model=ExperimentSchema)
 def discard_rack_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.discard_rack_tool(
+        lambda: DiscardRackToolService(experiment_service).run(
             experiment_id,
-            find_rack_tool_slot(experiment_id, tool_id),
+            DiscardRackToolRequest(rack_slot_id=find_rack_tool_slot(experiment_id, tool_id)),
         )
     )
 
@@ -105,10 +128,12 @@ def restore_trashed_tool_to_workbench_slot(
     request: TrashToolRestoreToWorkbenchSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.restore_trashed_tool_to_workbench_slot(
+        lambda: RestoreTrashedToolToWorkbenchSlotService(experiment_service).run(
             experiment_id,
-            entry_id,
-            request.target_slot_id,
+            RestoreTrashedToolToWorkbenchSlotRequest(
+                trash_tool_id=entry_id,
+                target_slot_id=request.target_slot_id,
+            ),
         )
     )
 
@@ -120,9 +145,11 @@ def restore_trashed_tool_to_rack_slot(
     request: TrashToolRestoreToRackSchema,
 ) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: experiment_service.restore_trashed_tool_to_rack_slot(
+        lambda: RestoreTrashedToolToRackSlotService(experiment_service).run(
             experiment_id,
-            entry_id,
-            request.rack_slot_id,
+            RestoreTrashedToolToRackSlotRequest(
+                trash_tool_id=entry_id,
+                rack_slot_id=request.rack_slot_id,
+            ),
         )
     )
