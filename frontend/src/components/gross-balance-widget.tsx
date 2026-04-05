@@ -1,7 +1,7 @@
 "use client";
 
-import type { DragEvent } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { DragEvent, PointerEventHandler, ReactNode } from "react";
 
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 
@@ -10,24 +10,110 @@ type GrossBalanceWidgetProps = {
   measuredGrossMassG: number | null;
   netMassG: number | null;
   grossMassOffsetG: number;
+  onCommitOffset: (nextOffsetG: number) => void;
   onDragOver: (event: DragEvent<HTMLDivElement>) => void;
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
-  onIncrementOffset: () => void;
-  onDecrementOffset: () => void;
   stagedContent?: ReactNode;
 };
+
+const holdDelayMs = 300;
+const repeatIntervalMs = 80;
 
 export function GrossBalanceWidget({
   isDropHighlighted,
   measuredGrossMassG,
   netMassG,
   grossMassOffsetG,
+  onCommitOffset,
   onDragOver,
   onDrop,
-  onIncrementOffset,
-  onDecrementOffset,
   stagedContent,
 }: GrossBalanceWidgetProps) {
+  const holdTimeoutRef = useRef<number | null>(null);
+  const holdIntervalRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+  const holdCommittedRef = useRef(false);
+  const [displayOffsetG, setDisplayOffsetG] = useState(grossMassOffsetG);
+  const displayOffsetRef = useRef(grossMassOffsetG);
+
+  useEffect(() => {
+    displayOffsetRef.current = grossMassOffsetG;
+    setDisplayOffsetG(grossMassOffsetG);
+  }, [grossMassOffsetG]);
+
+  const clearHoldTimers = () => {
+    if (holdTimeoutRef.current !== null) {
+      window.clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+
+    if (holdIntervalRef.current !== null) {
+      window.clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+  };
+
+  useEffect(() => clearHoldTimers, []);
+
+  const applyDelta = (delta: number) => {
+    const nextOffset = Math.max(-100, Math.min(0, displayOffsetRef.current + delta));
+    displayOffsetRef.current = nextOffset;
+    setDisplayOffsetG(nextOffset);
+  };
+
+  const commitIfChanged = () => {
+    if (displayOffsetRef.current !== grossMassOffsetG) {
+      onCommitOffset(displayOffsetRef.current);
+    }
+  };
+
+  const startHold = (delta: number, disabled: boolean): PointerEventHandler<HTMLButtonElement> => {
+    return () => {
+      if (disabled) {
+        return;
+      }
+
+      suppressClickRef.current = false;
+      holdCommittedRef.current = false;
+      clearHoldTimers();
+      holdTimeoutRef.current = window.setTimeout(() => {
+        suppressClickRef.current = true;
+        holdCommittedRef.current = true;
+        applyDelta(delta);
+        holdIntervalRef.current = window.setInterval(() => {
+          applyDelta(delta);
+        }, repeatIntervalMs);
+      }, holdDelayMs);
+    };
+  };
+
+  const stopHold: PointerEventHandler<HTMLButtonElement> = () => {
+    clearHoldTimers();
+    if (!holdCommittedRef.current) {
+      return;
+    }
+
+    holdCommittedRef.current = false;
+    commitIfChanged();
+  };
+
+  const handleClick = (delta: number) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+
+    const currentOffset = displayOffsetRef.current;
+    const nextOffset = Math.max(-100, Math.min(0, currentOffset + delta));
+    if (nextOffset === currentOffset) {
+      return;
+    }
+
+    displayOffsetRef.current = nextOffset;
+    setDisplayOffsetG(nextOffset);
+    onCommitOffset(nextOffset);
+  };
+
   return (
     <WorkspaceEquipmentWidget
       bodyClassName="px-4 py-4"
@@ -48,7 +134,13 @@ export function GrossBalanceWidget({
               aria-label="Decrease gross balance offset"
               className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-lg font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={grossMassOffsetG <= -100}
-              onClick={onDecrementOffset}
+              onClick={() => {
+                handleClick(-1);
+              }}
+              onPointerCancel={stopHold}
+              onPointerDown={startHold(-1, grossMassOffsetG <= -100)}
+              onPointerLeave={stopHold}
+              onPointerUp={stopHold}
               type="button"
             >
               -
@@ -57,13 +149,19 @@ export function GrossBalanceWidget({
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-200/80">
                 Offset
               </p>
-              <p className="mt-1 font-mono text-lg">{grossMassOffsetG >= 0 ? `+${grossMassOffsetG}` : grossMassOffsetG} g</p>
+              <p className="mt-1 font-mono text-lg">{displayOffsetG >= 0 ? `+${displayOffsetG}` : displayOffsetG} g</p>
             </div>
             <button
               aria-label="Increase gross balance offset"
               className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-lg font-semibold text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={grossMassOffsetG >= 0}
-              onClick={onIncrementOffset}
+              onClick={() => {
+                handleClick(1);
+              }}
+              onPointerCancel={stopHold}
+              onPointerDown={startHold(1, grossMassOffsetG >= 0)}
+              onPointerLeave={stopHold}
+              onPointerUp={stopHold}
               type="button"
             >
               +

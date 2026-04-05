@@ -42,19 +42,8 @@ function formatVolume(volumeMl: number) {
   return Number.parseFloat(volumeMl.toFixed(3)).toString();
 }
 
-function formatMass(totalMassG: number) {
-  if (totalMassG >= 1000) {
-    return `${(totalMassG / 1000).toFixed(2)} kg`;
-  }
-
-  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
-}
-
-function formatLotMetadata(unitCount: number | null, totalMassG: number) {
-  const unitLabel = unitCount === null ? null : `${unitCount} unit${unitCount === 1 ? "" : "s"}`;
-  const massLabel = formatMass(totalMassG);
-
-  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+function formatLotMetadata(unitCount: number | null) {
+  return unitCount === null ? "" : `${unitCount} unit${unitCount === 1 ? "" : "s"}`;
 }
 
 function getPrimaryToolLabelText(labels: BenchLabel[]) {
@@ -88,7 +77,6 @@ export function BenchToolCard({
   const currentVolume = Number.parseFloat(
     tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
   );
-  const totalProduceMassG = produceLots.reduce((total, lot) => total + lot.totalMassG, 0);
   const fillRatio = tool.capacity_ml > 0 ? Math.min(currentVolume / tool.capacity_ml, 1) : 0;
   const powderMassG = tool.powderMassG ?? 0;
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
@@ -231,47 +219,16 @@ export function BenchToolCard({
         </div>
 
         {isSampleBag ? (
-          <div className="space-y-2">
-            {hasFieldLabel ? (
-              <div className="rounded-[0.95rem] border border-emerald-200 bg-emerald-50/70 px-2.5 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Field label
-                </p>
-                <p className="mt-1 text-xs font-medium text-slate-900">{tool.fieldLabelText}</p>
-              </div>
-            ) : null}
-            <div className="rounded-[1rem] bg-gradient-to-r from-emerald-200/70 to-emerald-50 p-[1px]">
-              <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Produce load
-                  </p>
-                  <p className="mt-0.5 text-base font-semibold text-slate-950">
-                    {produceLots.length} lot{produceLots.length === 1 ? "" : "s"}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    {produceLots.length > 0 ? formatMass(totalProduceMassG) : "Sealed sample intake"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : isProduceSurface ? (
-          produceLots.length === 0 ? (
-            <div className="rounded-[1rem] bg-gradient-to-r from-amber-200/70 to-amber-50 p-[1px]">
-              <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Produce surface
-                  </p>
-                  <p className="mt-0.5 text-base font-semibold text-slate-950">
-                    Ready
-                  </p>
-                  <p className="text-[11px] text-slate-500">Ready for cutting prep</p>
-                </div>
-              </div>
+          hasFieldLabel ? (
+            <div className="rounded-[0.95rem] border border-emerald-200 bg-emerald-50/70 px-2.5 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Field label
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-900">{tool.fieldLabelText}</p>
             </div>
           ) : null
+        ) : isProduceSurface ? (
+          null
         ) : (
           <div
             className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
@@ -370,7 +327,7 @@ export function BenchToolCard({
                   draggable={canDragContainedProduce && Boolean(onProduceLotDragStart)}
                   footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
-                  metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  metadata={formatLotMetadata(produceLot.unitCount)}
                   onClick={() => {
                     onProduceLotClick?.(produceLot);
                   }}
@@ -385,11 +342,7 @@ export function BenchToolCard({
                   variant="compact"
                 />
               ))
-            ) : (
-              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
-                Drop produce lot here
-              </span>
-            )
+            ) : null
           ) : isProduceSurface ? (
             produceLots.length > 0 ? (
               produceLots.map((produceLot) => (
@@ -399,7 +352,7 @@ export function BenchToolCard({
                   draggable={canDragContainedProduce && Boolean(onProduceLotDragStart)}
                   footerBadge={<ProduceLotStatusBadge produceLot={produceLot} />}
                   key={produceLot.id}
-                  metadata={formatLotMetadata(produceLot.unitCount, produceLot.totalMassG)}
+                  metadata={formatLotMetadata(produceLot.unitCount)}
                   onClick={() => {
                     onProduceLotClick?.(produceLot);
                   }}
@@ -414,11 +367,7 @@ export function BenchToolCard({
                   variant="compact"
                 />
               ))
-            ) : (
-              <span className="rounded-full border border-dashed border-slate-300 px-3 py-0.5 text-xs font-medium text-slate-500">
-                Drop produce lot here
-              </span>
-            )
+            ) : null
           ) : tool.liquids.length > 0 ? (
             tool.liquids.map((liquid) => (
               <div

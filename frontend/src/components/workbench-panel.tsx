@@ -43,22 +43,10 @@ type ToolDropPayload =
   | RackToolDragPayload
   | TrashToolDragPayload;
 
-function formatProduceLotMass(totalMassG: number) {
-  if (totalMassG >= 1000) {
-    return `${(totalMassG / 1000).toFixed(2)} kg`;
-  }
-
-  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
-}
-
 function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
-  const unitLabel =
-    produceLot.unitCount === null
-      ? null
-      : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
-  const massLabel = formatProduceLotMass(produceLot.totalMassG);
-
-  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+  return produceLot.unitCount === null
+    ? ""
+    : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
 }
 
 type WorkbenchPanelProps = {

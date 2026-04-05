@@ -181,6 +181,14 @@ export function useLabExperiment({
   const [isCommandPending, setIsCommandPending] = useState(false);
   const hasLoadedInitialExperiment = useRef(false);
   const latestSnapshotVersionRef = useRef(0);
+  const isCommandPendingRef = useRef(false);
+  const grossBalanceOffsetQueuedPayloadRef = useRef<Record<string, unknown> | null>(null);
+  const grossBalanceOffsetInFlightRef = useRef(false);
+
+  const setCommandPending = (pending: boolean) => {
+    isCommandPendingRef.current = pending;
+    setIsCommandPending(pending);
+  };
 
   const getLatestStatusMessage = (experiment: Experiment) => {
     return experiment.audit_log.at(-1) ?? defaultStatusMessage;
@@ -238,40 +246,77 @@ export function useLabExperiment({
     });
   }, [state.status, state.status === "ready" ? state.experiment.id : null]);
 
+  const runMutation = async (
+    mutation: MutationFn,
+    payload?: Record<string, unknown>,
+    options?: { onSuccess?: (updatedExperiment: Experiment) => void },
+  ) => {
+    let updatedExperiment: Experiment;
+
+    try {
+      updatedExperiment = await mutation(state.experiment.id, payload);
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "Experiment not found") {
+        throw error;
+      }
+
+      if (experimentId) {
+        throw error;
+      }
+      const recreatedExperiment = await createExperiment();
+      updatedExperiment = await mutation(recreatedExperiment.id, payload);
+    }
+
+    applyExperimentSnapshot(updatedExperiment);
+    options?.onSuccess?.(updatedExperiment);
+  };
+
   const executeMutation = async (
     mutation: MutationFn,
     payload?: Record<string, unknown>,
     options?: { onSuccess?: (updatedExperiment: Experiment) => void },
   ) => {
-    if (state.status !== "ready" || isCommandPending) {
+    if (state.status !== "ready" || isCommandPendingRef.current) {
       return;
     }
 
-    setIsCommandPending(true);
+    setCommandPending(true);
 
     try {
-      let updatedExperiment: Experiment;
-
-      try {
-        updatedExperiment = await mutation(state.experiment.id, payload);
-      } catch (error) {
-        if (!(error instanceof Error) || error.message !== "Experiment not found") {
-          throw error;
-        }
-
-        if (experimentId) {
-          throw error;
-        }
-        const recreatedExperiment = await createExperiment();
-        updatedExperiment = await mutation(recreatedExperiment.id, payload);
-      }
-
-      applyExperimentSnapshot(updatedExperiment);
-      options?.onSuccess?.(updatedExperiment);
+      await runMutation(mutation, payload, options);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Experiment mutation failed");
     } finally {
-      setIsCommandPending(false);
+      setCommandPending(false);
+    }
+  };
+
+  const executeGrossBalanceOffsetMutation = async (payload: Record<string, unknown>) => {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    grossBalanceOffsetQueuedPayloadRef.current = payload;
+
+    if (grossBalanceOffsetInFlightRef.current) {
+      return;
+    }
+
+    grossBalanceOffsetInFlightRef.current = true;
+    setCommandPending(true);
+
+    try {
+      while (grossBalanceOffsetQueuedPayloadRef.current) {
+        const nextPayload = grossBalanceOffsetQueuedPayloadRef.current;
+        grossBalanceOffsetQueuedPayloadRef.current = null;
+        await runMutation(mutationFns.setGrossBalanceContainerOffset, nextPayload);
+      }
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Experiment mutation failed");
+    } finally {
+      grossBalanceOffsetInFlightRef.current = false;
+      grossBalanceOffsetQueuedPayloadRef.current = null;
+      setCommandPending(false);
     }
   };
 
@@ -400,7 +445,7 @@ export function useLabExperiment({
     recordGrossWeight: (payload?: Record<string, unknown>) =>
       executeMutation(mutationFns.recordGrossWeight, payload),
     setGrossBalanceContainerOffset: (payload: Record<string, unknown>) =>
-      executeMutation(mutationFns.setGrossBalanceContainerOffset, payload),
+      executeGrossBalanceOffsetMutation(payload),
     removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>
       executeMutation(mutationFns.removeLiquidFromWorkbenchTool, payload),
     removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) =>

@@ -215,22 +215,10 @@ function getRackIllustrationSlotPosition(slotIndex: number) {
   };
 }
 
-function formatProduceLotMass(totalMassG: number) {
-  if (totalMassG >= 1000) {
-    return `${(totalMassG / 1000).toFixed(2)} kg`;
-  }
-
-  return `${Number.parseFloat(totalMassG.toFixed(0)).toString()} g`;
-}
-
 function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
-  const unitLabel =
-    produceLot.unitCount === null
-      ? null
-      : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
-  const massLabel = formatProduceLotMass(produceLot.totalMassG);
-
-  return unitLabel ? `${unitLabel} • ${massLabel}` : massLabel;
+  return produceLot.unitCount === null
+    ? ""
+    : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
 }
 
 function roundMass(massG: number) {
@@ -2885,18 +2873,13 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                       grossMassOffsetG={state.experiment.limsReception.grossMassOffsetG}
                       measuredGrossMassG={state.experiment.limsReception.measuredGrossMassG}
                       netMassG={grossBalanceNetMassG}
-                      onDecrementOffset={() => {
+                      onCommitOffset={(nextOffsetG) => {
                         void experimentApi.setGrossBalanceContainerOffset({
-                          gross_mass_offset_g: state.experiment.limsReception.grossMassOffsetG - 1,
+                          gross_mass_offset_g: nextOffsetG,
                         });
                       }}
                       onDragOver={handleGrossBalanceDragOver}
                       onDrop={handleGrossBalanceDrop}
-                      onIncrementOffset={() => {
-                        void experimentApi.setGrossBalanceContainerOffset({
-                          gross_mass_offset_g: state.experiment.limsReception.grossMassOffsetG + 1,
-                        });
-                      }}
                       stagedContent={grossBalanceStagedContent}
                     />
                   ) : widgetId === "rack" ? (
@@ -3019,9 +3002,13 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                               key={lot.id}
                               metadata={
                                 lot.cutState === "ground"
-                                  ? `Ground product • ${formatProduceLotMetadata(lot)}`
+                                  ? formatProduceLotMetadata(lot)
+                                    ? `Ground product • ${formatProduceLotMetadata(lot)}`
+                                    : "Ground product"
                                   : lot.cutState === "waste"
-                                    ? `Jammed waste • ${formatProduceLotMetadata(lot)}`
+                                    ? formatProduceLotMetadata(lot)
+                                      ? `Jammed waste • ${formatProduceLotMetadata(lot)}`
+                                      : "Jammed waste"
                                     : formatProduceLotMetadata(lot)
                               }
                               onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}

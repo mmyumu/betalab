@@ -308,7 +308,7 @@ describe("WorkbenchPanel", () => {
         .querySelector("[data-kind='sample_bag']"),
     ).toHaveAttribute("data-primary-produce-cut-state", "cut");
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
-    expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
+    expect(screen.getByText("12 units")).toBeInTheDocument();
   });
 
   it("derives the produce lot display name from the produce state on workbench surfaces", () => {
@@ -338,10 +338,9 @@ describe("WorkbenchPanel", () => {
     );
 
     expect(screen.getByText("Apple lot 1 powder")).toBeInTheDocument();
-    expect(screen.getByText("ground")).toBeInTheDocument();
   });
 
-  it("renders direct station produce with the apple icon and contamination badge", () => {
+  it("renders direct station produce with the apple icon", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
@@ -370,8 +369,7 @@ describe("WorkbenchPanel", () => {
 
     expect(screen.getByLabelText("Apple lot illustration")).toBeInTheDocument();
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
-    expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
-    expect(screen.getByText("contaminated")).toBeInTheDocument();
+    expect(screen.getByText("12 units")).toBeInTheDocument();
   });
 
   it("shows a thermometer for cold produce resting on a station", () => {
@@ -404,7 +402,7 @@ describe("WorkbenchPanel", () => {
     expect(screen.getByText("4.2°C")).toBeInTheDocument();
   });
 
-  it("renders cutting board produce with the apple icon and full-width status badge", () => {
+  it("renders cutting board produce with the apple icon", () => {
     render(
       <PesticideWorkbenchPanel
         onLiquidVolumeChange={vi.fn()}
@@ -442,8 +440,7 @@ describe("WorkbenchPanel", () => {
 
     expect(screen.getByLabelText("Apple lot illustration")).toBeInTheDocument();
     expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
-    expect(screen.getByText("12 units • 2.45 kg")).toBeInTheDocument();
-    expect(screen.getByText("clean")).toBeInTheDocument();
+    expect(screen.getByText("12 units")).toBeInTheDocument();
   });
 
   it("renders cut produce on a cutting board with the cut apple variant", () => {
@@ -483,7 +480,6 @@ describe("WorkbenchPanel", () => {
       />,
     );
 
-    expect(screen.getByText("cut")).toBeInTheDocument();
     expect(screen.getAllByTestId("apple-illustration").at(-1)).toHaveAttribute("data-variant", "cut");
   });
 

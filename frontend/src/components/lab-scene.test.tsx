@@ -1490,7 +1490,7 @@ describe("LabScene", () => {
 
     await waitFor(() => {
       expect(
-        within(screen.getByTestId("bench-slot-station_2")).getByText("contaminated"),
+        within(screen.getByTestId("bench-slot-station_2")).getByText("Apple lot 1"),
       ).toBeInTheDocument();
     });
   });
@@ -2410,7 +2410,7 @@ describe("LabScene", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("cut")).toBeInTheDocument();
+      expect(screen.getByText("Apple lot 1")).toBeInTheDocument();
     });
     expect(screen.getByTestId("apple-illustration")).toHaveAttribute("data-variant", "cut");
   });

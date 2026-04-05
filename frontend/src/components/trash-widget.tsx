@@ -146,8 +146,9 @@ export function TrashWidget({
             }
             subtitle={
               <p className="truncate text-xs text-slate-500">
-                {trashProduceLot.originLabel} •{" "}
-                {formatProduceLotMetadata(trashProduceLot.produceLot)}
+                {formatProduceLotMetadata(trashProduceLot.produceLot)
+                  ? `${trashProduceLot.originLabel} • ${formatProduceLotMetadata(trashProduceLot.produceLot)}`
+                  : trashProduceLot.originLabel}
               </p>
             }
             title={

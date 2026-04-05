@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GrossBalanceWidget } from "@/components/gross-balance-widget";
 
 describe("GrossBalanceWidget", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders gross, offset, and net values", () => {
     render(
       <GrossBalanceWidget
@@ -11,10 +15,9 @@ describe("GrossBalanceWidget", () => {
         isDropHighlighted={false}
         measuredGrossMassG={2485}
         netMassG={2450}
-        onDecrementOffset={vi.fn()}
+        onCommitOffset={vi.fn()}
         onDragOver={vi.fn()}
         onDrop={vi.fn()}
-        onIncrementOffset={vi.fn()}
       />,
     );
 
@@ -24,19 +27,17 @@ describe("GrossBalanceWidget", () => {
     expect(screen.getByText("Drop object here")).toBeInTheDocument();
   });
 
-  it("disables offset buttons at the allowed bounds and forwards clicks", () => {
-    const decrement = vi.fn();
-    const increment = vi.fn();
+  it("disables offset buttons at the allowed bounds and commits clicks", () => {
+    const commitOffset = vi.fn();
     const { rerender } = render(
       <GrossBalanceWidget
         grossMassOffsetG={0}
         isDropHighlighted
         measuredGrossMassG={null}
         netMassG={null}
-        onDecrementOffset={decrement}
+        onCommitOffset={commitOffset}
         onDragOver={vi.fn()}
         onDrop={vi.fn()}
-        onIncrementOffset={increment}
         stagedContent={<div>Staged bag</div>}
       />,
     );
@@ -48,7 +49,7 @@ describe("GrossBalanceWidget", () => {
     expect(screen.getByText("Staged bag")).toBeInTheDocument();
 
     fireEvent.click(decreaseButton);
-    expect(decrement).toHaveBeenCalledTimes(1);
+    expect(commitOffset).toHaveBeenCalledWith(-1);
 
     rerender(
       <GrossBalanceWidget
@@ -56,16 +57,64 @@ describe("GrossBalanceWidget", () => {
         isDropHighlighted={false}
         measuredGrossMassG={null}
         netMassG={null}
-        onDecrementOffset={decrement}
+        onCommitOffset={commitOffset}
         onDragOver={vi.fn()}
         onDrop={vi.fn()}
-        onIncrementOffset={increment}
       />,
     );
 
     expect(screen.getByRole("button", { name: "Decrease gross balance offset" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Increase gross balance offset" })).not.toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Increase gross balance offset" }));
-    expect(increment).toHaveBeenCalledTimes(1);
+    expect(commitOffset).toHaveBeenCalledWith(-99);
+  });
+
+  it("updates the display while holding and commits only the final offset on release", () => {
+    vi.useFakeTimers();
+
+    const commitOffset = vi.fn();
+
+    render(
+      <GrossBalanceWidget
+        grossMassOffsetG={-35}
+        isDropHighlighted={false}
+        measuredGrossMassG={2485}
+        netMassG={2450}
+        onCommitOffset={commitOffset}
+        onDragOver={vi.fn()}
+        onDrop={vi.fn()}
+      />,
+    );
+
+    const decreaseButton = screen.getByRole("button", { name: "Decrease gross balance offset" });
+
+    fireEvent.pointerDown(decreaseButton);
+    act(() => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(commitOffset).toHaveBeenCalledTimes(0);
+    expect(screen.getByText("-35 g")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(commitOffset).toHaveBeenCalledTimes(0);
+    expect(screen.getByText("-36 g")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(160);
+    });
+    expect(commitOffset).toHaveBeenCalledTimes(0);
+    expect(screen.getByText("-38 g")).toBeInTheDocument();
+
+    fireEvent.pointerUp(decreaseButton);
+    fireEvent.click(decreaseButton);
+    expect(commitOffset).toHaveBeenCalledTimes(1);
+    expect(commitOffset).toHaveBeenCalledWith(-38);
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(commitOffset).toHaveBeenCalledTimes(1);
   });
 });

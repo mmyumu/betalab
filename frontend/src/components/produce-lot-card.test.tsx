@@ -8,7 +8,7 @@ describe("ProduceLotCard", () => {
     render(
       <ProduceLotCard
         dataTestId="produce-lot-card"
-        metadata="Jammed waste • 12 units • 2450 g"
+        metadata="Jammed waste • 12 units"
         produceLot={{
           id: "produce_1",
           label: "Apple lot 1",
@@ -23,14 +23,14 @@ describe("ProduceLotCard", () => {
     );
 
     expect(screen.getByText("Jammed")).toBeInTheDocument();
-    expect(screen.getByText("Jammed waste • 12 units • 2450 g")).toBeInTheDocument();
+    expect(screen.getByText("Jammed waste • 12 units")).toBeInTheDocument();
   });
 
   it("shows a degassing indicator when residual CO2 remains in the lot", () => {
     render(
       <ProduceLotCard
         dataTestId="produce-lot-card"
-        metadata="12 units • 2450 g"
+        metadata="12 units"
         produceLot={{
           id: "produce_1",
           label: "Apple lot 1",
