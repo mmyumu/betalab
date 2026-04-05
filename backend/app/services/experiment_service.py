@@ -86,6 +86,7 @@ class ExperimentRuntimeService:
                 "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
                 "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
                 "spatula": asdict(experiment.spatula),
+                "analytical_balance": asdict(experiment.analytical_balance),
                 "audit_log": experiment.audit_log,
             }
         )

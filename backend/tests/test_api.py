@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 import app.api.experiments as experiments_api
 from app.api.experiment_routes import common as experiment_routes_common
+from app.api.experiment_routes import analytical_balance as experiment_routes_analytical_balance
 from app.api.experiment_routes import core as experiment_routes_core
 from app.api.experiment_routes import gross_balance as experiment_routes_gross_balance
 from app.api.experiment_routes import rack as experiment_routes_rack
@@ -14,6 +15,7 @@ from app.api.experiment_routes import workbench as experiment_routes_workbench
 from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
 from app.main import app
+from app.services.helpers.workbench import build_workbench_tool
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
 
@@ -24,6 +26,7 @@ def isolated_api_experiment_service(tmp_path, monkeypatch):
         repository=SqliteExperimentRepository(str(tmp_path / "api-tests.sqlite3"))
     )
     monkeypatch.setattr(experiment_routes_common, "experiment_service", isolated_service)
+    monkeypatch.setattr(experiment_routes_analytical_balance, "experiment_service", isolated_service)
     monkeypatch.setattr(experiment_routes_core, "experiment_service", isolated_service)
     monkeypatch.setattr(
         experiment_routes_gross_balance,
@@ -249,6 +252,43 @@ def test_set_gross_balance_container_offset_over_http() -> None:
 
     assert updated.status_code == 200
     assert updated.json()["lims_reception"]["gross_mass_offset_g"] == -35
+
+
+def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        experiment = experiment_service._require_experiment(experiment_id)
+        analytical_balance = next(
+            widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance"
+        )
+        analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
+        analytical_balance.tool.powder_mass_g = 10.124
+        experiment.analytical_balance.tare_mass_g = 12.0
+        experiment.analytical_balance.tared_tool_id = analytical_balance.tool.id
+        experiment_service._persist_mutation_and_to_schema(experiment)
+
+        recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
+
+    assert recorded.status_code == 200
+    assert recorded.json()["lims_reception"]["measured_sample_mass_g"] == pytest.approx(10.124)
+
+
+def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+        experiment = experiment_service._require_experiment(experiment_id)
+        analytical_balance = next(
+            widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance"
+        )
+        analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
+        analytical_balance.tool.powder_mass_g = 10.5
+        experiment.analytical_balance.tare_mass_g = 12.0
+        experiment.analytical_balance.tared_tool_id = analytical_balance.tool.id
+        experiment_service._persist_mutation_and_to_schema(experiment)
+        recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
+
+    assert recorded.status_code == 400
+    assert "ERR_RANGE" in recorded.json()["detail"]
 
 
 def test_list_experiments_returns_saved_sessions_over_http() -> None:

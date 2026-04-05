@@ -9,6 +9,7 @@ import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptLiquids, canToolAcceptProduce, canToolReceiveContents } from "@/lib/entity-rules";
 import {
   hasCompatibleDropTarget,
+  readAnalyticalBalanceToolDragPayload,
   readBasketToolDragPayload,
   readDragDescriptor,
   readBenchToolDragPayload,
@@ -21,6 +22,7 @@ import {
   readToolbarDragPayload,
 } from "@/lib/workbench-dnd";
 import type {
+  AnalyticalBalanceToolDragPayload,
   BenchLabel,
   BasketToolDragPayload,
   BenchSlot,
@@ -39,6 +41,7 @@ import type {
 type ToolDropPayload =
   | BenchToolDragPayload
   | BasketToolDragPayload
+  | AnalyticalBalanceToolDragPayload
   | GrossBalanceToolDragPayload
   | RackToolDragPayload
   | TrashToolDragPayload;
@@ -159,6 +162,7 @@ export function WorkbenchPanel({
         descriptor.sourceKind === "palette" ||
         descriptor.sourceKind === "basket" ||
         descriptor.sourceKind === "gross_balance" ||
+        descriptor.sourceKind === "analytical_balance" ||
         descriptor.sourceKind === "rack" ||
         descriptor.sourceKind === "trash"
       ) {
@@ -238,6 +242,12 @@ export function WorkbenchPanel({
     const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
     if (grossBalanceToolPayload) {
       onBenchToolDrop?.(slot.id, grossBalanceToolPayload);
+      return;
+    }
+
+    const analyticalBalanceToolPayload = readAnalyticalBalanceToolDragPayload(event.dataTransfer);
+    if (analyticalBalanceToolPayload) {
+      onBenchToolDrop?.(slot.id, analyticalBalanceToolPayload);
       return;
     }
 

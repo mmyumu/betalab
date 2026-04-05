@@ -1,5 +1,6 @@
 import type { Experiment, ExperimentListEntry } from "@/types/experiment";
 import type {
+  AnalyticalBalanceState,
   BenchLabel,
   BenchLiquidPortion,
   BenchSlot,
@@ -489,6 +490,18 @@ export async function moveWorkbenchToolToGrossBalance(
   });
 }
 
+export async function moveWorkbenchToolToAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/place-workbench-tool`,
+    body: { slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
 export async function moveBasketToolToGrossBalance(
   experimentId: string,
   _payload?: MutationPayload,
@@ -496,6 +509,16 @@ export async function moveBasketToolToGrossBalance(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/place-basket-tool`,
+  });
+}
+
+export async function moveAnalyticalBalanceToolToGrossBalance(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/place-analytical-balance-tool`,
   });
 }
 
@@ -507,6 +530,18 @@ export async function placeToolOnGrossBalance(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/place-tool`,
+    body: { tool_id: requireString(body, "tool_id") },
+  });
+}
+
+export async function placeToolOnAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/place-tool`,
     body: { tool_id: requireString(body, "tool_id") },
   });
 }
@@ -523,6 +558,28 @@ export async function moveRackToolToGrossBalance(
   });
 }
 
+export async function moveRackToolToAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/place-rack-tool`,
+    body: { rack_slot_id: requireString(body, "rack_slot_id") },
+  });
+}
+
+export async function moveGrossBalanceToolToAnalyticalBalance(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/place-gross-balance-tool`,
+  });
+}
+
 export async function restoreTrashedToolToGrossBalance(
   experimentId: string,
   payload: MutationPayload,
@@ -534,6 +591,17 @@ export async function restoreTrashedToolToGrossBalance(
   });
 }
 
+export async function restoreTrashedToolToAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/restore-trash-tool/${requireString(body, "trash_tool_id")}`,
+  });
+}
+
 export async function moveGrossBalanceToolToWorkbench(
   experimentId: string,
   payload: MutationPayload,
@@ -542,6 +610,18 @@ export async function moveGrossBalanceToolToWorkbench(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/move-tool-to-workbench`,
+    body: { target_slot_id: requireString(body, "target_slot_id") },
+  });
+}
+
+export async function moveAnalyticalBalanceToolToWorkbench(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/move-tool-to-workbench`,
     body: { target_slot_id: requireString(body, "target_slot_id") },
   });
 }
@@ -558,6 +638,18 @@ export async function moveGrossBalanceToolToRack(
   });
 }
 
+export async function moveAnalyticalBalanceToolToRack(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/move-tool-to-rack`,
+    body: { rack_slot_id: requireString(body, "rack_slot_id") },
+  });
+}
+
 export async function discardGrossBalanceTool(
   experimentId: string,
   _payload?: MutationPayload,
@@ -565,6 +657,36 @@ export async function discardGrossBalanceTool(
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/discard-tool`,
+  });
+}
+
+export async function discardAnalyticalBalanceTool(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/discard-tool`,
+  });
+}
+
+export async function tareAnalyticalBalance(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/tare`,
+  });
+}
+
+export async function recordAnalyticalSampleMass(
+  experimentId: string,
+  _payload?: MutationPayload,
+): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/record-sample-mass`,
   });
 }
 
@@ -1117,6 +1239,13 @@ function normalizeExperiment(experiment: Experiment): Experiment {
         SpatulaState &
         Record<string, unknown>,
     ),
+    analyticalBalance: normalizeAnalyticalBalanceState(
+      (
+        (experiment as Experiment & Record<string, unknown>).analyticalBalance ??
+        (experiment as Experiment & Record<string, unknown>).analytical_balance ??
+        {}
+      ) as AnalyticalBalanceState & Record<string, unknown>,
+    ),
   };
 }
 
@@ -1204,6 +1333,25 @@ function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>):
         ? (spatula.sourceToolId as string | null)
         : spatula.source_tool_id !== undefined
           ? (spatula.source_tool_id as string | null)
+          : null,
+  };
+}
+
+function normalizeAnalyticalBalanceState(
+  analyticalBalance: AnalyticalBalanceState & Record<string, unknown>,
+): AnalyticalBalanceState {
+  return {
+    tareMassG:
+      analyticalBalance.tareMassG !== undefined && analyticalBalance.tareMassG !== null
+        ? Number(analyticalBalance.tareMassG)
+        : analyticalBalance.tare_mass_g !== undefined && analyticalBalance.tare_mass_g !== null
+          ? Number(analyticalBalance.tare_mass_g)
+          : null,
+    taredToolId:
+      analyticalBalance.taredToolId !== undefined
+        ? (analyticalBalance.taredToolId as string | null)
+        : analyticalBalance.tared_tool_id !== undefined
+          ? (analyticalBalance.tared_tool_id as string | null)
           : null,
   };
 }

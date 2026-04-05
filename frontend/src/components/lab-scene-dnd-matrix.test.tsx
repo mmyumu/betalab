@@ -44,6 +44,12 @@ async function renderWorkbenchForSource(sourceCase: (typeof dndSourceCases)[numb
     expect(screen.queryByTestId("gross-balance-dropzone")).not.toBeInTheDocument();
   }
 
+  if (sourceCase.availableTargets.includes("analytical-balance-dropzone")) {
+    await waitFor(() => {
+      expect(screen.getByTestId("analytical-balance-dropzone")).toBeInTheDocument();
+    });
+  }
+
   if (sourceCase.expectRackWidget) {
     await waitFor(() => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();

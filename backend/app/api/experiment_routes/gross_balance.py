@@ -24,6 +24,8 @@ from app.services.domain_services.gross_balance import (
     MoveGrossBalanceToolToRackService,
     MoveGrossBalanceToolToWorkbenchRequest,
     MoveGrossBalanceToolToWorkbenchService,
+    MoveAnalyticalBalanceToolToGrossBalanceRequest,
+    MoveAnalyticalBalanceToolToGrossBalanceService,
     MoveRackToolToGrossBalanceRequest,
     MoveRackToolToGrossBalanceService,
     MoveWidgetProduceLotToGrossBalanceRequest,
@@ -90,6 +92,15 @@ def move_rack_tool_to_gross_balance(
         lambda: MoveRackToolToGrossBalanceService(experiment_service).run(
             experiment_id,
             MoveRackToolToGrossBalanceRequest(rack_slot_id=request.rack_slot_id),
+        )
+    )
+
+
+@router.post("/{experiment_id}/gross-balance/place-analytical-balance-tool", response_model=ExperimentSchema)
+def move_analytical_balance_tool_to_gross_balance(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: MoveAnalyticalBalanceToolToGrossBalanceService(experiment_service).run(
+            experiment_id, MoveAnalyticalBalanceToolToGrossBalanceRequest()
         )
     )
 

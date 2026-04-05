@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.domain.models import (
+    AnalyticalBalanceState,
     Experiment,
     ExperimentStatus,
     LimsReception,
@@ -55,6 +56,16 @@ def build_experiment() -> Experiment:
                     label="Gross balance",
                     anchor="top-left",
                     offset_x=364,
+                    offset_y=886,
+                    is_present=False,
+                    is_trashed=False,
+                ),
+                WorkspaceWidget(
+                    id="analytical_balance",
+                    widget_type="analytical_balance",
+                    label="Analytical balance",
+                    anchor="top-left",
+                    offset_x=688,
                     offset_y=886,
                     is_present=False,
                     is_trashed=False,
@@ -130,6 +141,7 @@ def build_experiment() -> Experiment:
         lims_entries=[],
         basket_tool=basket_tool,
         spatula=SpatulaState(),
+        analytical_balance=AnalyticalBalanceState(),
         last_simulation_at=datetime.now(timezone.utc),
         audit_log=[
             "Experiment created",

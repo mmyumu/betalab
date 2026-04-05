@@ -10,6 +10,7 @@ import { BenchToolCard } from "@/components/bench-tool-card";
 import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
 import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
 import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
+import { AnalyticalBalanceWidget } from "@/components/analytical-balance-widget";
 import { GrossBalanceWidget } from "@/components/gross-balance-widget";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { LimsWidget } from "@/components/lims-widget";
@@ -30,6 +31,7 @@ import {
 import {
   createToolbarDragPayload,
   hasCompatibleDropTarget,
+  readAnalyticalBalanceToolDragPayload,
   readBasketToolDragPayload,
   readBenchToolDragPayload,
   readGrossBalanceToolDragPayload,
@@ -43,6 +45,7 @@ import {
   readWorkspaceWidgetDragPayload,
   toDragDescriptor,
   writeBasketToolDragPayload,
+  writeAnalyticalBalanceToolDragPayload,
   writeBenchToolDragPayload,
   writeGrossBalanceToolDragPayload,
   writeLimsLabelTicketDragPayload,
@@ -70,6 +73,7 @@ import {
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
 import type {
+  AnalyticalBalanceToolDragPayload,
   BenchLabel,
   BasketToolDragPayload,
   BenchSlot,
@@ -108,6 +112,7 @@ const widgetIds = [
   "basket",
   "grinder",
   "gross_balance",
+  "analytical_balance",
 ] as const;
 const workspaceEquipmentItemToWidgetId = {
   autosampler_rack_widget: "rack",
@@ -116,6 +121,7 @@ const workspaceEquipmentItemToWidgetId = {
   produce_basket_widget: "basket",
   lims_terminal_widget: "lims",
   gross_balance_widget: "gross_balance",
+  analytical_balance_widget: "analytical_balance",
 } as const;
 const widgetTrashability: Record<WidgetId, boolean> = {
   lims: false,
@@ -126,6 +132,7 @@ const widgetTrashability: Record<WidgetId, boolean> = {
   grinder: true,
   basket: false,
   gross_balance: true,
+  analytical_balance: true,
 };
 
 type WidgetId = (typeof widgetIds)[number];
@@ -152,6 +159,7 @@ const widgetFrameSpecs: Record<WidgetId, WidgetLayout> = {
   basket: { x: 1276, y: 262, width: 198, fallbackHeight: 236 },
   grinder: { x: 980, y: 886, width: 430, fallbackHeight: 340 },
   gross_balance: { x: 364, y: 886, width: 300, fallbackHeight: 280 },
+  analytical_balance: { x: 688, y: 886, width: 300, fallbackHeight: 308 },
 };
 const rackSlotCount = 12;
 const debugProducePresets: DebugProducePreset[] = [
@@ -197,7 +205,8 @@ function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipm
     value === "instrument" ||
     value === "basket" ||
     value === "grinder" ||
-    value === "gross_balance"
+    value === "gross_balance" ||
+    value === "analytical_balance"
   );
 }
 
@@ -221,20 +230,21 @@ function formatProduceLotMetadata(produceLot: ExperimentProduceLot) {
     : `${produceLot.unitCount} unit${produceLot.unitCount === 1 ? "" : "s"}`;
 }
 
-function roundMass(massG: number) {
-  return Math.round(massG * 10) / 10;
+function roundMass(massG: number, decimals = 1) {
+  const factor = 10 ** decimals;
+  return Math.round(massG * factor) / factor;
 }
 
 function getApproximateProduceMassG(produceLot: ExperimentProduceLot) {
   return roundMass(Math.max(produceLot.totalMassG, 0));
 }
 
-function getApproximateToolMassG(tool: BenchToolInstance) {
+function getApproximateToolMassG(tool: BenchToolInstance, decimals = 1) {
   const tareMassG = toolTareMassByType[tool.toolType] ?? 0;
   const produceMassG = (tool.produceLots ?? []).reduce((sum, lot) => sum + lot.totalMassG, 0);
   const liquidMassG = tool.liquids.reduce((sum, liquid) => sum + liquid.volume_ml, 0);
   const powderMassG = tool.powderMassG ?? 0;
-  return roundMass(Math.max(tareMassG + produceMassG + liquidMassG + powderMassG, 0));
+  return roundMass(Math.max(tareMassG + produceMassG + liquidMassG + powderMassG, 0), decimals);
 }
 
 function buildDebugProduceDraftFields(): DropDraftField[] {
@@ -548,7 +558,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
-    if (tool.toolType !== "sample_vial") {
+    if (tool.toolType !== "sample_vial" && tool.toolType !== "centrifuge_tube") {
       return;
     }
 
@@ -624,7 +634,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
-    if (tool.toolType === "sample_vial" && !spatula.isLoaded) {
+    if ((tool.toolType === "sample_vial" || tool.toolType === "centrifuge_tube") && !spatula.isLoaded) {
       setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
     }
   };
@@ -860,6 +870,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       | BasketToolDragPayload
       | RackToolDragPayload
       | GrossBalanceToolDragPayload
+      | AnalyticalBalanceToolDragPayload
       | TrashToolDragPayload,
   ) => {
     if (payload.sourceKind === "basket") {
@@ -895,6 +906,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
     if (payload.sourceKind === "gross_balance") {
       void experimentApi.moveGrossBalanceToolToWorkbench({
+        target_slot_id: targetSlotId,
+      });
+      clearDropTargets();
+      return;
+    }
+
+    if (payload.sourceKind === "analytical_balance") {
+      void experimentApi.moveAnalyticalBalanceToolToWorkbench({
         target_slot_id: targetSlotId,
       });
       clearDropTargets();
@@ -1228,6 +1247,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       readBenchToolDragPayload(event.dataTransfer) ??
       readBasketToolDragPayload(event.dataTransfer) ??
       readRackToolDragPayload(event.dataTransfer) ??
+      readAnalyticalBalanceToolDragPayload(event.dataTransfer) ??
       readTrashToolDragPayload(event.dataTransfer);
     const producePayload = readProduceDragPayload(event.dataTransfer);
     const measuredMassG = toolPayload
@@ -1262,6 +1282,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         void experimentApi.moveRackToolToGrossBalance({
           rack_slot_id: toolPayload.rackSlotId,
         });
+        return;
+      }
+      if (toolPayload.sourceKind === "analytical_balance") {
+        void experimentApi.moveAnalyticalBalanceToolToGrossBalance();
         return;
       }
       if ("trashToolId" in toolPayload) {
@@ -1368,6 +1392,93 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
     writeProduceDragPayload(dataTransfer, payload);
     showDropTargets(payload.allowedDropTargets);
+    setActiveDragItem(toDragDescriptor(payload));
+  };
+
+  const handleAnalyticalBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (dndDisabledByAction) {
+      return;
+    }
+    if (hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
+      event.preventDefault();
+    }
+  };
+
+  const handleAnalyticalBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (dndDisabledByAction) {
+      return;
+    }
+    if (!hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
+      return;
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    const toolPayload =
+      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
+      readBenchToolDragPayload(event.dataTransfer) ??
+      readGrossBalanceToolDragPayload(event.dataTransfer) ??
+      readRackToolDragPayload(event.dataTransfer) ??
+      readTrashToolDragPayload(event.dataTransfer) ??
+      readAnalyticalBalanceToolDragPayload(event.dataTransfer);
+
+    if (!toolPayload) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    clearDropTargets();
+
+    if (toolbarPayload?.itemType === "tool") {
+      void experimentApi.placeToolOnAnalyticalBalance({
+        tool_id: toolbarPayload.itemId,
+      });
+      return;
+    }
+
+    if (toolPayload.sourceKind === "workbench" && "sourceSlotId" in toolPayload) {
+      void experimentApi.moveWorkbenchToolToAnalyticalBalance({
+        source_slot_id: toolPayload.sourceSlotId,
+      });
+      return;
+    }
+
+    if (toolPayload.sourceKind === "rack" && "rackSlotId" in toolPayload) {
+      void experimentApi.moveRackToolToAnalyticalBalance({
+        rack_slot_id: toolPayload.rackSlotId,
+      });
+      return;
+    }
+
+    if (toolPayload.sourceKind === "gross_balance") {
+      void experimentApi.moveGrossBalanceToolToAnalyticalBalance();
+      return;
+    }
+
+    if (toolPayload.sourceKind === "trash" && "trashToolId" in toolPayload) {
+      void experimentApi.restoreTrashedToolToAnalyticalBalance({
+        trash_tool_id: toolPayload.trashToolId,
+      });
+    }
+  };
+
+  const handleAnalyticalBalanceItemDragStart = (dataTransfer: DataTransfer) => {
+    if (!analyticalBalanceTool) {
+      return;
+    }
+
+    const allowedDropTargets = getToolDropTargets(analyticalBalanceTool.toolType);
+    const payload: AnalyticalBalanceToolDragPayload = {
+      allowedDropTargets,
+      entityKind: "tool",
+      sourceId: "analytical_balance",
+      sourceKind: "analytical_balance",
+      toolId: analyticalBalanceTool.toolId,
+      toolType: analyticalBalanceTool.toolType,
+    };
+
+    writeAnalyticalBalanceToolDragPayload(dataTransfer, payload);
+    showDropTargets(allowedDropTargets);
     setActiveDragItem(toDragDescriptor(payload));
   };
 
@@ -1535,6 +1646,15 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       return;
     }
 
+    const analyticalBalanceToolPayload = readAnalyticalBalanceToolDragPayload(event.dataTransfer);
+    if (analyticalBalanceToolPayload) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+      void experimentApi.discardAnalyticalBalanceTool();
+      return;
+    }
+
     const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(event.dataTransfer);
     if (workspaceLiquidPayload?.sourceKind === "grinder" && !isGrinderRunning) {
       event.preventDefault();
@@ -1661,6 +1781,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     state.experiment.workspace.widgets.find((widget) => widget.id === "grinder") ?? null;
   const grossBalanceWidget =
     state.experiment.workspace.widgets.find((widget) => widget.id === "gross_balance") ?? null;
+  const analyticalBalanceWidget =
+    state.experiment.workspace.widgets.find((widget) => widget.id === "analytical_balance") ?? null;
   const grossBalanceNetMassG =
     state.experiment.limsReception.measuredGrossMassG === null
       ? null
@@ -1671,8 +1793,16 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const grinderProduceLots = grinderWidget?.produceLots ?? [];
   const grinderLiquids = grinderWidget?.liquids ?? [];
   const grossBalanceTool = grossBalanceWidget?.tool ?? null;
+  const analyticalBalanceTool = analyticalBalanceWidget?.tool ?? null;
   const grossBalanceProduceLots = grossBalanceWidget?.produceLots ?? [];
   const grossBalanceProduceLot = grossBalanceProduceLots[0] ?? null;
+  const analyticalBalanceMeasuredMassG = analyticalBalanceTool
+    ? getApproximateToolMassG(analyticalBalanceTool, 3)
+    : null;
+  const analyticalBalanceNetMassG =
+    analyticalBalanceMeasuredMassG === null || state.experiment.analyticalBalance.tareMassG === null
+      ? null
+      : roundMass(analyticalBalanceMeasuredMassG - state.experiment.analyticalBalance.tareMassG, 3);
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
   const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
@@ -1704,6 +1834,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       | BasketToolDragPayload
       | RackToolDragPayload
       | GrossBalanceToolDragPayload
+      | AnalyticalBalanceToolDragPayload
       | TrashToolDragPayload,
   ) => {
     if ("itemType" in payload && payload.itemType === "tool") {
@@ -1729,6 +1860,11 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         ? getApproximateToolMassG(grossBalanceTool)
         : roundMass(toolTareMassByType[payload.toolType] ?? 0);
     }
+    if (payload.sourceKind === "analytical_balance") {
+      return analyticalBalanceTool
+        ? getApproximateToolMassG(analyticalBalanceTool)
+        : roundMass(toolTareMassByType[payload.toolType] ?? 0);
+    }
     return null;
   };
   const resolveToolFromPayload = (
@@ -1738,6 +1874,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       | BasketToolDragPayload
       | RackToolDragPayload
       | GrossBalanceToolDragPayload
+      | AnalyticalBalanceToolDragPayload
       | TrashToolDragPayload,
   ) => {
     if ("itemType" in payload && payload.itemType === "tool") {
@@ -1771,6 +1908,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     }
     if (payload.sourceKind === "gross_balance") {
       return grossBalanceTool;
+    }
+    if (payload.sourceKind === "analytical_balance") {
+      return analyticalBalanceTool;
     }
     return null;
   };
@@ -2357,7 +2497,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       harvest_date: payload.harvest_date,
       indicative_mass_g: payload.indicative_mass_g,
       measured_gross_mass_g: grossBalanceNetMassG,
-      measured_sample_mass_g: payload.measured_sample_mass_g,
+      measured_sample_mass_g:
+        payload.measured_sample_mass_g ?? state.experiment.limsReception.measuredSampleMassG,
     });
   };
 
@@ -2552,6 +2693,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         activeDragItem.sourceKind === "palette" ||
         activeDragItem.sourceKind === "basket" ||
         activeDragItem.sourceKind === "gross_balance" ||
+        activeDragItem.sourceKind === "analytical_balance" ||
         activeDragItem.sourceKind === "rack" ||
         activeDragItem.sourceKind === "trash"
       ) {
@@ -2623,6 +2765,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const displayGrinderProduceLots = grinderProduceLots;
   const displayBalanceTool = grossBalanceTool;
   const displayBalanceProduceLot = grossBalanceProduceLot;
+  const displayAnalyticalBalanceTool = analyticalBalanceTool;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
   const grossBalanceStagedContent =
     pendingGrossBalanceDropDraft ? (
@@ -2686,6 +2829,23 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         />
       </div>
     ) : null;
+  const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
+    <div
+      data-testid="analytical-balance-staged-item"
+    >
+      <BenchToolCard
+        draggable
+        onDragEnd={() => {
+          clearDropTargets();
+        }}
+        onDragStart={(event) => {
+          handleAnalyticalBalanceItemDragStart(event.dataTransfer);
+        }}
+        onRemoveLiquid={() => {}}
+        tool={{ ...displayAnalyticalBalanceTool, id: `analytical-${displayAnalyticalBalanceTool.id}` }}
+      />
+    </div>
+  ) : null;
   const handleCreateAppleLot = () => {
     void experimentApi.createProduceLot( {
       produce_type: "apple",
@@ -2881,6 +3041,19 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
                       onDragOver={handleGrossBalanceDragOver}
                       onDrop={handleGrossBalanceDrop}
                       stagedContent={grossBalanceStagedContent}
+                    />
+                  ) : widgetId === "analytical_balance" ? (
+                    <AnalyticalBalanceWidget
+                      isDropHighlighted={isDropTargetHighlighted("analytical_balance_widget")}
+                      measuredMassG={analyticalBalanceMeasuredMassG}
+                      netMassG={analyticalBalanceNetMassG}
+                      onDragOver={handleAnalyticalBalanceDragOver}
+                      onDrop={handleAnalyticalBalanceDrop}
+                      onTare={() => {
+                        void experimentApi.tareAnalyticalBalance();
+                      }}
+                      stagedContent={analyticalBalanceStagedContent}
+                      tareMassG={state.experiment.analyticalBalance.tareMassG}
                     />
                   ) : widgetId === "rack" ? (
                     <RackWidget

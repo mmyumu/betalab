@@ -34,6 +34,7 @@ export type DndTargetId =
   | "bench-slot-station_2"
   | "grinder-dropzone"
   | "gross-balance-dropzone"
+  | "analytical-balance-dropzone"
   | "rack-illustration-slot-1"
   | "widget-workspace"
   | "trash-dropzone";
@@ -73,6 +74,7 @@ const workspaceWidgetItemToId = {
   cryogenic_grinder_widget: "grinder",
   lims_terminal_widget: "lims",
   gross_balance_widget: "gross_balance",
+  analytical_balance_widget: "analytical_balance",
 } as const;
 
 const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
@@ -102,6 +104,7 @@ export const dndTargetCases: {
   { id: "bench-slot-station_2", label: "empty station", assertDragOver: true },
   { id: "grinder-dropzone", label: "grinder", assertDragOver: true },
   { id: "gross-balance-dropzone", label: "gross balance", assertDragOver: true },
+  { id: "analytical-balance-dropzone", label: "analytical balance", assertDragOver: true },
   { id: "rack-illustration-slot-1", label: "rack slot", assertDragOver: true },
   { id: "widget-workspace", label: "workspace canvas", assertDragOver: false },
   { id: "trash-dropzone", label: "trash", assertDragOver: true },
@@ -154,6 +157,10 @@ function makeRackSlots(overrides: Partial<RackSlot>[] = []): RackSlot[] {
 function makeWorkspaceWidgets(
   overrides: Partial<ExperimentWorkspaceWidget>[] = [],
 ): ExperimentWorkspaceWidget[] {
+  const normalizedOverrides =
+    overrides.length === 8
+      ? [overrides[0], overrides[1], {}, overrides[2], overrides[3], overrides[4], overrides[5], overrides[6], overrides[7]]
+      : overrides;
   const baseWidgets: ExperimentWorkspaceWidget[] = [
     {
       id: "lims",
@@ -171,6 +178,16 @@ function makeWorkspaceWidgets(
       label: "Gross balance",
       anchor: "top-left",
       offsetX: 364,
+      offsetY: 886,
+      isPresent: true,
+      isTrashed: false,
+    },
+    {
+      id: "analytical_balance",
+      widgetType: "analytical_balance",
+      label: "Analytical balance",
+      anchor: "top-left",
+      offsetX: 688,
       offsetY: 886,
       isPresent: true,
       isTrashed: false,
@@ -239,7 +256,7 @@ function makeWorkspaceWidgets(
 
   return baseWidgets.map((widget, index) => ({
     ...widget,
-    ...(overrides[index] ?? {}),
+    ...(normalizedOverrides[index] ?? {}),
   }));
 }
 
@@ -350,6 +367,10 @@ function makeExperiment({
       isLoaded: false,
       loadedPowderMassG: 0,
       sourceToolId: null,
+    },
+    analyticalBalance: {
+      tareMassG: null,
+      taredToolId: null,
     },
     limsReception,
     limsEntries: limsReception.labSampleCode ? [limsReception] : [],
@@ -1865,16 +1886,70 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
   };
 }
 
+function getAnalyticalBalanceTargetExpectation(sourceCase: DndSourceCase) {
+  const isCentrifugeTubeSource =
+    sourceCase.id === "palette-centrifuge_tube_50ml" ||
+    sourceCase.id === "workbench-centrifuge_tube_50ml" ||
+    sourceCase.id === "trash-tool-centrifuge_tube_50ml";
+
+  if (!isCentrifugeTubeSource) {
+    return {
+      compatible: false,
+      command: null,
+    };
+  }
+
+  if (sourceCase.id === "palette-centrifuge_tube_50ml") {
+    return {
+      compatible: true,
+      command: {
+        type: "place_tool_on_analytical_balance",
+        payload: {
+          tool_id: "centrifuge_tube_50ml",
+        },
+      },
+    };
+  }
+
+  if (sourceCase.id === "workbench-centrifuge_tube_50ml") {
+    return {
+      compatible: true,
+      command: {
+        type: "move_workbench_tool_to_analytical_balance",
+        payload: {
+          source_slot_id: "station_1",
+        },
+      },
+    };
+  }
+
+  return {
+    compatible: true,
+    command: {
+      type: "restore_trashed_tool_to_analytical_balance",
+      payload: {
+        trash_tool_id: "trash_tool_1",
+      },
+    },
+  };
+}
+
 export const dndSourceCases: DndSourceCase[] = baseDndSourceCases.map((sourceCase) => ({
   ...sourceCase,
-  availableTargets: sourceCase.availableTargets.includes("gross-balance-dropzone")
-    ? sourceCase.availableTargets
-    : [...sourceCase.availableTargets, "gross-balance-dropzone"],
+  availableTargets: [
+    ...(sourceCase.availableTargets.includes("gross-balance-dropzone")
+      ? sourceCase.availableTargets
+      : [...sourceCase.availableTargets, "gross-balance-dropzone"]),
+    "analytical-balance-dropzone",
+  ],
   targetExpectations: {
     ...sourceCase.targetExpectations,
     "gross-balance-dropzone":
       sourceCase.targetExpectations["gross-balance-dropzone"] ??
       getGrossBalanceTargetExpectation(sourceCase),
+    "analytical-balance-dropzone":
+      sourceCase.targetExpectations["analytical-balance-dropzone"] ??
+      getAnalyticalBalanceTargetExpectation(sourceCase),
   },
 }));
 

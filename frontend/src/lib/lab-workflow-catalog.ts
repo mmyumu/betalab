@@ -170,6 +170,16 @@ export const labWorkflowCategories: ToolbarCategory[] = [
         accent: "rose",
         widgetType: "gross_balance",
       },
+      {
+        id: "analytical_balance_widget",
+        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        itemType: "workspace_widget",
+        name: "Analytical balance",
+        subtitle: "Sample intake",
+        description: "Precision balance used to tare the Falcon tube and capture the 10.000 g QuEChERS test portion.",
+        accent: "emerald",
+        widgetType: "analytical_balance",
+      },
     ],
   },
   {

@@ -11,6 +11,9 @@ export function getToolDropTargets(toolType: ToolType): DropTargetType[] {
   if (toolType === "sample_vial") {
     targets.splice(1, 0, "rack_slot");
   }
+  if (toolType === "centrifuge_tube") {
+    targets.push("analytical_balance_widget");
+  }
 
   return targets;
 }
@@ -59,10 +62,11 @@ export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
 
 export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidgetId): boolean {
   return (
-    widgetId === "rack" ||
-    widgetId === "instrument" ||
-    widgetId === "grinder" ||
-    widgetId === "gross_balance"
+      widgetId === "rack" ||
+      widgetId === "instrument" ||
+      widgetId === "grinder" ||
+      widgetId === "gross_balance" ||
+      widgetId === "analytical_balance"
   );
 }
 

@@ -87,6 +87,12 @@ class SpatulaState:
 
 
 @dataclass
+class AnalyticalBalanceState:
+    tare_mass_g: float | None = None
+    tared_tool_id: str | None = None
+
+
+@dataclass
 class WorkbenchSlot:
     id: str
     label: str
@@ -202,6 +208,7 @@ class Experiment:
     last_simulation_at: datetime
     basket_tool: WorkbenchTool | None = None
     spatula: SpatulaState = field(default_factory=SpatulaState)
+    analytical_balance: AnalyticalBalanceState = field(default_factory=AnalyticalBalanceState)
     lims_entries: list[LimsReception] = field(default_factory=list)
     snapshot_version: int = 0
     audit_log: list[str] = field(default_factory=list)

@@ -24,4 +24,4 @@ def can_tool_receive_contents(tool_type: str, is_sealed: bool) -> bool:
 
 
 def is_workspace_widget_discardable(widget_id: str) -> bool:
-    return widget_id in {"rack", "instrument", "grinder", "gross_balance"}
+    return widget_id in {"rack", "instrument", "grinder", "gross_balance", "analytical_balance"}

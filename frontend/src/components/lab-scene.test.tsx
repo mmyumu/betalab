@@ -114,6 +114,10 @@ function makeRackSlots(overrides: Partial<RackSlot>[] = []): RackSlot[] {
 function makeWorkspaceWidgets(
   overrides: Partial<ExperimentWorkspaceWidget>[] = [],
 ): ExperimentWorkspaceWidget[] {
+  const normalizedOverrides =
+    overrides.length === 8
+      ? [overrides[0], overrides[1], {}, overrides[2], overrides[3], overrides[4], overrides[5], overrides[6], overrides[7]]
+      : overrides;
   const baseWidgets: ExperimentWorkspaceWidget[] = [
     {
       id: "lims",
@@ -131,6 +135,16 @@ function makeWorkspaceWidgets(
       label: "Gross balance",
       anchor: "top-left",
       offsetX: 364,
+      offsetY: 886,
+      isPresent: false,
+      isTrashed: false,
+    },
+    {
+      id: "analytical_balance",
+      widgetType: "analytical_balance",
+      label: "Analytical balance",
+      anchor: "top-left",
+      offsetX: 688,
       offsetY: 886,
       isPresent: false,
       isTrashed: false,
@@ -199,11 +213,12 @@ function makeWorkspaceWidgets(
 
   return baseWidgets.map((widget, index) => ({
     ...widget,
-    ...(overrides[index] ?? {}),
+    ...(normalizedOverrides[index] ?? {}),
   }));
 }
 
 function makeWorkbenchExperiment({
+  analyticalBalance = { tareMassG: null, taredToolId: null },
   auditLog = ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],
   basketProduceLots = [],
   basketTool = null,
@@ -218,6 +233,7 @@ function makeWorkbenchExperiment({
   trashTools = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
+  analyticalBalance?: Experiment["analyticalBalance"];
   auditLog?: string[];
   basketProduceLots?: {
     id: string;
@@ -253,6 +269,7 @@ function makeWorkbenchExperiment({
       loadedPowderMassG: 0,
       sourceToolId: null,
     },
+    analyticalBalance,
     limsReception,
     limsEntries,
     audit_log: auditLog,
@@ -338,7 +355,7 @@ function makeTrashSampleLabelEntry(
 }
 
 function makeWorkspaceWithRackVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
-  return makeWorkspaceWidgets([{}, {}, {}, {}, { isPresent: true, ...overrides }, {}, {}, {}]);
+  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, { isPresent: true, ...overrides }, {}, {}, {}]);
 }
 
 function makeWorkspaceWithRackAndInstrumentVisible(
@@ -346,6 +363,7 @@ function makeWorkspaceWithRackAndInstrumentVisible(
   instrumentOverrides: Partial<ExperimentWorkspaceWidget> = {},
 ) {
   return makeWorkspaceWidgets([
+    {},
     {},
     {},
     {},
@@ -358,13 +376,19 @@ function makeWorkspaceWithRackAndInstrumentVisible(
 }
 
 function makeWorkspaceWithGrinderVisible(overrides: Partial<ExperimentWorkspaceWidget> = {}) {
-  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, {}, {}, { isPresent: true, ...overrides }]);
+  return makeWorkspaceWidgets([{}, {}, {}, {}, {}, {}, {}, {}, { isPresent: true, ...overrides }]);
 }
 
 function makeWorkspaceWithGrossBalanceVisible(
   overrides: Partial<ExperimentWorkspaceWidget> = {},
 ) {
-  return makeWorkspaceWidgets([{}, { isPresent: true, ...overrides }, {}, {}, {}, {}, {}, {}]);
+  return makeWorkspaceWidgets([{}, { isPresent: true, ...overrides }, {}, {}, {}, {}, {}, {}, {}]);
+}
+
+function makeWorkspaceWithAnalyticalBalanceVisible(
+  overrides: Partial<ExperimentWorkspaceWidget> = {},
+) {
+  return makeWorkspaceWidgets([{}, {}, { isPresent: true, ...overrides }, {}, {}, {}, {}, {}, {}]);
 }
 
 afterEach(() => {
@@ -4638,5 +4662,37 @@ describe("LabScene", () => {
       "data-status",
       "ready",
     );
+  });
+
+  it("tares the analytical balance from its button", async () => {
+    const analyticalTube = makeTool({
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "QuEChERS extraction",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+    });
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }) as Experiment,
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(makeWorkbenchExperiment() as Experiment);
+
+    render(<PesticideWorkbench />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("analytical-balance-dropzone")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tare" }));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "tare_analytical_balance",
+        {},
+      );
+    });
   });
 });

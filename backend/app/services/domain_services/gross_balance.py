@@ -74,6 +74,11 @@ class RestoreTrashedToolToGrossBalanceRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveAnalyticalBalanceToolToGrossBalanceRequest:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class MoveGrossBalanceToolToWorkbenchRequest:
     target_slot_id: str
 
@@ -358,6 +363,22 @@ class RestoreTrashedToolToGrossBalanceService(GrossBalanceServiceBase):
             restored_tool,
             action_verb="restored onto",
         )
+
+
+class MoveAnalyticalBalanceToolToGrossBalanceService(GrossBalanceServiceBase):
+    def _run(
+        self,
+        experiment: Experiment,
+        request: MoveAnalyticalBalanceToolToGrossBalanceRequest,
+    ) -> None:
+        analytical_balance = find_workspace_widget(experiment.workspace, "analytical_balance")
+        if analytical_balance.tool is None:
+            raise ValueError("Analytical balance does not contain a tool.")
+        moved_tool = analytical_balance.tool
+        analytical_balance.tool = None
+        experiment.analytical_balance.tare_mass_g = None
+        experiment.analytical_balance.tared_tool_id = None
+        self._place_tool_on_balance(experiment, moved_tool, action_verb="moved to")
 
 
 class MoveGrossBalanceToolToWorkbenchService(GrossBalanceServiceBase):

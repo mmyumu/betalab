@@ -20,6 +20,11 @@ class SpatulaStateSchema(BaseModel):
     source_tool_id: str | None = None
 
 
+class AnalyticalBalanceStateSchema(BaseModel):
+    tare_mass_g: float | None = None
+    tared_tool_id: str | None = None
+
+
 class ProduceLotSchema(BaseModel):
     id: str
     label: str
@@ -244,6 +249,7 @@ class ExperimentSchema(BaseModel):
     lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
     basket_tool: WorkbenchToolSchema | None = None
     spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
+    analytical_balance: AnalyticalBalanceStateSchema = Field(default_factory=AnalyticalBalanceStateSchema)
     audit_log: list[str]
 
 
@@ -417,6 +423,10 @@ class GrossWeightRecordSchema(BaseModel):
 
 class GrossMassOffsetUpdateSchema(BaseModel):
     gross_mass_offset_g: int
+
+
+class AnalyticalBalanceMeasuredMassSchema(BaseModel):
+    measured_sample_mass_g: float
 
 
 class LimsReceptionCreateSchema(BaseModel):

@@ -6,7 +6,8 @@ export type DropTargetType =
   | "rack_slot"
   | "trash_bin"
   | "grinder_widget"
-  | "gross_balance_widget";
+  | "gross_balance_widget"
+  | "analytical_balance_widget";
 
 type ToolbarBaseItem = {
   allowedDropTargets: DropTargetType[];
@@ -43,7 +44,8 @@ export type WorkspaceWidgetType =
   | "cryogenic_grinder"
   | "produce_basket"
   | "lims_terminal"
-  | "gross_balance";
+  | "gross_balance"
+  | "analytical_balance";
 export type ExperimentWorkspaceWidgetId =
   | "workbench"
   | "trash"
@@ -52,7 +54,8 @@ export type ExperimentWorkspaceWidgetId =
   | "grinder"
   | "basket"
   | "lims"
-  | "gross_balance";
+  | "gross_balance"
+  | "analytical_balance";
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
@@ -73,6 +76,7 @@ export type DragSourceKind =
   | "basket"
   | "grinder"
   | "gross_balance"
+  | "analytical_balance"
   | "lims";
 
 export type DebugProducePresetId = "apple_powder_residual_co2";
@@ -233,6 +237,14 @@ export type GrossBalanceToolDragPayload = BaseDragPayload & {
   toolType: ToolType;
 };
 
+export type AnalyticalBalanceToolDragPayload = BaseDragPayload & {
+  entityKind: "tool";
+  sourceId: string;
+  sourceKind: "analytical_balance";
+  toolId: string;
+  toolType: ToolType;
+};
+
 export type TrashToolDragPayload = BaseDragPayload & {
   entityKind: "tool";
   sourceId: string;
@@ -359,6 +371,11 @@ export type LimsReception = {
   labSampleCode: string | null;
   status: "awaiting_reception" | "awaiting_label_application" | "received";
   printedLabelTicket: PrintedLabelTicket | null;
+};
+
+export type AnalyticalBalanceState = {
+  tareMassG: number | null;
+  taredToolId: string | null;
 };
 
 export type TrashProduceLotEntry = {

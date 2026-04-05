@@ -1,4 +1,5 @@
 import type {
+  AnalyticalBalanceState,
   BenchSlot,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
@@ -43,6 +44,7 @@ export type Experiment = {
   limsEntries: LimsReception[];
   basketTool: BenchToolInstance | null;
   spatula: SpatulaState;
+  analyticalBalance: AnalyticalBalanceState;
   audit_log: string[];
 };
 

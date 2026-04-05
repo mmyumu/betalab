@@ -53,6 +53,10 @@ const makeExperiment = (): Experiment => ({
     loadedPowderMassG: 0,
     sourceToolId: null,
   },
+  analyticalBalance: {
+    tareMassG: null,
+    taredToolId: null,
+  },
   audit_log: [],
 });
 

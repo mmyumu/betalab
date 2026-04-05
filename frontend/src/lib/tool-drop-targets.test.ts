@@ -24,6 +24,15 @@ describe("tool drop targets", () => {
     expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
   });
 
+  it("keeps the 50 mL tube compatible with the analytical balance from every origin", () => {
+    expect(getToolDropTargets("centrifuge_tube")).toEqual([
+      "workbench_slot",
+      "trash_bin",
+      "gross_balance_widget",
+      "analytical_balance_widget",
+    ]);
+  });
+
   it("keeps produce lot compatibility independent from origin and includes the grinder", () => {
     expect(getProduceLotDropTargets()).toEqual([
       "workbench_slot",

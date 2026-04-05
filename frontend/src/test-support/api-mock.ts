@@ -47,16 +47,31 @@ export const discardBasketTool = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "discard_basket_tool", {}),
 );
 export const moveWorkbenchToolToGrossBalance = wrapCommand("move_workbench_tool_to_gross_balance");
+export const moveWorkbenchToolToAnalyticalBalance = wrapCommand("move_workbench_tool_to_analytical_balance");
 export const moveBasketToolToGrossBalance = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "move_basket_tool_to_gross_balance", {}),
 );
+export const moveAnalyticalBalanceToolToGrossBalance = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "move_analytical_balance_tool_to_gross_balance", {}),
+);
 export const placeToolOnGrossBalance = wrapCommand("place_tool_on_gross_balance");
+export const placeToolOnAnalyticalBalance = wrapCommand("place_tool_on_analytical_balance");
 export const moveRackToolToGrossBalance = wrapCommand("move_rack_tool_to_gross_balance");
+export const moveRackToolToAnalyticalBalance = wrapCommand("move_rack_tool_to_analytical_balance");
 export const restoreTrashedToolToGrossBalance = wrapCommand("restore_trashed_tool_to_gross_balance");
+export const restoreTrashedToolToAnalyticalBalance = wrapCommand("restore_trashed_tool_to_analytical_balance");
 export const moveGrossBalanceToolToWorkbench = wrapCommand("move_gross_balance_tool_to_workbench");
 export const moveGrossBalanceToolToRack = wrapCommand("move_gross_balance_tool_to_rack");
+export const moveGrossBalanceToolToAnalyticalBalance = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "move_gross_balance_tool_to_analytical_balance", {}),
+);
+export const moveAnalyticalBalanceToolToWorkbench = wrapCommand("move_analytical_balance_tool_to_workbench");
+export const moveAnalyticalBalanceToolToRack = wrapCommand("move_analytical_balance_tool_to_rack");
 export const discardGrossBalanceTool = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "discard_gross_balance_tool", {}),
+);
+export const discardAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "discard_analytical_balance_tool", {}),
 );
 export const openGrossBalanceTool = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "open_gross_balance_tool", {}),
@@ -68,6 +83,12 @@ export const recordGrossWeight = vi.fn((experimentId: string, payload?: Record<s
   sendExperimentCommand(experimentId, "record_gross_weight", payload ?? {}),
 );
 export const setGrossBalanceContainerOffset = wrapCommand("set_gross_balance_container_offset");
+export const tareAnalyticalBalance = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "tare_analytical_balance", {}),
+);
+export const recordAnalyticalSampleMass = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "record_analytical_sample_mass", {}),
+);
 export const moveWorkspaceProduceLotToGrossBalance = wrapCommand("move_workspace_produce_lot_to_gross_balance");
 export const moveWorkbenchProduceLotToGrossBalance = wrapCommand("move_workbench_produce_lot_to_gross_balance");
 export const moveWidgetProduceLotToGrossBalance = wrapCommand("move_widget_produce_lot_to_gross_balance");

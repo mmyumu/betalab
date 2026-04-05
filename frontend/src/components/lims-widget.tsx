@@ -85,7 +85,7 @@ export function LimsWidget({
       );
       setMeasuredSampleMassText(
         selectedEntryMeasuredSampleMassG !== null
-          ? selectedEntryMeasuredSampleMassG.toFixed(2)
+          ? selectedEntryMeasuredSampleMassG.toFixed(3)
           : "",
       );
       return;
@@ -113,7 +113,7 @@ export function LimsWidget({
     Number.isFinite(measuredSampleMassValue) && measuredSampleMassValue > 0;
   const formatIndicativeMass = (massG: number) =>
     Number.isInteger(massG) ? `${massG.toFixed(0)} g` : `${massG.toFixed(1)} g`;
-  const formatMeasuredSampleMass = (massG: number) => `${massG.toFixed(2)} g`;
+  const formatMeasuredSampleMass = (massG: number) => `${massG.toFixed(3)} g`;
   const canCreateReception =
     orchardName.trim().length > 0 &&
     harvestDate.trim().length > 0 &&
@@ -285,8 +285,8 @@ export function LimsWidget({
               inputMode="decimal"
               min="0"
               onChange={(event) => setMeasuredSampleMassText(event.target.value)}
-              placeholder="10.00"
-              step="0.01"
+              placeholder="10.000"
+              step="0.001"
               type="number"
               value={measuredSampleMassText}
             />

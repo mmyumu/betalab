@@ -652,8 +652,8 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
     def _run(self, experiment: Experiment, request: PourSpatulaIntoWorkbenchToolRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.slot_id)
         tool = require_slot_tool(slot, "receiving powder")
-        if tool.tool_type != "sample_vial":
-            raise ValueError("The spatula can only pour into an autosampler vial.")
+        if tool.tool_type not in {"sample_vial", "centrifuge_tube"}:
+            raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before adding powder.")
         if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
