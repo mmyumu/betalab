@@ -16,7 +16,7 @@ test.describe("Pesticide workbench", () => {
   test.beforeEach(async ({ page }) => {
     api = await mockWorkbenchApi(page);
     await page.goto("/");
-    await expect(page.getByText("Creating pesticide workbench from backend...")).toBeVisible();
+    await page.getByRole("button", { name: "New experiment" }).click();
     await expect(page.getByTestId("bench-slot-station_1")).toBeVisible();
   });
 

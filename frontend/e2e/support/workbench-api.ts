@@ -185,15 +185,31 @@ function makeTool(toolId: string): BenchToolInstance {
 
 function makeExperiment(): Experiment {
   return {
+    analyticalBalance: { tareMassG: null, taredToolId: null },
     audit_log: [...defaultAuditLog],
+    basketTool: null,
     id: "experiment_pesticides",
     last_simulation_at: "2026-03-29T00:00:00Z",
+    limsEntries: [],
+    limsReception: {
+      grossMassOffsetG: 0,
+      harvestDate: "",
+      id: null,
+      indicativeMassG: 0,
+      labSampleCode: null,
+      measuredGrossMassG: null,
+      measuredSampleMassG: null,
+      orchardName: "",
+      printedLabelTicket: null,
+      status: "awaiting_reception",
+    },
     rack: { slots: makeRackSlots() },
     snapshot_version: 1,
+    spatula: { isLoaded: false, loadedPowderMassG: 0, sourceToolId: null },
     status: "preparing",
     trash: { produceLots: [], sampleLabels: [], tools: [] },
     workbench: { slots: makeSlots() },
-    workspace: { produceLots: [], widgets: makeWorkspaceWidgets() },
+    workspace: { produceBasketLots: [], widgets: makeWorkspaceWidgets() },
   };
 }
 
@@ -315,13 +331,13 @@ function applyCommand(
     }
     case "create_produce_lot": {
       const produceLot: ExperimentProduceLot = {
-        id: `produce_${next.workspace.produceLots.length + 1}`,
-        label: `Apple lot ${next.workspace.produceLots.length + 1}`,
+        id: `produce_${next.workspace.produceBasketLots.length + 1}`,
+        label: `Apple lot ${next.workspace.produceBasketLots.length + 1}`,
         produceType: "apple",
         totalMassG: 2450,
         unitCount: 12,
       };
-      next.workspace.produceLots.push(produceLot);
+      next.workspace.produceBasketLots.push(produceLot);
       return appendAudit(next, `${produceLot.label} added to the basket.`);
     }
     default:
@@ -350,7 +366,14 @@ export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
   let experiment = makeExperiment();
   const commands: CommandRecord[] = [];
 
-  await page.route("**/experiments", async (route) => {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+  await page.route(`${apiBase}/experiments`, async (route) => {
+    if (route.request().method() === "GET") {
+      await fulfillJson(route, 200, []);
+      return;
+    }
+
     if (route.request().method() !== "POST") {
       await route.fallback();
       return;
@@ -360,7 +383,7 @@ export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
     await fulfillJson(route, 200, experiment);
   });
 
-  await page.route("**/experiments/**", async (route) => {
+  await page.route(`${apiBase}/experiments/**`, async (route) => {
     const request = route.request();
     const method = request.method();
     const url = new URL(request.url());

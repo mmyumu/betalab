@@ -740,6 +740,7 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
     assert [widget.id for widget in experiment.workspace.widgets] == [
         "lims",
         "gross_balance",
+        "analytical_balance",
         "workbench",
         "trash",
         "rack",
@@ -747,17 +748,19 @@ def test_create_experiment_starts_with_received_bag_and_empty_workbench() -> Non
         "basket",
         "grinder",
     ]
-    assert experiment.workspace.widgets[0].is_present is True
-    assert experiment.workspace.widgets[1].is_present is False
-    assert experiment.workspace.widgets[2].is_present is True
-    assert experiment.workspace.widgets[3].is_present is True
-    assert experiment.workspace.widgets[4].is_present is False
-    assert experiment.workspace.widgets[5].is_present is False
-    assert experiment.workspace.widgets[6].is_present is True
-    assert experiment.workspace.widgets[7].is_present is False
-    assert experiment.workspace.widgets[3].anchor == "top-left"
-    assert experiment.workspace.widgets[3].offset_x == 1276
-    assert experiment.workspace.widgets[3].offset_y == 24
+    widgets_by_id = {widget.id: widget for widget in experiment.workspace.widgets}
+    assert widgets_by_id["lims"].is_present is True
+    assert widgets_by_id["gross_balance"].is_present is False
+    assert widgets_by_id["analytical_balance"].is_present is False
+    assert widgets_by_id["workbench"].is_present is True
+    assert widgets_by_id["trash"].is_present is True
+    assert widgets_by_id["rack"].is_present is False
+    assert widgets_by_id["instrument"].is_present is False
+    assert widgets_by_id["basket"].is_present is True
+    assert widgets_by_id["grinder"].is_present is False
+    assert widgets_by_id["trash"].anchor == "top-left"
+    assert widgets_by_id["trash"].offset_x == 1276
+    assert widgets_by_id["trash"].offset_y == 24
     assert all(widget.is_trashed is False for widget in experiment.workspace.widgets)
     assert experiment.workspace.produce_basket_lots == []
     assert experiment.basket_tool is not None
