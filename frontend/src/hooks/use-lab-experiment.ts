@@ -277,10 +277,15 @@ export function useLabExperiment({
     payload?: Record<string, unknown>,
     options?: { onSuccess?: (updatedExperiment: Experiment) => void },
   ) => {
+    if (state.status !== "ready") {
+      return;
+    }
+
+    const activeExperimentId = state.experiment.id;
     let updatedExperiment: Experiment;
 
     try {
-      updatedExperiment = await mutation(state.experiment.id, payload);
+      updatedExperiment = await mutation(activeExperimentId, payload);
     } catch (error) {
       if (!(error instanceof Error) || error.message !== "Experiment not found") {
         throw error;

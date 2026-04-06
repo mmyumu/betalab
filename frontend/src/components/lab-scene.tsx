@@ -1,108 +1,55 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 
-import { FloatingWidget } from "@/components/floating-widget";
-import { ActionBarPanel } from "@/components/action-bar-panel";
-import { BenchToolCard } from "@/components/bench-tool-card";
-import { CryogenicGrinderIllustration } from "@/components/illustrations/cryogenic-grinder-illustration";
-import { DebugProducePalette, type DebugProducePreset } from "@/components/debug-produce-palette";
+import { LabSceneView } from "@/components/lab-scene-view";
 import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
-import { AnalyticalBalanceWidget } from "@/components/analytical-balance-widget";
-import { GrossBalanceWidget } from "@/components/gross-balance-widget";
-import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
-import { LimsWidget } from "@/components/lims-widget";
-import { ProduceBasketWidget } from "@/components/produce-basket-widget";
-import { ProduceLotCard } from "@/components/produce-lot-card";
-import { RackWidget } from "@/components/rack-widget";
-import { TrashWidget } from "@/components/trash-widget";
-import { WorkbenchPanel } from "@/components/workbench-panel";
-import { ToolbarPanel } from "@/components/toolbar-panel";
-import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
-import { DraggableInventoryItem } from "@/components/draggable-inventory-item";
+import { type DebugProducePreset } from "@/components/debug-produce-palette";
+import { useAnalyticalBalanceDnd } from "@/hooks/use-analytical-balance-dnd";
+import { useDragState } from "@/hooks/use-drag-state";
+import { useGrinderDnd } from "@/hooks/use-grinder-dnd";
+import { useGrossBalanceDnd } from "@/hooks/use-gross-balance-dnd";
+import { useDropDraft } from "@/hooks/use-drop-draft";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
+import { useRackDnd } from "@/hooks/use-rack-dnd";
+import { useTrashDnd } from "@/hooks/use-trash-dnd";
+import { useWorkbenchDnd } from "@/hooks/use-workbench-dnd";
 import {
   inferAnchoredLayout,
   type WidgetLayout,
   useWorkspaceLayout,
 } from "@/hooks/use-workspace-layout";
 import {
-  createToolbarDragPayload,
   hasCompatibleDropTarget,
-  readAnalyticalBalanceToolDragPayload,
-  readBasketToolDragPayload,
-  readBenchToolDragPayload,
-  readGrossBalanceToolDragPayload,
-  readLimsLabelTicketDragPayload,
-  readProduceDragPayload,
-  readRackToolDragPayload,
-  readSampleLabelDragPayload,
-  readTrashToolDragPayload,
   readToolbarDragPayload,
-  readWorkspaceLiquidDragPayload,
   readWorkspaceWidgetDragPayload,
-  toDragDescriptor,
-  writeBasketToolDragPayload,
-  writeAnalyticalBalanceToolDragPayload,
-  writeBenchToolDragPayload,
-  writeGrossBalanceToolDragPayload,
-  writeLimsLabelTicketDragPayload,
-  writeProduceDragPayload,
-  writeRackToolDragPayload,
-  writeSampleLabelDragPayload,
-  writeTrashToolDragPayload,
-  writeWorkspaceLiquidDragPayload,
-  writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
+import {
+  getWorkspaceEquipmentWidgetId,
+  isWorkspaceEquipmentWidgetId,
+} from "@/lib/workspace-widget-ids";
 import {
   canToolAcceptLiquids,
   canToolAcceptProduce,
   canToolReceiveContents,
-  getLimsLabelTicketDropTargets,
-  getProduceLotDropTargets,
-  getSampleLabelDropTargets,
-  getToolDropTargets,
-  getWorkspaceWidgetDropTargets,
   isWorkspaceWidgetDiscardable,
 } from "@/lib/tool-drop-targets";
 import {
   labLiquidCatalog,
-  labToolCatalog,
-  labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
 import type {
-  AnalyticalBalanceToolDragPayload,
   BenchLabel,
-  BasketToolDragPayload,
   BenchSlot,
-  BenchToolDragPayload,
   BenchToolInstance,
-  DragDescriptor,
-  DropTargetType,
   ExperimentProduceLot,
-  ExperimentWorkspaceWidget,
-  GrossBalanceToolDragPayload,
-  LimsLabelTicketDragPayload,
-  ProduceDragPayload,
   RackSlot,
-  RackToolDragPayload,
-  TrashToolDragPayload,
-  TrashProduceLotEntry,
-  TrashSampleLabelEntry,
-  TrashToolEntry,
   ToolType,
   ToolbarDragPayload,
-  WorkspaceLiquidDragPayload,
 } from "@/types/workbench";
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
-const ambientTemperatureC = 20;
-const grinderOptimalThresholdC = -40;
-const grinderStartThresholdC = -20;
-const grinderJamThresholdC = -10;
 const widgetIds = [
   "lims",
   "workbench",
@@ -198,21 +145,6 @@ const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 const spatulaCursor = "crosshair";
 
-function isWorkspaceEquipmentWidgetId(value: WidgetId): value is WorkspaceEquipmentWidgetId {
-  return (
-    value === "lims" ||
-    value === "rack" ||
-    value === "instrument" ||
-    value === "basket" ||
-    value === "grinder" ||
-    value === "gross_balance" ||
-    value === "analytical_balance"
-  );
-}
-
-function getWorkspaceEquipmentWidgetId(itemId: string): WorkspaceEquipmentWidgetId | null {
-  return workspaceEquipmentItemToWidgetId[itemId as keyof typeof workspaceEquipmentItemToWidgetId] ?? null;
-}
 
 function getRackIllustrationSlotPosition(slotIndex: number) {
   const column = slotIndex % rackIllustrationColumns;
@@ -306,28 +238,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     experimentId,
   });
   const { state, statusMessage, isCommandPending, loadExperiment } = experimentApi;
-  const [pendingDropDraft, setPendingDropDraft] = useState<{
-    commandType:
-      | "add_liquid_to_workbench_tool"
-      | "add_liquid_to_workspace_widget"
-      | "create_debug_produce_lot_on_workbench"
-      | "create_debug_produce_lot_to_widget";
-    confirmLabel?: string;
-    fields: DropDraftField[];
-    itemId?: string;
-    presetId?: string;
-    targetId: string;
-    targetKind: "bench_slot" | "workspace_widget";
-    title: string;
-  } | null>(null);
-  const [activeDropTargets, setActiveDropTargets] = useState<DropTargetType[]>([]);
-  const [activeDragItem, setActiveDragItem] = useState<DragDescriptor | null>(null);
+  const {
+    pendingDropDraft,
+    setPendingDropDraft,
+    handleUpdateDropDraftField,
+    handleConfirmDropDraft,
+  } = useDropDraft(experimentApi);
+  const {
+    activeDropTargets,
+    activeDragItem,
+    clearDropTargets,
+    isDropTargetHighlighted,
+    setActiveDragItem,
+    setActiveDropTargets,
+    showDropTargets,
+  } = useDragState();
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
-  const [grinderFeedback, setGrinderFeedback] = useState<"neutral" | "overload" | "jammed">(
-    "neutral",
-  );
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const isKnifeMode = activeActionId === "knife";
   const isSpatulaMode = activeActionId === "spatula";
@@ -382,52 +310,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
   }, []);
 
-  useEffect(() => {
-    if (state.status !== "ready") {
-      return;
-    }
-
-    const grinder = state.experiment.workspace.widgets.find((widget) => widget.id === "grinder");
-    const hasProduceLot = (grinder?.produceLots?.length ?? 0) > 0;
-    const grinderDraftIsOpen =
-      pendingDropDraft?.targetKind === "workspace_widget" &&
-      pendingDropDraft.targetId === "grinder";
-
-    if (!hasProduceLot || grinderDraftIsOpen) {
-      setGrinderFeedback("neutral");
-    }
-  }, [pendingDropDraft, state]);
-
-  useEffect(() => {
-    const grinder = state.status === "ready"
-      ? state.experiment.workspace.widgets.find((widget) => widget.id === "grinder")
-      : null;
-    const loadedLot = grinder?.produceLots?.[0] ?? null;
-    const grinderDraftIsOpen =
-      pendingDropDraft?.targetKind === "workspace_widget" &&
-      pendingDropDraft.targetId === "grinder";
-
-    if (!loadedLot || grinderDraftIsOpen) {
-      return;
-    }
-
-    const lotIsWhole = (loadedLot.cutState ?? "whole") === "whole";
-    const lotTemperatureC = loadedLot.temperatureC ?? ambientTemperatureC;
-
-    if (!lotIsWhole && lotTemperatureC <= grinderStartThresholdC) {
-      setGrinderFeedback("neutral");
-    }
-  }, [pendingDropDraft, state]);
-
-  const showDropTargets = (dropTargets: readonly DropTargetType[]) => {
-    setActiveDropTargets([...dropTargets]);
-  };
-
-  const clearDropTargets = () => {
-    setActiveDropTargets([]);
-    setActiveDragItem(null);
-  };
-
   const stopSpatulaPour = () => {
     if (spatulaPourIntervalRef.current !== null) {
       window.clearInterval(spatulaPourIntervalRef.current);
@@ -479,10 +361,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       stopSpatulaPour();
     };
   }, [isSpatulaMode]);
-
-  const isDropTargetHighlighted = (targetType: DropTargetType) => {
-    return activeDropTargets.includes(targetType);
-  };
 
   const handleToolbarItemDrop = (slotId: string, payload: ToolbarDragPayload) => {
     if (payload.itemType === "tool") {
@@ -703,126 +581,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     });
   };
 
-  const handleOpenGrinderLiquidDraft = (liquidId: "dry_ice_pellets") => {
-    const liquidDefinition = labLiquidCatalog[liquidId];
-    setPendingDropDraft({
-      commandType: "add_liquid_to_workspace_widget",
-      fields: [
-        {
-          ariaLabel: "Dry ice draft mass",
-          id: "volume_ml",
-          inputStep: 1,
-          label: "Mass",
-          stepAmount: 100,
-          unitLabel: "g",
-          value: liquidDefinition?.transfer_volume_ml ?? 1000,
-          wheelStep: 100,
-        },
-      ],
-      itemId: liquidId,
-      targetId: "grinder",
-      targetKind: "workspace_widget",
-      title: `Dose ${liquidDefinition?.name ?? "Dry ice pellets"}`,
-    });
-  };
-
-  const handleGrinderLiquidDragStart = (
-    liquid: ExperimentWorkspaceWidget["liquids"][number],
-    dataTransfer: DataTransfer,
-  ) => {
-    if (grinderDndDisabled) {
-      return;
-    }
-
-    const allowedDropTargets: DropTargetType[] = ["trash_bin"];
-    const payload: WorkspaceLiquidDragPayload = {
-      allowedDropTargets,
-      entityKind: "liquid",
-      liquidEntryId: liquid.id,
-      liquidType: liquid.liquidId,
-      sourceId: liquid.id,
-      sourceKind: "grinder",
-      widgetId: "grinder",
-    };
-
-    writeWorkspaceLiquidDragPayload(dataTransfer, payload);
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(payload));
-  };
-
-  const handleUpdateDropDraftField = (fieldId: string, value: number) => {
-    setPendingDropDraft((current) =>
-      current
-        ? {
-            ...current,
-            fields: current.fields.map((field) =>
-              field.id === fieldId
-                ? { ...field, value: Math.max(value, field.minValue ?? 0) }
-                : field,
-            ),
-          }
-        : current,
-    );
-  };
-
-  const handleConfirmDropDraft = () => {
-    if (!pendingDropDraft) {
-      return;
-    }
-
-    const getFieldValue = (fieldId: string) =>
-      pendingDropDraft.fields.find((field) => field.id === fieldId)?.value ?? 0;
-
-    if (pendingDropDraft.commandType === "add_liquid_to_workspace_widget") {
-      void experimentApi.addLiquidToWorkspaceWidget( {
-        widget_id: pendingDropDraft.targetId,
-        liquid_id: pendingDropDraft.itemId ?? "dry_ice_pellets",
-        volume_ml: getFieldValue("volume_ml"),
-      });
-      setPendingDropDraft(null);
-      return;
-    }
-
-    if (pendingDropDraft.commandType === "add_liquid_to_workbench_tool") {
-      void experimentApi.addLiquidToWorkbenchTool( {
-        slot_id: pendingDropDraft.targetId,
-        liquid_id: pendingDropDraft.itemId ?? "",
-        volume_ml: getFieldValue("volume_ml"),
-      });
-      setPendingDropDraft(null);
-      return;
-    }
-
-    if (
-      pendingDropDraft.commandType === "create_debug_produce_lot_to_widget" &&
-      pendingDropDraft.presetId
-    ) {
-      void experimentApi.createDebugProduceLotToWidget({
-        preset_id: pendingDropDraft.presetId,
-        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
-        temperature_c: getFieldValue("temperature_c"),
-        total_mass_g: getFieldValue("total_mass_g"),
-        widget_id: pendingDropDraft.targetId,
-      });
-      setPendingDropDraft(null);
-      return;
-    }
-
-    if (
-      pendingDropDraft.commandType === "create_debug_produce_lot_on_workbench" &&
-      pendingDropDraft.presetId
-    ) {
-      void experimentApi.createDebugProduceLotOnWorkbench({
-        preset_id: pendingDropDraft.presetId,
-        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
-        target_slot_id: pendingDropDraft.targetId,
-        temperature_c: getFieldValue("temperature_c"),
-        total_mass_g: getFieldValue("total_mass_g"),
-      });
-      setPendingDropDraft(null);
-    }
-  };
-
   const handleAddWorkbenchSlot = () => {
     void experimentApi.addWorkbenchSlot();
   };
@@ -830,237 +588,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const handleRemoveWorkbenchSlot = (slotId: string) => {
     void experimentApi.removeWorkbenchSlot( {
       slot_id: slotId,
-    });
-  };
-
-  const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => {
-    return getToolDropTargets(tool.toolType);
-  };
-
-  const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
-    if (dndDisabledByAction) {
-      return false;
-    }
-    return getBenchToolAllowedDropTargets(tool).length > 0;
-  };
-
-  const handleBenchToolDragStart = (
-    slotId: string,
-    tool: BenchToolInstance,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (!canDragBenchTool(slotId, tool)) {
-      return;
-    }
-
-    writeBenchToolDragPayload(dataTransfer, {
-      allowedDropTargets: [...getBenchToolAllowedDropTargets(tool)],
-      entityKind: "tool",
-      sourceId: slotId,
-      sourceKind: "workbench",
-      sourceSlotId: slotId,
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    });
-    const descriptor = {
-      allowedDropTargets: getBenchToolAllowedDropTargets(tool),
-      entityKind: "tool" as const,
-      sourceId: slotId,
-      sourceKind: "workbench" as const,
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    };
-    showDropTargets(descriptor.allowedDropTargets);
-    setActiveDragItem(descriptor);
-  };
-
-  const handleBenchToolDrop = (
-    targetSlotId: string,
-    payload:
-      | BenchToolDragPayload
-      | BasketToolDragPayload
-      | RackToolDragPayload
-      | GrossBalanceToolDragPayload
-      | AnalyticalBalanceToolDragPayload
-      | TrashToolDragPayload,
-  ) => {
-    if (payload.sourceKind === "basket") {
-      void experimentApi.placeReceivedBagOnWorkbench({
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if ("sourceSlotId" in payload) {
-      if (payload.sourceSlotId === targetSlotId) {
-        clearDropTargets();
-        return;
-      }
-
-      void experimentApi.moveToolBetweenWorkbenchSlots( {
-        source_slot_id: payload.sourceSlotId,
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if ("trashToolId" in payload) {
-      void experimentApi.restoreTrashedToolToWorkbenchSlot( {
-        target_slot_id: targetSlotId,
-        trash_tool_id: payload.trashToolId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceToolToWorkbench({
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "analytical_balance") {
-      void experimentApi.moveAnalyticalBalanceToolToWorkbench({
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    void experimentApi.removeRackToolToWorkbenchSlot( {
-      rack_slot_id: payload.rackSlotId,
-      target_slot_id: targetSlotId,
-    });
-    clearDropTargets();
-  };
-
-  const handleBasketToolDragStart = (
-    tool: BenchToolInstance,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getToolDropTargets(tool.toolType);
-
-    writeBasketToolDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "tool",
-      sourceId: tool.id,
-      sourceKind: "basket",
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "tool",
-      sourceId: tool.id,
-      sourceKind: "basket",
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    });
-  };
-
-  const handleLimsTicketDragStart = (
-    ticket: NonNullable<typeof state.experiment.limsReception.printedLabelTicket>,
-    dataTransfer: DataTransfer,
-  ) => {
-    const allowedDropTargets = getLimsLabelTicketDropTargets();
-    const payload: LimsLabelTicketDragPayload = {
-      allowedDropTargets,
-      entityKind: "lims_label_ticket",
-      sourceId: ticket.id,
-      sourceKind: "lims",
-      ticketId: ticket.id,
-      sampleCode: ticket.sampleCode,
-      labelText: ticket.labelText,
-    };
-    writeLimsLabelTicketDragPayload(dataTransfer, payload);
-    showDropTargets(payload.allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(payload));
-  };
-
-  const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
-    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
-      setPendingDropDraft({
-        commandType: "create_debug_produce_lot_on_workbench",
-        confirmLabel: "Spawn",
-        fields: buildDebugProduceDraftFields(),
-        presetId: payload.debugProducePresetId,
-        targetId: targetSlotId,
-        targetKind: "bench_slot",
-        title: "Configure Apple powder",
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "basket") {
-      void experimentApi.addProduceLotToWorkbenchTool( {
-        slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
-      if (payload.sourceSlotId === targetSlotId) {
-        clearDropTargets();
-        return;
-      }
-
-      void experimentApi.moveProduceLotBetweenWorkbenchTools( {
-        source_slot_id: payload.sourceSlotId,
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "grinder") {
-      void experimentApi.moveWidgetProduceLotToWorkbenchTool( {
-        widget_id: "grinder",
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceProduceLotToWorkbench({
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
-      void experimentApi.restoreTrashedProduceLotToWorkbenchTool( {
-        target_slot_id: targetSlotId,
-        trash_produce_lot_id: payload.trashProduceLotId,
-      });
-    }
-
-    clearDropTargets();
-  };
-
-  const handleWorkbenchProduceLotClick = (slotId: string, produceLot: ExperimentProduceLot) => {
-    if (!isKnifeMode || (produceLot.cutState ?? "whole") !== "whole") {
-      return;
-    }
-
-    void experimentApi.cutWorkbenchProduceLot( {
-      slot_id: slotId,
-      produce_lot_id: produceLot.id,
     });
   };
 
@@ -1208,541 +735,79 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     event.stopPropagation();
   };
 
-  const handleGrinderDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (grinderDndDisabled) {
-      return;
-    }
-    if (hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
-      event.preventDefault();
-    }
-  };
+  const rackSlots = state.status === "ready" ? state.experiment.rack.slots : [];
+  const analyticalBalanceTool =
+    state.status === "ready"
+      ? (state.experiment.workspace.widgets.find((w) => w.id === "analytical_balance")?.tool ?? null)
+      : null;
+  const grossBalanceTool =
+    state.status === "ready"
+      ? (state.experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.tool ?? null)
+      : null;
+  const grossBalanceProduceLot =
+    state.status === "ready"
+      ? (state.experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.produceLots?.[0] ?? null)
+      : null;
+  const hasPrintedLabelTicket =
+    state.status === "ready"
+      ? state.experiment.limsReception.printedLabelTicket !== null
+      : false;
+  const grinderWidget =
+    state.status === "ready"
+      ? (state.experiment.workspace.widgets.find((w) => w.id === "grinder") ?? null)
+      : null;
+  const rackDnd = useRackDnd({
+    dndDisabledByAction,
+    dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+    rackSlots,
+  });
 
-  const handleGrossBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (
-      hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget") ||
-      (canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
-        hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool"))
-    ) {
-      event.preventDefault();
-    }
-  };
+  const grinderDnd = useGrinderDnd({
+    buildDebugProduceDraftFields,
+    dndDisabledByAction,
+    dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+    grinderWidget,
+    isCommandPending,
+    pendingDropDraft,
+    setPendingDropDraft,
+  });
 
-  const handleGrossBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const canDropOnBalanceWidget = hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget");
-    const canDropOnBalanceBag =
-      canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
-      hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool");
-    if (!canDropOnBalanceWidget && !canDropOnBalanceBag) {
-      return;
-    }
+  const grossBalanceDnd = useGrossBalanceDnd({
+    buildDebugProduceDraftFields,
+    dndDisabledByAction,
+    dragState: { activeDropTargets, activeDragItem, clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+    grossBalanceProduceLot,
+    grossBalanceTool,
+    hasPrintedLabelTicket,
+    setPendingDropDraft,
+  });
 
-    if (canDropOnBalanceBag) {
-      const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-      if (limsTicketPayload) {
-        event.preventDefault();
-        event.stopPropagation();
-        applyLimsTicketToLabelTarget(getGrossBalanceLabelTarget());
-        return;
-      }
-    }
+  const analyticalBalanceDnd = useAnalyticalBalanceDnd({
+    analyticalBalanceTool,
+    dndDisabledByAction,
+    dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+  });
 
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const toolPayload =
-      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
-      readBenchToolDragPayload(event.dataTransfer) ??
-      readBasketToolDragPayload(event.dataTransfer) ??
-      readRackToolDragPayload(event.dataTransfer) ??
-      readAnalyticalBalanceToolDragPayload(event.dataTransfer) ??
-      readTrashToolDragPayload(event.dataTransfer);
-    const producePayload = readProduceDragPayload(event.dataTransfer);
-    const measuredMassG = toolPayload
-      ? resolveToolMassFromPayload(toolPayload)
-      : producePayload
-        ? resolveProduceMassFromPayload(producePayload)
-        : null;
+  const trashDnd = useTrashDnd({
+    dndDisabledByAction,
+    dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+    getWorkspaceEquipmentWidgetId,
+    isGrinderRunning: grinderDnd.isGrinderRunning,
+  });
 
-    event.preventDefault();
-    event.stopPropagation();
-    clearDropTargets();
-
-    if (toolbarPayload?.itemType === "tool") {
-      void experimentApi.placeToolOnGrossBalance({
-        tool_id: toolbarPayload.itemId,
-      });
-      return;
-    }
-
-    if (toolPayload) {
-      if (toolPayload.sourceKind === "basket") {
-        void experimentApi.moveBasketToolToGrossBalance();
-        return;
-      }
-      if ("sourceSlotId" in toolPayload) {
-        void experimentApi.moveWorkbenchToolToGrossBalance({
-          source_slot_id: toolPayload.sourceSlotId,
-        });
-        return;
-      }
-      if ("rackSlotId" in toolPayload) {
-        void experimentApi.moveRackToolToGrossBalance({
-          rack_slot_id: toolPayload.rackSlotId,
-        });
-        return;
-      }
-      if (toolPayload.sourceKind === "analytical_balance") {
-        void experimentApi.moveAnalyticalBalanceToolToGrossBalance();
-        return;
-      }
-      if ("trashToolId" in toolPayload) {
-        void experimentApi.restoreTrashedToolToGrossBalance({
-          trash_tool_id: toolPayload.trashToolId,
-        });
-        return;
-      }
-    }
-
-    if (producePayload) {
-      if (producePayload.sourceKind === "basket") {
-        void experimentApi.moveWorkspaceProduceLotToGrossBalance({
-          produce_lot_id: producePayload.produceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
-        void experimentApi.moveWorkbenchProduceLotToGrossBalance({
-          source_slot_id: producePayload.sourceSlotId,
-          produce_lot_id: producePayload.produceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "grinder") {
-        void experimentApi.moveWidgetProduceLotToGrossBalance({
-          produce_lot_id: producePayload.produceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
-        void experimentApi.restoreTrashedProduceLotToGrossBalance({
-          trash_produce_lot_id: producePayload.trashProduceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
-        setPendingDropDraft({
-          commandType: "create_debug_produce_lot_to_widget",
-          confirmLabel: "Spawn",
-          fields: buildDebugProduceDraftFields(),
-          presetId: producePayload.debugProducePresetId,
-          targetId: "gross_balance",
-          targetKind: "workspace_widget",
-          title: "Configure Apple powder",
-        });
-        return;
-      }
-    }
-  };
-
-  const handleBalanceItemDragStart = (dataTransfer: DataTransfer) => {
-    if (grossBalanceTool) {
-      const allowedDropTargets = getToolDropTargets(grossBalanceTool.toolType);
-      writeGrossBalanceToolDragPayload(dataTransfer, {
-        allowedDropTargets,
-        entityKind: "tool",
-        sourceId: "gross_balance",
-        sourceKind: "gross_balance",
-        toolId: grossBalanceTool.toolId,
-        toolType: grossBalanceTool.toolType,
-      });
-      showDropTargets(allowedDropTargets);
-      setActiveDragItem({
-        allowedDropTargets,
-        entityKind: "tool",
-        sourceId: "gross_balance",
-        sourceKind: "gross_balance",
-        toolId: grossBalanceTool.toolId,
-        toolType: grossBalanceTool.toolType,
-      });
-      return;
-    }
-
-    if (!grossBalanceProduceLot) {
-      return;
-    }
-
-    const payload: ProduceDragPayload = {
-      allowedDropTargets: getProduceLotDropTargets(),
-      entityKind: "produce",
-      produceLotId: grossBalanceProduceLot.id,
-      produceType: grossBalanceProduceLot.produceType,
-      sourceId: "gross_balance",
-      sourceKind: "gross_balance",
-    };
-    writeProduceDragPayload(dataTransfer, payload);
-    showDropTargets(payload.allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(payload));
-  };
-
-  const handleGrossBalanceProduceLotDragStart = (
-    produceLot: ExperimentProduceLot,
-    dataTransfer: DataTransfer,
-  ) => {
-    const allowedDropTargets = getProduceLotDropTargets();
-    const payload: ProduceDragPayload = {
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: produceLot.id,
-      produceType: produceLot.produceType,
-      sourceId: produceLot.id,
-      sourceKind: "gross_balance",
-    };
-    writeProduceDragPayload(dataTransfer, payload);
-    showDropTargets(payload.allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(payload));
-  };
-
-  const handleAnalyticalBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
-      event.preventDefault();
-    }
-  };
-
-  const handleAnalyticalBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
-      return;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const toolPayload =
-      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
-      readBenchToolDragPayload(event.dataTransfer) ??
-      readGrossBalanceToolDragPayload(event.dataTransfer) ??
-      readRackToolDragPayload(event.dataTransfer) ??
-      readTrashToolDragPayload(event.dataTransfer) ??
-      readAnalyticalBalanceToolDragPayload(event.dataTransfer);
-
-    if (!toolPayload) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    clearDropTargets();
-
-    if (toolbarPayload?.itemType === "tool") {
-      void experimentApi.placeToolOnAnalyticalBalance({
-        tool_id: toolbarPayload.itemId,
-      });
-      return;
-    }
-
-    if (toolPayload.sourceKind === "workbench" && "sourceSlotId" in toolPayload) {
-      void experimentApi.moveWorkbenchToolToAnalyticalBalance({
-        source_slot_id: toolPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    if (toolPayload.sourceKind === "rack" && "rackSlotId" in toolPayload) {
-      void experimentApi.moveRackToolToAnalyticalBalance({
-        rack_slot_id: toolPayload.rackSlotId,
-      });
-      return;
-    }
-
-    if (toolPayload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceToolToAnalyticalBalance();
-      return;
-    }
-
-    if (toolPayload.sourceKind === "trash" && "trashToolId" in toolPayload) {
-      void experimentApi.restoreTrashedToolToAnalyticalBalance({
-        trash_tool_id: toolPayload.trashToolId,
-      });
-    }
-  };
-
-  const handleAnalyticalBalanceItemDragStart = (dataTransfer: DataTransfer) => {
-    if (!analyticalBalanceTool) {
-      return;
-    }
-
-    const allowedDropTargets = getToolDropTargets(analyticalBalanceTool.toolType);
-    const payload: AnalyticalBalanceToolDragPayload = {
-      allowedDropTargets,
-      entityKind: "tool",
-      sourceId: "analytical_balance",
-      sourceKind: "analytical_balance",
-      toolId: analyticalBalanceTool.toolId,
-      toolType: analyticalBalanceTool.toolType,
-    };
-
-    writeAnalyticalBalanceToolDragPayload(dataTransfer, payload);
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem(toDragDescriptor(payload));
-  };
-
-  const handleGrinderDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (grinderDndDisabled) {
-      return;
-    }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "grinder_widget")) {
-      return;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "liquid") {
-      event.preventDefault();
-      clearDropTargets();
-      if (toolbarPayload.itemId === "dry_ice_pellets") {
-        handleOpenGrinderLiquidDraft("dry_ice_pellets");
-        return;
-      }
-      return;
-    }
-
-    const producePayload = readProduceDragPayload(event.dataTransfer);
-    if (!producePayload) {
-      return;
-    }
-
-    event.preventDefault();
-    clearDropTargets();
-
-    if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
-      setPendingDropDraft({
-        commandType: "create_debug_produce_lot_to_widget",
-        confirmLabel: "Spawn",
-        fields: buildDebugProduceDraftFields(),
-        presetId: producePayload.debugProducePresetId,
-        targetId: "grinder",
-        targetKind: "workspace_widget",
-        title: "Configure Apple powder",
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "basket") {
-      void experimentApi.addWorkspaceProduceLotToWidget( {
-        widget_id: "grinder",
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
-      void experimentApi.moveWorkbenchProduceLotToWidget( {
-        widget_id: "grinder",
-        source_slot_id: producePayload.sourceSlotId,
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceProduceLotToWidget({
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
-      void experimentApi.restoreTrashedProduceLotToWidget( {
-        widget_id: "grinder",
-        trash_produce_lot_id: producePayload.trashProduceLotId,
-      });
-    }
-  };
-
-  const handleTrashDragOver = (event: DragEvent<HTMLButtonElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
-      event.preventDefault();
-    }
-  };
-
-  const handleTrashDrop = (event: DragEvent<HTMLButtonElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "trash_bin")) {
-      return;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "sample_label") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardSampleLabelFromPalette( {
-        sample_label_id: toolbarPayload.itemId,
-      });
-      return;
-    }
-
-    if (toolbarPayload?.itemType === "tool") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardToolFromPalette( {
-        tool_id: toolbarPayload.itemId,
-      });
-      return;
-    }
-
-    if (toolbarPayload?.itemType === "workspace_widget") {
-      const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
-      if (!widgetId) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWorkspaceWidget( {
-        widget_id: widgetId,
-      });
-      return;
-    }
-
-    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWorkbenchTool( {
-        slot_id: benchToolPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    const basketToolPayload = readBasketToolDragPayload(event.dataTransfer);
-    if (basketToolPayload?.toolType === "sample_bag") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardBasketTool();
-      return;
-    }
-
-    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardRackTool( {
-        rack_slot_id: rackToolPayload.rackSlotId,
-      });
-      return;
-    }
-
-    const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
-    if (grossBalanceToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardGrossBalanceTool();
-      return;
-    }
-
-    const analyticalBalanceToolPayload = readAnalyticalBalanceToolDragPayload(event.dataTransfer);
-    if (analyticalBalanceToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardAnalyticalBalanceTool();
-      return;
-    }
-
-    const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(event.dataTransfer);
-    if (workspaceLiquidPayload?.sourceKind === "grinder" && !isGrinderRunning) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.removeLiquidFromWorkspaceWidget( {
-        widget_id: workspaceLiquidPayload.widgetId,
-        liquid_entry_id: workspaceLiquidPayload.liquidEntryId,
-      });
-      return;
-    }
-
-    const producePayload = readProduceDragPayload(event.dataTransfer);
-    if (producePayload?.sourceKind === "basket") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWorkspaceProduceLot( {
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload?.sourceKind === "grinder") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWidgetProduceLot( {
-        widget_id: "grinder",
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload?.sourceKind === "gross_balance") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardGrossBalanceProduceLot({
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload?.sourceKind === "workbench" && producePayload.sourceSlotId) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardProduceLotFromWorkbenchTool( {
-        slot_id: producePayload.sourceSlotId,
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload?.sourceKind === "workbench" && sampleLabelPayload.sourceSlotId) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardSampleLabelFromWorkbenchTool( {
-        ...(sampleLabelPayload.sampleLabelId.endsWith("-legacy-label")
-          ? {}
-          : { label_id: sampleLabelPayload.sampleLabelId }),
-        slot_id: sampleLabelPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    if (limsTicketPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardPrintedLimsLabel();
-    }
-  };
+  const workbenchDnd = useWorkbenchDnd({
+    buildDebugProduceDraftFields,
+    dndDisabledByAction,
+    dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
+    experimentApi,
+    isKnifeMode,
+    setPendingDropDraft,
+  });
 
   if (state.status === "loading") {
     return (
@@ -1783,13 +848,10 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
 
   const workbench = state.experiment.workbench;
   const slots = workbench.slots;
-  const rackSlots = state.experiment.rack.slots;
   const basketTool = state.experiment.basketTool;
   const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
-  const grinderWidget =
-    state.experiment.workspace.widgets.find((widget) => widget.id === "grinder") ?? null;
   const grossBalanceWidget =
     state.experiment.workspace.widgets.find((widget) => widget.id === "gross_balance") ?? null;
   const analyticalBalanceWidget =
@@ -1801,12 +863,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
   );
-  const grinderProduceLots = grinderWidget?.produceLots ?? [];
-  const grinderLiquids = grinderWidget?.liquids ?? [];
-  const grossBalanceTool = grossBalanceWidget?.tool ?? null;
-  const analyticalBalanceTool = analyticalBalanceWidget?.tool ?? null;
   const grossBalanceProduceLots = grossBalanceWidget?.produceLots ?? [];
-  const grossBalanceProduceLot = grossBalanceProduceLots[0] ?? null;
   const analyticalBalanceMeasuredMassG = analyticalBalanceTool
     ? getApproximateToolMassG(analyticalBalanceTool, 3)
     : null;
@@ -1814,290 +871,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     analyticalBalanceMeasuredMassG === null || state.experiment.analyticalBalance.tareMassG === null
       ? null
       : roundMass(analyticalBalanceMeasuredMassG - state.experiment.analyticalBalance.tareMassG, 3);
-  const grinderLoadedLot = grinderProduceLots[0] ?? null;
-  const grinderHasProduceLot = grinderProduceLots.length > 0;
-  const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
-  const grinderLotIsWaste = (grinderLoadedLot?.cutState ?? "whole") === "waste";
-  const grinderFault = grinderWidget?.grinderFault ?? null;
-  const grinderRunRemainingMs = grinderWidget?.grinderRunRemainingMs ?? 0;
-  const grinderRunDurationMs = grinderWidget?.grinderRunDurationMs ?? 0;
-  const isGrinderRunning = grinderRunRemainingMs > 0;
-  const grinderProgressPercent =
-    grinderRunDurationMs > 0
-      ? Math.max(0, Math.min(((grinderRunDurationMs - grinderRunRemainingMs) / grinderRunDurationMs) * 100, 100))
-      : 0;
-  const pendingGrinderDropDraft =
-    pendingDropDraft?.targetKind === "workspace_widget" &&
-    pendingDropDraft.targetId === "grinder"
-      ? pendingDropDraft
-      : null;
-  const grinderCanAttempt =
-    grinderHasProduceLot && !grinderLotIsGround && !grinderLotIsWaste && !pendingGrinderDropDraft;
-  const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
-  const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
-  const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
-  const grinderLotIsInHighTorqueZone =
-    grinderLotTemperatureC > grinderStartThresholdC && grinderLotTemperatureC < grinderJamThresholdC;
-  const resolveToolMassFromPayload = (
-    payload:
-      | ToolbarDragPayload
-      | BenchToolDragPayload
-      | BasketToolDragPayload
-      | RackToolDragPayload
-      | GrossBalanceToolDragPayload
-      | AnalyticalBalanceToolDragPayload
-      | TrashToolDragPayload,
-  ) => {
-    if ("itemType" in payload && payload.itemType === "tool") {
-      return roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if (payload.sourceKind === "basket") {
-      return basketTool ? getApproximateToolMassG(basketTool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if ("sourceSlotId" in payload) {
-      const tool = slots.find((slot) => slot.id === payload.sourceSlotId)?.tool ?? null;
-      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if ("rackSlotId" in payload) {
-      const tool = rackSlots.find((slot) => slot.id === payload.rackSlotId)?.tool ?? null;
-      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if ("trashToolId" in payload) {
-      const tool = trashedTools.find((entry) => entry.id === payload.trashToolId)?.tool ?? null;
-      return tool ? getApproximateToolMassG(tool) : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if (payload.sourceKind === "gross_balance") {
-      return grossBalanceTool
-        ? getApproximateToolMassG(grossBalanceTool)
-        : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    if (payload.sourceKind === "analytical_balance") {
-      return analyticalBalanceTool
-        ? getApproximateToolMassG(analyticalBalanceTool)
-        : roundMass(toolTareMassByType[payload.toolType] ?? 0);
-    }
-    return null;
-  };
-  const resolveToolFromPayload = (
-    payload:
-      | ToolbarDragPayload
-      | BenchToolDragPayload
-      | BasketToolDragPayload
-      | RackToolDragPayload
-      | GrossBalanceToolDragPayload
-      | AnalyticalBalanceToolDragPayload
-      | TrashToolDragPayload,
-  ) => {
-    if ("itemType" in payload && payload.itemType === "tool") {
-      const catalogItem = labToolCatalog[payload.itemId];
-      return catalogItem
-        ? {
-            accent: catalogItem.accent,
-            capacity_ml: catalogItem.capacity_ml,
-            id: payload.itemId,
-            label: catalogItem.name,
-            labels: [],
-            liquids: [],
-            produceLots: [],
-            subtitle: catalogItem.subtitle,
-            toolId: payload.itemId,
-            toolType: catalogItem.toolType,
-          }
-        : null;
-    }
-    if (payload.sourceKind === "basket") {
-      return basketTool;
-    }
-    if ("sourceSlotId" in payload) {
-      return slots.find((slot) => slot.id === payload.sourceSlotId)?.tool ?? null;
-    }
-    if ("rackSlotId" in payload) {
-      return rackSlots.find((slot) => slot.id === payload.rackSlotId)?.tool ?? null;
-    }
-    if ("trashToolId" in payload) {
-      return trashedTools.find((entry) => entry.id === payload.trashToolId)?.tool ?? null;
-    }
-    if (payload.sourceKind === "gross_balance") {
-      return grossBalanceTool;
-    }
-    if (payload.sourceKind === "analytical_balance") {
-      return analyticalBalanceTool;
-    }
-    return null;
-  };
-  const resolveProduceMassFromPayload = (payload: ProduceDragPayload) => {
-    if (payload.sourceKind === "basket") {
-      const produceLot = state.experiment.workspace.produceBasketLots.find((lot) => lot.id === payload.produceLotId);
-      return produceLot ? getApproximateProduceMassG(produceLot) : null;
-    }
-    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
-      const slot = slots.find((entry) => entry.id === payload.sourceSlotId) ?? null;
-      const produceLot =
-        slot?.surfaceProduceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        slot?.tool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        null;
-      return produceLot ? getApproximateProduceMassG(produceLot) : null;
-    }
-    if (payload.sourceKind === "grinder") {
-      const produceLot = grinderProduceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
-      return produceLot ? getApproximateProduceMassG(produceLot) : null;
-    }
-    if (payload.sourceKind === "gross_balance") {
-      const produceLot =
-        grossBalanceTool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        grossBalanceProduceLot;
-      return produceLot ? getApproximateProduceMassG(produceLot) : null;
-    }
-    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
-      const produceLot =
-        trashedProduceLots.find((entry) => entry.id === payload.trashProduceLotId)?.produceLot ?? null;
-      return produceLot ? getApproximateProduceMassG(produceLot) : null;
-    }
-    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
-      const preset = debugProducePresets.find((entry) => entry.id === payload.debugProducePresetId) ?? null;
-      return preset ? getApproximateProduceMassG(preset.produceLot) : null;
-    }
-    return null;
-  };
-  const resolveProduceFromPayload = (payload: ProduceDragPayload) => {
-    if (payload.sourceKind === "basket") {
-      return state.experiment.workspace.produceBasketLots.find((lot) => lot.id === payload.produceLotId) ?? null;
-    }
-    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
-      const slot = slots.find((entry) => entry.id === payload.sourceSlotId) ?? null;
-      return (
-        slot?.surfaceProduceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        slot?.tool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        null
-      );
-    }
-    if (payload.sourceKind === "grinder") {
-      return grinderProduceLots.find((lot) => lot.id === payload.produceLotId) ?? null;
-    }
-    if (payload.sourceKind === "gross_balance") {
-      return (
-        grossBalanceTool?.produceLots?.find((lot) => lot.id === payload.produceLotId) ??
-        grossBalanceProduceLot
-      );
-    }
-    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
-      return trashedProduceLots.find((entry) => entry.id === payload.trashProduceLotId)?.produceLot ?? null;
-    }
-    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
-      return debugProducePresets.find((entry) => entry.id === payload.debugProducePresetId)?.produceLot ?? null;
-    }
-    return null;
-  };
-  const grinderStatus =
-    isGrinderRunning && grinderFault !== "motor_jammed"
-      ? "running"
-      : grinderCanAttempt
-        ? "ready"
-        : "idle";
-  const grinderDndDisabled = dndDisabledByAction || isGrinderRunning;
-  const handleStartGrinder = () => {
-    if (!grinderCanAttempt || isGrinderRunning || isCommandPending) {
-      return;
-    }
-
-    if (grinderLotIsWhole) {
-      setGrinderFeedback("overload");
-      return;
-    }
-
-    if (!grinderLotIsColdEnough) {
-      setGrinderFeedback("jammed");
-      return;
-    }
-
-    setGrinderFeedback("neutral");
-    void experimentApi.startGrinderCycle( {
-      widget_id: "grinder",
-    });
-  };
-  const grinderDisplayMode = grinderLotIsGround
-    ? "complete"
-    : grinderFault === "motor_jammed"
-      ? "jammed"
-    : !grinderCanAttempt
-    ? "idle"
-    : isGrinderRunning && grinderLotIsInHighTorqueZone
-      ? "warning"
-      : isGrinderRunning
-      ? "running"
-      : grinderFeedback === "overload"
-        ? "overload"
-        : grinderFeedback === "jammed"
-          ? "jammed"
-          : "ready";
-  const grinderDisplayLabel =
-    grinderDisplayMode === "running"
-      ? "RUNNING"
-      : grinderDisplayMode === "complete"
-        ? "COMPLETE"
-      : grinderDisplayMode === "warning"
-        ? "WARNING"
-      : grinderDisplayMode === "overload"
-        ? "OVERLOAD"
-        : grinderDisplayMode === "jammed"
-          ? "JAMMED"
-          : grinderDisplayMode === "ready"
-            ? "READY"
-            : "STANDBY";
-  const grinderInfoLine1 =
-    grinderDisplayMode === "running"
-      ? `Progress ${Math.round(grinderProgressPercent)}%`
-      : grinderDisplayMode === "warning"
-        ? `Torque high`
-      : grinderDisplayMode === "ready"
-        ? "RPM 00000"
-        : grinderDisplayMode === "complete"
-          ? "RPM 00000"
-          : grinderDisplayMode === "overload"
-            ? "RPM 00000"
-            : grinderDisplayMode === "jammed"
-              ? "RPM 00000"
-              : "RPM 00000";
-  const grinderInfoLine1Right =
-    grinderDisplayMode === "running" || grinderDisplayMode === "warning"
-      ? "RPM 10000"
-      : grinderDisplayMode === "ready"
-        ? "Cycle 30s"
-        : "";
-  const grinderInfoLine2 =
-    grinderDisplayMode === "running"
-      ? "Load nominal"
-      : grinderDisplayMode === "warning"
-        ? "Jam risk"
-      : grinderDisplayMode === "ready"
-        ? "Load ready"
-        : grinderDisplayMode === "complete"
-          ? "Rotor stopped"
-          : grinderDisplayMode === "overload"
-            ? "Load too high"
-            : grinderDisplayMode === "jammed"
-              ? "Start lock"
-              : "Rotor stopped";
-  const grinderInfoLine2Right =
-    grinderDisplayMode === "running"
-      ? "Cryo mode"
-      : grinderDisplayMode === "warning"
-        ? "Pre-cool now"
-      : grinderDisplayMode === "ready"
-        ? grinderLotTemperatureC <= grinderOptimalThresholdC
-          ? "Optimal"
-          : "Cryo armed"
-        : grinderDisplayMode === "complete"
-          ? "Unload lot"
-          : grinderDisplayMode === "overload"
-            ? "Cut first"
-            : grinderDisplayMode === "jammed"
-              ? "Pre-cool"
-              : grinderHasProduceLot
-                ? "Cycle ready"
-                : "No sample";
-
-  const renderPendingBenchDropDraft = (slotId: string) => {
+const renderPendingBenchDropDraft = (slotId: string) => {
     const pendingBenchDraft =
       pendingDropDraft?.targetKind === "bench_slot" && pendingDropDraft.targetId === slotId
         ? pendingDropDraft
@@ -2120,11 +894,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       />
     );
   };
-  const pendingGrossBalanceDropDraft =
-    pendingDropDraft?.targetKind === "workspace_widget" &&
-    pendingDropDraft.targetId === "gross_balance"
-      ? pendingDropDraft
-      : null;
   const rackLoadedCount = rackSlots.filter((slot) => slot.tool).length;
   const rackOccupiedSlots = rackSlots.flatMap((slot, index) =>
     slot.tool ? [index + 1] : [],
@@ -2135,365 +904,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     ),
   );
   const instrumentStatus = rackLoadedCount > 0 ? ("ready" as const) : ("idle" as const);
-
-  const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {
-      event.preventDefault();
-    }
-  };
-
-  const handleRackSlotDrop = (event: DragEvent<HTMLDivElement>, slotIndex: number) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const targetRackSlot = rackSlots[slotIndex];
-    if (!targetRackSlot) {
-      return;
-    }
-
-    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-
-      void experimentApi.placeWorkbenchToolInRackSlot( {
-        source_slot_id: benchToolPayload.sourceSlotId,
-        rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
-    if (grossBalanceToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-
-      void experimentApi.moveGrossBalanceToolToRack({
-        rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload?.toolType === "sample_vial") {
-      if (rackToolPayload.rackSlotId === targetRackSlot.id) {
-        clearDropTargets();
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      void experimentApi.moveRackToolBetweenSlots( {
-        source_rack_slot_id: rackToolPayload.rackSlotId,
-        target_rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const toolbarTool =
-      toolbarPayload?.itemType === "tool" ? labToolCatalog[toolbarPayload.itemId] : null;
-    if (toolbarTool?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-
-      void experimentApi.placeToolInRackSlot( {
-        rack_slot_id: targetRackSlot.id,
-        tool_id: toolbarTool.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
-    if (trashToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-
-      void experimentApi.restoreTrashedToolToRackSlot( {
-        rack_slot_id: targetRackSlot.id,
-        trash_tool_id: trashToolPayload.trashToolId,
-      });
-      clearDropTargets();
-    }
-  };
-
-  const handleRackToolDragStart = (
-    rackSlot: RackSlot,
-    tool: BenchToolInstance,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getToolDropTargets(tool.toolType);
-
-    writeRackToolDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "tool",
-      rackSlotId: rackSlot.id,
-      sourceId: rackSlot.id,
-      sourceKind: "rack",
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    });
-    const descriptor = {
-      allowedDropTargets,
-      entityKind: "tool" as const,
-      sourceId: rackSlot.id,
-      sourceKind: "rack" as const,
-      toolId: tool.toolId,
-      toolType: tool.toolType,
-    };
-    showDropTargets(descriptor.allowedDropTargets);
-    setActiveDragItem(descriptor);
-  };
-
-  const handleTrashToolDragStart = (
-    trashTool: TrashToolEntry,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
-
-    writeTrashToolDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "tool",
-      sourceId: trashTool.id,
-      sourceKind: "trash",
-      toolId: trashTool.tool.toolId,
-      toolType: trashTool.tool.toolType,
-      trashToolId: trashTool.id,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "tool",
-      sourceId: trashTool.id,
-      sourceKind: "trash",
-      toolId: trashTool.tool.toolId,
-      toolType: trashTool.tool.toolType,
-    });
-  };
-
-  const handleTrashedWidgetDragStart = (
-    widget: ExperimentWorkspaceWidget,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getWorkspaceWidgetDropTargets(widget.id);
-
-    writeWorkspaceWidgetDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "workspace_widget",
-      sourceId: widget.id,
-      sourceKind: "trash",
-      widgetId: widget.id,
-      widgetType: widget.widgetType,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "workspace_widget",
-      sourceId: widget.id,
-      sourceKind: "trash",
-      widgetId: widget.id,
-      widgetType: widget.widgetType,
-    });
-  };
-
-  const handleTrashProduceLotDragStart = (
-    trashProduceLot: TrashProduceLotEntry,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getProduceLotDropTargets();
-
-    writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: trashProduceLot.produceLot.id,
-      produceType: trashProduceLot.produceLot.produceType,
-      sourceId: trashProduceLot.produceLot.id,
-      sourceKind: "trash",
-      trashProduceLotId: trashProduceLot.id,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: trashProduceLot.produceLot.id,
-      produceType: trashProduceLot.produceLot.produceType,
-      sourceId: trashProduceLot.produceLot.id,
-      sourceKind: "trash",
-      trashProduceLotId: trashProduceLot.id,
-    });
-  };
-
-  const handleBasketProduceDragStart = (
-    produceLotId: string,
-    produceType: "apple",
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getProduceLotDropTargets();
-
-    writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId,
-      produceType,
-      sourceId: produceLotId,
-      sourceKind: "basket",
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId,
-      produceType,
-      sourceId: produceLotId,
-      sourceKind: "basket",
-    });
-  };
-
-  const handleDebugProducePresetDragStart = (
-    preset: DebugProducePreset,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets: DropTargetType[] = ["workbench_slot", "grinder_widget", "gross_balance_widget"];
-
-    writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets,
-      debugProducePresetId: preset.id,
-      entityKind: "produce",
-      produceLotId: preset.id,
-      produceType: preset.produceLot.produceType,
-      sourceId: preset.id,
-      sourceKind: "debug_palette",
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      debugProducePresetId: preset.id,
-      entityKind: "produce",
-      produceLotId: preset.id,
-      produceType: preset.produceLot.produceType,
-      sourceId: preset.id,
-      sourceKind: "debug_palette",
-    });
-  };
-
-  const handleGrinderProduceDragStart = (
-    produceLot: ExperimentProduceLot,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (grinderDndDisabled) {
-      return;
-    }
-    const allowedDropTargets = getProduceLotDropTargets();
-
-    writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: produceLot.id,
-      produceType: produceLot.produceType,
-      sourceId: produceLot.id,
-      sourceKind: "grinder",
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: produceLot.id,
-      produceType: produceLot.produceType,
-      sourceId: produceLot.id,
-      sourceKind: "grinder",
-    });
-  };
-
-  const handleWorkbenchProduceLotDragStart = (
-    slotId: string,
-    produceLot: ExperimentProduceLot,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const allowedDropTargets = getProduceLotDropTargets();
-
-    writeProduceDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: produceLot.id,
-      produceType: produceLot.produceType,
-      sourceId: produceLot.id,
-      sourceKind: "workbench",
-      sourceSlotId: slotId,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "produce",
-      produceLotId: produceLot.id,
-      produceType: produceLot.produceType,
-      sourceId: produceLot.id,
-      sourceKind: "workbench",
-      sourceSlotId: slotId,
-    });
-  };
-
-  const handleWorkbenchSampleLabelDragStart = (
-    slotId: string,
-    label: BenchLabel,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-
-    const allowedDropTargets = getSampleLabelDropTargets();
-
-    writeSampleLabelDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "sample_label",
-      label,
-      sampleLabelId: label.id,
-      sampleLabelText: label.text,
-      sourceId: slotId,
-      sourceKind: "workbench",
-      sourceSlotId: slotId,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "sample_label",
-      label,
-      sampleLabelId: label.id,
-      sampleLabelText: label.text,
-      sourceId: slotId,
-      sourceKind: "workbench",
-      sourceSlotId: slotId,
-    });
-  };
 
   const handleSaveLimsReception = (payload: {
     entry_id?: string;
@@ -2548,140 +958,8 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
   };
 
-  const getGrossBalanceLabelTarget = (): LabelTarget | null => {
-    if (!grossBalanceTool) {
-      return null;
-    }
-
-    return {
-      kind: "gross_balance",
-      tool: grossBalanceTool,
-    };
-  };
-
   const canApplyLimsTicketToLabelTarget = (target: LabelTarget | null) => {
-    return (
-      target !== null &&
-      !getToolHasLimsLabel(target.tool) &&
-      state.experiment.limsReception.printedLabelTicket !== null
-    );
-  };
-
-  const applyLimsTicketToLabelTarget = (target: LabelTarget | null) => {
-    if (!canApplyLimsTicketToLabelTarget(target)) {
-      return;
-    }
-
-    if (target.kind === "workbench") {
-      handleApplyLimsLabelTicket({ slotId: target.slotId });
-      return;
-    }
-
-    handleApplyLimsLabelTicket({ grossBalanceBag: true });
-  };
-
-  const canAcceptBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceLabelTarget();
-    if (!labelTarget) {
-      return false;
-    }
-    if (!canApplyLimsTicketToLabelTarget(labelTarget)) {
-      return false;
-    }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool")) {
-      return false;
-    }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "sample_label") {
-      return false;
-    }
-
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload?.sourceKind === "workbench" || sampleLabelPayload?.sourceKind === "trash") {
-      return false;
-    }
-
-    const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    return limsLabelTicketPayload !== null;
-  };
-
-  const isGrossBalanceSampleBagHighlighted =
-    activeDragItem?.entityKind === "lims_label_ticket" &&
-    activeDropTargets.includes("sample_bag_tool") &&
-    canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget());
-
-  const handleBalanceStagedToolDragOver = (event: DragEvent<HTMLElement>) => {
-    if (canAcceptBalanceStagedToolDrop(event)) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
-  const handleBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceLabelTarget();
-    if (!labelTarget || !canAcceptBalanceStagedToolDrop(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "sample_label") {
-      return;
-    }
-
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload) {
-      return;
-    }
-
-    const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    if (limsLabelTicketPayload) {
-      applyLimsTicketToLabelTarget(labelTarget);
-    }
-  };
-
-  const handleTrashSampleLabelDragStart = (
-    trashSampleLabel: TrashSampleLabelEntry,
-    dataTransfer: DataTransfer,
-  ) => {
-    if (dndDisabledByAction) {
-      return;
-    }
-    const label =
-      trashSampleLabel.label ??
-      ({
-        id: trashSampleLabel.id,
-        labelKind: "manual",
-        text: (trashSampleLabel as TrashSampleLabelEntry & { sampleLabelText?: string }).sampleLabelText ?? "",
-        receivedDate: null,
-        sampleCode: null,
-      } satisfies BenchLabel);
-    const allowedDropTargets = getSampleLabelDropTargets();
-
-    writeSampleLabelDragPayload(dataTransfer, {
-      allowedDropTargets,
-      entityKind: "sample_label",
-      label,
-      sampleLabelId: trashSampleLabel.id,
-      sampleLabelText: label.text,
-      sourceId: trashSampleLabel.id,
-      sourceKind: "trash",
-      trashSampleLabelId: trashSampleLabel.id,
-    });
-    showDropTargets(allowedDropTargets);
-    setActiveDragItem({
-      allowedDropTargets,
-      entityKind: "sample_label",
-      label,
-      sampleLabelId: trashSampleLabel.id,
-      sampleLabelText: label.text,
-      sourceId: trashSampleLabel.id,
-      sourceKind: "trash",
-      trashSampleLabelId: trashSampleLabel.id,
-    });
+    return target !== null && !getToolHasLimsLabel(target.tool) && hasPrintedLabelTicket;
   };
 
   const isBenchSlotHighlighted = (slot: BenchSlot) => {
@@ -2773,95 +1051,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const displayRackSlots = rackSlots;
   const displayTrashTools = trashedTools;
   const displayTrashProduceLots = trashedProduceLots;
-  const displayGrinderProduceLots = grinderProduceLots;
-  const displayBalanceTool = grossBalanceTool;
-  const displayBalanceProduceLot = grossBalanceProduceLot;
-  const displayAnalyticalBalanceTool = analyticalBalanceTool;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
-  const grossBalanceStagedContent =
-    pendingGrossBalanceDropDraft ? (
-      <DropDraftCard
-        confirmLabel={pendingGrossBalanceDropDraft.confirmLabel}
-        fields={pendingGrossBalanceDropDraft.fields}
-        onCancel={() => {
-          setPendingDropDraft(null);
-        }}
-        onChangeField={handleUpdateDropDraftField}
-        onConfirm={handleConfirmDropDraft}
-        title={pendingGrossBalanceDropDraft.title}
-      />
-    ) : displayBalanceTool ? (
-      <div
-        data-testid="gross-balance-staged-item"
-        onDragOver={handleBalanceStagedToolDragOver}
-        onDrop={handleBalanceStagedToolDrop}
-      >
-        <BenchToolCard
-          dataDropHighlighted={isGrossBalanceSampleBagHighlighted}
-          draggable
-          onDragEnd={() => {
-            clearDropTargets();
-          }}
-          onDragStart={(event) => {
-            handleBalanceItemDragStart(event.dataTransfer);
-          }}
-          onProduceLotDragEnd={clearDropTargets}
-          onProduceLotDragStart={(produceLot, event) => {
-            handleGrossBalanceProduceLotDragStart(produceLot, event.dataTransfer);
-          }}
-          onDragOver={handleBalanceStagedToolDragOver}
-          onDrop={handleBalanceStagedToolDrop}
-          onToggleSeal={handleBalanceToolSealToggle}
-          onRemoveLiquid={() => {}}
-          tool={{ ...displayBalanceTool, id: `balance-${displayBalanceTool.id}` }}
-        />
-      </div>
-    ) : displayBalanceProduceLot ? (
-      <div
-        className="cursor-grab rounded-[1rem] border border-amber-200 bg-amber-50/80 p-2.5 shadow-sm active:cursor-grabbing"
-        data-testid="gross-balance-staged-item"
-        draggable
-        onDragEnd={() => {
-          clearDropTargets();
-        }}
-        onDragStart={(event) => {
-          handleBalanceItemDragStart(event.dataTransfer);
-        }}
-      >
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
-          Loose material on pan
-        </p>
-        <ProduceLotCard
-          dataTestId={`gross-balance-produce-${displayBalanceProduceLot.id}`}
-          draggable={false}
-          metadata={formatProduceLotMetadata(displayBalanceProduceLot)}
-          produceLot={{ ...displayBalanceProduceLot, id: `balance-${displayBalanceProduceLot.id}` }}
-          variant="expanded"
-        />
-      </div>
-    ) : null;
-  const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
-    <div
-      data-testid="analytical-balance-staged-item"
-    >
-      <BenchToolCard
-        draggable
-        onDragEnd={() => {
-          clearDropTargets();
-        }}
-        onDragStart={(event) => {
-          handleAnalyticalBalanceItemDragStart(event.dataTransfer);
-        }}
-        onToggleSeal={handleAnalyticalBalanceToolSealToggle}
-        onRemoveLiquid={() => {}}
-        tool={{ ...displayAnalyticalBalanceTool, id: `analytical-${displayAnalyticalBalanceTool.id}` }}
-      />
-    </div>
-  ) : null;
   const handleCreateAppleLot = () => {
-    void experimentApi.createProduceLot( {
-      produce_type: "apple",
-    });
+    void experimentApi.createProduceLot({ produce_type: "apple" });
   };
   const workspaceCursor =
     activeActionId === "knife"
@@ -2871,483 +1063,99 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         : undefined;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-      <div className="mx-auto w-full">
-        <nav aria-label="Breadcrumb" className="mb-3">
-          <Link
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
-            href="/"
-          >
-            <span aria-hidden="true">←</span>
-            <span>Experiments</span>
-          </Link>
-        </nav>
-        <header className="mb-8 rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-sm backdrop-blur xl:p-8">
-          <h1 className="text-4xl font-semibold tracking-tight xl:text-[3.25rem]">
-            Laboratory workspace
-          </h1>
-        </header>
-
-        <div className="mt-6 grid gap-4 xl:grid-cols-[202px_minmax(0,1fr)_92px] xl:items-start xl:gap-6">
-          <div className="space-y-4 xl:sticky xl:top-6 xl:self-start" data-testid="widget-inventory">
-            <div>
-              <ToolbarPanel
-                categories={labWorkflowCategories}
-                dragDisabled={dndDisabledByAction}
-                onItemDragEnd={clearDropTargets}
-                onItemDragStart={(item, allowedDropTargets) => {
-                  if (dndDisabledByAction) {
-                    return;
-                  }
-                  const payload = createToolbarDragPayload(item);
-                  showDropTargets(allowedDropTargets);
-                  setActiveDragItem(toDragDescriptor(payload));
-                }}
-              />
-            </div>
-            {debugInventoryEnabled ? (
-              <div data-testid="widget-debug-inventory">
-                <DebugProducePalette
-                  onItemDragEnd={clearDropTargets}
-                  onPresetDragStart={handleDebugProducePresetDragStart}
-                  presets={debugProducePresets}
-                />
-              </div>
-            ) : null}
-          </div>
-
-          <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
-            <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Custom layout
-                </p>
-                <p className="min-w-0 truncate text-sm text-slate-600">
-                  {isCommandPending ? `${statusMessage} Syncing...` : statusMessage}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className={`relative mt-4 overflow-hidden rounded-[2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)] transition-colors ${
-                isDropTargetHighlighted("workspace_canvas")
-                  ? "border-sky-300/90 ring-2 ring-sky-200/80"
-                  : "border-slate-300/80"
-              }`}
-              data-drop-highlighted={isDropTargetHighlighted("workspace_canvas") ? "true" : "false"}
-              data-testid="widget-workspace"
-              onDragOverCapture={handleWorkspaceDragOver}
-              onDropCapture={handleWorkspaceDrop}
-              ref={workspaceRef}
-              style={{ cursor: workspaceCursor, minHeight: workspaceHeight }}
-            >
-            <div
-              className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]"
-              data-testid="workspace-drop-surface-grid"
-            />
-            <div
-              className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_26%)]"
-              data-testid="workspace-drop-surface-glow"
-            />
-
-            <FloatingWidget
-              id="trash"
-              isActive={activeWidgetId === "trash"}
-              label="Trash Widget"
-              onDragStart={(widgetId, event) => {
-                if (dndDisabledByAction) {
-                  return;
-                }
-                handleWidgetDragStart(widgetId, event);
-              }}
-              onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.trash}
-              zIndex={10 + widgetOrder.indexOf("trash")}
-            >
-              <TrashWidget
-                dndDisabled={dndDisabledByAction}
-                formatProduceLotMetadata={formatProduceLotMetadata}
-                isDropHighlighted={isDropTargetHighlighted("trash_bin")}
-                isEmpty={isTrashEmpty}
-                isOpen={isTrashOpen}
-                onDragOver={handleTrashDragOver}
-                onDrop={handleTrashDrop}
-                onItemDragEnd={clearDropTargets}
-                onToggle={() => setIsTrashOpen((current) => !current)}
-                onToolDragStart={handleTrashToolDragStart}
-                onTrashedWidgetDragStart={handleTrashedWidgetDragStart}
-                onTrashProduceLotDragStart={handleTrashProduceLotDragStart}
-                onTrashSampleLabelDragStart={handleTrashSampleLabelDragStart}
-                trashedProduceLots={displayTrashProduceLots}
-                trashedSampleLabels={trashedSampleLabels}
-                trashedTools={displayTrashTools}
-                trashedWidgets={trashedWidgets}
-              />
-            </FloatingWidget>
-
-            {liveWidgetIds
-              .filter(isWorkspaceEquipmentWidgetId)
-              .map((widgetId) => (
-                <FloatingWidget
-                  id={widgetId}
-                  isActive={activeWidgetId === widgetId}
-                  key={widgetId}
-                  label={
-                    widgetId === "lims"
-                      ? "LIMS Widget"
-                      : widgetId === "rack"
-                      ? "Rack Widget"
-                      : widgetId === "instrument"
-                        ? "Instrument Widget"
-                          : widgetId === "grinder"
-                            ? "Grinder Widget"
-                          : widgetId === "gross_balance"
-                            ? "Gross Balance Widget"
-                            : "Produce Basket Widget"
-                  }
-                  onDragStart={(widgetId, event) => {
-                    if (dndDisabledByAction) {
-                      return;
-                    }
-                    handleWidgetDragStart(widgetId, event);
-                  }}
-                  onHeightChange={handleWidgetHeightChange}
-                  position={widgetLayout[widgetId]}
-                  zIndex={10 + widgetOrder.indexOf(widgetId)}
-                >
-                  {widgetId === "lims" ? (
-                    <LimsWidget
-                      entries={state.experiment.limsEntries}
-                      onPrintLabel={(entryId) => {
-                        void experimentApi.printLimsLabel(entryId ? { entry_id: entryId } : undefined);
-                      }}
-                      onSaveReception={handleSaveLimsReception}
-                      onTicketDragEnd={clearDropTargets}
-                      onTicketDragStart={handleLimsTicketDragStart}
-                      reception={state.experiment.limsReception}
-                    />
-                  ) : widgetId === "basket" ? (
-                    <ProduceBasketWidget
-                      basketTool={displayBasketTool}
-                      dndDisabled={dndDisabledByAction}
-                      formatProduceLotMetadata={formatProduceLotMetadata}
-                      isOpen={isBasketOpen}
-                      onBagDragStart={handleBasketToolDragStart}
-                      onCreateAppleLot={handleCreateAppleLot}
-                      onItemDragEnd={clearDropTargets}
-                      onProduceDragStart={handleBasketProduceDragStart}
-                      onToggle={() => setIsBasketOpen((current) => !current)}
-                      produceLots={displayBasketProduceLots}
-                    />
-                  ) : widgetId === "gross_balance" ? (
-                    <GrossBalanceWidget
-                      isDropHighlighted={isDropTargetHighlighted("gross_balance_widget")}
-                      grossMassOffsetG={state.experiment.limsReception.grossMassOffsetG}
-                      measuredGrossMassG={state.experiment.limsReception.measuredGrossMassG}
-                      netMassG={grossBalanceNetMassG}
-                      onCommitOffset={(nextOffsetG) => {
-                        void experimentApi.setGrossBalanceContainerOffset({
-                          gross_mass_offset_g: nextOffsetG,
-                        });
-                      }}
-                      onDragOver={handleGrossBalanceDragOver}
-                      onDrop={handleGrossBalanceDrop}
-                      stagedContent={grossBalanceStagedContent}
-                    />
-                  ) : widgetId === "analytical_balance" ? (
-                    <AnalyticalBalanceWidget
-                      isDropHighlighted={isDropTargetHighlighted("analytical_balance_widget")}
-                      measuredMassG={analyticalBalanceMeasuredMassG}
-                      netMassG={analyticalBalanceNetMassG}
-                      onDragOver={handleAnalyticalBalanceDragOver}
-                      onDrop={handleAnalyticalBalanceDrop}
-                      onTare={() => {
-                        void experimentApi.tareAnalyticalBalance();
-                      }}
-                      stagedContent={analyticalBalanceStagedContent}
-                      tareMassG={state.experiment.analyticalBalance.tareMassG}
-                    />
-                  ) : widgetId === "rack" ? (
-                    <RackWidget
-                      dndDisabled={dndDisabledByAction}
-                      getSlotPosition={getRackIllustrationSlotPosition}
-                      isSlotHighlighted={isRackSlotHighlighted}
-                      loadedCount={rackLoadedCount}
-                      occupiedSlotLiquids={rackOccupiedSlotLiquids}
-                      occupiedSlots={rackOccupiedSlots}
-                      onItemDragEnd={clearDropTargets}
-                      onRackSlotDragOver={handleRackSlotDragOver}
-                      onRackSlotDrop={handleRackSlotDrop}
-                      onRackToolDragStart={handleRackToolDragStart}
-                      rackSlots={displayRackSlots}
-                      slotCount={rackSlotCount}
-                    />
-                  ) : widgetId === "instrument" ? (
-                    <WorkspaceEquipmentWidget
-                      eyebrow="LC-MS/MS"
-                      footer={
-                        instrumentStatus === "ready"
-                          ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
-                          : "Populate the rack with at least one autosampler vial to switch the instrument preview into a ready state."
-                      }
-                    >
-                      <LcMsMsInstrumentIllustration
-                        className="mx-auto max-w-[36rem]"
-                        status={instrumentStatus}
-                        testId="lc-msms-instrument-illustration"
-                      />
-                    </WorkspaceEquipmentWidget>
-                  ) : (
-                    <WorkspaceEquipmentWidget
-                      dataDropHighlighted={isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
-                      dropZoneTestId="grinder-dropzone"
-                      eyebrow="Cryogenic grinder"
-                      onDragOver={handleGrinderDragOver}
-                      onDrop={handleGrinderDrop}
-                    >
-                      <div className="space-y-4">
-                        <CryogenicGrinderIllustration
-                          className="mx-auto max-w-[24rem]"
-                          onPowerClick={handleStartGrinder}
-                          powerButtonDisabled={!grinderCanAttempt || isGrinderRunning || isCommandPending}
-                          powerButtonLabel={isGrinderRunning ? "Grinder running" : "Start grinder"}
-                          powerButtonTestId="grinder-power-button"
-                          status={grinderStatus}
-                          testId="cryogenic-grinder-illustration"
-                        />
-                        <div
-                          className="rounded-[1rem] border border-slate-300 bg-[linear-gradient(180deg,#dce7c7,#b8c89b)] px-4 py-3 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"
-                          data-testid="grinder-lcd-panel"
-                        >
-                          <div className="flex items-center justify-start gap-3">
-                            <p
-                              className={`font-mono text-xs font-bold uppercase tracking-[0.28em] ${
-                                grinderDisplayMode === "overload" || grinderDisplayMode === "jammed"
-                                  ? "text-red-800"
-                                  : grinderDisplayMode === "warning"
-                                    ? "text-amber-800"
-                                  : grinderDisplayMode === "running"
-                                    ? "text-emerald-800"
-                                    : "text-slate-800"
-                              }`}
-                              data-testid="grinder-lcd-status"
-                            >
-                              {grinderDisplayLabel}
-                            </p>
-                          </div>
-                          <div className="mt-3 min-h-[4.8rem]">
-                            <div className="grid min-h-[4.8rem] grid-rows-[auto_auto_auto] gap-1">
-                              {grinderDisplayMode === "running" || grinderDisplayMode === "warning" ? (
-                                <div className="h-3 overflow-hidden rounded-full border border-slate-500/30 bg-slate-900/10">
-                                  <div
-                                    className={`h-full rounded-full transition-[width] ${
-                                      grinderDisplayMode === "warning" ? "bg-amber-700" : "bg-emerald-700"
-                                    }`}
-                                    data-testid="grinder-lcd-progress-bar"
-                                    style={{ width: `${grinderProgressPercent}%` }}
-                                  />
-                                </div>
-                              ) : (
-                                <p
-                                  className="font-mono text-sm font-semibold uppercase tracking-[0.2em] text-slate-800"
-                                  data-testid="grinder-lcd-message"
-                                >
-                                  {grinderDisplayMode === "overload"
-                                    ? "Whole fruit detected"
-                                  : grinderDisplayMode === "jammed"
-                                      ? grinderLotIsWaste
-                                        ? "Discard jammed waste"
-                                        : "Product not cold enough"
-                                      : grinderDisplayMode === "warning"
-                                        ? "High torque detected"
-                                      : grinderDisplayMode === "complete"
-                                        ? "Unload ground product"
-                                        : grinderDisplayMode === "ready"
-                                          ? "System ready"
-                                          : "Awaiting load"}
-                                </p>
-                              )}
-                              <div className="flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-700">
-                                <p>{grinderInfoLine1}</p>
-                                <p data-testid="grinder-lcd-rpm">{grinderInfoLine1Right}</p>
-                              </div>
-                              <div className="flex items-center justify-between gap-4 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-700">
-                                <p>{grinderInfoLine2}</p>
-                                <p data-testid="grinder-lcd-load">{grinderInfoLine2Right}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {displayGrinderProduceLots.map((lot) => (
-                            <ProduceLotCard
-                              className="rounded-[0.9rem] bg-white"
-                              dataTestId={`grinder-produce-${lot.id}`}
-                              draggable={!grinderDndDisabled}
-                              key={lot.id}
-                              metadata={
-                                lot.cutState === "ground"
-                                  ? formatProduceLotMetadata(lot)
-                                    ? `Ground product • ${formatProduceLotMetadata(lot)}`
-                                    : "Ground product"
-                                  : lot.cutState === "waste"
-                                    ? formatProduceLotMetadata(lot)
-                                      ? `Jammed waste • ${formatProduceLotMetadata(lot)}`
-                                      : "Jammed waste"
-                                    : formatProduceLotMetadata(lot)
-                              }
-                              onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
-                              onDragStart={
-                                grinderDndDisabled
-                                  ? undefined
-                                  : (event) => handleGrinderProduceDragStart(lot, event.dataTransfer)
-                              }
-                              produceLot={lot}
-                              variant="expanded"
-                            />
-                          ))}
-                          {grinderLiquids.map((liquid) => (
-                            <DraggableInventoryItem
-                              className="rounded-[0.9rem] bg-white"
-                              contentClassName="flex-1"
-                              dataTestId={`grinder-liquid-${liquid.id}`}
-                              key={liquid.id}
-                              onDragEnd={grinderDndDisabled ? undefined : clearDropTargets}
-                              onDragStart={
-                                grinderDndDisabled
-                                  ? undefined
-                                  : (dataTransfer) => handleGrinderLiquidDragStart(liquid, dataTransfer)
-                              }
-                              subtitle={
-                                <div className="mt-1 flex items-center justify-between gap-3">
-                                  <span className="block truncate text-xs text-slate-500">
-                                    Cooling medium
-                                  </span>
-                                  <span className="text-[11px] font-semibold text-slate-600">
-                                    {liquid.volume_ml} g
-                                  </span>
-                                </div>
-                              }
-                              title={
-                                <span className="block truncate text-sm font-semibold text-slate-900">
-                                  {liquid.name}
-                                </span>
-                              }
-                            />
-                          ))}
-                          {pendingGrinderDropDraft ? (
-                            <DropDraftCard
-                              confirmLabel={pendingGrinderDropDraft.confirmLabel}
-                              fields={pendingGrinderDropDraft.fields}
-                              onCancel={() => {
-                                setPendingDropDraft(null);
-                              }}
-                              onChangeField={handleUpdateDropDraftField}
-                              onConfirm={handleConfirmDropDraft}
-                              title={pendingGrinderDropDraft.title}
-                            />
-                          ) : null}
-                        </div>
-                      </div>
-                    </WorkspaceEquipmentWidget>
-                  )}
-                </FloatingWidget>
-              ))}
-
-            <FloatingWidget
-              id="workbench"
-              isActive={activeWidgetId === "workbench"}
-              label="Workbench Widget"
-              onDragStart={(widgetId, event) => {
-                if (dndDisabledByAction) {
-                  return;
-                }
-                handleWidgetDragStart(widgetId, event);
-              }}
-              onHeightChange={handleWidgetHeightChange}
-              position={widgetLayout.workbench}
-              zIndex={5}
-            >
-              <WorkbenchPanel
-                dndDisabled={dndDisabledByAction}
-                onAddWorkbenchSlot={handleAddWorkbenchSlot}
-                onApplyLimsLabelTicket={(slotId) => {
-                  handleApplyLimsLabelTicket({ slotId });
-                }}
-                onApplySampleLabel={handleApplySampleLabel}
-                canApplyLimsLabelTicketToSlot={(slot) =>
-                  canApplyLimsTicketToLabelTarget(getWorkbenchLabelTarget(slot))
-                }
-                canDragBenchTool={canDragBenchTool}
-                isBenchSlotHighlighted={isBenchSlotHighlighted}
-                onBenchToolClick={handleSpatulaToolCardClick}
-                onBenchToolDragEnd={clearDropTargets}
-                onBenchToolIllustrationClick={handleSpatulaToolIllustrationClick}
-                onBenchToolPointerDown={handleSpatulaToolPointerDown}
-                onBenchToolPointerUp={handleSpatulaToolPointerUp}
-                onBenchToolDragStart={handleBenchToolDragStart}
-                onBenchToolDrop={handleBenchToolDrop}
-                onProduceLotClick={handleWorkbenchProduceLotClick}
-                onMoveSampleLabel={handleMoveSampleLabel}
-                onProduceLotDragStart={handleWorkbenchProduceLotDragStart}
-                onProduceDrop={handleProduceDrop}
-                onRemoveLiquid={handleRemoveLiquid}
-                onRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
-                onRestoreTrashedSampleLabel={handleRestoreTrashedSampleLabel}
-                onSampleLabelDragEnd={clearDropTargets}
-                onSampleLabelDragStart={handleWorkbenchSampleLabelDragStart}
-                onSampleLabelTextChange={handleSampleLabelTextChange}
-                onToggleToolSeal={handleToggleToolSeal}
-                renderPendingContent={(slot) => renderPendingBenchDropDraft(slot.id)}
-                slots={displaySlots}
-                statusMessage={statusMessage}
-                onToolbarItemDrop={handleToolbarItemDrop}
-              />
-            </FloatingWidget>
-            </div>
-          </section>
-
-          <div
-            className="xl:sticky xl:top-6 xl:self-start"
-            data-testid="widget-actions"
-          >
-            <ActionBarPanel
-              activeActionId={activeActionId}
-              helperText={isSpatulaMode ? spatulaHintMessage : null}
-              onToggleAction={(actionId) => {
-                clearDropTargets();
-                stopSpatulaPour();
-                setActiveActionId((current) => (current === actionId ? null : actionId));
-              }}
-              spatulaLoaded={spatula.isLoaded}
-            />
-          </div>
-        </div>
-      </div>
-      {isSpatulaMode && spatulaCursorPosition ? (
-        <div
-          className="pointer-events-none fixed z-[80] h-7 w-20"
-          style={{
-            left: spatulaCursorPosition.x + 8,
-            top: spatulaCursorPosition.y - 20,
-          }}
-        >
-          <div className="relative h-full w-full opacity-90">
-            <div className="absolute left-0 top-[11px] h-2.5 w-12 rounded-full bg-slate-800" />
-            <div className="absolute left-[42px] top-[9px] h-2 w-7 rounded-r-full border border-slate-700 border-l-0 bg-slate-200" />
-            {spatula.isLoaded ? (
-              <div
-                className="absolute left-[40px] rounded-full bg-[#d8c9ae]"
-                style={{
-                  bottom: 9,
-                  height: `${6 + Math.min(spatula.loadedPowderMassG, 2) * 4}px`,
-                  width: `${12 + Math.min(spatula.loadedPowderMassG, 2) * 6}px`,
-                }}
-              />
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </main>
+    <LabSceneView
+      activeActionId={activeActionId}
+      analyticalBalanceDnd={analyticalBalanceDnd}
+      analyticalBalanceMeasuredMassG={analyticalBalanceMeasuredMassG}
+      analyticalBalanceNetMassG={analyticalBalanceNetMassG}
+      activeWidgetId={activeWidgetId}
+      canApplyLimsLabelToSlot={(slot) => canApplyLimsTicketToLabelTarget(getWorkbenchLabelTarget(slot))}
+      clearDropTargets={clearDropTargets}
+      debugInventoryEnabled={debugInventoryEnabled}
+      debugProducePresets={debugProducePresets}
+      displayBasketProduceLots={displayBasketProduceLots}
+      displayBasketTool={displayBasketTool}
+      displayRackSlots={displayRackSlots}
+      displaySlots={displaySlots}
+      displayTrashProduceLots={displayTrashProduceLots}
+      displayTrashTools={displayTrashTools}
+      dndDisabledByAction={dndDisabledByAction}
+      experiment={state.experiment}
+      formatProduceLotMetadata={formatProduceLotMetadata}
+      getRackIllustrationSlotPosition={getRackIllustrationSlotPosition}
+      grinderDnd={grinderDnd}
+      grossBalanceDnd={grossBalanceDnd}
+      grossBalanceNetMassG={grossBalanceNetMassG ?? 0}
+      handleAddWorkbenchSlot={handleAddWorkbenchSlot}
+      handleAnalyticalBalanceToolSealToggle={handleAnalyticalBalanceToolSealToggle}
+      handleApplyLimsLabelTicket={handleApplyLimsLabelTicket}
+      handleApplySampleLabel={handleApplySampleLabel}
+      handleBalanceToolSealToggle={handleBalanceToolSealToggle}
+      handleConfirmDropDraft={handleConfirmDropDraft}
+      handleCreateAppleLot={handleCreateAppleLot}
+      handleMoveSampleLabel={handleMoveSampleLabel}
+      handleRemoveLiquid={handleRemoveLiquid}
+      handleRemoveWorkbenchSlot={handleRemoveWorkbenchSlot}
+      handleRestoreTrashedSampleLabel={handleRestoreTrashedSampleLabel}
+      handleSampleLabelTextChange={handleSampleLabelTextChange}
+      handleSaveLimsReception={handleSaveLimsReception}
+      handleSpatulaToolCardClick={handleSpatulaToolCardClick}
+      handleSpatulaToolIllustrationClick={handleSpatulaToolIllustrationClick}
+      handleSpatulaToolPointerDown={handleSpatulaToolPointerDown}
+      handleSpatulaToolPointerUp={handleSpatulaToolPointerUp}
+      handleToggleToolSeal={handleToggleToolSeal}
+      handleToolbarItemDrop={handleToolbarItemDrop}
+      handleUpdateDropDraftField={handleUpdateDropDraftField}
+      handleWidgetDragStart={handleWidgetDragStart}
+      handleWidgetHeightChange={handleWidgetHeightChange}
+      handleWorkspaceDragOver={handleWorkspaceDragOver}
+      handleWorkspaceDrop={handleWorkspaceDrop}
+      isBenchSlotHighlighted={isBenchSlotHighlighted}
+      isBasketOpen={isBasketOpen}
+      isCommandPending={isCommandPending}
+      isDropTargetHighlighted={isDropTargetHighlighted}
+      isRackSlotHighlighted={isRackSlotHighlighted}
+      isSpatulaMode={isSpatulaMode}
+      isTrashEmpty={isTrashEmpty}
+      isTrashOpen={isTrashOpen}
+      instrumentStatus={instrumentStatus}
+      liveWidgetIds={liveWidgetIds}
+      onCommitGrossBalanceOffset={(nextOffsetG) => {
+        void experimentApi.setGrossBalanceContainerOffset({ gross_mass_offset_g: nextOffsetG });
+      }}
+      onPrintLimsLabel={(entryId) => {
+        void experimentApi.printLimsLabel(entryId ? { entry_id: entryId } : undefined);
+      }}
+      onTareAnalyticalBalance={() => {
+        void experimentApi.tareAnalyticalBalance();
+      }}
+      pendingDropDraft={pendingDropDraft}
+      rackDnd={rackDnd}
+      rackLoadedCount={rackLoadedCount}
+      rackOccupiedSlotLiquids={rackOccupiedSlotLiquids}
+      rackOccupiedSlots={rackOccupiedSlots}
+      rackSlotCount={rackSlotCount}
+      renderPendingBenchDropDraft={renderPendingBenchDropDraft}
+      setActiveActionId={setActiveActionId}
+      setActiveDragItem={setActiveDragItem}
+      setIsBasketOpen={setIsBasketOpen}
+      setIsTrashOpen={setIsTrashOpen}
+      setPendingDropDraft={setPendingDropDraft}
+      showDropTargets={showDropTargets}
+      spatula={spatula}
+      spatulaCursorPosition={spatulaCursorPosition}
+      spatulaHintMessage={spatulaHintMessage}
+      statusMessage={statusMessage}
+      stopSpatulaPour={stopSpatulaPour}
+      trashDnd={trashDnd}
+      trashedSampleLabels={trashedSampleLabels}
+      trashedWidgets={trashedWidgets}
+      widgetLayout={widgetLayout}
+      widgetOrder={widgetOrder}
+      workbenchDnd={workbenchDnd}
+      workspaceCursor={workspaceCursor}
+      workspaceHeight={workspaceHeight}
+      workspaceRef={workspaceRef}
+    />
   );
 }

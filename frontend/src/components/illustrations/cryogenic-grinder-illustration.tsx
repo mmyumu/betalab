@@ -38,7 +38,7 @@ export function CryogenicGrinderIllustration({
       ? "drop-shadow-[0_0_14px_rgba(245,158,11,0.34)]"
       : "";
   const powerButtonToneClassName = isRunning
-    ? "border-red-600 bg-red-600 text-white shadow-[0_0_0_8px_rgba(220,38,38,0.18)]"
+    ? "border-red-600 bg-red-600 text-white"
     : isReady
       ? "border-red-300 bg-red-100 text-red-700 shadow-[0_10px_24px_rgba(239,68,68,0.2)] hover:border-red-400 hover:bg-red-200 hover:text-red-800"
       : "border-red-200 bg-red-100 text-red-400";

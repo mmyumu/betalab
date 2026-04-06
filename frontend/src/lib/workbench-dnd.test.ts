@@ -155,6 +155,11 @@ describe("workbench dnd helpers", () => {
     expect(readSampleLabelDragPayload(dataTransfer)).toEqual({
       allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "sample_label",
+      label: {
+        id: "bench_tool_bag-sample-label",
+        labelKind: "manual",
+        text: "LOT-2026-041",
+      },
       sampleLabelId: "bench_tool_bag-sample-label",
       sampleLabelText: "LOT-2026-041",
       sourceId: "station_1",

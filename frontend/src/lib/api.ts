@@ -1195,6 +1195,9 @@ export async function restoreTrashedSampleLabelToWorkbenchTool(experimentId: str
 }
 
 function normalizeExperiment(experiment: Experiment): Experiment {
+  const rawTrash = experiment.trash as Experiment["trash"] & Record<string, unknown>;
+  const rawWorkspace = experiment.workspace as Experiment["workspace"] & Record<string, unknown>;
+
   return {
     ...experiment,
     last_simulation_at: String(
@@ -1214,23 +1217,28 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       slots: experiment.rack.slots.map(normalizeRackSlot),
     },
     trash: {
-      produceLots:
-        (experiment.trash.produceLots ?? experiment.trash.produce_lots ?? []).map(
+      produceLots: (
+        experiment.trash.produceLots ??
+        rawTrash.produce_lots ??
+        []
+      ).map(
           normalizeTrashProduceLot,
         ),
-      sampleLabels:
-        (experiment.trash.sampleLabels ?? experiment.trash.sample_labels ?? []).map(
+      sampleLabels: (
+        experiment.trash.sampleLabels ??
+        rawTrash.sample_labels ??
+        []
+      ).map(
           normalizeTrashSampleLabel,
         ),
       tools: experiment.trash.tools.map(normalizeTrashTool),
     },
     workspace: {
-      produceBasketLots:
-        (
-          experiment.workspace.produceBasketLots ??
-          (experiment.workspace as Experiment["workspace"] & Record<string, unknown>).produce_basket_lots ??
-          []
-        ).map(
+      produceBasketLots: (
+        experiment.workspace.produceBasketLots ??
+        rawWorkspace.produce_basket_lots ??
+        []
+      ).map(
           normalizeProduceLot,
         ),
       widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
@@ -1270,10 +1278,17 @@ function normalizeExperiment(experiment: Experiment): Experiment {
 }
 
 function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
+  const rawSlot = slot as BenchSlot & Record<string, unknown>;
+  const rawSurfaceProduceLots = (
+    slot.surfaceProduceLots ??
+    rawSlot.surface_produce_lots ??
+    []
+  ) as unknown[];
+
   return {
     id: slot.id,
     label: slot.label,
-    surfaceProduceLots: (slot.surfaceProduceLots ?? slot.surface_produce_lots ?? []).map((lot) =>
+    surfaceProduceLots: rawSurfaceProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
     tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
@@ -1281,6 +1296,8 @@ function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
 }
 
 function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): BenchToolInstance {
+  const rawProduceLots = (tool.produceLots ?? tool.produce_lots ?? []) as unknown[];
+
   return {
     id: tool.id,
     toolId: String(tool.toolId ?? tool.tool_id),
@@ -1333,7 +1350,7 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
               },
             ]
           : [],
-    produceLots: (tool.produceLots ?? tool.produce_lots ?? []).map((lot) =>
+    produceLots: rawProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
     liquids:
@@ -1514,6 +1531,7 @@ function normalizeWorkspaceWidget(
 ): ExperimentWorkspaceWidget {
   const legacyX = Number(widget.x ?? 0);
   const legacyY = Number(widget.y ?? 0);
+  const rawProduceLots = (widget.produceLots ?? widget.produce_lots ?? []) as unknown[];
   const rawTool = (widget.tool ?? (widget as Record<string, unknown>).tool) as
     | (BenchToolInstance & Record<string, unknown>)
     | null
@@ -1539,7 +1557,7 @@ function normalizeWorkspaceWidget(
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
     tool: rawTool === undefined ? undefined : rawTool === null ? null : normalizeBenchTool(rawTool),
-    produceLots: (widget.produceLots ?? widget.produce_lots ?? []).map((lot) =>
+    produceLots: rawProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
     liquids:

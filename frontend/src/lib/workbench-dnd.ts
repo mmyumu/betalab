@@ -769,14 +769,23 @@ export function readSampleLabelDragPayload(
       ((parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashSampleLabelId === "string"))
     ) {
+      const label: BenchLabel =
+        parsed.label && typeof parsed.label === "object"
+          ? (parsed.label as BenchLabel)
+          : {
+              id: parsed.sampleLabelId,
+              labelKind: "manual",
+              text: parsed.sampleLabelText,
+            };
+
       return {
         allowedDropTargets,
         entityKind: "sample_label",
+        label,
         sampleLabelId: parsed.sampleLabelId,
         sampleLabelText: parsed.sampleLabelText,
         sourceId: parsed.sourceId,
         sourceKind: parsed.sourceKind,
-        ...(parsed.label ? { label: parsed.label as BenchLabel } : {}),
         ...(parsed.sourceKind === "workbench" ? { sourceSlotId: parsed.sourceSlotId } : {}),
         ...(parsed.sourceKind === "trash"
           ? { trashSampleLabelId: parsed.trashSampleLabelId }
