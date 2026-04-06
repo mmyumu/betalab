@@ -14,13 +14,19 @@ import {
 import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { AnalyticalBalanceToolDragPayload, BenchToolInstance } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
+import type {
+  MoveRackToolToAnalyticalBalancePayload,
+  MoveWorkbenchToolToAnalyticalBalancePayload,
+  PlaceToolOnAnalyticalBalancePayload,
+  RestoreTrashedToolToAnalyticalBalancePayload,
+} from "@/types/api-payloads";
 
 type AnalyticalBalanceDndExperimentApi = {
   moveGrossBalanceToolToAnalyticalBalance: () => void;
-  moveRackToolToAnalyticalBalance: (payload: Record<string, unknown>) => void;
-  moveWorkbenchToolToAnalyticalBalance: (payload: Record<string, unknown>) => void;
-  placeToolOnAnalyticalBalance: (payload: Record<string, unknown>) => void;
-  restoreTrashedToolToAnalyticalBalance: (payload: Record<string, unknown>) => void;
+  moveRackToolToAnalyticalBalance: (payload: MoveRackToolToAnalyticalBalancePayload) => void;
+  moveWorkbenchToolToAnalyticalBalance: (payload: MoveWorkbenchToolToAnalyticalBalancePayload) => void;
+  placeToolOnAnalyticalBalance: (payload: PlaceToolOnAnalyticalBalancePayload) => void;
+  restoreTrashedToolToAnalyticalBalance: (payload: RestoreTrashedToolToAnalyticalBalancePayload) => void;
 };
 
 type AnalyticalBalanceDndOptions = {

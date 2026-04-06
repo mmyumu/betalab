@@ -25,20 +25,30 @@ import type {
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type { DropDraft } from "@/hooks/use-drop-draft";
 import type { DropDraftField } from "@/components/drop-draft-card";
+import type {
+  MoveRackToolToGrossBalancePayload,
+  MoveWidgetProduceLotToGrossBalancePayload,
+  MoveWorkbenchProduceLotToGrossBalancePayload,
+  MoveWorkbenchToolToGrossBalancePayload,
+  MoveWorkspaceProduceLotToGrossBalancePayload,
+  PlaceToolOnGrossBalancePayload,
+  RestoreTrashedProduceLotToGrossBalancePayload,
+  RestoreTrashedToolToGrossBalancePayload,
+} from "@/types/api-payloads";
 
 type GrossBalanceDndExperimentApi = {
   applyPrintedLimsLabelToGrossBalanceBag: () => void;
   moveAnalyticalBalanceToolToGrossBalance: () => void;
   moveBasketToolToGrossBalance: () => void;
   moveGrossBalanceToolToAnalyticalBalance: () => void;
-  moveRackToolToGrossBalance: (payload: Record<string, unknown>) => void;
-  moveWidgetProduceLotToGrossBalance: (payload: Record<string, unknown>) => void;
-  moveWorkbenchProduceLotToGrossBalance: (payload: Record<string, unknown>) => void;
-  moveWorkbenchToolToGrossBalance: (payload: Record<string, unknown>) => void;
-  moveWorkspaceProduceLotToGrossBalance: (payload: Record<string, unknown>) => void;
-  placeToolOnGrossBalance: (payload: Record<string, unknown>) => void;
-  restoreTrashedProduceLotToGrossBalance: (payload: Record<string, unknown>) => void;
-  restoreTrashedToolToGrossBalance: (payload: Record<string, unknown>) => void;
+  moveRackToolToGrossBalance: (payload: MoveRackToolToGrossBalancePayload) => void;
+  moveWidgetProduceLotToGrossBalance: (payload: MoveWidgetProduceLotToGrossBalancePayload) => void;
+  moveWorkbenchProduceLotToGrossBalance: (payload: MoveWorkbenchProduceLotToGrossBalancePayload) => void;
+  moveWorkbenchToolToGrossBalance: (payload: MoveWorkbenchToolToGrossBalancePayload) => void;
+  moveWorkspaceProduceLotToGrossBalance: (payload: MoveWorkspaceProduceLotToGrossBalancePayload) => void;
+  placeToolOnGrossBalance: (payload: PlaceToolOnGrossBalancePayload) => void;
+  restoreTrashedProduceLotToGrossBalance: (payload: RestoreTrashedProduceLotToGrossBalancePayload) => void;
+  restoreTrashedToolToGrossBalance: (payload: RestoreTrashedToolToGrossBalancePayload) => void;
 };
 
 type GrossBalanceDndOptions = {

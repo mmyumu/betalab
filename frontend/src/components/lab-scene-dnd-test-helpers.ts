@@ -555,9 +555,7 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "discard_sample_label_from_palette",
-          payload: {
-            sample_label_id: "sampling_bag_label",
-          },
+          payload: {},
         },
       },
     },
@@ -611,7 +609,7 @@ function createDebugProducePresetSourceCase(): DndSourceCase {
         command: null,
       },
       "trash-dropzone": {
-        compatible: false,
+        compatible: true,
         command: null,
       },
     },

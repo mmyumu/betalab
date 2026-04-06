@@ -31,23 +31,35 @@ import type {
   TrashToolEntry,
 } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
+import type {
+  DiscardGrossBalanceProduceLotPayload,
+  DiscardProduceLotFromWorkbenchToolPayload,
+  DiscardRackToolPayload,
+  DiscardSampleLabelFromWorkbenchToolPayload,
+  DiscardToolFromPalettePayload,
+  DiscardWidgetProduceLotPayload,
+  DiscardWorkbenchToolPayload,
+  DiscardWorkspaceProduceLotPayload,
+  DiscardWorkspaceWidgetPayload,
+  RemoveLiquidFromWorkspaceWidgetPayload,
+} from "@/types/api-payloads";
 
 type TrashDndExperimentApi = {
   discardAnalyticalBalanceTool: () => void;
   discardBasketTool: () => void;
-  discardGrossBalanceProduceLot: (payload: Record<string, unknown>) => void;
+  discardGrossBalanceProduceLot: (payload: DiscardGrossBalanceProduceLotPayload) => void;
   discardGrossBalanceTool: () => void;
   discardPrintedLimsLabel: () => void;
-  discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) => void;
-  discardRackTool: (payload: Record<string, unknown>) => void;
-  discardSampleLabelFromPalette: (payload: Record<string, unknown>) => void;
-  discardSampleLabelFromWorkbenchTool: (payload: Record<string, unknown>) => void;
-  discardToolFromPalette: (payload: Record<string, unknown>) => void;
-  discardWidgetProduceLot: (payload: Record<string, unknown>) => void;
-  discardWorkbenchTool: (payload: Record<string, unknown>) => void;
-  discardWorkspaceProduceLot: (payload: Record<string, unknown>) => void;
-  discardWorkspaceWidget: (payload: Record<string, unknown>) => void;
-  removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) => void;
+  discardProduceLotFromWorkbenchTool: (payload: DiscardProduceLotFromWorkbenchToolPayload) => void;
+  discardRackTool: (payload: DiscardRackToolPayload) => void;
+  discardSampleLabelFromPalette: () => void;
+  discardSampleLabelFromWorkbenchTool: (payload: DiscardSampleLabelFromWorkbenchToolPayload) => void;
+  discardToolFromPalette: (payload: DiscardToolFromPalettePayload) => void;
+  discardWidgetProduceLot: (payload: DiscardWidgetProduceLotPayload) => void;
+  discardWorkbenchTool: (payload: DiscardWorkbenchToolPayload) => void;
+  discardWorkspaceProduceLot: (payload: DiscardWorkspaceProduceLotPayload) => void;
+  discardWorkspaceWidget: (payload: DiscardWorkspaceWidgetPayload) => void;
+  removeLiquidFromWorkspaceWidget: (payload: RemoveLiquidFromWorkspaceWidgetPayload) => void;
 };
 
 type TrashDndOptions = {
@@ -107,9 +119,7 @@ export function useTrashDnd({
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.discardSampleLabelFromPalette({
-        sample_label_id: toolbarPayload.itemId,
-      });
+      void experimentApi.discardSampleLabelFromPalette();
       return;
     }
 

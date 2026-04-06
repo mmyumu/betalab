@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { DragEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { DragEvent } from "react";
 
 import { LabSceneView } from "@/components/lab-scene-view";
 import { DropDraftCard, type DropDraftField } from "@/components/drop-draft-card";
@@ -13,6 +13,7 @@ import { useGrossBalanceDnd } from "@/hooks/use-gross-balance-dnd";
 import { useDropDraft } from "@/hooks/use-drop-draft";
 import { useLabExperiment } from "@/hooks/use-lab-experiment";
 import { useRackDnd } from "@/hooks/use-rack-dnd";
+import { useSpatulaInteraction } from "@/hooks/use-spatula-interaction";
 import { useTrashDnd } from "@/hooks/use-trash-dnd";
 import { useWorkbenchDnd } from "@/hooks/use-workbench-dnd";
 import {
@@ -145,7 +146,6 @@ const knifeCursor =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none'%3E%3Cg transform='rotate(-142 12 12)'%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' fill='%230f172a'/%3E%3Crect x='4.1' y='9.9' width='8.6' height='4.2' rx='1.2' stroke='%230f172a' stroke-width='1.15'/%3E%3Cpath d='M12.7 9.9H15.9L19.8 12L15.9 14.1H12.7V9.9Z' fill='%23e2e8f0' stroke='%230f172a' stroke-width='1.15' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E\") 22 8, auto";
 const spatulaCursor = "crosshair";
 
-
 function getRackIllustrationSlotPosition(slotIndex: number) {
   const column = slotIndex % rackIllustrationColumns;
   const row = Math.floor(slotIndex / rackIllustrationColumns);
@@ -268,10 +268,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
           loadedPowderMassG: 0,
           sourceToolId: null,
         };
-  const [spatulaCursorPosition, setSpatulaCursorPosition] = useState<{ x: number; y: number } | null>(null);
-  const [spatulaHintMessage, setSpatulaHintMessage] = useState<string | null>(null);
-  const spatulaPourIntervalRef = useRef<number | null>(null);
-  const spatulaPourStateRef = useRef<{ slotId: string; startY: number; currentRateG: number } | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -310,57 +306,24 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     };
   }, []);
 
-  const stopSpatulaPour = () => {
-    if (spatulaPourIntervalRef.current !== null) {
-      window.clearInterval(spatulaPourIntervalRef.current);
-      spatulaPourIntervalRef.current = null;
-    }
-    spatulaPourStateRef.current = null;
-  };
-
-  useEffect(() => {
-    if (!isSpatulaMode) {
-      setSpatulaHintMessage(null);
-      return;
-    }
-
-    setSpatulaHintMessage(
-      spatula.isLoaded
-        ? "Maintiens sur une fiole puis lève la souris pour verser."
-        : "Clique sur une jarre ouverte pour charger la spatule.",
-    );
-  }, [isSpatulaMode, spatula.isLoaded]);
-
-  useEffect(() => {
-    if (!isSpatulaMode) {
-      setSpatulaCursorPosition(null);
-      stopSpatulaPour();
-      return;
-    }
-
-    const handlePointerMove = (event: PointerEvent) => {
-      setSpatulaCursorPosition({ x: event.clientX, y: event.clientY });
-      const pourState = spatulaPourStateRef.current;
-      if (!pourState) {
-        return;
-      }
-
-      const liftPx = Math.max(pourState.startY - event.clientY, 0);
-      pourState.currentRateG = Math.min(0.28, 0.06 + liftPx * 0.0022);
-    };
-
-    const handlePointerUp = () => {
-      stopSpatulaPour();
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      stopSpatulaPour();
-    };
-  }, [isSpatulaMode]);
+  const {
+    handleSpatulaToolCardClick,
+    handleSpatulaToolIllustrationClick,
+    handleSpatulaToolPointerDown,
+    handleSpatulaToolPointerUp,
+    spatulaCursorPosition,
+    spatulaHintMessage,
+    stopSpatulaPour,
+  } = useSpatulaInteraction({
+    isSpatulaMode,
+    onLoadFromTool: (payload) => {
+      void experimentApi.loadSpatulaFromWorkbenchTool(payload);
+    },
+    onPourIntoTool: (payload) => {
+      void experimentApi.pourSpatulaIntoWorkbenchTool(payload);
+    },
+    spatula,
+  });
 
   const handleToolbarItemDrop = (slotId: string, payload: ToolbarDragPayload) => {
     if (payload.itemType === "tool") {
@@ -425,96 +388,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     void experimentApi.closeWorkbenchTool({
       slot_id: slotId,
     });
-  };
-
-  const handleSpatulaToolPointerDown = (
-    slotId: string,
-    tool: BenchToolInstance,
-    event: ReactPointerEvent<HTMLElement>,
-  ) => {
-    if (!isSpatulaMode || event.button !== 0) {
-      return;
-    }
-
-    if (tool.toolType !== "sample_vial" && tool.toolType !== "centrifuge_tube") {
-      return;
-    }
-
-    if (!spatula.isLoaded) {
-      setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
-      return;
-    }
-
-    event.preventDefault();
-    stopSpatulaPour();
-    setSpatulaHintMessage("Versement en cours...");
-    spatulaPourStateRef.current = {
-      slotId,
-      startY: event.clientY,
-      currentRateG: 0.08,
-    };
-    spatulaPourIntervalRef.current = window.setInterval(() => {
-      const pourState = spatulaPourStateRef.current;
-      if (!pourState) {
-        return;
-      }
-
-      void experimentApi.pourSpatulaIntoWorkbenchTool({
-        slot_id: pourState.slotId,
-        delta_mass_g: Number(pourState.currentRateG.toFixed(3)),
-      });
-    }, 100);
-  };
-
-  const handleSpatulaToolPointerUp = () => {
-    stopSpatulaPour();
-  };
-
-  const handleSpatulaToolIllustrationClick = (
-    slotId: string,
-    tool: BenchToolInstance,
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => {
-    if (!isSpatulaMode || tool.toolType !== "storage_jar") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    stopSpatulaPour();
-    setSpatulaHintMessage("Chargement de la spatule...");
-    void experimentApi.loadSpatulaFromWorkbenchTool({
-      slot_id: slotId,
-    });
-  };
-
-  const handleSpatulaToolCardClick = (
-    slotId: string,
-    tool: BenchToolInstance,
-    event: ReactMouseEvent<HTMLElement>,
-  ) => {
-    if (!isSpatulaMode) {
-      return;
-    }
-
-    const target = event.target;
-    if (target instanceof HTMLElement && target.closest("button, input, textarea, select")) {
-      return;
-    }
-
-    if (tool.toolType === "storage_jar") {
-      event.preventDefault();
-      stopSpatulaPour();
-      setSpatulaHintMessage("Chargement de la spatule...");
-      void experimentApi.loadSpatulaFromWorkbenchTool({
-        slot_id: slotId,
-      });
-      return;
-    }
-
-    if ((tool.toolType === "sample_vial" || tool.toolType === "centrifuge_tube") && !spatula.isLoaded) {
-      setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
-    }
   };
 
   const handleBalanceToolSealToggle = () => {

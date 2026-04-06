@@ -20,6 +20,13 @@ import type {
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type { DropDraft } from "@/hooks/use-drop-draft";
 import type { DropDraftField } from "@/components/drop-draft-card";
+import type {
+  AddWorkspaceProduceLotToWidgetPayload,
+  MoveGrossBalanceProduceLotToWidgetPayload,
+  MoveWorkbenchProduceLotToWidgetPayload,
+  RestoreTrashedProduceLotToWidgetPayload,
+  StartGrinderCyclePayload,
+} from "@/types/api-payloads";
 
 const ambientTemperatureC = 20;
 const grinderOptimalThresholdC = -40;
@@ -27,11 +34,11 @@ const grinderStartThresholdC = -20;
 const grinderJamThresholdC = -10;
 
 type GrinderDndExperimentApi = {
-  addWorkspaceProduceLotToWidget: (payload: Record<string, unknown>) => void;
-  moveGrossBalanceProduceLotToWidget: (payload: Record<string, unknown>) => void;
-  moveWorkbenchProduceLotToWidget: (payload: Record<string, unknown>) => void;
-  restoreTrashedProduceLotToWidget: (payload: Record<string, unknown>) => void;
-  startGrinderCycle: (payload: Record<string, unknown>) => void;
+  addWorkspaceProduceLotToWidget: (payload: AddWorkspaceProduceLotToWidgetPayload) => void;
+  moveGrossBalanceProduceLotToWidget: (payload: MoveGrossBalanceProduceLotToWidgetPayload) => void;
+  moveWorkbenchProduceLotToWidget: (payload: MoveWorkbenchProduceLotToWidgetPayload) => void;
+  restoreTrashedProduceLotToWidget: (payload: RestoreTrashedProduceLotToWidgetPayload) => void;
+  startGrinderCycle: (payload: StartGrinderCyclePayload) => void;
 };
 
 type GrinderDndOptions = {

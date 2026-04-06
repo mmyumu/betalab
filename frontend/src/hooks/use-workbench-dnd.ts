@@ -34,19 +34,34 @@ import type {
   TrashToolDragPayload,
 } from "@/types/workbench";
 
+import type {
+  AddProduceLotToWorkbenchToolPayload,
+  CutWorkbenchProduceLotPayload,
+  MoveAnalyticalBalanceToolToWorkbenchPayload,
+  MoveGrossBalanceProduceLotToWorkbenchPayload,
+  MoveGrossBalanceToolToWorkbenchPayload,
+  MoveProduceLotBetweenWorkbenchToolsPayload,
+  MoveToolBetweenWorkbenchSlotsPayload,
+  MoveWidgetProduceLotToWorkbenchToolPayload,
+  PlaceReceivedBagOnWorkbenchPayload,
+  RemoveRackToolToWorkbenchSlotPayload,
+  RestoreTrashedProduceLotToWorkbenchToolPayload,
+  RestoreTrashedToolToWorkbenchSlotPayload,
+} from "@/types/api-payloads";
+
 type WorkbenchDndExperimentApi = {
-  addProduceLotToWorkbenchTool: (payload: Record<string, unknown>) => void;
-  cutWorkbenchProduceLot: (payload: Record<string, unknown>) => void;
-  moveAnalyticalBalanceToolToWorkbench: (payload: Record<string, unknown>) => void;
-  moveGrossBalanceProduceLotToWorkbench: (payload: Record<string, unknown>) => void;
-  moveGrossBalanceToolToWorkbench: (payload: Record<string, unknown>) => void;
-  moveProduceLotBetweenWorkbenchTools: (payload: Record<string, unknown>) => void;
-  moveToolBetweenWorkbenchSlots: (payload: Record<string, unknown>) => void;
-  moveWidgetProduceLotToWorkbenchTool: (payload: Record<string, unknown>) => void;
-  placeReceivedBagOnWorkbench: (payload: Record<string, unknown>) => void;
-  removeRackToolToWorkbenchSlot: (payload: Record<string, unknown>) => void;
-  restoreTrashedProduceLotToWorkbenchTool: (payload: Record<string, unknown>) => void;
-  restoreTrashedToolToWorkbenchSlot: (payload: Record<string, unknown>) => void;
+  addProduceLotToWorkbenchTool: (payload: AddProduceLotToWorkbenchToolPayload) => void;
+  cutWorkbenchProduceLot: (payload: CutWorkbenchProduceLotPayload) => void;
+  moveAnalyticalBalanceToolToWorkbench: (payload: MoveAnalyticalBalanceToolToWorkbenchPayload) => void;
+  moveGrossBalanceProduceLotToWorkbench: (payload: MoveGrossBalanceProduceLotToWorkbenchPayload) => void;
+  moveGrossBalanceToolToWorkbench: (payload: MoveGrossBalanceToolToWorkbenchPayload) => void;
+  moveProduceLotBetweenWorkbenchTools: (payload: MoveProduceLotBetweenWorkbenchToolsPayload) => void;
+  moveToolBetweenWorkbenchSlots: (payload: MoveToolBetweenWorkbenchSlotsPayload) => void;
+  moveWidgetProduceLotToWorkbenchTool: (payload: MoveWidgetProduceLotToWorkbenchToolPayload) => void;
+  placeReceivedBagOnWorkbench: (payload: PlaceReceivedBagOnWorkbenchPayload) => void;
+  removeRackToolToWorkbenchSlot: (payload: RemoveRackToolToWorkbenchSlotPayload) => void;
+  restoreTrashedProduceLotToWorkbenchTool: (payload: RestoreTrashedProduceLotToWorkbenchToolPayload) => void;
+  restoreTrashedToolToWorkbenchSlot: (payload: RestoreTrashedToolToWorkbenchSlotPayload) => void;
 };
 
 type WorkbenchDndOptions = {
@@ -367,11 +382,7 @@ export function useWorkbenchDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets: DropTargetType[] = [
-      "workbench_slot",
-      "grinder_widget",
-      "gross_balance_widget",
-    ];
+    const allowedDropTargets = getProduceLotDropTargets();
 
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,

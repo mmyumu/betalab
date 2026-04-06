@@ -13,13 +13,20 @@ import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import { labToolCatalog } from "@/lib/lab-workflow-catalog";
 import type { BenchToolInstance, RackSlot } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
+import type {
+  MoveGrossBalanceToolToRackPayload,
+  MoveRackToolBetweenSlotsPayload,
+  PlaceToolInRackSlotPayload,
+  PlaceWorkbenchToolInRackSlotPayload,
+  RestoreTrashedToolToRackSlotPayload,
+} from "@/types/api-payloads";
 
 type RackDndExperimentApi = {
-  moveGrossBalanceToolToRack: (payload: Record<string, unknown>) => void;
-  moveRackToolBetweenSlots: (payload: Record<string, unknown>) => void;
-  placeToolInRackSlot: (payload: Record<string, unknown>) => void;
-  placeWorkbenchToolInRackSlot: (payload: Record<string, unknown>) => void;
-  restoreTrashedToolToRackSlot: (payload: Record<string, unknown>) => void;
+  moveGrossBalanceToolToRack: (payload: MoveGrossBalanceToolToRackPayload) => void;
+  moveRackToolBetweenSlots: (payload: MoveRackToolBetweenSlotsPayload) => void;
+  placeToolInRackSlot: (payload: PlaceToolInRackSlotPayload) => void;
+  placeWorkbenchToolInRackSlot: (payload: PlaceWorkbenchToolInRackSlotPayload) => void;
+  restoreTrashedToolToRackSlot: (payload: RestoreTrashedToolToRackSlotPayload) => void;
 };
 
 type RackDndOptions = {

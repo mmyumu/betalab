@@ -2,6 +2,12 @@ import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DropDraftField } from "@/components/drop-draft-card";
+import type {
+  AddLiquidToWorkbenchToolPayload,
+  AddLiquidToWorkspaceWidgetPayload,
+  CreateDebugProduceLotOnWorkbenchPayload,
+  CreateDebugProduceLotToWidgetPayload,
+} from "@/types/api-payloads";
 
 export type DropDraft = {
   commandType:
@@ -19,10 +25,10 @@ export type DropDraft = {
 };
 
 type DropDraftExperimentApi = {
-  addLiquidToWorkbenchTool: (payload: Record<string, unknown>) => void;
-  addLiquidToWorkspaceWidget: (payload: Record<string, unknown>) => void;
-  createDebugProduceLotOnWorkbench: (payload: Record<string, unknown>) => void;
-  createDebugProduceLotToWidget: (payload: Record<string, unknown>) => void;
+  addLiquidToWorkbenchTool: (payload: AddLiquidToWorkbenchToolPayload) => void;
+  addLiquidToWorkspaceWidget: (payload: AddLiquidToWorkspaceWidgetPayload) => void;
+  createDebugProduceLotOnWorkbench: (payload: CreateDebugProduceLotOnWorkbenchPayload) => void;
+  createDebugProduceLotToWidget: (payload: CreateDebugProduceLotToWidgetPayload) => void;
 };
 
 export type DropDraftApi = {

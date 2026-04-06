@@ -94,6 +94,77 @@ import {
   updateWorkbenchToolSampleLabelText,
 } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
+import type {
+  AddLiquidToWorkbenchToolPayload,
+  AddLiquidToWorkspaceWidgetPayload,
+  AddProduceLotToWorkbenchToolPayload,
+  AddWorkspaceProduceLotToWidgetPayload,
+  AddWorkspaceWidgetPayload,
+  ApplyPrintedLimsLabelPayload,
+  ApplySampleLabelToWorkbenchToolPayload,
+  CloseWorkbenchToolPayload,
+  CompleteGrinderCyclePayload,
+  CreateDebugProduceLotOnWorkbenchPayload,
+  CreateDebugProduceLotToWidgetPayload,
+  CreateLimsReceptionPayload,
+  CreateProduceLotPayload,
+  CutWorkbenchProduceLotPayload,
+  DiscardGrossBalanceProduceLotPayload,
+  DiscardProduceLotFromWorkbenchToolPayload,
+  DiscardRackToolPayload,
+  DiscardSampleLabelFromWorkbenchToolPayload,
+  DiscardToolFromPalettePayload,
+  DiscardWidgetProduceLotPayload,
+  DiscardWorkbenchToolPayload,
+  DiscardWorkspaceProduceLotPayload,
+  DiscardWorkspaceWidgetPayload,
+  LoadSpatulaFromWorkbenchToolPayload,
+  MoveAnalyticalBalanceToolToRackPayload,
+  MoveAnalyticalBalanceToolToWorkbenchPayload,
+  MoveGrossBalanceProduceLotToWidgetPayload,
+  MoveGrossBalanceProduceLotToWorkbenchPayload,
+  MoveGrossBalanceToolToRackPayload,
+  MoveGrossBalanceToolToWorkbenchPayload,
+  MoveProduceLotBetweenWorkbenchToolsPayload,
+  MoveRackToolBetweenSlotsPayload,
+  MoveRackToolToAnalyticalBalancePayload,
+  MoveRackToolToGrossBalancePayload,
+  MoveSampleLabelBetweenWorkbenchToolsPayload,
+  MoveToolBetweenWorkbenchSlotsPayload,
+  MoveWidgetProduceLotToGrossBalancePayload,
+  MoveWidgetProduceLotToWorkbenchToolPayload,
+  MoveWorkbenchProduceLotToGrossBalancePayload,
+  MoveWorkbenchProduceLotToWidgetPayload,
+  MoveWorkbenchToolToAnalyticalBalancePayload,
+  MoveWorkbenchToolToGrossBalancePayload,
+  MoveWorkspaceProduceLotToGrossBalancePayload,
+  MoveWorkspaceWidgetPayload,
+  OpenWorkbenchToolPayload,
+  PlaceReceivedBagOnWorkbenchPayload,
+  PlaceToolInRackSlotPayload,
+  PlaceToolOnAnalyticalBalancePayload,
+  PlaceToolOnGrossBalancePayload,
+  PlaceToolOnWorkbenchPayload,
+  PlaceWorkbenchToolInRackSlotPayload,
+  PourSpatulaIntoWorkbenchToolPayload,
+  PrintLimsLabelPayload,
+  RecordGrossWeightPayload,
+  RemoveLiquidFromWorkbenchToolPayload,
+  RemoveLiquidFromWorkspaceWidgetPayload,
+  RemoveRackToolToWorkbenchSlotPayload,
+  RemoveWorkbenchSlotPayload,
+  RestoreTrashedProduceLotToGrossBalancePayload,
+  RestoreTrashedProduceLotToWidgetPayload,
+  RestoreTrashedProduceLotToWorkbenchToolPayload,
+  RestoreTrashedSampleLabelToWorkbenchToolPayload,
+  RestoreTrashedToolToAnalyticalBalancePayload,
+  RestoreTrashedToolToGrossBalancePayload,
+  RestoreTrashedToolToRackSlotPayload,
+  RestoreTrashedToolToWorkbenchSlotPayload,
+  SetGrossBalanceContainerOffsetPayload,
+  StartGrinderCyclePayload,
+  UpdateWorkbenchToolSampleLabelTextPayload,
+} from "@/types/api-payloads";
 
 type LabExperimentState =
   | { status: "loading" }
@@ -356,176 +427,176 @@ export function useLabExperiment({
     loadExperiment,
     state,
     statusMessage,
-    addLiquidToWorkbenchTool: (payload: Record<string, unknown>) =>
+    addLiquidToWorkbenchTool: (payload: AddLiquidToWorkbenchToolPayload) =>
       executeMutation(mutationFns.addLiquidToWorkbenchTool, payload),
-    addLiquidToWorkspaceWidget: (payload: Record<string, unknown>) =>
+    addLiquidToWorkspaceWidget: (payload: AddLiquidToWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.addLiquidToWorkspaceWidget, payload),
-    addProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+    addProduceLotToWorkbenchTool: (payload: AddProduceLotToWorkbenchToolPayload) =>
       executeMutation(mutationFns.addProduceLotToWorkbenchTool, payload),
     addWorkbenchSlot: () => executeMutation(mutationFns.addWorkbenchSlot),
-    addWorkspaceProduceLotToWidget: (payload: Record<string, unknown>) =>
+    addWorkspaceProduceLotToWidget: (payload: AddWorkspaceProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.addWorkspaceProduceLotToWidget, payload),
-    addWorkspaceWidget: (payload: Record<string, unknown>) =>
+    addWorkspaceWidget: (payload: AddWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.addWorkspaceWidget, payload),
-    applyPrintedLimsLabel: (payload: Record<string, unknown>) =>
+    applyPrintedLimsLabel: (payload: ApplyPrintedLimsLabelPayload) =>
       executeMutation(mutationFns.applyPrintedLimsLabel, payload),
     applyPrintedLimsLabelToGrossBalanceBag: () =>
       executeMutation(mutationFns.applyPrintedLimsLabelToGrossBalanceBag),
     applyPrintedLimsLabelToBasketBag: () =>
       executeMutation(mutationFns.applyPrintedLimsLabelToBasketBag),
-    applySampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
+    applySampleLabelToWorkbenchTool: (payload: ApplySampleLabelToWorkbenchToolPayload) =>
       executeMutation(mutationFns.applySampleLabelToWorkbenchTool, payload),
     closeGrossBalanceTool: () =>
       executeMutation(mutationFns.closeGrossBalanceTool),
     closeAnalyticalBalanceTool: () =>
       executeMutation(mutationFns.closeAnalyticalBalanceTool),
-    closeWorkbenchTool: (payload: Record<string, unknown>) =>
+    closeWorkbenchTool: (payload: CloseWorkbenchToolPayload) =>
       executeMutation(mutationFns.closeWorkbenchTool, payload),
-    completeGrinderCycle: (payload: Record<string, unknown>) =>
+    completeGrinderCycle: (payload: CompleteGrinderCyclePayload) =>
       executeMutation(mutationFns.completeGrinderCycle, payload),
-    startGrinderCycle: (payload: Record<string, unknown>) =>
+    startGrinderCycle: (payload: StartGrinderCyclePayload) =>
       executeMutation(mutationFns.startGrinderCycle, payload),
-    createProduceLot: (payload: Record<string, unknown>) =>
+    createProduceLot: (payload: CreateProduceLotPayload) =>
       executeMutation(mutationFns.createProduceLot, payload),
-    createDebugProduceLotOnWorkbench: (payload: Record<string, unknown>) =>
+    createDebugProduceLotOnWorkbench: (payload: CreateDebugProduceLotOnWorkbenchPayload) =>
       executeMutation(mutationFns.createDebugProduceLotOnWorkbench, payload),
-    createDebugProduceLotToWidget: (payload: Record<string, unknown>) =>
+    createDebugProduceLotToWidget: (payload: CreateDebugProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.createDebugProduceLotToWidget, payload),
-    createLimsReception: (payload: Record<string, unknown>) =>
+    createLimsReception: (payload: CreateLimsReceptionPayload) =>
       executeMutation(mutationFns.createLimsReception, payload),
-    cutWorkbenchProduceLot: (payload: Record<string, unknown>) =>
+    cutWorkbenchProduceLot: (payload: CutWorkbenchProduceLotPayload) =>
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
     discardBasketTool: () =>
       executeMutation(mutationFns.discardBasketTool),
     discardAnalyticalBalanceTool: () =>
       executeMutation(mutationFns.discardAnalyticalBalanceTool),
-    discardGrossBalanceProduceLot: (payload: Record<string, unknown>) =>
+    discardGrossBalanceProduceLot: (payload: DiscardGrossBalanceProduceLotPayload) =>
       executeMutation(mutationFns.discardGrossBalanceProduceLot, payload),
     discardGrossBalanceTool: () =>
       executeMutation(mutationFns.discardGrossBalanceTool),
-    discardProduceLotFromWorkbenchTool: (payload: Record<string, unknown>) =>
+    discardProduceLotFromWorkbenchTool: (payload: DiscardProduceLotFromWorkbenchToolPayload) =>
       executeMutation(mutationFns.discardProduceLotFromWorkbenchTool, payload),
     discardPrintedLimsLabel: () =>
       executeMutation(mutationFns.discardPrintedLimsLabel),
-    discardRackTool: (payload: Record<string, unknown>) =>
+    discardRackTool: (payload: DiscardRackToolPayload) =>
       executeMutation(mutationFns.discardRackTool, payload),
-    discardSampleLabelFromPalette: (payload?: Record<string, unknown>) =>
-      executeMutation(mutationFns.discardSampleLabelFromPalette, payload),
-    discardSampleLabelFromWorkbenchTool: (payload: Record<string, unknown>) =>
+    discardSampleLabelFromPalette: () =>
+      executeMutation(mutationFns.discardSampleLabelFromPalette),
+    discardSampleLabelFromWorkbenchTool: (payload: DiscardSampleLabelFromWorkbenchToolPayload) =>
       executeMutation(mutationFns.discardSampleLabelFromWorkbenchTool, payload),
-    discardToolFromPalette: (payload: Record<string, unknown>) =>
+    discardToolFromPalette: (payload: DiscardToolFromPalettePayload) =>
       executeMutation(mutationFns.discardToolFromPalette, payload),
-    discardWidgetProduceLot: (payload: Record<string, unknown>) =>
+    discardWidgetProduceLot: (payload: DiscardWidgetProduceLotPayload) =>
       executeMutation(mutationFns.discardWidgetProduceLot, payload),
-    discardWorkbenchTool: (payload: Record<string, unknown>) =>
+    discardWorkbenchTool: (payload: DiscardWorkbenchToolPayload) =>
       executeMutation(mutationFns.discardWorkbenchTool, payload),
-    discardWorkspaceProduceLot: (payload: Record<string, unknown>) =>
+    discardWorkspaceProduceLot: (payload: DiscardWorkspaceProduceLotPayload) =>
       executeMutation(mutationFns.discardWorkspaceProduceLot, payload),
-    discardWorkspaceWidget: (payload: Record<string, unknown>) =>
+    discardWorkspaceWidget: (payload: DiscardWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.discardWorkspaceWidget, payload),
     moveBasketToolToGrossBalance: () =>
       executeMutation(mutationFns.moveBasketToolToGrossBalance),
     moveAnalyticalBalanceToolToGrossBalance: () =>
       executeMutation(mutationFns.moveAnalyticalBalanceToolToGrossBalance),
-    moveAnalyticalBalanceToolToRack: (payload: Record<string, unknown>) =>
+    moveAnalyticalBalanceToolToRack: (payload: MoveAnalyticalBalanceToolToRackPayload) =>
       executeMutation(mutationFns.moveAnalyticalBalanceToolToRack, payload),
-    moveAnalyticalBalanceToolToWorkbench: (payload: Record<string, unknown>) =>
+    moveAnalyticalBalanceToolToWorkbench: (payload: MoveAnalyticalBalanceToolToWorkbenchPayload) =>
       executeMutation(mutationFns.moveAnalyticalBalanceToolToWorkbench, payload),
-    placeToolOnAnalyticalBalance: (payload: Record<string, unknown>) =>
+    placeToolOnAnalyticalBalance: (payload: PlaceToolOnAnalyticalBalancePayload) =>
       executeMutation(mutationFns.placeToolOnAnalyticalBalance, payload),
-    placeToolOnGrossBalance: (payload: Record<string, unknown>) =>
+    placeToolOnGrossBalance: (payload: PlaceToolOnGrossBalancePayload) =>
       executeMutation(mutationFns.placeToolOnGrossBalance, payload),
-    moveGrossBalanceProduceLotToWidget: (payload: Record<string, unknown>) =>
+    moveGrossBalanceProduceLotToWidget: (payload: MoveGrossBalanceProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.moveGrossBalanceProduceLotToWidget, payload),
     moveGrossBalanceToolToAnalyticalBalance: () =>
       executeMutation(mutationFns.moveGrossBalanceToolToAnalyticalBalance),
-    moveGrossBalanceProduceLotToWorkbench: (payload: Record<string, unknown>) =>
+    moveGrossBalanceProduceLotToWorkbench: (payload: MoveGrossBalanceProduceLotToWorkbenchPayload) =>
       executeMutation(mutationFns.moveGrossBalanceProduceLotToWorkbench, payload),
-    moveGrossBalanceToolToRack: (payload: Record<string, unknown>) =>
+    moveGrossBalanceToolToRack: (payload: MoveGrossBalanceToolToRackPayload) =>
       executeMutation(mutationFns.moveGrossBalanceToolToRack, payload),
-    moveGrossBalanceToolToWorkbench: (payload: Record<string, unknown>) =>
+    moveGrossBalanceToolToWorkbench: (payload: MoveGrossBalanceToolToWorkbenchPayload) =>
       executeMutation(mutationFns.moveGrossBalanceToolToWorkbench, payload),
-    moveProduceLotBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
+    moveProduceLotBetweenWorkbenchTools: (payload: MoveProduceLotBetweenWorkbenchToolsPayload) =>
       executeMutation(mutationFns.moveProduceLotBetweenWorkbenchTools, payload),
-    moveRackToolBetweenSlots: (payload: Record<string, unknown>) =>
+    moveRackToolBetweenSlots: (payload: MoveRackToolBetweenSlotsPayload) =>
       executeMutation(mutationFns.moveRackToolBetweenSlots, payload),
-    moveRackToolToAnalyticalBalance: (payload: Record<string, unknown>) =>
+    moveRackToolToAnalyticalBalance: (payload: MoveRackToolToAnalyticalBalancePayload) =>
       executeMutation(mutationFns.moveRackToolToAnalyticalBalance, payload),
-    moveRackToolToGrossBalance: (payload: Record<string, unknown>) =>
+    moveRackToolToGrossBalance: (payload: MoveRackToolToGrossBalancePayload) =>
       executeMutation(mutationFns.moveRackToolToGrossBalance, payload),
-    moveSampleLabelBetweenWorkbenchTools: (payload: Record<string, unknown>) =>
+    moveSampleLabelBetweenWorkbenchTools: (payload: MoveSampleLabelBetweenWorkbenchToolsPayload) =>
       executeMutation(mutationFns.moveSampleLabelBetweenWorkbenchTools, payload),
-    moveToolBetweenWorkbenchSlots: (payload: Record<string, unknown>) =>
+    moveToolBetweenWorkbenchSlots: (payload: MoveToolBetweenWorkbenchSlotsPayload) =>
       executeMutation(mutationFns.moveToolBetweenWorkbenchSlots, payload),
-    moveWorkbenchProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+    moveWorkbenchProduceLotToGrossBalance: (payload: MoveWorkbenchProduceLotToGrossBalancePayload) =>
       executeMutation(mutationFns.moveWorkbenchProduceLotToGrossBalance, payload),
-    moveWorkbenchToolToAnalyticalBalance: (payload: Record<string, unknown>) =>
+    moveWorkbenchToolToAnalyticalBalance: (payload: MoveWorkbenchToolToAnalyticalBalancePayload) =>
       executeMutation(mutationFns.moveWorkbenchToolToAnalyticalBalance, payload),
-    moveWorkbenchToolToGrossBalance: (payload: Record<string, unknown>) =>
+    moveWorkbenchToolToGrossBalance: (payload: MoveWorkbenchToolToGrossBalancePayload) =>
       executeMutation(mutationFns.moveWorkbenchToolToGrossBalance, payload),
-    moveWidgetProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+    moveWidgetProduceLotToWorkbenchTool: (payload: MoveWidgetProduceLotToWorkbenchToolPayload) =>
       executeMutation(mutationFns.moveWidgetProduceLotToWorkbenchTool, payload),
-    moveWidgetProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+    moveWidgetProduceLotToGrossBalance: (payload: MoveWidgetProduceLotToGrossBalancePayload) =>
       executeMutation(mutationFns.moveWidgetProduceLotToGrossBalance, payload),
-    moveWorkbenchProduceLotToWidget: (payload: Record<string, unknown>) =>
+    moveWorkbenchProduceLotToWidget: (payload: MoveWorkbenchProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.moveWorkbenchProduceLotToWidget, payload),
-    moveWorkspaceProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+    moveWorkspaceProduceLotToGrossBalance: (payload: MoveWorkspaceProduceLotToGrossBalancePayload) =>
       executeMutation(mutationFns.moveWorkspaceProduceLotToGrossBalance, payload),
-    moveWorkspaceWidget: (payload: Record<string, unknown>) =>
+    moveWorkspaceWidget: (payload: MoveWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.moveWorkspaceWidget, payload),
-    loadSpatulaFromWorkbenchTool: (payload: Record<string, unknown>) =>
+    loadSpatulaFromWorkbenchTool: (payload: LoadSpatulaFromWorkbenchToolPayload) =>
       executeMutation(mutationFns.loadSpatulaFromWorkbenchTool, payload),
     openGrossBalanceTool: () =>
       executeMutation(mutationFns.openGrossBalanceTool),
     openAnalyticalBalanceTool: () =>
       executeMutation(mutationFns.openAnalyticalBalanceTool),
-    openWorkbenchTool: (payload: Record<string, unknown>) =>
+    openWorkbenchTool: (payload: OpenWorkbenchToolPayload) =>
       executeMutation(mutationFns.openWorkbenchTool, payload),
-    placeToolInRackSlot: (payload: Record<string, unknown>) =>
+    placeToolInRackSlot: (payload: PlaceToolInRackSlotPayload) =>
       executeMutation(mutationFns.placeToolInRackSlot, payload),
-    placeReceivedBagOnWorkbench: (payload: Record<string, unknown>) =>
+    placeReceivedBagOnWorkbench: (payload: PlaceReceivedBagOnWorkbenchPayload) =>
       executeMutation(mutationFns.placeReceivedBagOnWorkbench, payload),
-    placeToolOnWorkbench: (payload: Record<string, unknown>) =>
+    placeToolOnWorkbench: (payload: PlaceToolOnWorkbenchPayload) =>
       executeMutation(mutationFns.placeToolOnWorkbench, payload),
-    placeWorkbenchToolInRackSlot: (payload: Record<string, unknown>) =>
+    placeWorkbenchToolInRackSlot: (payload: PlaceWorkbenchToolInRackSlotPayload) =>
       executeMutation(mutationFns.placeWorkbenchToolInRackSlot, payload),
-    printLimsLabel: (payload?: Record<string, unknown>) =>
+    printLimsLabel: (payload?: PrintLimsLabelPayload) =>
       executeMutation(mutationFns.printLimsLabel, payload),
-    pourSpatulaIntoWorkbenchTool: (payload: Record<string, unknown>) =>
+    pourSpatulaIntoWorkbenchTool: (payload: PourSpatulaIntoWorkbenchToolPayload) =>
       executeMutation(mutationFns.pourSpatulaIntoWorkbenchTool, payload),
-    recordGrossWeight: (payload?: Record<string, unknown>) =>
+    recordGrossWeight: (payload?: RecordGrossWeightPayload) =>
       executeMutation(mutationFns.recordGrossWeight, payload),
     recordAnalyticalSampleMass: () =>
       executeMutation(mutationFns.recordAnalyticalSampleMass),
-    setGrossBalanceContainerOffset: (payload: Record<string, unknown>) =>
+    setGrossBalanceContainerOffset: (payload: SetGrossBalanceContainerOffsetPayload) =>
       executeGrossBalanceOffsetMutation(payload),
     tareAnalyticalBalance: () =>
       executeMutation(mutationFns.tareAnalyticalBalance),
-    removeLiquidFromWorkbenchTool: (payload: Record<string, unknown>) =>
+    removeLiquidFromWorkbenchTool: (payload: RemoveLiquidFromWorkbenchToolPayload) =>
       executeMutation(mutationFns.removeLiquidFromWorkbenchTool, payload),
-    removeLiquidFromWorkspaceWidget: (payload: Record<string, unknown>) =>
+    removeLiquidFromWorkspaceWidget: (payload: RemoveLiquidFromWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.removeLiquidFromWorkspaceWidget, payload),
-    removeRackToolToWorkbenchSlot: (payload: Record<string, unknown>) =>
+    removeRackToolToWorkbenchSlot: (payload: RemoveRackToolToWorkbenchSlotPayload) =>
       executeMutation(mutationFns.removeRackToolToWorkbenchSlot, payload),
-    removeWorkbenchSlot: (payload: Record<string, unknown>) =>
+    removeWorkbenchSlot: (payload: RemoveWorkbenchSlotPayload) =>
       executeMutation(mutationFns.removeWorkbenchSlot, payload),
-    restoreTrashedProduceLotToGrossBalance: (payload: Record<string, unknown>) =>
+    restoreTrashedProduceLotToGrossBalance: (payload: RestoreTrashedProduceLotToGrossBalancePayload) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToGrossBalance, payload),
-    restoreTrashedProduceLotToWorkbenchTool: (payload: Record<string, unknown>) =>
+    restoreTrashedProduceLotToWorkbenchTool: (payload: RestoreTrashedProduceLotToWorkbenchToolPayload) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToWorkbenchTool, payload),
-    restoreTrashedProduceLotToWidget: (payload: Record<string, unknown>) =>
+    restoreTrashedProduceLotToWidget: (payload: RestoreTrashedProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToWidget, payload),
-    restoreTrashedSampleLabelToWorkbenchTool: (payload: Record<string, unknown>) =>
+    restoreTrashedSampleLabelToWorkbenchTool: (payload: RestoreTrashedSampleLabelToWorkbenchToolPayload) =>
       executeMutation(mutationFns.restoreTrashedSampleLabelToWorkbenchTool, payload),
-    restoreTrashedToolToAnalyticalBalance: (payload: Record<string, unknown>) =>
+    restoreTrashedToolToAnalyticalBalance: (payload: RestoreTrashedToolToAnalyticalBalancePayload) =>
       executeMutation(mutationFns.restoreTrashedToolToAnalyticalBalance, payload),
-    restoreTrashedToolToGrossBalance: (payload: Record<string, unknown>) =>
+    restoreTrashedToolToGrossBalance: (payload: RestoreTrashedToolToGrossBalancePayload) =>
       executeMutation(mutationFns.restoreTrashedToolToGrossBalance, payload),
-    restoreTrashedToolToRackSlot: (payload: Record<string, unknown>) =>
+    restoreTrashedToolToRackSlot: (payload: RestoreTrashedToolToRackSlotPayload) =>
       executeMutation(mutationFns.restoreTrashedToolToRackSlot, payload),
-    restoreTrashedToolToWorkbenchSlot: (payload: Record<string, unknown>) =>
+    restoreTrashedToolToWorkbenchSlot: (payload: RestoreTrashedToolToWorkbenchSlotPayload) =>
       executeMutation(mutationFns.restoreTrashedToolToWorkbenchSlot, payload),
-    updateWorkbenchToolSampleLabelText: (payload: Record<string, unknown>) =>
+    updateWorkbenchToolSampleLabelText: (payload: UpdateWorkbenchToolSampleLabelTextPayload) =>
       executeMutation(mutationFns.updateWorkbenchToolSampleLabelText, payload),
   };
 }
