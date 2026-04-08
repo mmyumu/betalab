@@ -1,0 +1,484 @@
+"use client";
+
+import type { Dispatch, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode, RefObject, SetStateAction } from "react";
+import type { DragEvent } from "react";
+
+import { AnalyticalBalanceWidget } from "@/components/analytical-balance-widget";
+import { BenchToolCard } from "@/components/bench-tool-card";
+import { DropDraftCard } from "@/components/drop-draft-card";
+import { FloatingWidget } from "@/components/floating-widget";
+import { GrinderWidgetContent } from "@/components/grinder-widget-content";
+import { GrossBalanceWidget } from "@/components/gross-balance-widget";
+import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
+import { LimsWidget } from "@/components/lims-widget";
+import { ProduceBasketWidget } from "@/components/produce-basket-widget";
+import { ProduceLotCard } from "@/components/produce-lot-card";
+import { RackWidget } from "@/components/rack-widget";
+import { TrashWidget } from "@/components/trash-widget";
+import { WorkbenchPanel } from "@/components/workbench-panel";
+import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
+import type { AnalyticalBalanceDndApi } from "@/hooks/use-analytical-balance-dnd";
+import type { DropDraft } from "@/hooks/use-drop-draft";
+import type { GrinderDndApi } from "@/hooks/use-grinder-dnd";
+import type { GrossBalanceDndApi } from "@/hooks/use-gross-balance-dnd";
+import type { RackDndApi } from "@/hooks/use-rack-dnd";
+import type { TrashDndApi } from "@/hooks/use-trash-dnd";
+import type { WorkbenchDndApi } from "@/hooks/use-workbench-dnd";
+import type { WidgetLayout } from "@/hooks/use-workspace-layout";
+import { isWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
+import type { Experiment } from "@/types/experiment";
+import type {
+  BenchLabel,
+  BenchSlot,
+  BenchToolInstance,
+  DragDescriptor,
+  DropTargetType,
+  ExperimentProduceLot,
+  ExperimentWorkspaceWidget,
+  RackSlot,
+  SpatulaState,
+  ToolbarDragPayload,
+  TrashProduceLotEntry,
+  TrashSampleLabelEntry,
+  TrashToolEntry,
+} from "@/types/workbench";
+
+export type LabSceneWorkspaceCanvasProps = {
+  balances: {
+    analyticalBalanceMeasuredMassG: number | null;
+    analyticalBalanceNetMassG: number | null;
+    grossBalanceNetMassG: number;
+  };
+  display: {
+    basketProduceLots: ExperimentProduceLot[];
+    basketTool: BenchToolInstance | null;
+    rackSlots: RackSlot[];
+    slots: BenchSlot[];
+    trashProduceLots: TrashProduceLotEntry[];
+    trashTools: TrashToolEntry[];
+    trashedSampleLabels: TrashSampleLabelEntry[];
+    trashedWidgets: ExperimentWorkspaceWidget[];
+  };
+  dnd: {
+    analyticalBalance: AnalyticalBalanceDndApi;
+    clearDropTargets: () => void;
+    dndDisabledByAction: boolean;
+    grinder: GrinderDndApi;
+    grossBalance: GrossBalanceDndApi;
+    isDropTargetHighlighted: (target: DropTargetType) => boolean;
+    rack: RackDndApi;
+    setActiveDragItem: (item: DragDescriptor | null) => void;
+    showDropTargets: (targets: readonly DropTargetType[]) => void;
+    trash: TrashDndApi;
+    workbench: WorkbenchDndApi;
+  };
+  dropDraft: {
+    handleConfirmDropDraft: () => void;
+    handleUpdateDropDraftField: (fieldId: string, value: number) => void;
+    pendingDropDraft: DropDraft | null;
+    renderPendingBenchDropDraft: (slotId: string) => ReactNode;
+    setPendingDropDraft: Dispatch<SetStateAction<DropDraft | null>>;
+  };
+  experiment: Experiment;
+  rack: {
+    getRackIllustrationSlotPosition: (index: number) => { left: string; top: string };
+    instrumentStatus: "idle" | "ready";
+    isRackSlotHighlighted: boolean;
+    rackLoadedCount: number;
+    rackOccupiedSlotLiquids: Record<number, BenchToolInstance["liquids"]>;
+    rackOccupiedSlots: number[];
+    rackSlotCount: number;
+  };
+  spatula: {
+    handleSpatulaToolCardClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLElement>) => void;
+    handleSpatulaToolIllustrationClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => void;
+    handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
+    handleSpatulaToolPointerUp: () => void;
+  };
+  ui: {
+    isBasketOpen: boolean;
+    isCommandPending: boolean;
+    isTrashEmpty: boolean;
+    isTrashOpen: boolean;
+    setIsBasketOpen: Dispatch<SetStateAction<boolean>>;
+    setIsTrashOpen: Dispatch<SetStateAction<boolean>>;
+    statusMessage: string;
+  };
+  workbench: {
+    canApplyLimsLabelToSlot: (slot: BenchSlot) => boolean;
+    formatProduceLotMetadata: (lot: ExperimentProduceLot) => string | null;
+    handleAddWorkbenchSlot: () => void;
+    handleApplyLimsLabelTicket: (payload: { basketBag?: true; grossBalanceBag?: true; slotId?: string }) => void;
+    handleApplySampleLabel: (slotId: string) => void;
+    handleMoveSampleLabel: (targetSlotId: string, payload: { label?: BenchLabel; sourceSlotId?: string }) => void;
+    handleRemoveLiquid: (slotId: string, liquidId: string) => void;
+    handleRemoveWorkbenchSlot: (slotId: string) => void;
+    handleRestoreTrashedSampleLabel: (targetSlotId: string, payload: { trashSampleLabelId?: string }) => void;
+    handleSampleLabelTextChange: (slotId: string, labelId: string, text: string) => void;
+    handleToggleToolSeal: (slotId: string, tool: BenchToolInstance) => void;
+    handleToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
+    isBenchSlotHighlighted: (slot: BenchSlot) => boolean;
+  };
+  workspace: {
+    activeWidgetId: string | null;
+    handleWidgetDragStart: (widgetId: string, event: ReactMouseEvent<HTMLDivElement>) => void;
+    handleWidgetHeightChange: (widgetId: string, height: number) => void;
+    handleWorkspaceDragOver: (event: DragEvent<HTMLDivElement>) => void;
+    handleWorkspaceDrop: (event: DragEvent<HTMLDivElement>) => void;
+    liveWidgetIds: string[];
+    widgetLayout: Record<string, WidgetLayout>;
+    widgetOrder: string[];
+    workspaceCursor: string | undefined;
+    workspaceHeight: number;
+    workspaceRef: RefObject<HTMLDivElement | null>;
+  };
+  workspaceActions: {
+    handleAnalyticalBalanceToolSealToggle: () => void;
+    handleBalanceToolSealToggle: () => void;
+    handleCreateAppleLot: () => void;
+    handleSaveLimsReception: (payload: {
+      entry_id?: string;
+      harvest_date: string;
+      indicative_mass_g: number;
+      measured_sample_mass_g: number | null;
+      orchard_name: string;
+    }) => void;
+    onCommitGrossBalanceOffset: (nextOffsetG: number) => void;
+    onPrintLimsLabel: (entryId?: string) => void;
+    onTareAnalyticalBalance: () => void;
+  };
+};
+
+export function LabSceneWorkspaceCanvas({
+  balances,
+  display,
+  dnd,
+  dropDraft,
+  experiment,
+  rack,
+  spatula,
+  ui,
+  workbench,
+  workspace,
+  workspaceActions,
+}: LabSceneWorkspaceCanvasProps) {
+  const pendingGrossBalanceDropDraft =
+    dropDraft.pendingDropDraft?.targetKind === "workspace_widget" &&
+    dropDraft.pendingDropDraft.targetId === "gross_balance"
+      ? dropDraft.pendingDropDraft
+      : null;
+
+  const displayBalanceTool =
+    experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.tool ?? null;
+  const displayBalanceProduceLot =
+    experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.produceLots?.[0] ?? null;
+  const displayAnalyticalBalanceTool =
+    experiment.workspace.widgets.find((w) => w.id === "analytical_balance")?.tool ?? null;
+
+  const grossBalanceStagedContent = pendingGrossBalanceDropDraft ? (
+    <DropDraftCard
+      confirmLabel={pendingGrossBalanceDropDraft.confirmLabel}
+      fields={pendingGrossBalanceDropDraft.fields}
+      onCancel={() => dropDraft.setPendingDropDraft(null)}
+      onChangeField={dropDraft.handleUpdateDropDraftField}
+      onConfirm={dropDraft.handleConfirmDropDraft}
+      title={pendingGrossBalanceDropDraft.title}
+    />
+  ) : displayBalanceTool ? (
+    <div
+      data-testid="gross-balance-staged-item"
+      onDragOver={dnd.grossBalance.handleBalanceStagedToolDragOver}
+      onDrop={dnd.grossBalance.handleBalanceStagedToolDrop}
+    >
+      <BenchToolCard
+        dataDropHighlighted={dnd.grossBalance.isGrossBalanceSampleBagHighlighted}
+        draggable
+        onDragEnd={dnd.clearDropTargets}
+        onDragStart={(event) => dnd.grossBalance.handleBalanceItemDragStart(event.dataTransfer)}
+        onDragOver={dnd.grossBalance.handleBalanceStagedToolDragOver}
+        onDrop={dnd.grossBalance.handleBalanceStagedToolDrop}
+        onProduceLotDragEnd={dnd.clearDropTargets}
+        onProduceLotDragStart={(produceLot, event) =>
+          dnd.grossBalance.handleGrossBalanceProduceLotDragStart(produceLot, event.dataTransfer)
+        }
+        onToggleSeal={workspaceActions.handleBalanceToolSealToggle}
+        onRemoveLiquid={() => {}}
+        tool={{ ...displayBalanceTool, id: `balance-${displayBalanceTool.id}` }}
+      />
+    </div>
+  ) : displayBalanceProduceLot ? (
+    <div
+      className="cursor-grab rounded-[1rem] border border-amber-200 bg-amber-50/80 p-2.5 shadow-sm active:cursor-grabbing"
+      data-testid="gross-balance-staged-item"
+      draggable
+      onDragEnd={dnd.clearDropTargets}
+      onDragStart={(event) => dnd.grossBalance.handleBalanceItemDragStart(event.dataTransfer)}
+    >
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+        Loose material on pan
+      </p>
+      <ProduceLotCard
+        dataTestId={`gross-balance-produce-${displayBalanceProduceLot.id}`}
+        draggable={false}
+        metadata={workbench.formatProduceLotMetadata(displayBalanceProduceLot) ?? ""}
+        produceLot={{ ...displayBalanceProduceLot, id: `balance-${displayBalanceProduceLot.id}` }}
+        variant="expanded"
+      />
+    </div>
+  ) : null;
+
+  const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
+    <div data-testid="analytical-balance-staged-item">
+      <BenchToolCard
+        draggable
+        onDragEnd={dnd.clearDropTargets}
+        onDragStart={(event) =>
+          dnd.analyticalBalance.handleAnalyticalBalanceItemDragStart(event.dataTransfer)
+        }
+        onToggleSeal={workspaceActions.handleAnalyticalBalanceToolSealToggle}
+        onRemoveLiquid={() => {}}
+        tool={{ ...displayAnalyticalBalanceTool, id: `analytical-${displayAnalyticalBalanceTool.id}` }}
+      />
+    </div>
+  ) : null;
+
+  return (
+    <section className="overflow-hidden rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(248,250,252,0.75),rgba(255,255,255,0.55))] p-4 shadow-[0_28px_60px_rgba(15,23,42,0.08)] backdrop-blur xl:p-6">
+      <div className="rounded-[1.6rem] border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Custom layout
+          </p>
+          <p className="min-w-0 truncate text-sm text-slate-600">
+            {ui.isCommandPending ? `${ui.statusMessage} Syncing...` : ui.statusMessage}
+          </p>
+        </div>
+      </div>
+
+      <div
+        className={`relative mt-4 overflow-hidden rounded-[2rem] border border-dashed bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.75),rgba(248,250,252,0.7)_40%,rgba(226,232,240,0.55)_100%)] transition-colors ${
+          dnd.isDropTargetHighlighted("workspace_canvas")
+            ? "border-sky-300/90 ring-2 ring-sky-200/80"
+            : "border-slate-300/80"
+        }`}
+        data-drop-highlighted={dnd.isDropTargetHighlighted("workspace_canvas") ? "true" : "false"}
+        data-testid="widget-workspace"
+        onDragOverCapture={workspace.handleWorkspaceDragOver}
+        onDropCapture={workspace.handleWorkspaceDrop}
+        ref={workspace.workspaceRef}
+        style={{ cursor: workspace.workspaceCursor, minHeight: workspace.workspaceHeight }}
+      >
+        <div
+          className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] bg-[size:32px_32px]"
+          data-testid="workspace-drop-surface-grid"
+        />
+        <div
+          className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_26%)]"
+          data-testid="workspace-drop-surface-glow"
+        />
+
+        <FloatingWidget
+          id="trash"
+          isActive={workspace.activeWidgetId === "trash"}
+          label="Trash Widget"
+          onDragStart={(widgetId, event) => {
+            if (dnd.dndDisabledByAction) return;
+            workspace.handleWidgetDragStart(widgetId, event);
+          }}
+          onHeightChange={workspace.handleWidgetHeightChange}
+          position={workspace.widgetLayout.trash}
+          zIndex={10 + workspace.widgetOrder.indexOf("trash")}
+        >
+          <TrashWidget
+            dndDisabled={dnd.dndDisabledByAction}
+            formatProduceLotMetadata={(lot) => workbench.formatProduceLotMetadata(lot) ?? ""}
+            isDropHighlighted={dnd.isDropTargetHighlighted("trash_bin")}
+            isEmpty={ui.isTrashEmpty}
+            isOpen={ui.isTrashOpen}
+            onDragOver={dnd.trash.handleTrashDragOver}
+            onDrop={dnd.trash.handleTrashDrop}
+            onItemDragEnd={dnd.clearDropTargets}
+            onToggle={() => ui.setIsTrashOpen((current) => !current)}
+            onToolDragStart={dnd.trash.handleTrashToolDragStart}
+            onTrashedWidgetDragStart={dnd.trash.handleTrashedWidgetDragStart}
+            onTrashProduceLotDragStart={dnd.trash.handleTrashProduceLotDragStart}
+            onTrashSampleLabelDragStart={dnd.trash.handleTrashSampleLabelDragStart}
+            trashedProduceLots={display.trashProduceLots}
+            trashedSampleLabels={display.trashedSampleLabels}
+            trashedTools={display.trashTools}
+            trashedWidgets={display.trashedWidgets}
+          />
+        </FloatingWidget>
+
+        {workspace.liveWidgetIds
+          .filter(isWorkspaceEquipmentWidgetId)
+          .map((widgetId) => (
+            <FloatingWidget
+              id={widgetId}
+              isActive={workspace.activeWidgetId === widgetId}
+              key={widgetId}
+              label={
+                widgetId === "lims"
+                  ? "LIMS Widget"
+                  : widgetId === "rack"
+                    ? "Rack Widget"
+                    : widgetId === "instrument"
+                      ? "Instrument Widget"
+                      : widgetId === "grinder"
+                        ? "Grinder Widget"
+                        : widgetId === "gross_balance"
+                          ? "Gross Balance Widget"
+                          : "Produce Basket Widget"
+              }
+              onDragStart={(id, event) => {
+                if (dnd.dndDisabledByAction) return;
+                workspace.handleWidgetDragStart(id, event);
+              }}
+              onHeightChange={workspace.handleWidgetHeightChange}
+              position={workspace.widgetLayout[widgetId]}
+              zIndex={10 + workspace.widgetOrder.indexOf(widgetId)}
+            >
+              {widgetId === "lims" ? (
+                <LimsWidget
+                  entries={experiment.limsEntries}
+                  onPrintLabel={workspaceActions.onPrintLimsLabel}
+                  onSaveReception={workspaceActions.handleSaveLimsReception}
+                  onTicketDragEnd={dnd.clearDropTargets}
+                  onTicketDragStart={dnd.workbench.handleLimsTicketDragStart}
+                  reception={experiment.limsReception}
+                />
+              ) : widgetId === "basket" ? (
+                <ProduceBasketWidget
+                  basketTool={display.basketTool}
+                  dndDisabled={dnd.dndDisabledByAction}
+                  formatProduceLotMetadata={(lot) => workbench.formatProduceLotMetadata(lot) ?? ""}
+                  isOpen={ui.isBasketOpen}
+                  onBagDragStart={dnd.workbench.handleBasketToolDragStart}
+                  onCreateAppleLot={workspaceActions.handleCreateAppleLot}
+                  onItemDragEnd={dnd.clearDropTargets}
+                  onProduceDragStart={dnd.workbench.handleBasketProduceDragStart}
+                  onToggle={() => ui.setIsBasketOpen((current) => !current)}
+                  produceLots={display.basketProduceLots}
+                />
+              ) : widgetId === "gross_balance" ? (
+                <GrossBalanceWidget
+                  isDropHighlighted={dnd.isDropTargetHighlighted("gross_balance_widget")}
+                  grossMassOffsetG={experiment.limsReception.grossMassOffsetG}
+                  measuredGrossMassG={experiment.limsReception.measuredGrossMassG}
+                  netMassG={balances.grossBalanceNetMassG}
+                  onCommitOffset={workspaceActions.onCommitGrossBalanceOffset}
+                  onDragOver={dnd.grossBalance.handleGrossBalanceDragOver}
+                  onDrop={dnd.grossBalance.handleGrossBalanceDrop}
+                  stagedContent={grossBalanceStagedContent}
+                />
+              ) : widgetId === "analytical_balance" ? (
+                <AnalyticalBalanceWidget
+                  isDropHighlighted={dnd.isDropTargetHighlighted("analytical_balance_widget")}
+                  measuredMassG={balances.analyticalBalanceMeasuredMassG}
+                  netMassG={balances.analyticalBalanceNetMassG}
+                  onDragOver={dnd.analyticalBalance.handleAnalyticalBalanceDragOver}
+                  onDrop={dnd.analyticalBalance.handleAnalyticalBalanceDrop}
+                  onTare={workspaceActions.onTareAnalyticalBalance}
+                  stagedContent={analyticalBalanceStagedContent}
+                  tareMassG={experiment.analyticalBalance.tareMassG}
+                />
+              ) : widgetId === "rack" ? (
+                <RackWidget
+                  dndDisabled={dnd.dndDisabledByAction}
+                  getSlotPosition={rack.getRackIllustrationSlotPosition}
+                  isSlotHighlighted={rack.isRackSlotHighlighted}
+                  loadedCount={rack.rackLoadedCount}
+                  occupiedSlotLiquids={rack.rackOccupiedSlotLiquids}
+                  occupiedSlots={rack.rackOccupiedSlots}
+                  onItemDragEnd={dnd.clearDropTargets}
+                  onRackSlotDragOver={dnd.rack.handleRackSlotDragOver}
+                  onRackSlotDrop={dnd.rack.handleRackSlotDrop}
+                  onRackToolDragStart={dnd.rack.handleRackToolDragStart}
+                  rackSlots={display.rackSlots}
+                  slotCount={rack.rackSlotCount}
+                />
+              ) : widgetId === "instrument" ? (
+                <WorkspaceEquipmentWidget
+                  eyebrow="LC-MS/MS"
+                  footer={
+                    rack.instrumentStatus === "ready"
+                      ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
+                      : "Populate the rack with at least one autosampler vial to switch the instrument preview into a ready state."
+                  }
+                >
+                  <LcMsMsInstrumentIllustration
+                    className="mx-auto max-w-[36rem]"
+                    status={rack.instrumentStatus}
+                    testId="lc-msms-instrument-illustration"
+                  />
+                </WorkspaceEquipmentWidget>
+              ) : (
+                <WorkspaceEquipmentWidget
+                  dataDropHighlighted={dnd.isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
+                  dropZoneTestId="grinder-dropzone"
+                  eyebrow="Cryogenic grinder"
+                  onDragOver={dnd.grinder.handleGrinderDragOver}
+                  onDrop={dnd.grinder.handleGrinderDrop}
+                >
+                  <GrinderWidgetContent
+                    formatProduceLotMetadata={workbench.formatProduceLotMetadata}
+                    grinder={dnd.grinder}
+                    isCommandPending={ui.isCommandPending}
+                    onCancelDropDraft={() => dropDraft.setPendingDropDraft(null)}
+                    onChangeDropDraftField={dropDraft.handleUpdateDropDraftField}
+                    onConfirmDropDraft={dropDraft.handleConfirmDropDraft}
+                    onDragEnd={dnd.clearDropTargets}
+                  />
+                </WorkspaceEquipmentWidget>
+              )}
+            </FloatingWidget>
+          ))}
+
+        <FloatingWidget
+          id="workbench"
+          isActive={workspace.activeWidgetId === "workbench"}
+          label="Workbench Widget"
+          onDragStart={(id, event) => {
+            if (dnd.dndDisabledByAction) return;
+            workspace.handleWidgetDragStart(id, event);
+          }}
+          onHeightChange={workspace.handleWidgetHeightChange}
+          position={workspace.widgetLayout.workbench}
+          zIndex={5}
+        >
+          <WorkbenchPanel
+            dndDisabled={dnd.dndDisabledByAction}
+            onAddWorkbenchSlot={workbench.handleAddWorkbenchSlot}
+            onApplyLimsLabelTicket={(slotId) => workbench.handleApplyLimsLabelTicket({ slotId })}
+            onApplySampleLabel={workbench.handleApplySampleLabel}
+            canApplyLimsLabelTicketToSlot={workbench.canApplyLimsLabelToSlot}
+            canDragBenchTool={dnd.workbench.canDragBenchTool}
+            isBenchSlotHighlighted={workbench.isBenchSlotHighlighted}
+            onBenchToolClick={spatula.handleSpatulaToolCardClick}
+            onBenchToolDragEnd={dnd.clearDropTargets}
+            onBenchToolIllustrationClick={spatula.handleSpatulaToolIllustrationClick}
+            onBenchToolPointerDown={spatula.handleSpatulaToolPointerDown}
+            onBenchToolPointerUp={spatula.handleSpatulaToolPointerUp}
+            onBenchToolDragStart={dnd.workbench.handleBenchToolDragStart}
+            onBenchToolDrop={dnd.workbench.handleBenchToolDrop}
+            onProduceLotClick={dnd.workbench.handleWorkbenchProduceLotClick}
+            onMoveSampleLabel={workbench.handleMoveSampleLabel}
+            onProduceLotDragStart={dnd.workbench.handleWorkbenchProduceLotDragStart}
+            onProduceDrop={dnd.workbench.handleProduceDrop}
+            onRemoveLiquid={workbench.handleRemoveLiquid}
+            onRemoveWorkbenchSlot={workbench.handleRemoveWorkbenchSlot}
+            onRestoreTrashedSampleLabel={workbench.handleRestoreTrashedSampleLabel}
+            onSampleLabelDragEnd={dnd.clearDropTargets}
+            onSampleLabelDragStart={dnd.workbench.handleWorkbenchSampleLabelDragStart}
+            onSampleLabelTextChange={workbench.handleSampleLabelTextChange}
+            onToggleToolSeal={workbench.handleToggleToolSeal}
+            renderPendingContent={(slot) => dropDraft.renderPendingBenchDropDraft(slot.id)}
+            slots={display.slots}
+            statusMessage={ui.statusMessage}
+            onToolbarItemDrop={workbench.handleToolbarItemDrop}
+          />
+        </FloatingWidget>
+      </div>
+    </section>
+  );
+}

@@ -2,6 +2,7 @@ import {
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
+import { getWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
 import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
@@ -67,15 +68,6 @@ export type DndSourceCase = {
     >
   >;
 };
-
-const workspaceWidgetItemToId = {
-  autosampler_rack_widget: "rack",
-  lc_msms_instrument_widget: "instrument",
-  cryogenic_grinder_widget: "grinder",
-  lims_terminal_widget: "lims",
-  gross_balance_widget: "gross_balance",
-  analytical_balance_widget: "analytical_balance",
-} as const;
 
 const toolbarItems = labWorkflowCategories.flatMap((category) => category.items);
 const toolItems = toolbarItems.filter((item): item is ToolCatalogItem => item.itemType === "tool");
@@ -407,10 +399,7 @@ function makePrintedLimsTicket(
 }
 
 function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
-  const widgetId =
-    item.itemType === "workspace_widget"
-      ? workspaceWidgetItemToId[item.id as keyof typeof workspaceWidgetItemToId]
-      : null;
+  const widgetId = item.itemType === "workspace_widget" ? getWorkspaceEquipmentWidgetId(item.id) : null;
 
   return {
     id: `palette-${item.id}`,

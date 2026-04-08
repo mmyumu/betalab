@@ -1,0 +1,75 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { useSpatulaInteraction } from "@/hooks/use-spatula-interaction";
+import { knifeCursor, spatulaCursor } from "@/lib/lab-scene-config";
+import type { SpatulaState } from "@/types/workbench";
+
+type ActionModeExperimentApi = {
+  loadSpatulaFromWorkbenchTool: (payload: { slot_id: string }) => void;
+  pourSpatulaIntoWorkbenchTool: (payload: { delta_mass_g: number; slot_id: string }) => void;
+};
+
+type UseActionModeOptions = {
+  clearDropTargets: () => void;
+  experimentApi: ActionModeExperimentApi;
+  spatula: SpatulaState;
+};
+
+export function useActionMode({ clearDropTargets, experimentApi, spatula }: UseActionModeOptions) {
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
+
+  const isKnifeMode = activeActionId === "knife";
+  const isSpatulaMode = activeActionId === "spatula";
+  const dndDisabledByAction = isKnifeMode || isSpatulaMode;
+  const workspaceCursor = isKnifeMode ? knifeCursor : isSpatulaMode ? spatulaCursor : undefined;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.closest("input, textarea, select, [contenteditable='true']") ||
+          target.getAttribute("role") === "textbox")
+      ) {
+        return;
+      }
+      const actionKey = event.key.toLowerCase();
+      if (actionKey !== "k" && actionKey !== "s") {
+        return;
+      }
+      event.preventDefault();
+      clearDropTargets();
+      setActiveActionId((current) =>
+        current === (actionKey === "k" ? "knife" : "spatula")
+          ? null
+          : actionKey === "k"
+            ? "knife"
+            : "spatula",
+      );
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [clearDropTargets]);
+
+  const spatulaInteraction = useSpatulaInteraction({
+    isSpatulaMode,
+    onLoadFromTool: (payload) => { void experimentApi.loadSpatulaFromWorkbenchTool(payload); },
+    onPourIntoTool: (payload) => { void experimentApi.pourSpatulaIntoWorkbenchTool(payload); },
+    spatula,
+  });
+
+  return {
+    activeActionId,
+    setActiveActionId,
+    dndDisabledByAction,
+    isKnifeMode,
+    isSpatulaMode,
+    workspaceCursor,
+    ...spatulaInteraction,
+  };
+}
