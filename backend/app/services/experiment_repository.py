@@ -122,39 +122,30 @@ class SqliteExperimentRepository:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, updated_at, snapshot_version, status, last_simulation_at, last_audit_entry, payload
+                SELECT id, updated_at, snapshot_version, status, last_simulation_at, last_audit_entry
                 FROM experiments
                 ORDER BY updated_at DESC, id DESC
                 """
             ).fetchall()
 
-        entries: list[ExperimentListEntrySchema] = []
-        for (
-            experiment_id,
-            updated_at,
-            snapshot_version,
-            status,
-            last_simulation_at,
-            last_audit_entry,
-            payload_json,
-        ) in rows:
-            if status is None or last_simulation_at is None:
-                payload = json.loads(payload_json)
-                schema = ExperimentSchema.model_validate(payload)
-                status = schema.status
-                last_simulation_at = schema.last_simulation_at.isoformat()
-                last_audit_entry = schema.audit_log[-1] if schema.audit_log else None
-            entries.append(
-                ExperimentListEntrySchema(
-                    id=experiment_id,
-                    status=status,
-                    last_simulation_at=datetime.fromisoformat(last_simulation_at),
-                    snapshot_version=snapshot_version,
-                    updated_at=datetime.fromisoformat(updated_at),
-                    last_audit_entry=last_audit_entry,
-                )
+        return [
+            ExperimentListEntrySchema(
+                id=experiment_id,
+                status=status,
+                last_simulation_at=datetime.fromisoformat(last_simulation_at),
+                snapshot_version=snapshot_version,
+                updated_at=datetime.fromisoformat(updated_at),
+                last_audit_entry=last_audit_entry,
             )
-        return entries
+            for (
+                experiment_id,
+                updated_at,
+                snapshot_version,
+                status,
+                last_simulation_at,
+                last_audit_entry,
+            ) in rows
+        ]
 
     def delete(self, experiment_id: str) -> bool:
         with self._connect() as connection:

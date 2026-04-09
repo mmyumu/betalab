@@ -35,14 +35,3 @@ class WriteDomainService(DomainService[ArgumentT], ABC):
     def _run(self, experiment: Experiment, arguments: ArgumentT) -> None: ...
 
 
-class ReadDomainService(DomainService[ArgumentT], ABC):
-    def run(self, experiment_id: str, arguments: ArgumentT) -> ExperimentSchema:
-        experiment = self._runtime._require_experiment(experiment_id)
-        did_advance = self._runtime._advance_experiment_to_now(experiment)
-        self._run(experiment, arguments)
-        if did_advance:
-            return self._runtime._persist_mutation_and_to_schema(experiment)
-        return self._runtime._to_schema(experiment)
-
-    @abstractmethod
-    def _run(self, experiment: Experiment, arguments: ArgumentT) -> None: ...
