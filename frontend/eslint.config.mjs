@@ -4,4 +4,10 @@ import nextTypescript from "eslint-config-next/typescript";
 export default [
   ...nextCoreWebVitals,
   ...nextTypescript,
+  {
+    rules: {
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ];

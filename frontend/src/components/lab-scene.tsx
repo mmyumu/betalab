@@ -18,7 +18,6 @@ import { useWorkbenchHandlers } from "@/hooks/use-workbench-handlers";
 import { useWorkspaceActions } from "@/hooks/use-workspace-actions";
 import { useWorkspaceDrop } from "@/hooks/use-workspace-drop";
 import {
-  inferAnchoredLayout,
   useWorkspaceLayout,
 } from "@/hooks/use-workspace-layout";
 import {
@@ -230,6 +229,31 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     workspaceRef,
   });
 
+  const readyExperiment = state.status === "ready" ? state.experiment : null;
+  const grossBalanceNetMassG =
+    readyExperiment?.limsReception.measuredGrossMassG === null || readyExperiment === null
+      ? null
+      : readyExperiment.limsReception.measuredGrossMassG +
+        readyExperiment.limsReception.grossMassOffsetG;
+
+  const workbenchHandlers = useWorkbenchHandlers({
+    activeDragItem,
+    activeDropTargets,
+    clearDropTargets,
+    dndDisabledByAction,
+    experimentApi,
+    hasPrintedLabelTicket,
+    setPendingDropDraft,
+  });
+
+  const workspaceActions = useWorkspaceActions({
+    analyticalBalanceTool,
+    experimentApi,
+    grossBalanceTool,
+    grossBalanceNetMassG,
+    measuredSampleMassG: readyExperiment?.limsReception.measuredSampleMassG ?? null,
+  });
+
   if (state.status === "loading") {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_30%),linear-gradient(180deg,#fffaf0_0%,#eef6ff_100%)] px-4 py-8 text-slate-950 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -268,11 +292,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
-  const grossBalanceNetMassG =
-    state.experiment.limsReception.measuredGrossMassG === null
-      ? null
-      : state.experiment.limsReception.measuredGrossMassG +
-        state.experiment.limsReception.grossMassOffsetG;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
     (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
   );
@@ -320,24 +339,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     trashedSampleLabels.length === 0 &&
     trashedWidgets.length === 0;
   const debugInventoryEnabled = process.env.NEXT_PUBLIC_ENABLE_DEBUG_INVENTORY === "true";
-
-  const workbenchHandlers = useWorkbenchHandlers({
-    activeDragItem,
-    activeDropTargets,
-    clearDropTargets,
-    dndDisabledByAction,
-    experimentApi,
-    hasPrintedLabelTicket,
-    setPendingDropDraft,
-  });
-
-  const workspaceActions = useWorkspaceActions({
-    analyticalBalanceTool,
-    experimentApi,
-    grossBalanceTool,
-    grossBalanceNetMassG,
-    measuredSampleMassG: state.experiment.limsReception.measuredSampleMassG,
-  });
 
   return (
     <LabSceneView

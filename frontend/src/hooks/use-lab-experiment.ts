@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   addLiquidToWorkbenchTool,
@@ -276,7 +276,6 @@ export function useLabExperiment({
   const [state, setState] = useState<LabExperimentState>({ status: "loading" });
   const [statusMessage, setStatusMessage] = useState(defaultStatusMessage);
   const [isCommandPending, setIsCommandPending] = useState(false);
-  const hasLoadedInitialExperiment = useRef(false);
   const latestSnapshotVersionRef = useRef(0);
   const isCommandPendingRef = useRef(false);
   const grossBalanceOffsetQueuedPayloadRef = useRef<Record<string, unknown> | null>(null);
@@ -287,11 +286,11 @@ export function useLabExperiment({
     setIsCommandPending(pending);
   };
 
-  const getLatestStatusMessage = (experiment: Experiment) => {
+  const getLatestStatusMessage = useCallback((experiment: Experiment) => {
     return experiment.audit_log.at(-1) ?? defaultStatusMessage;
-  };
+  }, [defaultStatusMessage]);
 
-  const applyExperimentSnapshot = (experiment: Experiment) => {
+  const applyExperimentSnapshot = useCallback((experiment: Experiment) => {
     if (experiment.snapshot_version < latestSnapshotVersionRef.current) {
       return;
     }
@@ -299,9 +298,10 @@ export function useLabExperiment({
     latestSnapshotVersionRef.current = experiment.snapshot_version;
     setState({ status: "ready", experiment });
     setStatusMessage(getLatestStatusMessage(experiment));
-  };
+  }, [getLatestStatusMessage]);
 
-  const loadExperiment = async () => {
+  const loadExperiment = useCallback(async () => {
+    latestSnapshotVersionRef.current = 0;
     setState({ status: "loading" });
 
     try {
@@ -315,25 +315,20 @@ export function useLabExperiment({
         message: error instanceof Error ? error.message : defaultErrorMessage,
       });
     }
-  };
+  }, [applyExperimentSnapshot, defaultErrorMessage, experimentId]);
 
   useEffect(() => {
-    if (hasLoadedInitialExperiment.current) {
-      return;
-    }
-
-    hasLoadedInitialExperiment.current = true;
     void loadExperiment();
-  }, []);
+  }, [loadExperiment]);
+
+  const readyExperimentId = state.status === "ready" ? state.experiment.id : null;
 
   useEffect(() => {
-    if (state.status !== "ready") {
+    if (!readyExperimentId) {
       return;
     }
 
-    const experimentId = state.experiment.id;
-
-    return subscribeToExperimentStream(experimentId, {
+    return subscribeToExperimentStream(readyExperimentId, {
       onError: (error) => {
         setStatusMessage(error.message);
       },
@@ -341,7 +336,7 @@ export function useLabExperiment({
         applyExperimentSnapshot(experiment);
       },
     });
-  }, [state.status, state.status === "ready" ? state.experiment.id : null]);
+  }, [applyExperimentSnapshot, readyExperimentId]);
 
   const runMutation = async (
     mutation: MutationFn,

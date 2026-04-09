@@ -29,8 +29,6 @@ export function CryogenicGrinderIllustration({
     radius: 30,
     width: 520,
   });
-  const bodyFill = isRunning ? "#334155" : "#475569";
-  const detailFill = isRunning ? "#0f172a" : "#1e293b";
   const accentFill = isRunning ? "#22c55e" : isReady ? "#f59e0b" : "#94a3b8";
   const panelGlow = isRunning
     ? "drop-shadow-[0_0_18px_rgba(34,197,94,0.45)]"

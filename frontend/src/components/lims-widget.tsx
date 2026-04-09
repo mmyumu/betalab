@@ -49,6 +49,7 @@ export function LimsWidget({
   const selectedEntryHarvestDate = selectedEntryView?.harvestDate ?? null;
   const selectedEntryIndicativeMassG = selectedEntryView?.indicativeMassG ?? null;
   const selectedEntryMeasuredSampleMassG = selectedEntryView?.measuredSampleMassG ?? null;
+  const hasSelectedEntryView = selectedEntryView !== null;
 
   useEffect(() => {
     if (reception.id !== previousReceptionIdRef.current) {
@@ -75,7 +76,7 @@ export function LimsWidget({
   }, [entries, reception.id, selectedEntryId]);
 
   useEffect(() => {
-    if (selectedEntryView) {
+    if (hasSelectedEntryView) {
       setOrchardName(selectedEntryOrchardName ?? "");
       setHarvestDate(selectedEntryHarvestDate ?? "");
       setIndicativeMassText(
@@ -98,6 +99,7 @@ export function LimsWidget({
       setMeasuredSampleMassText("");
     }
   }, [
+    hasSelectedEntryView,
     selectedEntryHarvestDate,
     selectedEntryId,
     selectedEntryIndicativeMassG,

@@ -36,7 +36,6 @@ import type {
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   RackSlot,
-  SpatulaState,
   ToolbarDragPayload,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
@@ -474,7 +473,6 @@ export function LabSceneWorkspaceCanvas({
             onToggleToolSeal={workbench.handleToggleToolSeal}
             renderPendingContent={(slot) => dropDraft.renderPendingBenchDropDraft(slot.id)}
             slots={display.slots}
-            statusMessage={ui.statusMessage}
             onToolbarItemDrop={workbench.handleToolbarItemDrop}
           />
         </FloatingWidget>

@@ -277,7 +277,8 @@ function optionalNumberBody(payload: Record<string, unknown>, fieldName: string)
   return { [fieldName]: requireNumber(payload, fieldName) };
 }
 
-export async function addWorkbenchSlot(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+export async function addWorkbenchSlot(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/workbench/slots`,
@@ -327,7 +328,8 @@ export async function discardToolFromPalette(experimentId: string, payload: Muta
   });
 }
 
-export async function discardSampleLabelFromPalette(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+export async function discardSampleLabelFromPalette(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/palette/sample-labels/discard`,
@@ -471,7 +473,8 @@ export async function placeReceivedBagOnWorkbench(experimentId: string, payload:
   });
 }
 
-export async function discardBasketTool(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+export async function discardBasketTool(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/reception/bag/discard`,
@@ -504,8 +507,9 @@ export async function moveWorkbenchToolToAnalyticalBalance(
 
 export async function moveBasketToolToGrossBalance(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/place-basket-tool`,
@@ -514,8 +518,9 @@ export async function moveBasketToolToGrossBalance(
 
 export async function moveAnalyticalBalanceToolToGrossBalance(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/place-analytical-balance-tool`,
@@ -572,8 +577,9 @@ export async function moveRackToolToAnalyticalBalance(
 
 export async function moveGrossBalanceToolToAnalyticalBalance(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/place-gross-balance-tool`,
@@ -652,8 +658,9 @@ export async function moveAnalyticalBalanceToolToRack(
 
 export async function discardGrossBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/discard-tool`,
@@ -662,8 +669,9 @@ export async function discardGrossBalanceTool(
 
 export async function discardAnalyticalBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/discard-tool`,
@@ -672,8 +680,9 @@ export async function discardAnalyticalBalanceTool(
 
 export async function tareAnalyticalBalance(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/tare`,
@@ -682,8 +691,9 @@ export async function tareAnalyticalBalance(
 
 export async function openAnalyticalBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/open-tool`,
@@ -692,8 +702,9 @@ export async function openAnalyticalBalanceTool(
 
 export async function closeAnalyticalBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/close-tool`,
@@ -702,8 +713,9 @@ export async function closeAnalyticalBalanceTool(
 
 export async function recordAnalyticalSampleMass(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/record-sample-mass`,
@@ -712,8 +724,9 @@ export async function recordAnalyticalSampleMass(
 
 export async function openGrossBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/open-tool`,
@@ -722,16 +735,17 @@ export async function openGrossBalanceTool(
 
 export async function closeGrossBalanceTool(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/close-tool`,
   });
 }
 
-export async function recordGrossWeight(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
-  const body = _payload && "measured_gross_mass_g" in _payload ? _payload : undefined;
+export async function recordGrossWeight(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  const body = payload && "measured_gross_mass_g" in payload ? payload : undefined;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/reception/gross-weight/record`,
@@ -884,7 +898,8 @@ export async function printLimsLabel(experimentId: string, payload?: MutationPay
   });
 }
 
-export async function discardPrintedLimsLabel(experimentId: string, _payload?: MutationPayload): Promise<Experiment> {
+export async function discardPrintedLimsLabel(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "DELETE",
     path: `/experiments/${experimentId}/lims/printed-label`,
@@ -902,8 +917,9 @@ export async function applyPrintedLimsLabel(experimentId: string, payload: Mutat
 
 export async function applyPrintedLimsLabelToBasketBag(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/lims/apply-label-to-basket-bag`,
@@ -912,8 +928,9 @@ export async function applyPrintedLimsLabelToBasketBag(
 
 export async function applyPrintedLimsLabelToGrossBalanceBag(
   experimentId: string,
-  _payload?: MutationPayload,
+  payload?: MutationPayload,
 ): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/lims/apply-label-to-gross-balance-bag`,

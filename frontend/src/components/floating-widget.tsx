@@ -22,7 +22,6 @@ export function FloatingWidget({
   children,
   id,
   isActive = false,
-  label: _label,
   onDragStart,
   onHeightChange,
   position,

@@ -108,7 +108,6 @@ type WorkbenchPanelProps = {
   onToggleToolSeal?: (slotId: string, tool: BenchToolInstance) => void;
   renderPendingContent?: (slot: BenchSlot, tool: BenchToolInstance | null) => ReactNode;
   slots: BenchSlot[];
-  statusMessage: string;
   onToolbarItemDrop: (slotId: string, payload: ToolbarDragPayload) => void;
 };
 
@@ -140,7 +139,6 @@ export function WorkbenchPanel({
   onToggleToolSeal,
   renderPendingContent,
   slots,
-  statusMessage,
   onToolbarItemDrop,
 }: WorkbenchPanelProps) {
   const canAcceptWorkbenchDrop = (event: DragEvent<HTMLElement>, slot: BenchSlot) => {

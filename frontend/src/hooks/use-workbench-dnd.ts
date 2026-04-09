@@ -24,7 +24,6 @@ import type {
   BenchLabel,
   BenchToolDragPayload,
   BenchToolInstance,
-  DropTargetType,
   ExperimentProduceLot,
   GrossBalanceToolDragPayload,
   LimsLabelTicketDragPayload,

@@ -398,7 +398,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
     setWidgetOrder((current) =>
       current.length === initialOrder.length ? current : [...initialOrder],
     );
-  }, [syncKey]);
+  }, [initialLayout, initialOrder, syncKey, workspaceSize]);
 
   const handleWidgetHeightChange = (widgetId: string, height: number) => {
     if (!(widgetId in initialLayout) || height <= 0) {

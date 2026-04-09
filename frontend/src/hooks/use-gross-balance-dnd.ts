@@ -5,7 +5,6 @@ import {
   readAnalyticalBalanceToolDragPayload,
   readBasketToolDragPayload,
   readBenchToolDragPayload,
-  readGrossBalanceToolDragPayload,
   readLimsLabelTicketDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
