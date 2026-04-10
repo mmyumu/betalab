@@ -12,5 +12,4 @@ export async function dragAndDrop(source: Locator, target: Locator) {
   await target.dispatchEvent("dragenter", { dataTransfer });
   await target.dispatchEvent("dragover", { dataTransfer });
   await target.dispatchEvent("drop", { dataTransfer });
-  await source.dispatchEvent("dragend", { dataTransfer });
 }

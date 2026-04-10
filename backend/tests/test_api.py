@@ -135,6 +135,129 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
     assert applied.json()["lims_reception"]["status"] == "received"
 
 
+def _find_slot(payload: dict, slot_id: str) -> dict:
+    return next(s for s in payload["workbench"]["slots"] if s["id"] == slot_id)
+
+
+def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        # --- Réception ---
+        basket_moved_to_balance = client.post(f"/experiments/{experiment_id}/gross-balance/place-basket-tool")
+        registered = client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Verger Saint-Martin",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": None,
+                "measured_sample_mass_g": 10.0,
+            },
+        )
+        printed = client.post(f"/experiments/{experiment_id}/lims/print-label")
+        labeled = client.post(f"/experiments/{experiment_id}/lims/apply-label-to-gross-balance-bag")
+
+        # --- Découpe ---
+        moved_bag_to_bench = client.post(
+            f"/experiments/{experiment_id}/gross-balance/move-tool-to-workbench",
+            json={"target_slot_id": "station_1"},
+        )
+        added_slot = client.post(f"/experiments/{experiment_id}/workbench/slots")
+        placed_board = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_2/place-tool",
+            json={"tool_id": "cutting_board_hdpe"},
+        )
+
+        received_bag = _find_slot(moved_bag_to_bench.json(), "station_1")["tool"]
+        board = _find_slot(placed_board.json(), "station_2")["tool"]
+        produce_lot_id = received_bag["produce_lots"][0]["id"]
+        bag_tool_id = received_bag["id"]
+        board_tool_id = board["id"]
+
+        moved_to_board = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{produce_lot_id}/move-to-tool",
+            json={"source_slot_id": "station_1", "target_slot_id": "station_2"},
+        )
+        cut = client.post(
+            f"/experiments/{experiment_id}/workbench/produce-lots/{produce_lot_id}/cut",
+            json={"slot_id": "station_2"},
+        )
+
+        # --- Broyage ---
+        added_grinder = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets",
+            json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+        )
+        moved_to_grinder = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/move-workbench-produce-lot",
+            json={"source_slot_id": "station_2", "produce_lot_id": produce_lot_id},
+        )
+        cooled = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids",
+            json={"liquid_id": "dry_ice_pellets", "volume_ml": 1000},
+        )
+        completed = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/complete-grinder-cycle"
+        )
+
+        # --- Transfert en pot ---
+        placed_jar = client.post(
+            f"/experiments/{experiment_id}/workbench/slots/station_3/place-tool",
+            json={"tool_id": "hdpe_storage_jar_2l"},
+        )
+        jar_tool_id = _find_slot(placed_jar.json(), "station_3")["tool"]["id"]
+        opened_jar = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{jar_tool_id}/open"
+        )
+        moved_to_jar = client.post(
+            f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{produce_lot_id}/move-to-workbench-tool",
+            json={"target_slot_id": "station_3"},
+        )
+
+    assert basket_moved_to_balance.status_code == 200
+    assert basket_moved_to_balance.json()["basket_tool"] is None
+    assert basket_moved_to_balance.json()["lims_reception"]["measured_gross_mass_g"] > 0
+    assert registered.status_code == 200
+    sample_code = registered.json()["lims_reception"]["lab_sample_code"]
+    assert sample_code.startswith("APP-2026-")
+    assert printed.status_code == 200
+    assert labeled.status_code == 200
+    gross_balance = _find_widget(labeled.json(), "gross_balance")
+    assert gross_balance["tool"]["sample_label_text"] == sample_code
+    assert moved_bag_to_bench.status_code == 200
+    assert _find_slot(moved_bag_to_bench.json(), "station_1")["tool"]["id"] == bag_tool_id
+    assert added_slot.status_code == 200
+    assert len(added_slot.json()["workbench"]["slots"]) == 3
+    assert placed_board.status_code == 200
+    assert _find_slot(placed_board.json(), "station_2")["tool"]["id"] == board_tool_id
+    assert moved_to_board.status_code == 200
+    assert _find_slot(moved_to_board.json(), "station_1")["tool"]["produce_lots"] == []
+    assert _find_slot(moved_to_board.json(), "station_2")["tool"]["produce_lots"][0]["id"] == produce_lot_id
+    assert cut.status_code == 200
+    assert _find_slot(cut.json(), "station_2")["tool"]["produce_lots"][0]["cut_state"] == "cut"
+    assert added_grinder.status_code == 200
+    assert moved_to_grinder.status_code == 200
+    assert _find_widget(moved_to_grinder.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
+    assert cooled.status_code == 200
+    cooled_grinder = _find_widget(cooled.json(), "grinder")
+    assert cooled_grinder["liquids"][0]["liquid_id"] == "dry_ice_pellets"
+    assert completed.status_code == 200
+    completed_grinder = _find_widget(completed.json(), "grinder")
+    assert completed_grinder["produce_lots"][0]["cut_state"] == "ground"
+    assert placed_jar.status_code == 200
+    assert opened_jar.status_code == 200
+    assert moved_to_jar.status_code == 200
+    assert _find_widget(moved_to_jar.json(), "grinder")["produce_lots"] == []
+    jar_tool = _find_slot(moved_to_jar.json(), "station_3")["tool"]
+    assert jar_tool["tool_id"] == "hdpe_storage_jar_2l"
+    assert jar_tool["produce_lots"][0]["id"] == produce_lot_id
+    assert jar_tool["produce_lots"][0]["cut_state"] == "ground"
+    assert moved_to_jar.json()["audit_log"][-1] == (
+        "Orchard apple lot moved from Cryogenic grinder to Wide-neck HDPE jar."
+    )
+
+
 def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)

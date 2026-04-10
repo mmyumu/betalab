@@ -10,6 +10,49 @@ async function expandToolbarCategory(page: Parameters<typeof test.beforeEach>[0]
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }
 
+const savedExperiment = {
+  id: "experiment_pesticides",
+  last_audit_entry: "Autosampler vial placed in Position 1.",
+  last_simulation_at: "2026-04-08T14:15:00Z",
+  snapshot_version: 7,
+  status: "preparing" as const,
+  updated_at: "2026-04-08T14:18:00Z",
+};
+
+test.describe("Experiments home", () => {
+  test("lists saved experiments from the mocked backend", async ({ page }) => {
+    await mockWorkbenchApi(page, { savedExperiments: [savedExperiment] });
+
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: "Saved experiments" })).toBeVisible();
+    await expect(page.getByText(savedExperiment.id)).toBeVisible();
+    await expect(page.getByText(savedExperiment.last_audit_entry)).toBeVisible();
+    await expect(page.getByText("1 session")).toBeVisible();
+  });
+
+  test("opens an existing experiment from the home page", async ({ page }) => {
+    await mockWorkbenchApi(page, { savedExperiments: [savedExperiment] });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open experiment" }).click();
+
+    await expect(page).toHaveURL(/\/experiments\/experiment_pesticides$/);
+    await expect(page.getByTestId("bench-slot-station_1")).toBeVisible();
+  });
+
+  test("deletes a saved experiment from the home page", async ({ page }) => {
+    await mockWorkbenchApi(page, { savedExperiments: [savedExperiment] });
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Delete" }).click();
+
+    await expect(page.getByText("0 sessions")).toBeVisible();
+    await expect(page.getByText("No saved experiments yet.")).toBeVisible();
+    await expect(page.getByText(savedExperiment.id)).toHaveCount(0);
+  });
+});
+
 test.describe("Pesticide workbench", () => {
   let api: Awaited<ReturnType<typeof mockWorkbenchApi>>;
 
@@ -32,6 +75,32 @@ test.describe("Pesticide workbench", () => {
     await expect(page.getByTestId("widget-basket")).toBeVisible();
     await expect(page.getByTestId("widget-rack")).toHaveCount(0);
     await expect(page.getByTestId("widget-instrument")).toHaveCount(0);
+  });
+
+  test("adds rack and instrument widgets from the palette onto the workspace", async ({ page }) => {
+    await expandToolbarCategory(page, "Workspace equipment");
+
+    await dragAndDrop(
+      page.getByTestId("toolbar-item-autosampler_rack_widget"),
+      page.getByTestId("widget-workspace"),
+    );
+    await dragAndDrop(
+      page.getByTestId("toolbar-item-lc_msms_instrument_widget"),
+      page.getByTestId("widget-workspace"),
+    );
+
+    await expect(page.getByTestId("widget-rack")).toBeVisible();
+    await expect(page.getByTestId("widget-instrument")).toBeVisible();
+    expect(api.commands).toMatchObject([
+      {
+        payload: expect.objectContaining({ widget_id: "rack" }),
+        type: "add_workspace_widget",
+      },
+      {
+        payload: expect.objectContaining({ widget_id: "instrument" }),
+        type: "add_workspace_widget",
+      },
+    ]);
   });
 
   test("adds and removes a workbench station through the real browser UI", async ({ page }) => {

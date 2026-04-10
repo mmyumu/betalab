@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 
-import type { Experiment } from "../../src/types/experiment";
+import type { Experiment, ExperimentListEntry } from "../../src/types/experiment";
 import type {
   BenchSlot,
   BenchToolInstance,
@@ -18,6 +18,10 @@ type CommandRecord = {
 
 type MockWorkbenchApi = {
   commands: CommandRecord[];
+};
+
+type MockWorkbenchApiOptions = {
+  savedExperiments?: ExperimentListEntry[];
 };
 
 const defaultAuditLog = [
@@ -213,6 +217,17 @@ function makeExperiment(): Experiment {
   };
 }
 
+function makeExperimentListEntry(experiment: Experiment): ExperimentListEntry {
+  return {
+    id: experiment.id,
+    last_audit_entry: experiment.audit_log.at(-1) ?? null,
+    last_simulation_at: experiment.last_simulation_at,
+    snapshot_version: experiment.snapshot_version,
+    status: experiment.status,
+    updated_at: experiment.last_simulation_at,
+  };
+}
+
 function appendAudit(experiment: Experiment, message: string) {
   return {
     ...experiment,
@@ -362,35 +377,51 @@ function parseJsonBody(route: Route): Record<string, unknown> {
   return {};
 }
 
-export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
+export async function mockWorkbenchApi(
+  page: Page,
+  options: MockWorkbenchApiOptions = {},
+): Promise<MockWorkbenchApi> {
   let experiment = makeExperiment();
+  let savedExperiments = options.savedExperiments
+    ? structuredClone(options.savedExperiments)
+    : [];
   const commands: CommandRecord[] = [];
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  const apiPattern = /^http:\/\/(?:localhost|127\.0\.0\.1):(8000|8010)\/experiments(?:\/.*)?$/;
 
-  await page.route(`${apiBase}/experiments`, async (route) => {
-    if (route.request().method() === "GET") {
-      await fulfillJson(route, 200, []);
-      return;
-    }
+  await page.route(apiPattern, async (route) => {
+    const request = route.request();
+    const method = request.method();
+    const path = new URL(request.url()).pathname;
 
-    if (route.request().method() !== "POST") {
+    // --- /experiments list ---
+    if (path === "/experiments") {
+      if (method === "GET") {
+        await fulfillJson(route, 200, savedExperiments);
+        return;
+      }
+      if (method === "POST") {
+        experiment = makeExperiment();
+        savedExperiments = [
+          makeExperimentListEntry(experiment),
+          ...savedExperiments.filter((entry) => entry.id !== experiment.id),
+        ];
+        await fulfillJson(route, 200, experiment);
+        return;
+      }
       await route.fallback();
       return;
     }
 
-    experiment = makeExperiment();
-    await fulfillJson(route, 200, experiment);
-  });
-
-  await page.route(`${apiBase}/experiments/**`, async (route) => {
-    const request = route.request();
-    const method = request.method();
-    const url = new URL(request.url());
-    const path = url.pathname;
-
+    // --- /experiments/{id} and sub-paths ---
     if (method === "GET" && path === `/experiments/${experiment.id}`) {
       await fulfillJson(route, 200, experiment);
+      return;
+    }
+
+    if (method === "DELETE" && path === `/experiments/${experiment.id}`) {
+      savedExperiments = savedExperiments.filter((entry) => entry.id !== experiment.id);
+      await route.fulfill({ body: "", status: 204 });
       return;
     }
 
@@ -461,6 +492,10 @@ export async function mockWorkbenchApi(page: Page): Promise<MockWorkbenchApi> {
 
     commands.push(command);
     experiment = applyCommand(experiment, command.type, command.payload);
+    savedExperiments = [
+      makeExperimentListEntry(experiment),
+      ...savedExperiments.filter((entry) => entry.id !== experiment.id),
+    ];
     await fulfillJson(route, 200, experiment);
   });
 
