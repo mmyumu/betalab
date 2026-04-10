@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.domain.rules import can_tool_be_sealed
 from app.domain.models import Experiment, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
+from app.domain.rules import can_tool_be_sealed
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
-from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.helpers.lookups import (
     find_rack_slot,
     find_trash_tool,
@@ -13,6 +12,7 @@ from app.services.helpers.lookups import (
     find_workspace_widget,
 )
 from app.services.helpers.workbench import build_workbench_tool
+from app.services.physical_simulation_service import PhysicalSimulationService
 
 _ANALYTICAL_BALANCE_MAX_G = 220.0
 _ANALYTICAL_BALANCE_TARE_LIMIT_G = 12.0

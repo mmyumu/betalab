@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.domain.models import ProduceLot, WorkbenchTool, new_id
 
@@ -59,7 +59,7 @@ class ReceivedAppleSampleSpec:
 
 
 def generate_received_apple_sample_spec(rng: random.Random | None = None) -> ReceivedAppleSampleSpec:
-    rng = rng or random.Random()
+    rng = rng or random.Random()  # nosec B311 — simulation data, not cryptographic use
     orchard_name = rng.choices(
         [name for name, _weight in _ORCHARD_NAME_WEIGHTS],
         weights=[weight for _name, weight in _ORCHARD_NAME_WEIGHTS],
@@ -71,7 +71,7 @@ def generate_received_apple_sample_spec(rng: random.Random | None = None) -> Rec
         k=1,
     )[0]
     harvest_date = (
-        datetime.now(timezone.utc).date() - timedelta(days=harvest_days_back)
+        datetime.now(UTC).date() - timedelta(days=harvest_days_back)
     ).isoformat()
     theoretical_mass_g = rng.choices(
         [mass for mass, _weight in _THEORETICAL_LOT_MASS_WEIGHTS_G],
@@ -82,7 +82,7 @@ def generate_received_apple_sample_spec(rng: random.Random | None = None) -> Rec
     deviation_g = rng.gauss(0.0, theoretical_mass_g * 0.012)
     deviation_g = max(min(deviation_g, deviation_limit_g), -deviation_limit_g)
     actual_mass_g = round(max(theoretical_mass_g + deviation_g, 1000.0), 1)
-    unit_count = max(8, int(round(actual_mass_g / 205.0)))
+    unit_count = max(8, round(actual_mass_g / 205.0))
 
     return ReceivedAppleSampleSpec(
         orchard_name=orchard_name,

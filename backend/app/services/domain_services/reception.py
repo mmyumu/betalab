@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.models import (
     Experiment,
@@ -159,7 +159,7 @@ class PrintLimsLabelService(WriteDomainService[PrintLimsLabelRequest]):
             id=new_id("lims_ticket"),
             sample_code=sample_code,
             label_text=sample_code,
-            received_date=datetime.now(timezone.utc).date().isoformat(),
+            received_date=datetime.now(UTC).date().isoformat(),
         )
         entry.printed_label_ticket = ticket
         experiment.lims_reception = _clone_lims_entry(entry, printed_label_ticket=ticket)

@@ -39,9 +39,11 @@ def test_analytical_balance_records_precise_sample_mass() -> None:
         MoveAnalyticalBalanceToolToWorkbenchRequest(target_slot_id="station_1"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.workbench.slots[0].tool.powder_mass_g = 10.124
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.powder_mass_g = 10.124
     runtime_experiment.workspace.widgets[1].tool = None
-    runtime_experiment.workspace.widgets[2].tool = runtime_experiment.workbench.slots[0].tool
+    runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
     updated = RecordAnalyticalSampleMassService(service).run(experiment.id, EmptyRequest())
     assert updated.lims_reception.measured_sample_mass_g == pytest.approx(10.124)
@@ -61,9 +63,11 @@ def test_analytical_balance_rejects_out_of_spec_sample_mass() -> None:
         MoveAnalyticalBalanceToolToWorkbenchRequest(target_slot_id="station_1"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.workbench.slots[0].tool.powder_mass_g = 10.5
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.powder_mass_g = 10.5
     runtime_experiment.workspace.widgets[1].tool = None
-    runtime_experiment.workspace.widgets[2].tool = runtime_experiment.workbench.slots[0].tool
+    runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
 
     with pytest.raises(ValueError, match="ERR_RANGE"):
@@ -80,7 +84,11 @@ def test_analytical_balance_tool_can_be_closed_and_reopened() -> None:
     )
 
     closed = CloseAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
-    assert closed.workspace.widgets[2].tool.is_sealed is True
+    closed_tool = closed.workspace.widgets[2].tool
+    assert closed_tool is not None
+    assert closed_tool.is_sealed is True
 
     reopened = OpenAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
-    assert reopened.workspace.widgets[2].tool.is_sealed is False
+    reopened_tool = reopened.workspace.widgets[2].tool
+    assert reopened_tool is not None
+    assert reopened_tool.is_sealed is False

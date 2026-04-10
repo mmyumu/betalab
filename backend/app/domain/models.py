@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import uuid4
 
 
-class ExperimentStatus(str, Enum):
+class ExperimentStatus(StrEnum):
     PREPARING = "preparing"
 
 
@@ -74,7 +74,7 @@ class WorkbenchTool:
     trapped_co2_mass_g: float = 0.0
     field_label_text: str | None = None
     labels: list[ContainerLabel] = field(default_factory=list)
-    produce_lots: list["ProduceLot"] = field(default_factory=list)
+    produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
     powder_mass_g: float = 0.0
 
@@ -97,7 +97,7 @@ class WorkbenchSlot:
     id: str
     label: str
     tool: WorkbenchTool | None = None
-    surface_produce_lots: list["ProduceLot"] = field(default_factory=list)
+    surface_produce_lots: list[ProduceLot] = field(default_factory=list)
 
 
 @dataclass
@@ -137,7 +137,7 @@ class EntityOrigin:
 class TrashProduceLotEntry:
     id: str
     origin_label: str
-    produce_lot: "ProduceLot"
+    produce_lot: ProduceLot
     origin: EntityOrigin | None = None
 
 
@@ -169,7 +169,7 @@ class WorkspaceWidget:
     grinder_run_remaining_ms: float = 0.0
     grinder_fault: str | None = None
     tool: WorkbenchTool | None = None
-    produce_lots: list["ProduceLot"] = field(default_factory=list)
+    produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
 
 

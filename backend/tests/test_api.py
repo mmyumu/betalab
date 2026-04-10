@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
 import app.api.experiments as experiments_api
-from app.api.experiment_routes import common as experiment_routes_common
 from app.api.experiment_routes import analytical_balance as experiment_routes_analytical_balance
+from app.api.experiment_routes import common as experiment_routes_common
 from app.api.experiment_routes import core as experiment_routes_core
 from app.api.experiment_routes import gross_balance as experiment_routes_gross_balance
 from app.api.experiment_routes import rack as experiment_routes_rack
@@ -15,9 +15,9 @@ from app.api.experiment_routes import workbench as experiment_routes_workbench
 from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
 from app.main import app
-from app.services.helpers.workbench import build_workbench_tool
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
+from app.services.helpers.workbench import build_workbench_tool
 
 
 @pytest.fixture(autouse=True)
@@ -628,7 +628,7 @@ def test_trash_tool_restore_routes_round_trip_over_http() -> None:
 
 
 def test_workspace_routes_round_trip_over_http() -> None:
-    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=timezone.utc)
+    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=UTC)
     warmed_at = created_at + timedelta(seconds=10)
     original_now_fn = experiment_service._now_fn
     experiment_service._now_fn = lambda: created_at
@@ -698,7 +698,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
 
 
 def test_experiment_stream_pushes_updated_snapshots() -> None:
-    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=timezone.utc)
+    created_at = datetime(2026, 3, 28, 19, 0, tzinfo=UTC)
     warmed_at = created_at + timedelta(seconds=10)
     original_now_fn = experiment_service._now_fn
     experiment_service._now_fn = lambda: created_at

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.models import (
     AnalyticalBalanceState,
@@ -142,7 +142,7 @@ def build_experiment() -> Experiment:
         basket_tool=basket_tool,
         spatula=SpatulaState(),
         analytical_balance=AnalyticalBalanceState(),
-        last_simulation_at=datetime.now(timezone.utc),
+        last_simulation_at=datetime.now(UTC),
         audit_log=[
             "Experiment created",
             "Receive the grower bag, weigh it, then register it in the LIMS.",

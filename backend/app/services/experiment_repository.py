@@ -5,7 +5,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
@@ -68,7 +68,7 @@ class SqliteExperimentRepository:
 
     def save(self, experiment: Experiment) -> None:
         payload = json.dumps(_serialize_experiment(experiment), sort_keys=True)
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         last_audit_entry = experiment.audit_log[-1] if experiment.audit_log else None
         with self._connect() as connection:
             connection.execute(

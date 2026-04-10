@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import Callable
+from datetime import UTC, datetime
 
 from app.domain.models import Experiment
 from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
@@ -19,7 +19,7 @@ class ExperimentRuntimeService:
     def __init__(self, repository: ExperimentRepository | None = None) -> None:
         self._experiments: dict[str, Experiment] = {}
         self._repository = repository or InMemoryExperimentRepository()
-        self._now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)
+        self._now_fn: Callable[[], datetime] = lambda: datetime.now(UTC)
 
     def create_experiment(self) -> ExperimentSchema:
         experiment = build_experiment()
@@ -56,7 +56,7 @@ class ExperimentRuntimeService:
     def _advance_experiment_to_now(self, experiment: Experiment) -> bool:
         now = self._now_fn()
         if now.tzinfo is None:
-            now = now.replace(tzinfo=timezone.utc)
+            now = now.replace(tzinfo=UTC)
 
         elapsed_ms = (now - experiment.last_simulation_at).total_seconds() * 1000.0
         if elapsed_ms <= 0:
