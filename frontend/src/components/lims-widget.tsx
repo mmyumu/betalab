@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { SampleIdentityLabel } from "@/components/sample-identity-label";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
@@ -8,6 +9,7 @@ import type { LimsReception, PrintedLabelTicket } from "@/types/workbench";
 
 type LimsWidgetProps = {
   entries: LimsReception[];
+  headerAction?: ReactNode;
   onSaveReception: (payload: {
     entry_id?: string;
     harvest_date: string;
@@ -23,6 +25,7 @@ type LimsWidgetProps = {
 
 export function LimsWidget({
   entries,
+  headerAction,
   onSaveReception,
   onPrintLabel,
   onTicketDragEnd,
@@ -134,6 +137,7 @@ export function LimsWidget({
     <WorkspaceEquipmentWidget
       bodyClassName="px-3 py-4"
       eyebrow="LIMS"
+      headerAction={headerAction}
     >
       <div className="space-y-2.5">
         <div className="overflow-hidden rounded-[1.4rem] border border-slate-300 bg-[linear-gradient(180deg,#d8dee5,#c2ccd6)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">

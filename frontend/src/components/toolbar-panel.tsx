@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { InventoryEquipmentItem } from "@/components/inventory-equipment-item";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { WorkspaceEquipmentIcon } from "@/components/icons/workspace-equipment-icon";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
@@ -96,52 +97,78 @@ export function ToolbarPanel({
               data-testid={`toolbar-category-panel-${category.id}`}
             >
                 {category.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`${dragDisabled ? "" : dragAffordanceClassName} rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform ${
-                      dragDisabled ? "" : "hover:-translate-y-0.5"
-                    } ${
-                      item.itemType === "liquid" ? accentClasses[item.accent] : neutralToolClasses
-                    }`}
-                    data-testid={`toolbar-item-${item.id}`}
-                    draggable={!dragDisabled}
-                    onDragEnd={() => {
-                      onItemDragEnd?.();
-                    }}
-                    onDragStart={(event) => {
-                      if (dragDisabled) {
-                        event.preventDefault();
-                        return;
-                      }
-                      const payload = createToolbarDragPayload(item);
-                      onItemDragStart?.(item, payload.allowedDropTargets);
-                      writeToolbarDragPayload(event.dataTransfer, payload);
-                    }}
-                    title={item.subtitle}
-                    >
-                      <div className="flex items-center gap-2">
-                      {item.itemType === "workspace_widget" ? (
+                  item.itemType === "workspace_widget" ? (
+                    <InventoryEquipmentItem
+                      dataTestId={`toolbar-item-${item.id}`}
+                      icon={(
                         <WorkspaceEquipmentIcon
                           className="h-8 w-10 shrink-0 overflow-hidden rounded-md"
                           widgetType={item.widgetType}
                         />
-                      ) : item.itemType === "sample_label" ? (
-                        <SampleLabelIcon />
-                      ) : (
-                        <LabAssetIcon
-                          accent={item.accent}
-                          className="h-8 w-7 shrink-0"
-                          fillRatio={item.itemType === "tool" ? 0 : undefined}
-                          isSealed={
-                            item.itemType === "tool" ? canToolBeSealed(item.toolType) : false
-                          }
-                          kind={item.itemType === "tool" ? item.toolType : item.liquidType}
-                          tone={item.itemType === "tool" ? "neutral" : "accent"}
-                        />
                       )}
-                      <p className="min-w-0 text-[13px] font-semibold leading-4">{item.name}</p>
+                      key={item.id}
+                      onDragEnd={
+                        dragDisabled
+                          ? undefined
+                          : () => {
+                              onItemDragEnd?.();
+                            }
+                      }
+                      onDragStart={
+                        dragDisabled
+                          ? undefined
+                          : (dataTransfer) => {
+                              const payload = createToolbarDragPayload(item);
+                              onItemDragStart?.(item, payload.allowedDropTargets);
+                              writeToolbarDragPayload(dataTransfer, payload);
+                            }
+                      }
+                      subtitle={item.subtitle}
+                      title={item.name}
+                    />
+                  ) : (
+                    <div
+                      key={item.id}
+                      className={`${dragDisabled ? "" : dragAffordanceClassName} rounded-[0.95rem] bg-gradient-to-br p-2 ring-1 transition-transform ${
+                        dragDisabled ? "" : "hover:-translate-y-0.5"
+                      } ${
+                        item.itemType === "liquid" ? accentClasses[item.accent] : neutralToolClasses
+                      }`}
+                      data-testid={`toolbar-item-${item.id}`}
+                      draggable={!dragDisabled}
+                      onDragEnd={() => {
+                        onItemDragEnd?.();
+                      }}
+                      onDragStart={(event) => {
+                        if (dragDisabled) {
+                          event.preventDefault();
+                          return;
+                        }
+                        const payload = createToolbarDragPayload(item);
+                        onItemDragStart?.(item, payload.allowedDropTargets);
+                        writeToolbarDragPayload(event.dataTransfer, payload);
+                      }}
+                      title={item.subtitle}
+                    >
+                      <div className="flex items-center gap-2">
+                        {item.itemType === "sample_label" ? (
+                          <SampleLabelIcon />
+                        ) : (
+                          <LabAssetIcon
+                            accent={item.accent}
+                            className="h-8 w-7 shrink-0"
+                            fillRatio={item.itemType === "tool" ? 0 : undefined}
+                            isSealed={
+                              item.itemType === "tool" ? canToolBeSealed(item.toolType) : false
+                            }
+                            kind={item.itemType === "tool" ? item.toolType : item.liquidType}
+                            tone={item.itemType === "tool" ? "neutral" : "accent"}
+                          />
+                        )}
+                        <p className="min-w-0 text-[13px] font-semibold leading-4">{item.name}</p>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))}
             </div>
           </article>

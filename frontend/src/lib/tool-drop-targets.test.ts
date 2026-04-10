@@ -54,6 +54,7 @@ describe("tool drop targets", () => {
   });
 
   it("routes storable workspace widgets to inventory and trashed widgets back to workspace", () => {
+    expect(canWorkspaceWidgetBeStored("lims")).toBe(true);
     expect(canWorkspaceWidgetBeStored("rack")).toBe(true);
     expect(canWorkspaceWidgetBeStored("grinder")).toBe(true);
     expect(canWorkspaceWidgetBeStored("basket")).toBe(false);

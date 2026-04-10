@@ -157,12 +157,12 @@ describe("ToolbarPanel", () => {
         .getByTestId("toolbar-item-autosampler_rack_widget")
         .querySelector("[data-widget-type='autosampler_rack']"),
     ).toBeInTheDocument();
+    expect(screen.getByText("Sequence staging")).toBeInTheDocument();
     expect(
       screen.getByTestId("toolbar-item-sampling_bag_label").querySelector("[data-kind='sample_label']"),
     ).toBeInTheDocument();
     expect(screen.queryByText("100 mL calibration prep")).not.toBeInTheDocument();
     expect(screen.queryByText("Organic modifier")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sequence staging")).not.toBeInTheDocument();
     expect(screen.queryByText("Traceability")).not.toBeInTheDocument();
     expect(screen.queryByText("tool")).not.toBeInTheDocument();
     expect(screen.queryByText("liquid")).not.toBeInTheDocument();

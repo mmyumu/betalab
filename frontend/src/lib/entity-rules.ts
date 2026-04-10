@@ -62,6 +62,7 @@ export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
 
 export function canWorkspaceWidgetBeStored(widgetId: ExperimentWorkspaceWidgetId): boolean {
   return (
+      widgetId === "lims" ||
       widgetId === "rack" ||
       widgetId === "instrument" ||
       widgetId === "grinder" ||

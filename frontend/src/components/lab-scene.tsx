@@ -441,7 +441,13 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         workspaceHeight,
         workspaceRef,
       }}
-      workspaceActions={workspaceActions}
+      workspaceActions={{
+        ...workspaceActions,
+        onStoreWorkspaceWidget: (widgetId) => {
+          clearDropTargets();
+          void experimentApi.storeWorkspaceWidget({ widget_id: widgetId });
+        },
+      }}
     />
   );
 }

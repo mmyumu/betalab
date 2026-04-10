@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { AppleIllustration } from "@/components/illustrations/apple-illustration";
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
@@ -8,6 +8,7 @@ import { ItemCountBadge } from "@/components/item-count-badge";
 import { LabAssetIcon } from "@/components/icons/lab-asset-icon";
 import { LcMsMsInstrumentIllustration } from "@/components/illustrations/lc-msms-instrument-illustration";
 import { ProduceBasketIllustration } from "@/components/illustrations/produce-basket-illustration";
+import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 
 describe("workspace equipment illustrations", () => {
   it("renders rack occupancy as data attributes", () => {
@@ -183,5 +184,27 @@ describe("workspace equipment illustrations", () => {
 
     expect(screen.getByLabelText("storage jar")).toBeInTheDocument();
     expect(screen.getByLabelText("storage jar").parentElement).toHaveAttribute("data-kind", "storage_jar");
+  });
+
+  it("renders an optional equipment header action", () => {
+    const onStore = vi.fn();
+
+    render(
+      <WorkspaceEquipmentWidget
+        eyebrow="Autosampler rack"
+        headerAction={
+          <button aria-label="Store in inventory" onClick={onStore} type="button">
+            <span aria-hidden="true">+</span>
+          </button>
+        }
+      >
+        <div>Rack body</div>
+      </WorkspaceEquipmentWidget>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Store in inventory" }));
+
+    expect(onStore).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Rack body")).toBeInTheDocument();
   });
 });

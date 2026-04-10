@@ -146,6 +146,7 @@ type LabSceneViewProps = {
       measured_sample_mass_g: number | null;
       orchard_name: string;
     }) => void;
+    onStoreWorkspaceWidget: (widgetId: ExperimentWorkspaceWidget["id"]) => void;
     onCommitGrossBalanceOffset: (nextOffsetG: number) => void;
     onPrintLimsLabel: (entryId?: string) => void;
     onTareAnalyticalBalance: () => void;

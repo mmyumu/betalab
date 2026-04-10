@@ -6,6 +6,7 @@ import type { DragEvent, PointerEventHandler, ReactNode } from "react";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 
 type GrossBalanceWidgetProps = {
+  headerAction?: ReactNode;
   isDropHighlighted: boolean;
   measuredGrossMassG: number | null;
   netMassG: number | null;
@@ -20,6 +21,7 @@ const holdDelayMs = 300;
 const repeatIntervalMs = 80;
 
 export function GrossBalanceWidget({
+  headerAction,
   isDropHighlighted,
   measuredGrossMassG,
   netMassG,
@@ -120,6 +122,7 @@ export function GrossBalanceWidget({
       dataDropHighlighted={isDropHighlighted ? "true" : "false"}
       dropZoneTestId="gross-balance-dropzone"
       eyebrow="Gross balance"
+      headerAction={headerAction}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >

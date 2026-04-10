@@ -4133,6 +4133,23 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert stored.audit_log[-1] == "Autosampler rack stored in inventory."
 
 
+def test_lims_widget_can_be_stored() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    stored = apply_command(service,
+        experiment.id,
+        "store_workspace_widget",
+        {
+            "widget_id": "lims",
+        },
+    )
+    lims_widget = next(widget for widget in stored.workspace.widgets if widget.id == "lims")
+    assert lims_widget.is_present is False
+    assert lims_widget.is_trashed is False
+    assert stored.audit_log[-1] == "LIMS terminal stored in inventory."
+
+
 def test_non_storable_workspace_widget_cannot_be_stored() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()

@@ -1252,6 +1252,39 @@ describe("LabScene", () => {
     );
   });
 
+  it("stores the LIMS widget from its header action", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWidgets([
+          { id: "lims", isPresent: false, isTrashed: false },
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+          {},
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const limsWidget = await screen.findByTestId("widget-lims");
+    fireEvent.click(within(limsWidget).getByTestId("store-workspace-widget-lims"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("widget-lims")).not.toBeInTheDocument();
+    });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "store_workspace_widget",
+      { widget_id: "lims" },
+    );
+  });
+
   it("does not store the workbench when dragged onto the inventory", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 

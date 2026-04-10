@@ -23,7 +23,7 @@ export const labSceneWidgetIds = [
 export type LabSceneWidgetId = (typeof labSceneWidgetIds)[number];
 
 export const labSceneWidgetStorability: Record<LabSceneWidgetId, boolean> = {
-  lims: false,
+  lims: true,
   workbench: false,
   trash: false,
   rack: true,

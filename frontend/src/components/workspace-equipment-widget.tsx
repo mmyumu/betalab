@@ -2,6 +2,7 @@
 
 import type { DragEvent, ReactNode } from "react";
 
+import { EquipmentCardHeader } from "@/components/equipment-card-header";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 
 type WorkspaceEquipmentWidgetProps = {
@@ -13,6 +14,7 @@ type WorkspaceEquipmentWidgetProps = {
   dropZoneTestId?: string;
   eyebrow: string;
   footer?: string;
+  headerAction?: ReactNode;
   onDragOver?: (event: DragEvent<HTMLDivElement>) => void;
   onDrop?: (event: DragEvent<HTMLDivElement>) => void;
   title?: string;
@@ -27,6 +29,7 @@ export function WorkspaceEquipmentWidget({
   dropZoneTestId,
   eyebrow,
   footer,
+  headerAction,
   onDragOver,
   onDrop,
   title,
@@ -37,24 +40,19 @@ export function WorkspaceEquipmentWidget({
         className={`${dragAffordanceClassName} border-b border-slate-200/80 bg-white/85 px-5 py-3.5 backdrop-blur xl:px-6 xl:py-4`}
         data-widget-drag-handle="true"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
-              {eyebrow}
-            </p>
-            {title ? (
-              <h2 className="mt-1 text-xl font-semibold text-slate-950 xl:text-2xl">{title}</h2>
-            ) : null}
-            {description ? (
-              <p className="mt-2 max-w-lg text-sm text-slate-600">{description}</p>
-            ) : null}
-          </div>
-          {badge ? (
-            <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
-              {badge}
-            </span>
-          ) : null}
-        </div>
+        <EquipmentCardHeader
+          action={headerAction}
+          badge={
+            badge ? (
+              <span className="rounded-full border border-slate-200 bg-slate-950 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white">
+                {badge}
+              </span>
+            ) : undefined
+          }
+          description={description}
+          eyebrow={eyebrow}
+          title={title}
+        />
       </div>
 
       <div className={bodyClassName ?? "px-5 py-5 xl:px-6 xl:py-6"}>

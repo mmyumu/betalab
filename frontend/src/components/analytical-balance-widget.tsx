@@ -5,6 +5,7 @@ import type { DragEvent, ReactNode } from "react";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 
 type AnalyticalBalanceWidgetProps = {
+  headerAction?: ReactNode;
   isDropHighlighted: boolean;
   measuredMassG: number | null;
   netMassG: number | null;
@@ -19,6 +20,7 @@ const analyticalBalanceMaxG = 220;
 const targetMaxG = 10.2;
 
 export function AnalyticalBalanceWidget({
+  headerAction,
   isDropHighlighted,
   measuredMassG,
   netMassG,
@@ -46,6 +48,7 @@ export function AnalyticalBalanceWidget({
       dataDropHighlighted={isDropHighlighted ? "true" : "false"}
       dropZoneTestId="analytical-balance-dropzone"
       eyebrow="Analytical balance"
+      headerAction={headerAction}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >

@@ -25,6 +25,7 @@ import type { RackDndApi } from "@/hooks/use-rack-dnd";
 import type { TrashDndApi } from "@/hooks/use-trash-dnd";
 import type { WorkbenchDndApi } from "@/hooks/use-workbench-dnd";
 import type { WidgetLayout } from "@/hooks/use-workspace-layout";
+import { canWorkspaceWidgetBeStored } from "@/lib/tool-drop-targets";
 import { isWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
 import type { Experiment } from "@/types/experiment";
 import type {
@@ -142,6 +143,7 @@ type LabSceneWorkspaceCanvasProps = {
       measured_sample_mass_g: number | null;
       orchard_name: string;
     }) => void;
+    onStoreWorkspaceWidget: (widgetId: ExperimentWorkspaceWidget["id"]) => void;
     onCommitGrossBalanceOffset: (nextOffsetG: number) => void;
     onPrintLimsLabel: (entryId?: string) => void;
     onTareAnalyticalBalance: () => void;
@@ -173,6 +175,51 @@ export function LabSceneWorkspaceCanvas({
     experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.produceLots?.[0] ?? null;
   const displayAnalyticalBalanceTool =
     experiment.workspace.widgets.find((w) => w.id === "analytical_balance")?.tool ?? null;
+  const renderStoreWidgetAction = (widgetId: ExperimentWorkspaceWidget["id"]) => {
+    if (!canWorkspaceWidgetBeStored(widgetId)) {
+      return undefined;
+    }
+
+    return (
+      <button
+        aria-label="Store in inventory"
+        className="flex h-10 w-8 items-center justify-center rounded-[0.8rem] border border-slate-200/90 bg-white/85 text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900"
+        data-no-widget-drag="true"
+        data-testid={`store-workspace-widget-${widgetId}`}
+        onClick={() => {
+          workspaceActions.onStoreWorkspaceWidget(widgetId);
+        }}
+        title="Store in inventory"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          className="h-4.5 w-4.5"
+          fill="none"
+          viewBox="0 0 20 20"
+        >
+          <path
+            d="M5.75 4.75H12.5C12.9142 4.75 13.25 5.08579 13.25 5.5V14.5C13.25 14.9142 12.9142 15.25 12.5 15.25H5.75C5.33579 15.25 5 14.9142 5 14.5V5.5C5 5.08579 5.33579 4.75 5.75 4.75Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M10.25 7L7.25 10L10.25 13"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M15.5 10H7.75"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="1.5"
+          />
+        </svg>
+      </button>
+    );
+  };
 
   const grossBalanceStagedContent = pendingGrossBalanceDropDraft ? (
     <DropDraftCard
@@ -340,6 +387,7 @@ export function LabSceneWorkspaceCanvas({
               {widgetId === "lims" ? (
                 <LimsWidget
                   entries={experiment.limsEntries}
+                  headerAction={renderStoreWidgetAction("lims")}
                   onPrintLabel={workspaceActions.onPrintLimsLabel}
                   onSaveReception={workspaceActions.handleSaveLimsReception}
                   onTicketDragEnd={dnd.clearDropTargets}
@@ -361,6 +409,7 @@ export function LabSceneWorkspaceCanvas({
                 />
               ) : widgetId === "gross_balance" ? (
                 <GrossBalanceWidget
+                  headerAction={renderStoreWidgetAction("gross_balance")}
                   isDropHighlighted={dnd.isDropTargetHighlighted("gross_balance_widget")}
                   grossMassOffsetG={experiment.limsReception.grossMassOffsetG}
                   measuredGrossMassG={experiment.limsReception.measuredGrossMassG}
@@ -372,6 +421,7 @@ export function LabSceneWorkspaceCanvas({
                 />
               ) : widgetId === "analytical_balance" ? (
                 <AnalyticalBalanceWidget
+                  headerAction={renderStoreWidgetAction("analytical_balance")}
                   isDropHighlighted={dnd.isDropTargetHighlighted("analytical_balance_widget")}
                   measuredMassG={balances.analyticalBalanceMeasuredMassG}
                   netMassG={balances.analyticalBalanceNetMassG}
@@ -385,6 +435,7 @@ export function LabSceneWorkspaceCanvas({
                 <RackWidget
                   dndDisabled={dnd.dndDisabledByAction}
                   getSlotPosition={rack.getRackIllustrationSlotPosition}
+                  headerAction={renderStoreWidgetAction("rack")}
                   isSlotHighlighted={rack.isRackSlotHighlighted}
                   loadedCount={rack.rackLoadedCount}
                   occupiedSlotLiquids={rack.rackOccupiedSlotLiquids}
@@ -399,6 +450,7 @@ export function LabSceneWorkspaceCanvas({
               ) : widgetId === "instrument" ? (
                 <WorkspaceEquipmentWidget
                   eyebrow="LC-MS/MS"
+                  headerAction={renderStoreWidgetAction("instrument")}
                   footer={
                     rack.instrumentStatus === "ready"
                       ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
@@ -416,6 +468,7 @@ export function LabSceneWorkspaceCanvas({
                   dataDropHighlighted={dnd.isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
                   dropZoneTestId="grinder-dropzone"
                   eyebrow="Cryogenic grinder"
+                  headerAction={renderStoreWidgetAction("grinder")}
                   onDragOver={dnd.grinder.handleGrinderDragOver}
                   onDrop={dnd.grinder.handleGrinderDrop}
                 >

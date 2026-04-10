@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 
 import { AutosamplerRackIllustration } from "@/components/illustrations/autosampler-rack-illustration";
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
@@ -10,6 +10,7 @@ import type { BenchToolInstance, RackSlot } from "@/types/workbench";
 type RackWidgetProps = {
   dndDisabled?: boolean;
   getSlotPosition: (slotIndex: number) => { left: string; top: string };
+  headerAction?: ReactNode;
   isSlotHighlighted: boolean;
   loadedCount: number;
   occupiedSlotLiquids: Record<number, BenchToolInstance["liquids"]>;
@@ -29,6 +30,7 @@ type RackWidgetProps = {
 export function RackWidget({
   dndDisabled = false,
   getSlotPosition,
+  headerAction,
   isSlotHighlighted,
   loadedCount,
   occupiedSlotLiquids,
@@ -44,6 +46,7 @@ export function RackWidget({
     <WorkspaceEquipmentWidget
       bodyClassName="px-4 py-4 xl:px-5 xl:py-5"
       eyebrow="Autosampler rack"
+      headerAction={headerAction}
     >
       <div className="space-y-3">
         <div className="relative mx-auto max-w-[25.75rem]">
