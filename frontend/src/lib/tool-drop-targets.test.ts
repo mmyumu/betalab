@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { canToolBeSealed } from "@/lib/entity-rules";
 import {
+  canStoreWorkspaceWidget,
   canWorkspaceWidgetBeStored,
   getLiquidDropTargets,
   getProduceLotDropTargets,
@@ -58,6 +59,27 @@ describe("tool drop targets", () => {
     expect(canWorkspaceWidgetBeStored("rack")).toBe(true);
     expect(canWorkspaceWidgetBeStored("grinder")).toBe(true);
     expect(canWorkspaceWidgetBeStored("basket")).toBe(false);
+    expect(
+      canStoreWorkspaceWidget({ id: "gross_balance", liquids: [], produceLots: [], tool: null }),
+    ).toBe(true);
+    expect(
+      canStoreWorkspaceWidget({
+        id: "gross_balance",
+        liquids: [],
+        produceLots: [],
+        tool: {
+          accent: "emerald",
+          capacity_ml: 500,
+          id: "tool_1",
+          label: "Received sampling bag",
+          liquids: [],
+          produceLots: [],
+          subtitle: "Field collection",
+          toolId: "sealed_sampling_bag",
+          toolType: "sample_bag",
+        },
+      }),
+    ).toBe(false);
     expect(getTrashedWorkspaceWidgetDropTargets()).toEqual(["workspace_canvas"]);
   });
 

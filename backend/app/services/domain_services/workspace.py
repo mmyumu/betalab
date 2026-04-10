@@ -159,6 +159,10 @@ class StoreWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetRequest]):
         widget = find_workspace_widget(experiment.workspace, request.widget_id)
         if not can_workspace_widget_be_stored(widget.id):
             raise ValueError(f"{widget.label} cannot be stored.")
+        if widget.id == "rack" and any(slot.tool is not None for slot in experiment.rack.slots):
+            raise ValueError(f"Empty {widget.label} before storing it.")
+        if widget.is_present and not _is_workspace_widget_empty(widget):
+            raise ValueError(f"Empty {widget.label} before storing it.")
         if not widget.is_present and not widget.is_trashed:
             return
 
@@ -170,6 +174,10 @@ class StoreWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetRequest]):
         widget.is_present = False
         widget.is_trashed = False
         experiment.audit_log.append(f"{widget.label} stored in inventory.")
+
+
+def _is_workspace_widget_empty(widget: WorkspaceWidget) -> bool:
+    return widget.tool is None and not widget.produce_lots and not widget.liquids
 
 
 class CreateReceivedSamplingBagService(WriteDomainService[CreateReceivedSamplingBagRequest]):

@@ -25,7 +25,7 @@ import type { RackDndApi } from "@/hooks/use-rack-dnd";
 import type { TrashDndApi } from "@/hooks/use-trash-dnd";
 import type { WorkbenchDndApi } from "@/hooks/use-workbench-dnd";
 import type { WidgetLayout } from "@/hooks/use-workspace-layout";
-import { canWorkspaceWidgetBeStored } from "@/lib/tool-drop-targets";
+import { canStoreWorkspaceWidget, canWorkspaceWidgetBeStored } from "@/lib/tool-drop-targets";
 import { isWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
 import type { Experiment } from "@/types/experiment";
 import type {
@@ -175,21 +175,30 @@ export function LabSceneWorkspaceCanvas({
     experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.produceLots?.[0] ?? null;
   const displayAnalyticalBalanceTool =
     experiment.workspace.widgets.find((w) => w.id === "analytical_balance")?.tool ?? null;
-  const renderStoreWidgetAction = (widgetId: ExperimentWorkspaceWidget["id"]) => {
-    if (!canWorkspaceWidgetBeStored(widgetId)) {
+  const renderStoreWidgetAction = (widget: ExperimentWorkspaceWidget) => {
+    if (!canWorkspaceWidgetBeStored(widget.id) || !widget.isPresent) {
       return undefined;
     }
+
+    const isDisabled =
+      !canStoreWorkspaceWidget(widget) ||
+      (widget.id === "rack" && display.rackSlots.some((slot) => slot.tool !== null));
 
     return (
       <button
         aria-label="Store in inventory"
-        className="flex h-10 w-8 items-center justify-center rounded-[0.8rem] border border-slate-200/90 bg-white/85 text-slate-500 shadow-sm transition hover:border-slate-300 hover:bg-white hover:text-slate-900"
+        className={`flex h-10 w-8 items-center justify-center rounded-[0.8rem] border shadow-sm transition ${
+          isDisabled
+            ? "cursor-not-allowed border-slate-200/80 bg-slate-100/90 text-slate-300"
+            : "border-slate-200/90 bg-white/85 text-slate-500 hover:border-slate-300 hover:bg-white hover:text-slate-900"
+        }`}
         data-no-widget-drag="true"
-        data-testid={`store-workspace-widget-${widgetId}`}
+        data-testid={`store-workspace-widget-${widget.id}`}
+        disabled={isDisabled}
         onClick={() => {
-          workspaceActions.onStoreWorkspaceWidget(widgetId);
+          workspaceActions.onStoreWorkspaceWidget(widget.id);
         }}
-        title="Store in inventory"
+        title={isDisabled ? "Empty this equipment before storing it" : "Store in inventory"}
         type="button"
       >
         <svg
@@ -358,7 +367,13 @@ export function LabSceneWorkspaceCanvas({
 
         {workspace.liveWidgetIds
           .filter(isWorkspaceEquipmentWidgetId)
-          .map((widgetId) => (
+          .map((widgetId) => {
+            const widget = experiment.workspace.widgets.find((entry) => entry.id === widgetId);
+            if (!widget) {
+              return null;
+            }
+
+            return (
             <FloatingWidget
               id={widgetId}
               isActive={workspace.activeWidgetId === widgetId}
@@ -387,7 +402,7 @@ export function LabSceneWorkspaceCanvas({
               {widgetId === "lims" ? (
                 <LimsWidget
                   entries={experiment.limsEntries}
-                  headerAction={renderStoreWidgetAction("lims")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   onPrintLabel={workspaceActions.onPrintLimsLabel}
                   onSaveReception={workspaceActions.handleSaveLimsReception}
                   onTicketDragEnd={dnd.clearDropTargets}
@@ -409,7 +424,7 @@ export function LabSceneWorkspaceCanvas({
                 />
               ) : widgetId === "gross_balance" ? (
                 <GrossBalanceWidget
-                  headerAction={renderStoreWidgetAction("gross_balance")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   isDropHighlighted={dnd.isDropTargetHighlighted("gross_balance_widget")}
                   grossMassOffsetG={experiment.limsReception.grossMassOffsetG}
                   measuredGrossMassG={experiment.limsReception.measuredGrossMassG}
@@ -421,7 +436,7 @@ export function LabSceneWorkspaceCanvas({
                 />
               ) : widgetId === "analytical_balance" ? (
                 <AnalyticalBalanceWidget
-                  headerAction={renderStoreWidgetAction("analytical_balance")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   isDropHighlighted={dnd.isDropTargetHighlighted("analytical_balance_widget")}
                   measuredMassG={balances.analyticalBalanceMeasuredMassG}
                   netMassG={balances.analyticalBalanceNetMassG}
@@ -435,7 +450,7 @@ export function LabSceneWorkspaceCanvas({
                 <RackWidget
                   dndDisabled={dnd.dndDisabledByAction}
                   getSlotPosition={rack.getRackIllustrationSlotPosition}
-                  headerAction={renderStoreWidgetAction("rack")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   isSlotHighlighted={rack.isRackSlotHighlighted}
                   loadedCount={rack.rackLoadedCount}
                   occupiedSlotLiquids={rack.rackOccupiedSlotLiquids}
@@ -450,7 +465,7 @@ export function LabSceneWorkspaceCanvas({
               ) : widgetId === "instrument" ? (
                 <WorkspaceEquipmentWidget
                   eyebrow="LC-MS/MS"
-                  headerAction={renderStoreWidgetAction("instrument")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   footer={
                     rack.instrumentStatus === "ready"
                       ? "The instrument reads as sequence-ready because the rack now contains at least one autosampler vial."
@@ -468,7 +483,7 @@ export function LabSceneWorkspaceCanvas({
                   dataDropHighlighted={dnd.isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
                   dropZoneTestId="grinder-dropzone"
                   eyebrow="Cryogenic grinder"
-                  headerAction={renderStoreWidgetAction("grinder")}
+                  headerAction={renderStoreWidgetAction(widget)}
                   onDragOver={dnd.grinder.handleGrinderDragOver}
                   onDrop={dnd.grinder.handleGrinderDrop}
                 >
@@ -484,7 +499,8 @@ export function LabSceneWorkspaceCanvas({
                 </WorkspaceEquipmentWidget>
               )}
             </FloatingWidget>
-          ))}
+            );
+          })}
 
         <FloatingWidget
           id="workbench"

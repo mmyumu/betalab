@@ -4164,6 +4164,65 @@ def test_non_storable_workspace_widget_cannot_be_stored() -> None:
         )
 
 
+def test_non_empty_workspace_widget_cannot_be_stored() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "gross_balance",
+            "anchor": "top-left",
+            "offset_x": 364,
+            "offset_y": 886,
+        },
+    )
+    apply_command(service,
+        experiment.id,
+        "create_produce_lot",
+        {
+            "produce_type": "apple",
+        },
+    )
+    move_basket_tool_to_gross_balance(service, experiment.id)
+
+    with pytest.raises(ValueError, match=r"Empty Gross balance before storing it."):
+        apply_command(service,
+            experiment.id,
+            "store_workspace_widget",
+            {
+                "widget_id": "gross_balance",
+            },
+        )
+
+
+def test_rack_with_loaded_vials_cannot_be_stored() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(service,
+        experiment.id,
+        "add_workspace_widget",
+        {
+            "widget_id": "rack",
+            "anchor": "top-left",
+            "offset_x": 234,
+            "offset_y": 886,
+        },
+    )
+    place_tool_in_rack_slot(service, experiment.id, "rack_slot_1", "sample_vial_lcms")
+
+    with pytest.raises(ValueError, match=r"Empty Autosampler rack before storing it."):
+        apply_command(service,
+            experiment.id,
+            "store_workspace_widget",
+            {
+                "widget_id": "rack",
+            },
+        )
+
+
 def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()

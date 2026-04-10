@@ -1,4 +1,5 @@
 import type {
+  ExperimentWorkspaceWidget,
   LiquidType,
   DropTargetType,
   ExperimentWorkspaceWidgetId,
@@ -69,6 +70,18 @@ export function canWorkspaceWidgetBeStored(widgetId: ExperimentWorkspaceWidgetId
       widgetId === "gross_balance" ||
       widgetId === "analytical_balance"
   );
+}
+
+export function isWorkspaceWidgetEmpty(
+  widget: Pick<ExperimentWorkspaceWidget, "tool" | "produceLots" | "liquids">,
+): boolean {
+  return widget.tool == null && (widget.produceLots?.length ?? 0) === 0 && (widget.liquids?.length ?? 0) === 0;
+}
+
+export function canStoreWorkspaceWidget(
+  widget: Pick<ExperimentWorkspaceWidget, "id" | "tool" | "produceLots" | "liquids">,
+): boolean {
+  return canWorkspaceWidgetBeStored(widget.id) && isWorkspaceWidgetEmpty(widget);
 }
 
 export function getTrashedWorkspaceWidgetDropTargets(): DropTargetType[] {

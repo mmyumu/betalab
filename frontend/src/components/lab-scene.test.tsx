@@ -1285,6 +1285,57 @@ describe("LabScene", () => {
     );
   });
 
+  it("disables storing equipment from the header while it still contains an item", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
+          tool: makeTool({
+            toolId: "sealed_sampling_bag",
+            label: "Received sampling bag",
+            subtitle: "Field collection",
+            toolType: "sample_bag",
+            capacity_ml: 500,
+          }),
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const button = await screen.findByTestId("store-workspace-widget-gross_balance");
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+
+    expect(sendExperimentCommand).not.toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "store_workspace_widget",
+      { widget_id: "gross_balance" },
+    );
+  });
+
+  it("disables storing the rack from the header while it still contains vials", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        rackSlots: makeRackSlots([{ tool: makeTool() }]),
+        workspaceWidgets: makeWorkspaceWithRackVisible(),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const button = await screen.findByTestId("store-workspace-widget-rack");
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+
+    expect(sendExperimentCommand).not.toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "store_workspace_widget",
+      { widget_id: "rack" },
+    );
+  });
+
   it("does not store the workbench when dragged onto the inventory", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
