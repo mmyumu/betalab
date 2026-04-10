@@ -37,7 +37,7 @@ import {
   discardWidgetProduceLot,
   discardWorkbenchTool,
   discardWorkspaceProduceLot,
-  discardWorkspaceWidget,
+  storeWorkspaceWidget,
   moveBasketToolToGrossBalance,
   moveAnalyticalBalanceToolToRack,
   moveAnalyticalBalanceToolToGrossBalance,
@@ -117,7 +117,7 @@ import type {
   DiscardWidgetProduceLotPayload,
   DiscardWorkbenchToolPayload,
   DiscardWorkspaceProduceLotPayload,
-  DiscardWorkspaceWidgetPayload,
+  StoreWorkspaceWidgetPayload,
   LoadSpatulaFromWorkbenchToolPayload,
   MoveAnalyticalBalanceToolToRackPayload,
   MoveAnalyticalBalanceToolToWorkbenchPayload,
@@ -212,7 +212,7 @@ const mutationFns = {
   discardWidgetProduceLot,
   discardWorkbenchTool,
   discardWorkspaceProduceLot,
-  discardWorkspaceWidget,
+  storeWorkspaceWidget,
   moveBasketToolToGrossBalance,
   moveAnalyticalBalanceToolToRack,
   moveAnalyticalBalanceToolToGrossBalance,
@@ -487,8 +487,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.discardWorkbenchTool, payload),
     discardWorkspaceProduceLot: (payload: DiscardWorkspaceProduceLotPayload) =>
       executeMutation(mutationFns.discardWorkspaceProduceLot, payload),
-    discardWorkspaceWidget: (payload: DiscardWorkspaceWidgetPayload) =>
-      executeMutation(mutationFns.discardWorkspaceWidget, payload),
+    storeWorkspaceWidget: (payload: StoreWorkspaceWidgetPayload) =>
+      executeMutation(mutationFns.storeWorkspaceWidget, payload),
     moveBasketToolToGrossBalance: () =>
       executeMutation(mutationFns.moveBasketToolToGrossBalance),
     moveAnalyticalBalanceToolToGrossBalance: () =>

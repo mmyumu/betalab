@@ -96,14 +96,13 @@ describe("useWorkspaceLayout", () => {
     const { result } = renderHook(() =>
       useWorkspaceLayout({
         fixedWidgetIds: [],
-        getIsWidgetTrashable: () => false,
+        getIsWidgetStorable: () => false,
         initialLayout,
         initialOrder: ["rack", "trash"],
-        onDiscardWidget: vi.fn(),
+        onStoreWidget: vi.fn(),
         onMoveWidget: vi.fn(),
         presentWidgetIds: ["rack", "trash"],
         syncKey: null,
-        trashWidgetId: "trash",
         widgets: [],
         workspaceRef,
       }),
@@ -199,14 +198,13 @@ describe("useWorkspaceLayout", () => {
       }) =>
         useWorkspaceLayout({
           fixedWidgetIds: [],
-          getIsWidgetTrashable: () => false,
+          getIsWidgetStorable: () => false,
           initialLayout,
           initialOrder: ["rack", "trash"],
-          onDiscardWidget: vi.fn(),
+          onStoreWidget: vi.fn(),
           onMoveWidget,
           presentWidgetIds: ["rack", "trash"],
           syncKey,
-          trashWidgetId: "trash",
           widgets,
           workspaceRef,
         }),
@@ -269,6 +267,93 @@ describe("useWorkspaceLayout", () => {
     });
 
     expect(result.current.widgetLayout.rack.y).toBe(708);
+    vi.unstubAllGlobals();
+  });
+
+  it("stores a storable widget when the drag ends over the inventory dropzone", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const onMoveWidget = vi.fn();
+    const onStoreWidget = vi.fn();
+    const workspaceRef = {
+      current: {
+        getBoundingClientRect: () => ({
+          left: 0,
+          top: 0,
+          width: 1600,
+          height: 1100,
+        }),
+      } as HTMLDivElement,
+    };
+    const inventoryDropRef = {
+      current: {
+        getBoundingClientRect: () => ({
+          left: 0,
+          top: 100,
+          right: 220,
+          bottom: 460,
+          width: 220,
+          height: 360,
+        }),
+      } as HTMLElement,
+    };
+
+    const initialLayout: Record<"rack" | "trash", WidgetLayout> = {
+      rack: {
+        anchor: "top-left",
+        fallbackHeight: 392,
+        offsetX: 234,
+        offsetY: 886,
+        width: 548,
+        x: 234,
+        y: 886,
+      },
+      trash: {
+        anchor: "top-right",
+        fallbackHeight: 214,
+        offsetX: 0,
+        offsetY: 126,
+        width: 164,
+        x: 1436,
+        y: 126,
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useWorkspaceLayout({
+        fixedWidgetIds: [],
+        getIsWidgetStorable: (widgetId) => widgetId === "rack",
+        inventoryDropRef,
+        initialLayout,
+        initialOrder: ["rack", "trash"],
+        onMoveWidget,
+        onStoreWidget,
+        presentWidgetIds: ["rack", "trash"],
+        syncKey: null,
+        widgets: [],
+        workspaceRef,
+      }),
+    );
+
+    act(() => {
+      result.current.handleWidgetDragStart("rack", {
+        button: 0,
+        clientX: 300,
+        clientY: 930,
+        preventDefault: vi.fn(),
+      } as unknown as ReactMouseEvent<HTMLDivElement>);
+    });
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent("mouseup", { clientX: 100, clientY: 220 }));
+    });
+
+    expect(onStoreWidget).toHaveBeenCalledWith("rack");
+    expect(onMoveWidget).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 });

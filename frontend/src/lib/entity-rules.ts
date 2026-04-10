@@ -60,7 +60,7 @@ export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
   return ["workbench_slot"];
 }
 
-export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidgetId): boolean {
+export function canWorkspaceWidgetBeStored(widgetId: ExperimentWorkspaceWidgetId): boolean {
   return (
       widgetId === "rack" ||
       widgetId === "instrument" ||
@@ -70,10 +70,6 @@ export function isWorkspaceWidgetDiscardable(widgetId: ExperimentWorkspaceWidget
   );
 }
 
-export function getWorkspaceWidgetDropTargets(
-  widgetId: ExperimentWorkspaceWidgetId,
-): DropTargetType[] {
-  return isWorkspaceWidgetDiscardable(widgetId)
-    ? ["workspace_canvas", "trash_bin"]
-    : ["workspace_canvas"];
+export function getTrashedWorkspaceWidgetDropTargets(): DropTargetType[] {
+  return ["workspace_canvas"];
 }

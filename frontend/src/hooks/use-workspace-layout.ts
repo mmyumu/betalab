@@ -32,15 +32,15 @@ type WorkspaceWidgetSync<WidgetId extends string> = {
 
 type UseWorkspaceLayoutOptions<WidgetId extends string> = {
   fixedWidgetIds: WidgetId[];
-  getIsWidgetTrashable: (widgetId: WidgetId) => boolean;
+  getIsWidgetStorable: (widgetId: WidgetId) => boolean;
+  inventoryDropRef?: RefObject<HTMLElement | null>;
   initialLayout: Record<WidgetId, WidgetLayout>;
   initialOrder: WidgetId[];
-  onDiscardWidget: (widgetId: WidgetId) => void;
+  onStoreWidget: (widgetId: WidgetId) => void;
   onMoveWidget: (widgetId: WidgetId, nextLayout: AnchoredWidgetLayout) => void;
-  onWidgetDragStateChange?: (widgetId: WidgetId | null, isTrashDropActive: boolean) => void;
+  onWidgetDragStateChange?: (widgetId: WidgetId | null, activeDropTarget: "inventory_panel" | null) => void;
   presentWidgetIds: WidgetId[];
   syncKey: string | null;
-  trashWidgetId: WidgetId;
   widgets: Array<WorkspaceWidgetSync<WidgetId>>;
   workspaceRef: RefObject<HTMLDivElement | null>;
 };
@@ -140,43 +140,30 @@ function inferAnchoredLayout(
   };
 }
 
-function isPointInsideWidget<WidgetId extends string>(
-  widgetId: WidgetId,
+function isPointInsideElement(
+  element: HTMLElement | null,
   clientX: number,
   clientY: number,
-  workspaceElement: HTMLDivElement | null,
-  layout: Record<WidgetId, WidgetLayout>,
-  heights: Record<WidgetId, number>,
 ) {
-  if (!workspaceElement) {
+  if (!element) {
     return false;
   }
 
-  const workspaceRect = workspaceElement.getBoundingClientRect();
-  const widgetPosition = layout[widgetId];
-  const widgetHeight = heights[widgetId] ?? widgetPosition.fallbackHeight;
-  const left = workspaceRect.left + widgetPosition.x;
-  const top = workspaceRect.top + widgetPosition.y;
-
-  return (
-    clientX >= left &&
-    clientX <= left + widgetPosition.width &&
-    clientY >= top &&
-    clientY <= top + widgetHeight
-  );
+  const rect = element.getBoundingClientRect();
+  return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
 }
 
 export function useWorkspaceLayout<WidgetId extends string>({
   fixedWidgetIds,
-  getIsWidgetTrashable,
+  getIsWidgetStorable,
+  inventoryDropRef,
   initialLayout,
   initialOrder,
-  onDiscardWidget,
+  onStoreWidget,
   onMoveWidget,
   onWidgetDragStateChange,
   presentWidgetIds,
   syncKey,
-  trashWidgetId,
   widgets,
   workspaceRef,
 }: UseWorkspaceLayoutOptions<WidgetId>) {
@@ -454,7 +441,7 @@ export function useWorkspaceLayout<WidgetId extends string>({
       ...current.filter((id) => id !== typedWidgetId),
       typedWidgetId,
     ]);
-    onWidgetDragStateChange?.(typedWidgetId, getIsWidgetTrashable(typedWidgetId));
+    onWidgetDragStateChange?.(typedWidgetId, null);
 
     const flushPendingDragPosition = () => {
       const pendingPosition = pendingDragPositionRef.current;
@@ -514,6 +501,18 @@ export function useWorkspaceLayout<WidgetId extends string>({
       const nextX = Math.min(Math.max(unclampedX, 0), maxX);
       const nextY = Math.min(Math.max(unclampedY, 0), maxY);
       const currentDraggedLayout = widgetLayoutRef.current[dragState.widgetId];
+      const isOverInventoryDropZone =
+        getIsWidgetStorable(dragState.widgetId) &&
+        isPointInsideElement(
+          inventoryDropRef?.current ?? null,
+          moveEvent.clientX,
+          moveEvent.clientY,
+        );
+
+      onWidgetDragStateChange?.(
+        dragState.widgetId,
+        isOverInventoryDropZone ? "inventory_panel" : null,
+      );
 
       if (
         currentDraggedLayout.x === nextX &&
@@ -545,22 +544,19 @@ export function useWorkspaceLayout<WidgetId extends string>({
 
       const dragState = dragStateRef.current;
       const draggedWidgetId = dragState?.widgetId;
-      const shouldTrashWidget =
+      const shouldStoreWidget =
         draggedWidgetId &&
-        getIsWidgetTrashable(draggedWidgetId) &&
-        isPointInsideWidget(
-          trashWidgetId,
+        getIsWidgetStorable(draggedWidgetId) &&
+        isPointInsideElement(
+          inventoryDropRef?.current ?? null,
           upEvent.clientX,
           upEvent.clientY,
-          workspaceRef.current,
-          widgetLayoutRef.current,
-          widgetHeightsRef.current,
         );
 
       dragStateRef.current = null;
       pendingDragPositionRef.current = null;
       setActiveWidgetId(null);
-      onWidgetDragStateChange?.(null, false);
+      onWidgetDragStateChange?.(null, null);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
       dragCleanupRef.current = null;
@@ -586,8 +582,8 @@ export function useWorkspaceLayout<WidgetId extends string>({
                 y: finalPosition.y,
               };
 
-        if (shouldTrashWidget) {
-          onDiscardWidget(draggedWidgetId);
+        if (shouldStoreWidget) {
+          onStoreWidget(draggedWidgetId);
           return;
         }
 

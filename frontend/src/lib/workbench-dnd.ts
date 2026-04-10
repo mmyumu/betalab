@@ -40,6 +40,7 @@ function isDropTargetType(targetType: unknown): targetType is DropTargetType {
     targetType === "workbench_slot" ||
     targetType === "sample_bag_tool" ||
     targetType === "workspace_canvas" ||
+    targetType === "inventory_panel" ||
     targetType === "rack_slot" ||
     targetType === "trash_bin" ||
     targetType === "grinder_widget" ||

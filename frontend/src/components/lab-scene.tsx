@@ -28,13 +28,12 @@ import {
   getRackIllustrationSlotPosition,
   labSceneWidgetFrameSpecs,
   labSceneWidgetIds,
-  labSceneWidgetTrashability,
+  labSceneWidgetStorability,
   rackSlotCount,
   roundMass,
   type LabSceneWidgetId,
 } from "@/lib/lab-scene-config";
-import { getWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
-import { isWorkspaceWidgetDiscardable } from "@/lib/tool-drop-targets";
+import { canWorkspaceWidgetBeStored } from "@/lib/tool-drop-targets";
 
 const defaultStatusMessage = "Start by dragging an extraction tool onto the bench.";
 const defaultErrorMessage = "Unable to load lab scene";
@@ -68,6 +67,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   } = useDragState();
   const [isBasketOpen, setIsBasketOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
+  const inventoryDropRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const spatula =
     state.status === "ready"
@@ -107,12 +107,13 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     workspaceHeight,
   } = useWorkspaceLayout<WidgetId>({
     fixedWidgetIds: [],
-    getIsWidgetTrashable: (widgetId) => labSceneWidgetTrashability[widgetId],
+    getIsWidgetStorable: (widgetId) => labSceneWidgetStorability[widgetId],
+    inventoryDropRef,
     initialLayout: labSceneWidgetFrameSpecs,
     initialOrder: [...labSceneWidgetIds],
-    onDiscardWidget: (widgetId) => {
+    onStoreWidget: (widgetId) => {
       clearDropTargets();
-      void experimentApi.discardWorkspaceWidget({ widget_id: widgetId });
+      void experimentApi.storeWorkspaceWidget({ widget_id: widgetId });
     },
     onMoveWidget: (widgetId, nextPosition) => {
       void experimentApi.moveWorkspaceWidget({
@@ -122,15 +123,14 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         offset_y: nextPosition.offsetY,
       });
     },
-    onWidgetDragStateChange: (widgetId, isTrashDropActive) => {
-      setActiveDropTargets(isTrashDropActive && widgetId ? ["trash_bin"] : []);
+    onWidgetDragStateChange: (widgetId, activeDropTarget) => {
+      setActiveDropTargets(activeDropTarget && widgetId ? [activeDropTarget] : []);
     },
     presentWidgetIds: liveWidgetIds,
     syncKey:
       state.status === "ready"
         ? `${state.experiment.id}:${JSON.stringify(state.experiment.workspace.widgets)}`
         : null,
-    trashWidgetId: "trash",
     widgets:
       state.status === "ready"
         ? state.experiment.workspace.widgets.map((widget) => ({
@@ -207,7 +207,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     dndDisabledByAction,
     dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
     experimentApi,
-    getWorkspaceEquipmentWidgetId,
     isGrinderRunning: grinderDnd.isGrinderRunning,
   });
 
@@ -293,7 +292,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
   const trashedWidgets = state.experiment.workspace.widgets.filter(
-    (widget) => isWorkspaceWidgetDiscardable(widget.id) && widget.isTrashed,
+    (widget) => canWorkspaceWidgetBeStored(widget.id) && widget.isTrashed,
   );
   const analyticalBalanceMeasuredMassG = analyticalBalanceTool
     ? getApproximateToolMassG(analyticalBalanceTool, 3)
@@ -367,6 +366,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
         dndDisabledByAction,
         grinder: grinderDnd,
         grossBalance: grossBalanceDnd,
+        inventoryDropRef,
         isDropTargetHighlighted,
         rack: rackDnd,
         setActiveDragItem,

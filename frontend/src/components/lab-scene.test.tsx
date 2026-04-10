@@ -26,6 +26,23 @@ import {
 
 const PesticideWorkbench = LabScene;
 
+function mockInventoryDropzoneBounds(dropzone: Element) {
+  Object.defineProperty(dropzone, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      bottom: 480,
+      height: 360,
+      left: 0,
+      right: 220,
+      top: 120,
+      width: 220,
+      x: 0,
+      y: 120,
+      toJSON: () => {},
+    }),
+  });
+}
+
 type MockDataTransfer = {
   data: Map<string, string>;
   dropEffect: string;
@@ -1009,7 +1026,7 @@ describe("LabScene", () => {
     });
   });
 
-  it("highlights the workspace canvas and trash when dragging a workspace widget from the palette", async () => {
+  it("highlights only the workspace canvas when dragging a workspace widget from the palette", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
     render(<PesticideWorkbench />);
@@ -1025,7 +1042,8 @@ describe("LabScene", () => {
 
     expect(screen.getByTestId("widget-workspace")).toHaveAttribute("data-drop-highlighted", "true");
     expect(screen.getByTestId("bench-slot-station_1")).toHaveAttribute("data-drop-highlighted", "false");
-    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "true");
+    expect(screen.getByTestId("inventory-dropzone")).toHaveAttribute("data-drop-highlighted", "false");
+    expect(screen.getByTestId("trash-dropzone")).toHaveAttribute("data-drop-highlighted", "false");
 
     fireEvent.dragEnd(screen.getByTestId("toolbar-item-autosampler_rack_widget"));
 
@@ -1214,19 +1232,27 @@ describe("LabScene", () => {
       expect(screen.getByTestId("widget-rack")).toBeInTheDocument();
     });
 
+    mockInventoryDropzoneBounds(screen.getByTestId("inventory-dropzone"));
+
     fireEvent.mouseDown(within(screen.getByTestId("widget-rack")).getByText("Autosampler rack"), {
       button: 0,
       clientX: 500,
       clientY: 430,
     });
-    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 100, clientY: 220 }));
 
     await waitFor(() => {
       expect(screen.queryByTestId("widget-rack")).not.toBeInTheDocument();
     });
+
+    expect(sendExperimentCommand).toHaveBeenCalledWith(
+      "experiment_pesticides",
+      "store_workspace_widget",
+      { widget_id: "rack" },
+    );
   });
 
-  it("does not remove the workbench when dragged onto the trash", async () => {
+  it("does not store the workbench when dragged onto the inventory", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
     render(<PesticideWorkbench />);
@@ -1235,12 +1261,14 @@ describe("LabScene", () => {
       expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
     });
 
+    mockInventoryDropzoneBounds(screen.getByTestId("inventory-dropzone"));
+
     fireEvent.mouseDown(screen.getByText("Workbench"), {
       button: 0,
       clientX: 260,
       clientY: 24,
     });
-    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 100, clientY: 220 }));
 
     expect(screen.getByTestId("widget-workbench")).toBeInTheDocument();
   });
@@ -3883,19 +3911,20 @@ describe("LabScene", () => {
     );
   });
 
-  it("does not remove the produce basket when dragged onto the trash", async () => {
+  it("does not store the produce basket when dragged onto the inventory", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
     render(<PesticideWorkbench />);
 
     const basket = await screen.findByTestId("widget-basket");
+    mockInventoryDropzoneBounds(screen.getByTestId("inventory-dropzone"));
 
     fireEvent.mouseDown(within(basket).getByText("Produce basket"), {
       button: 0,
       clientX: 1480,
       clientY: 280,
     });
-    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 1600, clientY: 140 }));
+    window.dispatchEvent(new MouseEvent("mouseup", { clientX: 100, clientY: 220 }));
 
     expect(screen.getByTestId("widget-basket")).toBeInTheDocument();
     expect(sendExperimentCommand).toHaveBeenCalledWith(
@@ -3905,7 +3934,7 @@ describe("LabScene", () => {
     );
     expect(sendExperimentCommand).not.toHaveBeenCalledWith(
       "experiment_pesticides",
-      "discard_workspace_widget",
+      "store_workspace_widget",
       { widget_id: "basket" },
     );
   });

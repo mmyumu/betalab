@@ -122,7 +122,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
     items: [
       {
         id: "autosampler_rack_widget",
-        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Autosampler rack",
         subtitle: "Sequence staging",
@@ -132,7 +132,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "lc_msms_instrument_widget",
-        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "LC-MS/MS",
         subtitle: "Instrument system",
@@ -142,7 +142,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "cryogenic_grinder_widget",
-        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Cryogenic grinder",
         subtitle: "Cold homogenization",
@@ -162,7 +162,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "gross_balance_widget",
-        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Gross balance",
         subtitle: "Receiving weight",
@@ -172,7 +172,7 @@ export const labWorkflowCategories: ToolbarCategory[] = [
       },
       {
         id: "analytical_balance_widget",
-        allowedDropTargets: ["workspace_canvas", "trash_bin"],
+        allowedDropTargets: ["workspace_canvas"],
         itemType: "workspace_widget",
         name: "Analytical balance",
         subtitle: "Sample intake",

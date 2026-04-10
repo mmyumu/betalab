@@ -130,7 +130,7 @@ from app.services.domain_services.workspace import (
     DiscardWidgetProduceLotService,
     DiscardWorkspaceProduceLotRequest,
     DiscardWorkspaceProduceLotService,
-    DiscardWorkspaceWidgetService,
+    StoreWorkspaceWidgetService,
     MoveWidgetProduceLotToWorkbenchToolRequest,
     MoveWidgetProduceLotToWorkbenchToolService,
     MoveWorkbenchProduceLotToWidgetRequest,
@@ -438,7 +438,7 @@ def apply_command(
                 offset_y=payload["offset_y"],
             ),
         ),
-        "discard_workspace_widget": lambda: DiscardWorkspaceWidgetService(service).run(
+        "store_workspace_widget": lambda: StoreWorkspaceWidgetService(service).run(
             experiment_id, WorkspaceWidgetRequest(widget_id=payload["widget_id"])
         ),
         "add_liquid_to_workspace_widget": lambda: AddLiquidToWorkspaceWidgetService(service).run(
@@ -3913,13 +3913,14 @@ def test_discard_tool_from_palette_adds_it_to_trash() -> None:
     assert updated.trash.tools[0].tool.tool_type == "sample_bag"
 
 
-def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
+def test_store_workspace_widget_from_palette_keeps_it_in_inventory() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
+    initial_audit_length = len(experiment.audit_log)
 
     updated = apply_command(service, 
         experiment.id,
-        "discard_workspace_widget",
+        "store_workspace_widget",
         {
             "widget_id": "rack",
         },
@@ -3927,8 +3928,8 @@ def test_discard_workspace_widget_from_palette_marks_it_trashed() -> None:
 
     widget = next(widget for widget in updated.workspace.widgets if widget.id == "rack")
     assert widget.is_present is False
-    assert widget.is_trashed is True
-    assert updated.audit_log[-1] == "Autosampler rack added to trash."
+    assert widget.is_trashed is False
+    assert len(updated.audit_log) == initial_audit_length
 
 
 def test_workbench_slot_commands_add_and_remove_empty_stations() -> None:
@@ -4119,27 +4120,27 @@ def test_workspace_widget_commands_manage_presence_and_position() -> None:
     assert rack_widget.offset_y == 460
     assert moved.audit_log[-1] == "Autosampler rack moved in workspace."
 
-    discarded = apply_command(service, 
+    stored = apply_command(service, 
         experiment.id,
-        "discard_workspace_widget",
+        "store_workspace_widget",
         {
             "widget_id": "rack",
         },
     )
-    rack_widget = next(widget for widget in discarded.workspace.widgets if widget.id == "rack")
+    rack_widget = next(widget for widget in stored.workspace.widgets if widget.id == "rack")
     assert rack_widget.is_present is False
-    assert rack_widget.is_trashed is True
-    assert discarded.audit_log[-1] == "Autosampler rack removed from workspace."
+    assert rack_widget.is_trashed is False
+    assert stored.audit_log[-1] == "Autosampler rack stored in inventory."
 
 
-def test_non_trashable_workspace_widget_cannot_be_discarded() -> None:
+def test_non_storable_workspace_widget_cannot_be_stored() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
-    with pytest.raises(ValueError, match="Produce basket cannot be discarded."):
+    with pytest.raises(ValueError, match="Produce basket cannot be stored."):
         apply_command(service, 
             experiment.id,
-            "discard_workspace_widget",
+            "store_workspace_widget",
             {
                 "widget_id": "basket",
             },

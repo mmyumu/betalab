@@ -372,11 +372,11 @@ export async function moveWorkspaceWidget(experimentId: string, payload: Mutatio
   });
 }
 
-export async function discardWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+export async function storeWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
-    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/discard`,
+    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/store`,
   });
 }
 

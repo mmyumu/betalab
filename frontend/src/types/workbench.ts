@@ -3,6 +3,7 @@ export type DropTargetType =
   | "workbench_slot"
   | "sample_bag_tool"
   | "workspace_canvas"
+  | "inventory_panel"
   | "rack_slot"
   | "trash_bin"
   | "grinder_widget"

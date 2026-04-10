@@ -21,7 +21,7 @@ import {
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,
-  getWorkspaceWidgetDropTargets,
+  getTrashedWorkspaceWidgetDropTargets,
 } from "@/lib/tool-drop-targets";
 import type {
   BenchLabel,
@@ -40,7 +40,6 @@ import type {
   DiscardWidgetProduceLotPayload,
   DiscardWorkbenchToolPayload,
   DiscardWorkspaceProduceLotPayload,
-  DiscardWorkspaceWidgetPayload,
   RemoveLiquidFromWorkspaceWidgetPayload,
 } from "@/types/api-payloads";
 
@@ -58,7 +57,6 @@ type TrashDndExperimentApi = {
   discardWidgetProduceLot: (payload: DiscardWidgetProduceLotPayload) => void;
   discardWorkbenchTool: (payload: DiscardWorkbenchToolPayload) => void;
   discardWorkspaceProduceLot: (payload: DiscardWorkspaceProduceLotPayload) => void;
-  discardWorkspaceWidget: (payload: DiscardWorkspaceWidgetPayload) => void;
   removeLiquidFromWorkspaceWidget: (payload: RemoveLiquidFromWorkspaceWidgetPayload) => void;
 };
 
@@ -66,7 +64,6 @@ type TrashDndOptions = {
   dndDisabledByAction: boolean;
   dragState: Pick<DragStateApi, "clearDropTargets" | "setActiveDragItem" | "showDropTargets">;
   experimentApi: TrashDndExperimentApi;
-  getWorkspaceEquipmentWidgetId: (itemId: string) => string | null;
   isGrinderRunning: boolean;
 };
 
@@ -92,7 +89,6 @@ export function useTrashDnd({
   dndDisabledByAction,
   dragState,
   experimentApi,
-  getWorkspaceEquipmentWidgetId,
   isGrinderRunning,
 }: TrashDndOptions): TrashDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
@@ -129,20 +125,6 @@ export function useTrashDnd({
       clearDropTargets();
       void experimentApi.discardToolFromPalette({
         tool_id: toolbarPayload.itemId,
-      });
-      return;
-    }
-
-    if (toolbarPayload?.itemType === "workspace_widget") {
-      const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
-      if (!widgetId) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWorkspaceWidget({
-        widget_id: widgetId,
       });
       return;
     }
@@ -307,7 +289,7 @@ export function useTrashDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getWorkspaceWidgetDropTargets(widget.id);
+    const allowedDropTargets = getTrashedWorkspaceWidgetDropTargets();
 
     writeWorkspaceWidgetDragPayload(dataTransfer, {
       allowedDropTargets,

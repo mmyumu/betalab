@@ -10,7 +10,7 @@ from app.domain.models import (
     WorkspaceWidget,
     new_id,
 )
-from app.domain.rules import can_tool_be_sealed, is_workspace_widget_discardable
+from app.domain.rules import can_tool_be_sealed, can_workspace_widget_be_stored
 from app.domain.workbench_catalog import get_workbench_liquid_definition
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
@@ -151,25 +151,25 @@ class MoveWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetLayoutRequest
         experiment.audit_log.append(f"{widget.label} moved in workspace.")
 
 
-class DiscardWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetRequest]):
+class StoreWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: WorkspaceWidgetRequest) -> None:
         widget = find_workspace_widget(experiment.workspace, request.widget_id)
-        if not is_workspace_widget_discardable(widget.id):
-            raise ValueError(f"{widget.label} cannot be discarded.")
-        if not widget.is_present and widget.is_trashed:
+        if not can_workspace_widget_be_stored(widget.id):
+            raise ValueError(f"{widget.label} cannot be stored.")
+        if not widget.is_present and not widget.is_trashed:
             return
 
-        if not widget.is_present:
-            widget.is_trashed = True
-            experiment.audit_log.append(f"{widget.label} added to trash.")
+        if not widget.is_present and widget.is_trashed:
+            widget.is_trashed = False
+            experiment.audit_log.append(f"{widget.label} moved from trash to inventory.")
             return
 
         widget.is_present = False
-        widget.is_trashed = True
-        experiment.audit_log.append(f"{widget.label} removed from workspace.")
+        widget.is_trashed = False
+        experiment.audit_log.append(f"{widget.label} stored in inventory.")
 
 
 class CreateReceivedSamplingBagService(WriteDomainService[CreateReceivedSamplingBagRequest]):

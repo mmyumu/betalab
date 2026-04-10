@@ -27,7 +27,6 @@ from app.services.domain_services.workspace import (
     DiscardWidgetProduceLotService,
     DiscardWorkspaceProduceLotRequest,
     DiscardWorkspaceProduceLotService,
-    DiscardWorkspaceWidgetService,
     MoveWidgetProduceLotToWorkbenchToolRequest,
     MoveWidgetProduceLotToWorkbenchToolService,
     MoveWorkbenchProduceLotToWidgetRequest,
@@ -35,6 +34,7 @@ from app.services.domain_services.workspace import (
     MoveWorkspaceWidgetService,
     RemoveLiquidFromWorkspaceWidgetService,
     StartGrinderCycleService,
+    StoreWorkspaceWidgetService,
     UpdateWorkspaceWidgetLiquidVolumeRequest,
     UpdateWorkspaceWidgetLiquidVolumeService,
     WorkspaceWidgetLayoutRequest,
@@ -82,10 +82,10 @@ def move_workspace_widget(
     )
 
 
-@router.post("/{experiment_id}/workspace/widgets/{widget_id}/discard", response_model=ExperimentSchema)
-def discard_workspace_widget(experiment_id: str, widget_id: str) -> ExperimentSchema:
+@router.post("/{experiment_id}/workspace/widgets/{widget_id}/store", response_model=ExperimentSchema)
+def store_workspace_widget(experiment_id: str, widget_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: DiscardWorkspaceWidgetService(experiment_service).run(
+        lambda: StoreWorkspaceWidgetService(experiment_service).run(
             experiment_id,
             WorkspaceWidgetRequest(widget_id=widget_id),
         )

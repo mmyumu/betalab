@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { canToolBeSealed } from "@/lib/entity-rules";
 import {
+  canWorkspaceWidgetBeStored,
   getLiquidDropTargets,
   getProduceLotDropTargets,
+  getTrashedWorkspaceWidgetDropTargets,
   getToolDropTargets,
 } from "@/lib/tool-drop-targets";
 
@@ -51,6 +53,12 @@ describe("tool drop targets", () => {
     expect(canToolBeSealed("beaker")).toBe(false);
   });
 
+  it("routes storable workspace widgets to inventory and trashed widgets back to workspace", () => {
+    expect(canWorkspaceWidgetBeStored("rack")).toBe(true);
+    expect(canWorkspaceWidgetBeStored("grinder")).toBe(true);
+    expect(canWorkspaceWidgetBeStored("basket")).toBe(false);
+    expect(getTrashedWorkspaceWidgetDropTargets()).toEqual(["workspace_canvas"]);
+  });
 
   it("routes dry ice pellets to the grinder while regular liquids stay on bench tools", () => {
     expect(getLiquidDropTargets("dry_ice_pellets")).toEqual(["grinder_widget"]);

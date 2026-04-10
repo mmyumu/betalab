@@ -61,6 +61,7 @@ export type LabSceneViewProps = {
     dndDisabledByAction: boolean;
     grinder: GrinderDndApi;
     grossBalance: GrossBalanceDndApi;
+    inventoryDropRef: RefObject<HTMLDivElement | null>;
     isDropTargetHighlighted: (target: DropTargetType) => boolean;
     rack: RackDndApi;
     setActiveDragItem: (item: DragDescriptor | null) => void;
@@ -189,6 +190,8 @@ export function LabSceneView({
             dnd={{
               clearDropTargets: dnd.clearDropTargets,
               dndDisabledByAction: dnd.dndDisabledByAction,
+              inventoryDropRef: dnd.inventoryDropRef,
+              isInventoryDropHighlighted: dnd.isDropTargetHighlighted("inventory_panel"),
               setActiveDragItem: dnd.setActiveDragItem,
               showDropTargets: dnd.showDropTargets,
               workbench: dnd.workbench,

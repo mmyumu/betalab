@@ -36,6 +36,7 @@ export type DndTargetId =
   | "grinder-dropzone"
   | "gross-balance-dropzone"
   | "analytical-balance-dropzone"
+  | "inventory-dropzone"
   | "rack-illustration-slot-1"
   | "widget-workspace"
   | "trash-dropzone";
@@ -97,6 +98,7 @@ export const dndTargetCases: {
   { id: "grinder-dropzone", label: "grinder", assertDragOver: true },
   { id: "gross-balance-dropzone", label: "gross balance", assertDragOver: true },
   { id: "analytical-balance-dropzone", label: "analytical balance", assertDragOver: true },
+  { id: "inventory-dropzone", label: "inventory", assertDragOver: true },
   { id: "rack-illustration-slot-1", label: "rack slot", assertDragOver: true },
   { id: "widget-workspace", label: "workspace canvas", assertDragOver: false },
   { id: "trash-dropzone", label: "trash", assertDragOver: true },
@@ -467,8 +469,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
       },
       "trash-dropzone": {
         compatible:
-          item.itemType === "tool" ||
-          (item.itemType === "workspace_widget" && item.allowedDropTargets.includes("trash_bin")),
+          item.itemType === "tool",
         command:
           item.itemType === "tool"
             ? {
@@ -477,14 +478,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
                   tool_id: item.id,
                 },
               }
-            : item.itemType === "workspace_widget" && widgetId && item.allowedDropTargets.includes("trash_bin")
-              ? {
-                  type: "discard_workspace_widget",
-                  payload: {
-                    widget_id: widgetId,
-                  },
-                }
-              : null,
+            : null,
       },
     },
   };
@@ -870,7 +864,7 @@ function createTrashWidgetSourceCase(
         },
       },
       "trash-dropzone": {
-        compatible: true,
+        compatible: false,
         command: null,
       },
     },

@@ -668,7 +668,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
             removed_liquid = client.delete(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}"
             )
-            discarded_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/discard")
+            stored_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/store")
     finally:
         experiment_service._now_fn = original_now_fn
 
@@ -688,10 +688,13 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert _find_widget(advanced.json(), "grinder")["produce_lots"][0]["temperature_c"] < 20.0
     assert removed_liquid.status_code == 200
     assert _find_widget(removed_liquid.json(), "grinder")["liquids"] == []
-    assert discarded_widget.status_code == 200
-    assert next(widget for widget in discarded_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
+    assert stored_widget.status_code == 200
+    assert next(widget for widget in stored_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
+        "is_present"
+    ] is False
+    assert next(widget for widget in stored_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
         "is_trashed"
-    ] is True
+    ] is False
 
 
 def test_experiment_stream_pushes_updated_snapshots() -> None:

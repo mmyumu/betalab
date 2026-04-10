@@ -132,7 +132,7 @@ export type DiscardWidgetProduceLotPayload = {
 
 export type DiscardWorkspaceProduceLotPayload = { produce_lot_id: string };
 
-export type DiscardWorkspaceWidgetPayload = { widget_id: string };
+export type StoreWorkspaceWidgetPayload = { widget_id: string };
 
 export type MoveGrossBalanceProduceLotToWidgetPayload = {
   produce_lot_id: string;

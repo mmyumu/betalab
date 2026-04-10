@@ -7,6 +7,6 @@ export {
   getProduceLotDropTargets,
   getSampleLabelDropTargets,
   getToolDropTargets,
-  getWorkspaceWidgetDropTargets,
-  isWorkspaceWidgetDiscardable,
+  getTrashedWorkspaceWidgetDropTargets,
+  canWorkspaceWidgetBeStored,
 } from "@/lib/entity-rules";
