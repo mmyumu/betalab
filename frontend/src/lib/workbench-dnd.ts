@@ -17,18 +17,18 @@ import type {
   WorkspaceWidgetDragPayload,
 } from "@/types/workbench";
 
-export const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
-export const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
-export const BASKET_TOOL_DRAG_MIME = "application/x-betalab-basket-tool-item";
-export const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
-export const GROSS_BALANCE_TOOL_DRAG_MIME = "application/x-betalab-gross-balance-tool-item";
-export const ANALYTICAL_BALANCE_TOOL_DRAG_MIME = "application/x-betalab-analytical-balance-tool-item";
-export const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
-export const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
-export const WORKSPACE_LIQUID_DRAG_MIME = "application/x-betalab-workspace-liquid-item";
-export const PRODUCE_DRAG_MIME = "application/x-betalab-produce-item";
-export const SAMPLE_LABEL_DRAG_MIME = "application/x-betalab-sample-label-item";
-export const LIMS_LABEL_TICKET_DRAG_MIME = "application/x-betalab-lims-label-ticket-item";
+const WORKBENCH_DRAG_MIME = "application/x-betalab-workbench-item";
+const BENCH_TOOL_DRAG_MIME = "application/x-betalab-bench-tool-item";
+const BASKET_TOOL_DRAG_MIME = "application/x-betalab-basket-tool-item";
+const RACK_TOOL_DRAG_MIME = "application/x-betalab-rack-tool-item";
+const GROSS_BALANCE_TOOL_DRAG_MIME = "application/x-betalab-gross-balance-tool-item";
+const ANALYTICAL_BALANCE_TOOL_DRAG_MIME = "application/x-betalab-analytical-balance-tool-item";
+const TRASH_TOOL_DRAG_MIME = "application/x-betalab-trash-tool-item";
+const WORKSPACE_WIDGET_DRAG_MIME = "application/x-betalab-workspace-widget-item";
+const WORKSPACE_LIQUID_DRAG_MIME = "application/x-betalab-workspace-liquid-item";
+const PRODUCE_DRAG_MIME = "application/x-betalab-produce-item";
+const SAMPLE_LABEL_DRAG_MIME = "application/x-betalab-sample-label-item";
+const LIMS_LABEL_TICKET_DRAG_MIME = "application/x-betalab-lims-label-ticket-item";
 const DROP_TARGET_MIME_PREFIX = "application/x-betalab-drop-target-";
 
 function getDropTargetMime(targetType: DropTargetType) {

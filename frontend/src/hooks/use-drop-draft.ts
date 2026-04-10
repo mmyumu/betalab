@@ -31,7 +31,7 @@ type DropDraftExperimentApi = {
   createDebugProduceLotToWidget: (payload: CreateDebugProduceLotToWidgetPayload) => void;
 };
 
-export type DropDraftApi = {
+type DropDraftApi = {
   pendingDropDraft: DropDraft | null;
   setPendingDropDraft: Dispatch<SetStateAction<DropDraft | null>>;
   handleUpdateDropDraftField: (fieldId: string, value: number) => void;

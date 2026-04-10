@@ -27,7 +27,7 @@ type UseWorkspaceActionsOptions = {
   measuredSampleMassG: number | null;
 };
 
-export type WorkspaceActions = {
+type WorkspaceActions = {
   handleAnalyticalBalanceToolSealToggle: () => void;
   handleBalanceToolSealToggle: () => void;
   handleCreateAppleLot: () => void;

@@ -21,7 +21,7 @@ import { expect } from "vitest";
 
 const pesticideToolCatalog = labToolCatalog;
 
-export type MockDataTransfer = {
+type MockDataTransfer = {
   data: Map<string, string>;
   dropEffect: string;
   effectAllowed: string;
@@ -45,12 +45,12 @@ export type DndCoverageScenario =
   | "inventory"
   | "surface-and-balance-produce";
 
-export type ExpectedCommand = {
+type ExpectedCommand = {
   payload: unknown;
   type: string;
 };
 
-export type DndSourceCase = {
+type DndSourceCase = {
   availableTargets: DndTargetId[];
   buildExperiment: () => Experiment;
   expectRackWidget: boolean;

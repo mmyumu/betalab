@@ -61,14 +61,14 @@ export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWid
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
 export type ProduceCutState = "whole" | "cut" | "ground" | "waste";
-export type DragEntityKind =
+type DragEntityKind =
   | "tool"
   | "liquid"
   | "workspace_widget"
   | "produce"
   | "sample_label"
   | "lims_label_ticket";
-export type DragSourceKind =
+type DragSourceKind =
   | "palette"
   | "debug_palette"
   | "workbench"

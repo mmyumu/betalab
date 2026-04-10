@@ -662,4 +662,4 @@ export function useWorkspaceLayout<WidgetId extends string>({
 }
 
 export type { WidgetLayout };
-export { inferAnchoredLayout, resolveAnchoredPosition };
+export { inferAnchoredLayout };

@@ -171,12 +171,6 @@ export type RestoreTrashedProduceLotToWidgetPayload = {
 
 export type StartGrinderCyclePayload = { widget_id: string };
 
-export type UpdateWorkspaceWidgetLiquidVolumePayload = {
-  widget_id: string;
-  liquid_entry_id: string;
-  volume_ml: number;
-};
-
 // ── Produce ──────────────────────────────────────────────────────────────────
 
 export type CreateProduceLotPayload = { produce_type: string };

@@ -53,7 +53,7 @@ type UseWorkbenchHandlersOptions = {
   setPendingDropDraft: Dispatch<SetStateAction<DropDraft | null>>;
 };
 
-export type WorkbenchHandlers = {
+type WorkbenchHandlers = {
   canApplyLimsLabelToSlot: (slot: BenchSlot) => boolean;
   handleAddWorkbenchSlot: () => void;
   handleApplyLimsLabelTicket: (payload: {

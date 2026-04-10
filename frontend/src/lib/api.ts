@@ -392,15 +392,6 @@ export async function addLiquidToWorkspaceWidget(experimentId: string, payload: 
   });
 }
 
-export async function updateWorkspaceWidgetLiquidVolume(experimentId: string, payload: MutationPayload): Promise<Experiment> {
-  const body = requirePayload(payload);
-  return sendMutationRequest(experimentId, {
-    method: "PATCH",
-    path: `/experiments/${experimentId}/workspace/widgets/${requireString(body, "widget_id")}/liquids/${requireString(body, "liquid_entry_id")}`,
-    body: { volume_ml: requireNumber(body, "volume_ml") },
-  });
-}
-
 export async function removeLiquidFromWorkspaceWidget(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1123,15 +1114,6 @@ export async function removeLiquidFromWorkbenchTool(experimentId: string, payloa
   return sendMutationRequest(experimentId, {
     method: "DELETE",
     path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/liquids/${requireString(body, "liquid_entry_id")}`,
-  });
-}
-
-export async function updateWorkbenchLiquidVolume(experimentId: string, payload: MutationPayload): Promise<Experiment> {
-  const body = requirePayload(payload);
-  return sendMutationRequest(experimentId, {
-    method: "PATCH",
-    path: `/experiments/${experimentId}/workbench/tools/${findWorkbenchToolId(experimentId, requireString(body, "slot_id"))}/liquids/${requireString(body, "liquid_entry_id")}`,
-    body: { volume_ml: requireNumber(body, "volume_ml") },
   });
 }
 

@@ -30,7 +30,7 @@ type UseWorkspaceDropOptions = {
   workspaceRef: RefObject<HTMLDivElement | null>;
 };
 
-export type WorkspaceDropHandlers = {
+type WorkspaceDropHandlers = {
   handleWorkspaceDragOver: (event: DragEvent<HTMLDivElement>) => void;
   handleWorkspaceDrop: (event: DragEvent<HTMLDivElement>) => void;
 };

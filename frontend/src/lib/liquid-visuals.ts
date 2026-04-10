@@ -5,25 +5,25 @@ type LiquidVisualSource = {
   volume_ml: number;
 };
 
-export type LiquidVisualPalette = {
+type LiquidVisualPalette = {
   glow: string;
   liquid: string;
   stroke: string;
 };
 
-export type LiquidVisualSegment = {
+type LiquidVisualSegment = {
   accent: ToolbarAccent;
   color: string;
   ratio: number;
 };
 
-export type ContainerLiquidVisualState = {
+type ContainerLiquidVisualState = {
   hasVisibleLiquid: boolean;
   palette: LiquidVisualPalette;
   segments: LiquidVisualSegment[];
 };
 
-export const liquidAccentPalette: Record<ToolbarAccent, LiquidVisualPalette> = {
+const liquidAccentPalette: Record<ToolbarAccent, LiquidVisualPalette> = {
   amber: {
     liquid: "#f59e0b",
     glow: "#fef3c7",
@@ -71,7 +71,7 @@ export function getLiquidVisualSegments(liquids: LiquidVisualSource[]): LiquidVi
   }));
 }
 
-export function getDominantLiquidAccent(
+function getDominantLiquidAccent(
   liquids: LiquidVisualSource[],
   fallbackAccent: ToolbarAccent,
 ) {

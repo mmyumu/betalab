@@ -34,7 +34,7 @@ import type {
   TrashToolEntry,
 } from "@/types/workbench";
 
-export type LabSceneViewProps = {
+type LabSceneViewProps = {
   experiment: Experiment;
   balances: {
     analyticalBalanceMeasuredMassG: number | null;

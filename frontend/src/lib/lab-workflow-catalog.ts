@@ -235,8 +235,3 @@ export const labLiquidCatalog = Object.fromEntries(
     .filter((item): item is LiquidCatalogItem => item.itemType === "liquid")
     .map((item) => [item.id, item]),
 ) satisfies Record<string, LiquidCatalogItem>;
-
-export const initialWorkbenchSlots: BenchSlot[] = [
-  { id: "station_1", label: "Station 1", tool: null },
-  { id: "station_2", label: "Station 2", tool: null },
-];

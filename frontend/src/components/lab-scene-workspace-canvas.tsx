@@ -42,7 +42,7 @@ import type {
   TrashToolEntry,
 } from "@/types/workbench";
 
-export type LabSceneWorkspaceCanvasProps = {
+type LabSceneWorkspaceCanvasProps = {
   balances: {
     analyticalBalanceMeasuredMassG: number | null;
     analyticalBalanceNetMassG: number | null;
