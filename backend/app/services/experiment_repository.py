@@ -191,15 +191,10 @@ class SqliteExperimentRepository:
         connection.commit()
 
     def _ensure_column(self, connection: sqlite3.Connection, column_name: str, column_type: str) -> None:
-        existing_columns = {
-            row[1]
-            for row in connection.execute("PRAGMA table_info(experiments)").fetchall()
-        }
+        existing_columns = {row[1] for row in connection.execute("PRAGMA table_info(experiments)").fetchall()}
         if column_name in existing_columns:
             return
-        connection.execute(
-            f"ALTER TABLE experiments ADD COLUMN {column_name} {column_type}"
-        )
+        connection.execute(f"ALTER TABLE experiments ADD COLUMN {column_name} {column_type}")
 
 
 def _serialize_experiment(experiment: Experiment) -> dict:
@@ -233,9 +228,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     id=slot.id,
                     label=slot.label,
                     tool=_deserialize_workbench_tool(slot.tool),
-                    surface_produce_lots=[
-                        _deserialize_produce_lot(lot) for lot in slot.surface_produce_lots
-                    ],
+                    surface_produce_lots=[_deserialize_produce_lot(lot) for lot in slot.surface_produce_lots],
                 )
                 for slot in schema.workbench.slots
             ]
@@ -287,10 +280,9 @@ def _deserialize_experiment(payload: dict) -> Experiment:
             measured_sample_mass_g=schema.lims_reception.measured_sample_mass_g,
             lab_sample_code=schema.lims_reception.lab_sample_code,
             status=schema.lims_reception.status,
-            printed_label_ticket=
-                PrintedLabelTicket(**schema.lims_reception.printed_label_ticket.model_dump())
-                if schema.lims_reception.printed_label_ticket is not None
-                else None,
+            printed_label_ticket=PrintedLabelTicket(**schema.lims_reception.printed_label_ticket.model_dump())
+            if schema.lims_reception.printed_label_ticket is not None
+            else None,
         ),
         last_simulation_at=schema.last_simulation_at,
         basket_tool=_deserialize_workbench_tool(schema.basket_tool),
@@ -304,32 +296,26 @@ def _deserialize_experiment(payload: dict) -> Experiment:
 def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
     workspace = Workspace(
         widgets=[
-                WorkspaceWidget(
-                    id=widget.id,
-                    widget_type=widget.widget_type,
-                    label=widget.label,
-                    anchor=widget.anchor,
-                    offset_x=widget.offset_x,
-                    offset_y=widget.offset_y,
-                    is_present=widget.is_present,
-                    is_trashed=widget.is_trashed,
-                    grinder_run_duration_ms=widget.grinder_run_duration_ms,
-                    grinder_run_remaining_ms=widget.grinder_run_remaining_ms,
-                    grinder_fault=widget.grinder_fault,
-                    tool=_deserialize_workbench_tool(widget.tool),
-                    produce_lots=[
-                        _deserialize_produce_lot(lot) for lot in widget.produce_lots
-                    ],
-                    liquids=[
-                        WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids
-                    ],
-                )
-                for widget in schema.workspace.widgets
+            WorkspaceWidget(
+                id=widget.id,
+                widget_type=widget.widget_type,
+                label=widget.label,
+                anchor=widget.anchor,
+                offset_x=widget.offset_x,
+                offset_y=widget.offset_y,
+                is_present=widget.is_present,
+                is_trashed=widget.is_trashed,
+                grinder_run_duration_ms=widget.grinder_run_duration_ms,
+                grinder_run_remaining_ms=widget.grinder_run_remaining_ms,
+                grinder_fault=widget.grinder_fault,
+                tool=_deserialize_workbench_tool(widget.tool),
+                produce_lots=[_deserialize_produce_lot(lot) for lot in widget.produce_lots],
+                liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids],
+            )
+            for widget in schema.workspace.widgets
         ],
     )
-    workspace.produce_basket_lots = [
-        _deserialize_produce_lot(lot) for lot in schema.workspace.produce_basket_lots
-    ]
+    workspace.produce_basket_lots = [_deserialize_produce_lot(lot) for lot in schema.workspace.produce_basket_lots]
     return workspace
 
 
@@ -345,10 +331,9 @@ def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:
                 measured_sample_mass_g=entry.measured_sample_mass_g,
                 lab_sample_code=entry.lab_sample_code,
                 status=entry.status,
-                printed_label_ticket=
-                    PrintedLabelTicket(**entry.printed_label_ticket.model_dump())
-                    if entry.printed_label_ticket is not None
-                    else None,
+                printed_label_ticket=PrintedLabelTicket(**entry.printed_label_ticket.model_dump())
+                if entry.printed_label_ticket is not None
+                else None,
             )
             for entry in schema.lims_entries
         ]

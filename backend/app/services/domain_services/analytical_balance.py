@@ -104,10 +104,7 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
         produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
         liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
         return round(
-            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0)
-            + produce_mass_g
-            + liquid_mass_g
-            + tool.powder_mass_g,
+            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0) + produce_mass_g + liquid_mass_g + tool.powder_mass_g,
             3,
         )
 
@@ -134,9 +131,7 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
 
 
 class MoveWorkbenchToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
-    def _run(
-        self, experiment: Experiment, request: MoveWorkbenchToolToAnalyticalBalanceRequest
-    ) -> None:
+    def _run(self, experiment: Experiment, request: MoveWorkbenchToolToAnalyticalBalanceRequest) -> None:
         source_slot = find_workbench_slot(experiment.workbench, request.source_slot_id)
         if source_slot.tool is None:
             raise ValueError(f"Place a tool on {source_slot.label} before moving it.")
@@ -162,20 +157,14 @@ class MoveRackToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
 
 
 class RestoreTrashedToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
-    def _run(
-        self, experiment: Experiment, request: RestoreTrashedToolToAnalyticalBalanceRequest
-    ) -> None:
+    def _run(self, experiment: Experiment, request: RestoreTrashedToolToAnalyticalBalanceRequest) -> None:
         trashed_tool = find_trash_tool(experiment.trash, request.trash_tool_id)
         self._place_tool_on_balance(experiment, trashed_tool.tool, action_verb="restored to")
-        experiment.trash.tools = [
-            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
-        ]
+        experiment.trash.tools = [entry for entry in experiment.trash.tools if entry.id != trashed_tool.id]
 
 
 class MoveGrossBalanceToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
-    def _run(
-        self, experiment: Experiment, request: MoveGrossBalanceToolToAnalyticalBalanceRequest
-    ) -> None:
+    def _run(self, experiment: Experiment, request: MoveGrossBalanceToolToAnalyticalBalanceRequest) -> None:
         gross_balance = find_workspace_widget(experiment.workspace, "gross_balance")
         if gross_balance.tool is None:
             raise ValueError("Gross balance does not contain a tool.")
@@ -186,17 +175,13 @@ class MoveGrossBalanceToolToAnalyticalBalanceService(AnalyticalBalanceServiceBas
 
 
 class MoveAnalyticalBalanceToolToWorkbenchService(AnalyticalBalanceServiceBase):
-    def _run(
-        self, experiment: Experiment, request: MoveAnalyticalBalanceToolToWorkbenchRequest
-    ) -> None:
+    def _run(self, experiment: Experiment, request: MoveAnalyticalBalanceToolToWorkbenchRequest) -> None:
         target_slot = find_workbench_slot(experiment.workbench, request.target_slot_id)
         if target_slot.tool is not None or target_slot.surface_produce_lots:
             raise ValueError(f"{target_slot.label} already contains a tool")
         moved_tool = self._take_tool_from_balance(experiment)
         target_slot.tool = moved_tool
-        experiment.audit_log.append(
-            f"{moved_tool.label} moved from Analytical balance to {target_slot.label}."
-        )
+        experiment.audit_log.append(f"{moved_tool.label} moved from Analytical balance to {target_slot.label}.")
 
 
 class MoveAnalyticalBalanceToolToRackService(AnalyticalBalanceServiceBase):
@@ -206,9 +191,7 @@ class MoveAnalyticalBalanceToolToRackService(AnalyticalBalanceServiceBase):
             raise ValueError(f"{target_slot.label} already contains a tool")
         moved_tool = self._take_tool_from_balance(experiment)
         target_slot.tool = moved_tool
-        experiment.audit_log.append(
-            f"{moved_tool.label} moved from Analytical balance to {target_slot.label}."
-        )
+        experiment.audit_log.append(f"{moved_tool.label} moved from Analytical balance to {target_slot.label}.")
 
 
 class DiscardAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
@@ -227,9 +210,7 @@ class DiscardAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
 class TareAnalyticalBalanceService(AnalyticalBalanceServiceBase):
     def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
         widget = self._find_analytical_balance_widget(experiment)
-        measured_mass_g = (
-            self._calculate_tool_mass_g(widget.tool) if widget.tool is not None else 0.0
-        )
+        measured_mass_g = self._calculate_tool_mass_g(widget.tool) if widget.tool is not None else 0.0
         experiment.analytical_balance.tare_mass_g = measured_mass_g
         experiment.audit_log.append(f"Analytical balance tared at {measured_mass_g:.3f} g.")
 
@@ -245,8 +226,7 @@ class OpenAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         tool.closure_fault = None
         if vent_event is not None and vent_event.lost_mass_g > 0:
             experiment.audit_log.append(
-                f"{tool.label} vented at {vent_event.pressure_bar:.3f} bar on Analytical balance; "
-                f"{vent_event.lost_mass_g:.3f} g of powder was lost."
+                f"{tool.label} vented at {vent_event.pressure_bar:.3f} bar on Analytical balance; {vent_event.lost_mass_g:.3f} g of powder was lost."
             )
             return
 
@@ -266,9 +246,7 @@ class CloseAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
 
 
 class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
-    def _run(
-        self, experiment: Experiment, request: PourSpatulaIntoAnalyticalBalanceToolRequest
-    ) -> None:
+    def _run(self, experiment: Experiment, request: PourSpatulaIntoAnalyticalBalanceToolRequest) -> None:
         tool = self._require_balance_tool(experiment)
         if tool.tool_type not in {"sample_vial", "centrifuge_tube"}:
             raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
@@ -304,15 +282,10 @@ class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):
 
         tare_mass_g = experiment.analytical_balance.tare_mass_g
         if tare_mass_g is None:
-            raise ValueError(
-                "ERR_TARE: Erreur de tare : le contenant semble trop lourd ou non remis a zero."
-            )
+            raise ValueError("ERR_TARE: Erreur de tare : le contenant semble trop lourd ou non remis a zero.")
 
         net_mass_g = round(measured_mass_g - tare_mass_g, 3)
-        if (
-            net_mass_g < _ANALYTICAL_BALANCE_TARGET_MIN_G
-            or net_mass_g > _ANALYTICAL_BALANCE_TARGET_MAX_G
-        ):
+        if net_mass_g < _ANALYTICAL_BALANCE_TARGET_MIN_G or net_mass_g > _ANALYTICAL_BALANCE_TARGET_MAX_G:
             raise ValueError("ERR_RANGE: Masse hors specifications. Ajustez la quantite de poudre.")
 
         experiment.lims_reception.measured_sample_mass_g = net_mass_g

@@ -63,11 +63,7 @@ def move_workbench_tool_to_gross_balance(
 
 @router.post("/{experiment_id}/gross-balance/place-basket-tool", response_model=ExperimentSchema)
 def move_basket_tool_to_gross_balance(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: MoveBasketToolToGrossBalanceService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: MoveBasketToolToGrossBalanceService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/gross-balance/place-tool", response_model=ExperimentSchema)
@@ -149,25 +145,17 @@ def move_gross_balance_tool_to_rack(
 
 @router.post("/{experiment_id}/gross-balance/discard-tool", response_model=ExperimentSchema)
 def discard_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: DiscardGrossBalanceToolService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: DiscardGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/gross-balance/open-tool", response_model=ExperimentSchema)
 def open_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: OpenGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest())
-    )
+    return handle_service_errors(lambda: OpenGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/gross-balance/close-tool", response_model=ExperimentSchema)
 def close_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: CloseGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest())
-    )
+    return handle_service_errors(lambda: CloseGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post(
@@ -235,9 +223,7 @@ def restore_trashed_produce_lot_to_gross_balance(
     return handle_service_errors(
         lambda: RestoreTrashedProduceLotToGrossBalanceService(experiment_service).run(
             experiment_id,
-            RestoreTrashedProduceLotToGrossBalanceRequest(
-                trash_produce_lot_id=trash_produce_lot_id
-            ),
+            RestoreTrashedProduceLotToGrossBalanceRequest(trash_produce_lot_id=trash_produce_lot_id),
         )
     )
 

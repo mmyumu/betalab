@@ -184,9 +184,7 @@ class RemoveWorkbenchSlotService(WriteDomainService[WorkbenchSlotRequest]):
         if slot.tool is not None or slot.surface_produce_lots:
             raise ValueError(f"{slot.label} must be empty before it can be removed.")
 
-        experiment.workbench.slots = [
-            existing_slot for existing_slot in experiment.workbench.slots if existing_slot.id != slot.id
-        ]
+        experiment.workbench.slots = [existing_slot for existing_slot in experiment.workbench.slots if existing_slot.id != slot.id]
         experiment.audit_log.append(f"{slot.label} removed from workbench.")
 
 
@@ -221,9 +219,7 @@ class MoveToolBetweenWorkbenchSlotsService(WriteDomainService[MoveToolBetweenWor
         moved_tool = source_slot.tool
         source_slot.tool = None
         target_slot.tool = moved_tool
-        experiment.audit_log.append(
-            f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}."
-        )
+        experiment.audit_log.append(f"{moved_tool.label} moved from {source_slot.label} to {target_slot.label}.")
 
 
 class DiscardWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
@@ -290,12 +286,8 @@ class RestoreTrashedToolToWorkbenchSlotService(WriteDomainService[RestoreTrashed
             raise ValueError(f"{target_slot.label} already contains a tool")
 
         target_slot.tool = trashed_tool.tool
-        experiment.trash.tools = [
-            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
-        ]
-        experiment.audit_log.append(
-            f"{target_slot.tool.label} restored from trash to {target_slot.label}."
-        )
+        experiment.trash.tools = [entry for entry in experiment.trash.tools if entry.id != trashed_tool.id]
+        experiment.audit_log.append(f"{target_slot.tool.label} restored from trash to {target_slot.label}.")
 
 
 class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToolRequest]):
@@ -316,9 +308,7 @@ class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToo
         if remaining_capacity <= 0:
             raise ValueError(f"{tool.label} is already full.")
 
-        requested_volume = round_volume(
-            max(float(request.volume_ml or liquid_definition.transfer_volume_ml), 0.0)
-        )
+        requested_volume = round_volume(max(float(request.volume_ml or liquid_definition.transfer_volume_ml), 0.0))
         volume_to_add = round_volume(min(requested_volume, remaining_capacity))
         existing_liquid = next(
             (liquid for liquid in tool.liquids if liquid.liquid_id == liquid_definition.id),
@@ -354,9 +344,7 @@ class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToo
             return
 
         if existing_liquid_was_present:
-            experiment.audit_log.append(
-                f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label}."
-            )
+            experiment.audit_log.append(f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label}.")
             return
 
         experiment.audit_log.append(f"{liquid_definition.name} added to {tool.label}.")
@@ -392,9 +380,7 @@ class UpdateWorkbenchLiquidVolumeService(WriteDomainService[UpdateWorkbenchLiqui
             experiment.audit_log.append(f"{liquid_entry.name} removed from {tool.label}.")
             return
 
-        experiment.audit_log.append(
-            f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {tool.label}."
-        )
+        experiment.audit_log.append(f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {tool.label}.")
 
 
 class AddProduceLotToWorkbenchToolService(WriteDomainService[AddProduceLotToWorkbenchToolRequest]):
@@ -430,9 +416,7 @@ class MoveProduceLotBetweenWorkbenchToolsService(WriteDomainService[MoveProduceL
             ),
             WorkbenchProduceLotTarget(slot_id=request.target_slot_id),
         )
-        experiment.audit_log.append(
-            f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}."
-        )
+        experiment.audit_log.append(f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}.")
 
 
 class DiscardProduceLotFromWorkbenchToolService(WriteDomainService[WorkbenchProduceLotRequest]):
@@ -482,9 +466,7 @@ class RestoreTrashedProduceLotToWorkbenchToolService(WriteDomainService[RestoreT
             TrashProduceLotSource(trash_produce_lot_id=request.trash_produce_lot_id),
             WorkbenchProduceLotTarget(slot_id=request.target_slot_id),
         )
-        experiment.audit_log.append(
-            f"{transfer.entity.label} restored from trash to {transfer.location_label}."
-        )
+        experiment.audit_log.append(f"{transfer.entity.label} restored from trash to {transfer.location_label}.")
 
 
 class ApplySampleLabelToWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
@@ -532,9 +514,7 @@ class MoveSampleLabelBetweenWorkbenchToolsService(WriteDomainService[MoveSampleL
         target_tool = require_slot_tool(target_slot, "adding a sample label")
         label = pop_tool_label(source_tool, request.label_id)
         target_tool.labels.append(label)
-        experiment.audit_log.append(
-            f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on {target_slot.label}."
-        )
+        experiment.audit_log.append(f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on {target_slot.label}.")
 
 
 class DiscardSampleLabelFromWorkbenchToolService(WriteDomainService[WorkbenchSampleLabelRequest]):
@@ -565,12 +545,8 @@ class RestoreTrashedSampleLabelToWorkbenchToolService(WriteDomainService[Restore
 
         target_tool = require_slot_tool(target_slot, "adding a sample label")
         target_tool.labels.append(trashed_sample_label.label)
-        experiment.trash.sample_labels = [
-            entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id
-        ]
-        experiment.audit_log.append(
-            f"Label restored from trash to {target_tool.label} on {target_slot.label}."
-        )
+        experiment.trash.sample_labels = [entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id]
+        experiment.audit_log.append(f"Label restored from trash to {target_tool.label} on {target_slot.label}.")
 
 
 class CloseWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):

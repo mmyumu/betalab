@@ -8,9 +8,7 @@ from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentNotFoundError, ExperimentRuntimeService
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
-experiment_service = ExperimentRuntimeService(
-    repository=SqliteExperimentRepository(settings.experiments_db_path)
-)
+experiment_service = ExperimentRuntimeService(repository=SqliteExperimentRepository(settings.experiments_db_path))
 experiment_stream_interval_seconds = 0.25
 
 

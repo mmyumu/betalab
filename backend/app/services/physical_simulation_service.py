@@ -219,8 +219,7 @@ class PhysicalSimulationService:
                 )
                 dry_ice.volume_ml = round_volume(
                     max(
-                        dry_ice.volume_ml
-                        - self._calculate_ambient_sublimation_mass_loss(elapsed_seconds),
+                        dry_ice.volume_ml - self._calculate_ambient_sublimation_mass_loss(elapsed_seconds),
                         0.0,
                     )
                 )
@@ -229,8 +228,7 @@ class PhysicalSimulationService:
 
             dry_ice.volume_ml = round_volume(
                 max(
-                    dry_ice.volume_ml
-                    - self._calculate_ambient_sublimation_mass_loss(elapsed_seconds),
+                    dry_ice.volume_ml - self._calculate_ambient_sublimation_mass_loss(elapsed_seconds),
                     0.0,
                 )
             )
@@ -275,12 +273,7 @@ class PhysicalSimulationService:
             thermal_mass_kg = max(lot.total_mass_g, 0.0) / 1000.0
             if thermal_mass_kg <= 0:
                 continue
-            absorbed_heat_kj += (
-                thermal_mass_kg
-                * self.thawed_apple_specific_heat_kj_per_kg_c
-                * base_heat_gain_c
-                * absorbed_heat_ratio
-            )
+            absorbed_heat_kj += thermal_mass_kg * self.thawed_apple_specific_heat_kj_per_kg_c * base_heat_gain_c * absorbed_heat_ratio
 
         self._sublimate_dry_ice(
             widget,
@@ -312,9 +305,7 @@ class PhysicalSimulationService:
         total_produce_mass_g: float,
     ) -> None:
         contact_factor = min(dry_ice_mass_g / max(total_produce_mass_g, 1.0), 1.0)
-        available_thermal_energy_kj = (
-            max(dry_ice_mass_g, 0.0) / 1000.0 * self.dry_ice_latent_heat_kj_per_kg
-        )
+        available_thermal_energy_kj = max(dry_ice_mass_g, 0.0) / 1000.0 * self.dry_ice_latent_heat_kj_per_kg
         requested_heat_removal_kj = 0.0
         lot_requests: list[tuple[ProduceLot, float, float]] = []
 
@@ -332,29 +323,19 @@ class PhysicalSimulationService:
                 continue
 
             effective_cp = self._get_effective_specific_heat(current_temperature_c)
-            cooling_rate = (
-                self.heat_transfer_ua_kj_per_s_c
-                * contact_factor
-                * mass_fraction
-                / max(thermal_mass_kg * effective_cp, 1e-9)
+            cooling_rate = self.heat_transfer_ua_kj_per_s_c * contact_factor * mass_fraction / max(thermal_mass_kg * effective_cp, 1e-9)
+            candidate_temperature_c = self.dry_ice_temperature_c + (current_temperature_c - self.dry_ice_temperature_c) * exp(
+                -cooling_rate * elapsed_seconds
             )
-            candidate_temperature_c = self.dry_ice_temperature_c + (
-                current_temperature_c - self.dry_ice_temperature_c
-            ) * exp(-cooling_rate * elapsed_seconds)
             lot_heat_request_kj = thermal_mass_kg * max(
-                self._get_specific_enthalpy(current_temperature_c)
-                - self._get_specific_enthalpy(candidate_temperature_c),
+                self._get_specific_enthalpy(current_temperature_c) - self._get_specific_enthalpy(candidate_temperature_c),
                 0.0,
             )
             lot_requests.append((lot, lot_heat_request_kj, candidate_temperature_c))
             requested_heat_removal_kj += lot_heat_request_kj
 
         usable_heat_removal_kj = min(requested_heat_removal_kj, available_thermal_energy_kj)
-        scaling_factor = (
-            usable_heat_removal_kj / requested_heat_removal_kj
-            if requested_heat_removal_kj > 0
-            else 0.0
-        )
+        scaling_factor = usable_heat_removal_kj / requested_heat_removal_kj if requested_heat_removal_kj > 0 else 0.0
 
         for lot, requested_heat_kj, candidate_temperature_c in lot_requests:
             actual_heat_kj = requested_heat_kj * scaling_factor
@@ -388,14 +369,12 @@ class PhysicalSimulationService:
     def _warm_open_produce_lot(self, lot: ProduceLot, elapsed_seconds: float) -> None:
         warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
         lot.temperature_c = min(
-            lot.temperature_c
-            + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
+            lot.temperature_c + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
             self.ambient_temperature_c,
         )
         lot.residual_co2_mass_g = round_volume(
             max(
-                lot.residual_co2_mass_g
-                - (self.residual_degassing_g_per_second * elapsed_seconds),
+                lot.residual_co2_mass_g - (self.residual_degassing_g_per_second * elapsed_seconds),
                 0.0,
             )
         )
@@ -404,8 +383,7 @@ class PhysicalSimulationService:
         for lot in tool.produce_lots:
             warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
             lot.temperature_c = min(
-                lot.temperature_c
-                + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
+                lot.temperature_c + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
                 self.ambient_temperature_c,
             )
 
@@ -436,9 +414,7 @@ class PhysicalSimulationService:
 
         gas_moles = trapped_co2_mass_g / self.co2_molar_mass_g_per_mol
         mean_temperature_c = (
-            sum(lot.temperature_c for lot in tool.produce_lots) / len(tool.produce_lots)
-            if tool.produce_lots
-            else self.ambient_temperature_c
+            sum(lot.temperature_c for lot in tool.produce_lots) / len(tool.produce_lots) if tool.produce_lots else self.ambient_temperature_c
         )
         temperature_k = max(mean_temperature_c + 273.15, 1.0)
         free_volume_m3 = self._get_free_container_volume_ml(tool) / 1_000_000.0
@@ -516,9 +492,7 @@ class PhysicalSimulationService:
 
         dry_ice.volume_ml = round_volume(
             max(
-                dry_ice.volume_ml
-                - (self._calculate_ambient_sublimation_mass_loss(elapsed_seconds) * boost)
-                - extra_mass_loss_g,
+                dry_ice.volume_ml - (self._calculate_ambient_sublimation_mass_loss(elapsed_seconds) * boost) - extra_mass_loss_g,
                 0.0,
             )
         )
@@ -532,38 +506,26 @@ class PhysicalSimulationService:
             return self.frozen_apple_specific_heat_kj_per_kg_c
 
         phase_band_width_c = self.freeze_start_temperature_c - self.freeze_end_temperature_c
-        latent_component = (
-            self.apple_water_mass_fraction * self.water_latent_heat_fusion_kj_per_kg
-        ) / phase_band_width_c
-        sensible_component = (
-            self.thawed_apple_specific_heat_kj_per_kg_c
-            + self.frozen_apple_specific_heat_kj_per_kg_c
-        ) / 2.0
+        latent_component = (self.apple_water_mass_fraction * self.water_latent_heat_fusion_kj_per_kg) / phase_band_width_c
+        sensible_component = (self.thawed_apple_specific_heat_kj_per_kg_c + self.frozen_apple_specific_heat_kj_per_kg_c) / 2.0
         return latent_component + sensible_component
 
     def _get_specific_enthalpy(self, temperature_c: float) -> float:
         frozen_band_span_c = self.freeze_end_temperature_c - self.dry_ice_temperature_c
-        frozen_enthalpy_at_phase_start = (
-            self.frozen_apple_specific_heat_kj_per_kg_c * frozen_band_span_c
-        )
+        frozen_enthalpy_at_phase_start = self.frozen_apple_specific_heat_kj_per_kg_c * frozen_band_span_c
         latent_enthalpy = self.apple_water_mass_fraction * self.water_latent_heat_fusion_kj_per_kg
 
         if temperature_c <= self.freeze_end_temperature_c:
-            return self.frozen_apple_specific_heat_kj_per_kg_c * (
-                temperature_c - self.dry_ice_temperature_c
-            )
+            return self.frozen_apple_specific_heat_kj_per_kg_c * (temperature_c - self.dry_ice_temperature_c)
 
         if temperature_c <= self.freeze_start_temperature_c:
-            phase_progress = (
-                temperature_c - self.freeze_end_temperature_c
-            ) / (self.freeze_start_temperature_c - self.freeze_end_temperature_c)
+            phase_progress = (temperature_c - self.freeze_end_temperature_c) / (self.freeze_start_temperature_c - self.freeze_end_temperature_c)
             return frozen_enthalpy_at_phase_start + (phase_progress * latent_enthalpy)
 
         return (
             frozen_enthalpy_at_phase_start
             + latent_enthalpy
-            + (temperature_c - self.freeze_start_temperature_c)
-            * self.thawed_apple_specific_heat_kj_per_kg_c
+            + (temperature_c - self.freeze_start_temperature_c) * self.thawed_apple_specific_heat_kj_per_kg_c
         )
 
     def _get_temperature_from_specific_enthalpy(
@@ -571,26 +533,17 @@ class PhysicalSimulationService:
         specific_enthalpy_kj_per_kg: float,
     ) -> float:
         frozen_band_span_c = self.freeze_end_temperature_c - self.dry_ice_temperature_c
-        frozen_enthalpy_at_phase_start = (
-            self.frozen_apple_specific_heat_kj_per_kg_c * frozen_band_span_c
-        )
+        frozen_enthalpy_at_phase_start = self.frozen_apple_specific_heat_kj_per_kg_c * frozen_band_span_c
         latent_enthalpy = self.apple_water_mass_fraction * self.water_latent_heat_fusion_kj_per_kg
         thawed_enthalpy_at_zero = frozen_enthalpy_at_phase_start + latent_enthalpy
 
         if specific_enthalpy_kj_per_kg <= frozen_enthalpy_at_phase_start:
-            return self.dry_ice_temperature_c + (
-                specific_enthalpy_kj_per_kg / self.frozen_apple_specific_heat_kj_per_kg_c
-            )
+            return self.dry_ice_temperature_c + (specific_enthalpy_kj_per_kg / self.frozen_apple_specific_heat_kj_per_kg_c)
 
         if specific_enthalpy_kj_per_kg <= thawed_enthalpy_at_zero:
-            phase_progress = (
-                specific_enthalpy_kj_per_kg - frozen_enthalpy_at_phase_start
-            ) / latent_enthalpy
-            return self.freeze_end_temperature_c + (
-                phase_progress * (self.freeze_start_temperature_c - self.freeze_end_temperature_c)
-            )
+            phase_progress = (specific_enthalpy_kj_per_kg - frozen_enthalpy_at_phase_start) / latent_enthalpy
+            return self.freeze_end_temperature_c + (phase_progress * (self.freeze_start_temperature_c - self.freeze_end_temperature_c))
 
         return self.freeze_start_temperature_c + (
-            (specific_enthalpy_kj_per_kg - thawed_enthalpy_at_zero)
-            / self.thawed_apple_specific_heat_kj_per_kg_c
+            (specific_enthalpy_kj_per_kg - thawed_enthalpy_at_zero) / self.thawed_apple_specific_heat_kj_per_kg_c
         )

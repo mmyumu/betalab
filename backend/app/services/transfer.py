@@ -88,9 +88,7 @@ class WorkspaceProduceLotSource:
 
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
         produce_lot = find_produce_basket_lot(experiment.workspace, self.produce_lot_id)
-        experiment.workspace.produce_basket_lots = [
-            lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id
-        ]
+        experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
         return TransferRemoval(
             entity=produce_lot,
             source_label="Produce basket",
@@ -165,9 +163,7 @@ class TrashProduceLotSource:
 
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
         trashed_produce_lot = find_trash_produce_lot(experiment.trash, self.trash_produce_lot_id)
-        experiment.trash.produce_lots = [
-            entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id
-        ]
+        experiment.trash.produce_lots = [entry for entry in experiment.trash.produce_lots if entry.id != trashed_produce_lot.id]
         return TransferRemoval(
             entity=trashed_produce_lot.produce_lot,
             source_label=trashed_produce_lot.origin_label,

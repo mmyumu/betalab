@@ -45,9 +45,7 @@ def place_received_bag_on_workbench(
 
 @router.post("/{experiment_id}/reception/bag/discard", response_model=ExperimentSchema)
 def discard_received_bag(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: DiscardBasketToolService(experiment_service).run(experiment_id, EmptyTrashRequest())
-    )
+    return handle_service_errors(lambda: DiscardBasketToolService(experiment_service).run(experiment_id, EmptyTrashRequest()))
 
 
 @router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)
@@ -58,9 +56,7 @@ def record_gross_weight(
     return handle_service_errors(
         lambda: RecordGrossWeightService(experiment_service).run(
             experiment_id,
-            RecordGrossWeightRequest(
-                measured_gross_mass_g=request.measured_gross_mass_g if request is not None else None
-            ),
+            RecordGrossWeightRequest(measured_gross_mass_g=request.measured_gross_mass_g if request is not None else None),
         )
     )
 
@@ -113,11 +109,7 @@ def print_lims_label(
 
 @router.delete("/{experiment_id}/lims/printed-label", response_model=ExperimentSchema)
 def discard_printed_lims_label(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: DiscardPrintedLimsLabelService(experiment_service).run(
-            experiment_id, EmptyReceptionRequest()
-        )
-    )
+    return handle_service_errors(lambda: DiscardPrintedLimsLabelService(experiment_service).run(experiment_id, EmptyReceptionRequest()))
 
 
 @router.post("/{experiment_id}/lims/apply-label-to-workbench-bag", response_model=ExperimentSchema)
@@ -135,11 +127,7 @@ def apply_printed_lims_label(
 
 @router.post("/{experiment_id}/lims/apply-label-to-basket-bag", response_model=ExperimentSchema)
 def apply_printed_lims_label_to_basket_bag(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: ApplyPrintedLimsLabelToBasketBagService(experiment_service).run(
-            experiment_id, EmptyReceptionRequest()
-        )
-    )
+    return handle_service_errors(lambda: ApplyPrintedLimsLabelToBasketBagService(experiment_service).run(experiment_id, EmptyReceptionRequest()))
 
 
 @router.post(
@@ -148,7 +136,5 @@ def apply_printed_lims_label_to_basket_bag(experiment_id: str) -> ExperimentSche
 )
 def apply_printed_lims_label_to_gross_balance_bag(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: ApplyPrintedLimsLabelToGrossBalanceBagService(experiment_service).run(
-            experiment_id, EmptyReceptionRequest()
-        )
+        lambda: ApplyPrintedLimsLabelToGrossBalanceBagService(experiment_service).run(experiment_id, EmptyReceptionRequest())
     )

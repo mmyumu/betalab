@@ -152,39 +152,27 @@ PRODUCE_LOT_DND_CASES: tuple[ProduceLotDndCase, ...] = (
 
 
 def _create_basket_lot(service: ExperimentRuntimeService, experiment_id: str) -> str:
-    created = CreateOrInitProduceLotService(service).run(
-        experiment_id, CreateProduceLotRequest(produce_type="apple")
-    )
+    created = CreateOrInitProduceLotService(service).run(experiment_id, CreateProduceLotRequest(produce_type="apple"))
     return created.workspace.produce_basket_lots[0].id
 
 
 def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, target: TargetKind) -> None:
     if target == "open_sample_bag":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag"))
         return
     if target == "sealed_sample_bag":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag"))
         CloseWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         return
     if target == "open_storage_jar":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l"))
         return
     if target == "sealed_storage_jar":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l"))
         CloseWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         return
     if target == "cutting_board":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="cutting_board_hdpe")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="cutting_board_hdpe"))
         return
     if target == "occupied_grinder":
         occupying_lot_id = _create_basket_lot(service, experiment_id)
@@ -193,14 +181,10 @@ def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, targe
         )
         return
     if target == "gross_balance_bag":
-        PlaceToolOnGrossBalanceService(service).run(
-            experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnGrossBalanceService(service).run(experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag"))
         return
     if target == "sealed_gross_balance_bag":
-        PlaceToolOnGrossBalanceService(service).run(
-            experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnGrossBalanceService(service).run(experiment_id, PlaceToolOnGrossBalanceRequest(tool_id="sealed_sampling_bag"))
         CloseGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
 
 
@@ -215,9 +199,7 @@ def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, sourc
         )
         return produce_lot_id, None
     if source == "workbench_tool":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="cutting_board_hdpe")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="cutting_board_hdpe"))
         AddProduceLotToWorkbenchToolService(service).run(
             experiment_id, AddProduceLotToWorkbenchToolRequest(slot_id="station_1", produce_lot_id=produce_lot_id)
         )
@@ -228,9 +210,7 @@ def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, sourc
         )
         return produce_lot_id, None
     if source == "trash":
-        discarded = DiscardWorkspaceProduceLotService(service).run(
-            experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id)
-        )
+        discarded = DiscardWorkspaceProduceLotService(service).run(experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id))
         return produce_lot_id, discarded.trash.produce_lots[0].id
     if source == "gross_balance":
         MoveWorkspaceProduceLotToGrossBalanceService(service).run(
@@ -355,9 +335,7 @@ def _execute_drop(
 
     if target == "trash":
         if source == "basket":
-            return DiscardWorkspaceProduceLotService(service).run(
-                experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id)
-            )
+            return DiscardWorkspaceProduceLotService(service).run(experiment_id, DiscardWorkspaceProduceLotRequest(produce_lot_id=produce_lot_id))
         if source in {"workbench_surface", "workbench_tool"}:
             return DiscardProduceLotFromWorkbenchToolService(service).run(
                 experiment_id, WorkbenchProduceLotRequest(slot_id="station_1", produce_lot_id=produce_lot_id)

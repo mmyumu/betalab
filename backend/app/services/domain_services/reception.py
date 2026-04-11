@@ -102,9 +102,7 @@ class SetGrossMassOffsetService(WriteDomainService[SetGrossMassOffsetRequest]):
             raise ValueError("Gross balance offset must stay between -100 g and 0 g.")
 
         experiment.lims_reception.gross_mass_offset_g = int(request.gross_mass_offset_g)
-        experiment.audit_log.append(
-            f"Gross balance container offset set to {request.gross_mass_offset_g:+d} g."
-        )
+        experiment.audit_log.append(f"Gross balance container offset set to {request.gross_mass_offset_g:+d} g.")
 
 
 class CreateLimsReceptionService(WriteDomainService[CreateLimsReceptionRequest]):
@@ -254,9 +252,7 @@ def _resolve_measured_gross_mass_g(
     if measured_gross_mass_g is not None:
         return float(measured_gross_mass_g)
     if experiment.lims_reception.measured_gross_mass_g is not None:
-        return float(experiment.lims_reception.measured_gross_mass_g) + float(
-            experiment.lims_reception.gross_mass_offset_g
-        )
+        return float(experiment.lims_reception.measured_gross_mass_g) + float(experiment.lims_reception.gross_mass_offset_g)
     return None
 
 
@@ -328,11 +324,7 @@ def _build_lims_reception_entry(
         indicative_mass_g=float(request.indicative_mass_g),
         measured_gross_mass_g=measured_gross_mass_g,
         gross_mass_offset_g=experiment.lims_reception.gross_mass_offset_g,
-        measured_sample_mass_g=(
-            float(request.measured_sample_mass_g)
-            if request.measured_sample_mass_g is not None
-            else None
-        ),
+        measured_sample_mass_g=(float(request.measured_sample_mass_g) if request.measured_sample_mass_g is not None else None),
         lab_sample_code=lab_sample_code,
         status=status,
         printed_label_ticket=printed_label_ticket,
@@ -351,11 +343,7 @@ def _update_lims_reception_entry(
     entry.indicative_mass_g = float(request.indicative_mass_g)
     entry.measured_gross_mass_g = measured_gross_mass_g
     entry.gross_mass_offset_g = experiment.lims_reception.gross_mass_offset_g
-    entry.measured_sample_mass_g = (
-        float(request.measured_sample_mass_g)
-        if request.measured_sample_mass_g is not None
-        else None
-    )
+    entry.measured_sample_mass_g = float(request.measured_sample_mass_g) if request.measured_sample_mass_g is not None else None
 
 
 def _require_printed_lims_ticket(experiment: Experiment) -> PrintedLabelTicket:

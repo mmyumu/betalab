@@ -129,38 +129,22 @@ def move_analytical_balance_tool_to_rack(
 
 @router.post("/{experiment_id}/analytical-balance/discard-tool", response_model=ExperimentSchema)
 def discard_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: DiscardAnalyticalBalanceToolService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: DiscardAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/analytical-balance/open-tool", response_model=ExperimentSchema)
 def open_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: OpenAnalyticalBalanceToolService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: OpenAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/analytical-balance/close-tool", response_model=ExperimentSchema)
 def close_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: CloseAnalyticalBalanceToolService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: CloseAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/analytical-balance/tare", response_model=ExperimentSchema)
 def tare_analytical_balance(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: TareAnalyticalBalanceService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: TareAnalyticalBalanceService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/analytical-balance/spatula/pour", response_model=ExperimentSchema)
@@ -178,8 +162,4 @@ def pour_spatula_into_analytical_balance_tool(
 
 @router.post("/{experiment_id}/analytical-balance/record-sample-mass", response_model=ExperimentSchema)
 def record_analytical_sample_mass(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: RecordAnalyticalSampleMassService(experiment_service).run(
-            experiment_id, EmptyRequest()
-        )
-    )
+    return handle_service_errors(lambda: RecordAnalyticalSampleMassService(experiment_service).run(experiment_id, EmptyRequest()))

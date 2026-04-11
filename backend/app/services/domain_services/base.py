@@ -33,5 +33,3 @@ class WriteDomainService(DomainService[ArgumentT], ABC):
 
     @abstractmethod
     def _run(self, experiment: Experiment, arguments: ArgumentT) -> None: ...
-
-

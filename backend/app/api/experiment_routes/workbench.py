@@ -72,20 +72,12 @@ from .common import (
 
 @router.post("/{experiment_id}/workbench/slots", response_model=ExperimentSchema)
 def add_workbench_slot(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: AddWorkbenchSlotService(experiment_service).run(
-            experiment_id, EmptyWorkbenchRequest()
-        )
-    )
+    return handle_service_errors(lambda: AddWorkbenchSlotService(experiment_service).run(experiment_id, EmptyWorkbenchRequest()))
 
 
 @router.delete("/{experiment_id}/workbench/slots/{slot_id}", response_model=ExperimentSchema)
 def remove_workbench_slot(experiment_id: str, slot_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: RemoveWorkbenchSlotService(experiment_service).run(
-            experiment_id, WorkbenchSlotRequest(slot_id=slot_id)
-        )
-    )
+    return handle_service_errors(lambda: RemoveWorkbenchSlotService(experiment_service).run(experiment_id, WorkbenchSlotRequest(slot_id=slot_id)))
 
 
 @router.post("/{experiment_id}/workbench/slots/{slot_id}/place-tool", response_model=ExperimentSchema)

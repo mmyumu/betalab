@@ -188,9 +188,7 @@ class CreateReceivedSamplingBagService(WriteDomainService[CreateReceivedSampling
         if experiment.basket_tool is not None:
             raise ValueError("The produce basket already contains the received sampling bag.")
         experiment.basket_tool = build_received_sampling_bag(label="Received sampling bag")
-        experiment.audit_log.append(
-            f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag."
-        )
+        experiment.audit_log.append(f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag.")
 
 
 class CreateProduceLotService(WriteDomainService[CreateProduceLotRequest]):
@@ -202,9 +200,7 @@ class CreateProduceLotService(WriteDomainService[CreateProduceLotRequest]):
         if produce_type != "apple":
             raise ValueError("Unsupported produce type")
 
-        apple_lot_count = sum(
-            1 for lot in experiment.workspace.produce_basket_lots if lot.produce_type == produce_type
-        )
+        apple_lot_count = sum(1 for lot in experiment.workspace.produce_basket_lots if lot.produce_type == produce_type)
 
         produce_lot = ProduceLot(
             id=new_id("produce"),
@@ -279,9 +275,7 @@ class UpdateWorkspaceWidgetLiquidVolumeService(WriteDomainService[UpdateWorkspac
             experiment.audit_log.append(f"{liquid_entry.name} removed from {widget.label}.")
             return
 
-        experiment.audit_log.append(
-            f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}."
-        )
+        experiment.audit_log.append(f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} g in {widget.label}.")
 
 
 class RemoveLiquidFromWorkspaceWidgetService(WriteDomainService[WorkspaceWidgetLiquidRequest]):
@@ -380,9 +374,7 @@ class RestoreTrashedProduceLotToWidgetService(WriteDomainService[RestoreTrashedP
             TrashProduceLotSource(trash_produce_lot_id=request.trash_produce_lot_id),
             GrinderProduceLotTarget(widget_id=request.widget_id),
         )
-        experiment.audit_log.append(
-            f"{transfer.entity.label} restored from trash to {transfer.location_label}."
-        )
+        experiment.audit_log.append(f"{transfer.entity.label} restored from trash to {transfer.location_label}.")
 
 
 class MoveWidgetProduceLotToWorkbenchToolService(WriteDomainService[MoveWidgetProduceLotToWorkbenchToolRequest]):
@@ -404,9 +396,7 @@ class MoveWidgetProduceLotToWorkbenchToolService(WriteDomainService[MoveWidgetPr
             )
             return
 
-        experiment.audit_log.append(
-            f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}."
-        )
+        experiment.audit_log.append(f"{transfer.entity.label} moved from {transfer.source_label} to {transfer.target_label}.")
 
 
 class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProduceLotRequest]):
@@ -415,9 +405,7 @@ class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProdu
 
     def _run(self, experiment: Experiment, request: DiscardWorkspaceProduceLotRequest) -> None:
         produce_lot = find_produce_basket_lot(experiment.workspace, request.produce_lot_id)
-        experiment.workspace.produce_basket_lots = [
-            lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id
-        ]
+        experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
         experiment.trash.produce_lots.append(
             TrashProduceLotEntry(
                 id=new_id("trash_produce_lot"),
@@ -456,9 +444,7 @@ def advance_workspace_cryogenics_state(experiment: Experiment, elapsed_ms: float
         if widget.grinder_run_remaining_ms > 0:
             grinding_seconds = min(remaining_seconds, widget.grinder_run_remaining_ms / 1000.0)
             physical_simulation_service.advance_grinding_widget(widget, grinding_seconds)
-            widget.grinder_run_remaining_ms = round_volume(
-                max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0)
-            )
+            widget.grinder_run_remaining_ms = round_volume(max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0))
             remaining_seconds -= grinding_seconds
 
             loaded_lot = widget.produce_lots[0] if widget.produce_lots else None
@@ -506,9 +492,7 @@ def complete_grinder_cycle(experiment: Experiment, widget_id: str) -> None:
         return
 
     homogeneity_score, grind_quality_label = physical_simulation_service.score_grind_result(produce_lot)
-    residual_dry_ice_mass_g = sum(
-        liquid.volume_ml for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets"
-    )
+    residual_dry_ice_mass_g = sum(liquid.volume_ml for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets")
     produce_lot.cut_state = "ground"
     produce_lot.homogeneity_score = homogeneity_score
     produce_lot.grind_quality_label = grind_quality_label

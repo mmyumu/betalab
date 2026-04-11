@@ -49,12 +49,8 @@ def find_trash_produce_lot(trash: Trash, trash_produce_lot_id: str) -> TrashProd
     return produce_lot
 
 
-def find_trash_sample_label(
-    trash: Trash, trash_sample_label_id: str
-) -> TrashSampleLabelEntry:
-    sample_label = next(
-        (entry for entry in trash.sample_labels if entry.id == trash_sample_label_id), None
-    )
+def find_trash_sample_label(trash: Trash, trash_sample_label_id: str) -> TrashSampleLabelEntry:
+    sample_label = next((entry for entry in trash.sample_labels if entry.id == trash_sample_label_id), None)
     if sample_label is None:
         raise ValueError("Unknown trash sample label")
     return sample_label
@@ -95,9 +91,7 @@ def find_workspace_widget(workspace: Workspace, widget_id: str) -> WorkspaceWidg
 
 
 def find_produce_basket_lot(workspace: Workspace, produce_lot_id: str) -> ProduceLot:
-    produce_lot = next(
-        (entry for entry in workspace.produce_basket_lots if entry.id == produce_lot_id), None
-    )
+    produce_lot = next((entry for entry in workspace.produce_basket_lots if entry.id == produce_lot_id), None)
     if produce_lot is None:
         raise ValueError("Unknown produce lot")
     return produce_lot

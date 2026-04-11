@@ -143,14 +143,10 @@ def _tool_id_for_source(source: ToolSource) -> str:
 
 def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, target: ToolTarget) -> None:
     if target == "occupied_workbench":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sample_vial_lcms")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sample_vial_lcms"))
         return
     if target == "occupied_rack":
-        PlaceToolInRackSlotService(service).run(
-            experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_2", tool_id="sample_vial_lcms")
-        )
+        PlaceToolInRackSlotService(service).run(experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_2", tool_id="sample_vial_lcms"))
 
 
 def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, source: ToolSource) -> str | None:
@@ -160,27 +156,17 @@ def _prepare_source(service: ExperimentRuntimeService, experiment_id: str, sourc
     if source == "basket_bag":
         return None
     if source.startswith("workbench_"):
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id=tool_id)
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id=tool_id))
         return None
     if source == "rack_vial":
-        PlaceToolInRackSlotService(service).run(
-            experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_1", tool_id=tool_id)
-        )
+        PlaceToolInRackSlotService(service).run(experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_1", tool_id=tool_id))
         return None
     if source.startswith("trash_"):
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id=tool_id)
-        )
-        discarded = DiscardWorkbenchToolService(service).run(
-            experiment_id, WorkbenchSlotRequest(slot_id="station_1")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id=tool_id))
+        discarded = DiscardWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_1"))
         return discarded.trash.tools[0].id
     if source == "gross_balance_vial":
-        PlaceToolOnGrossBalanceService(service).run(
-            experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id)
-        )
+        PlaceToolOnGrossBalanceService(service).run(experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id))
         return None
     raise AssertionError(f"Unhandled source: {source}")
 
@@ -195,13 +181,9 @@ def _execute_drop(
     tool_id = _tool_id_for_source(source)
     if target in {"empty_workbench", "occupied_workbench"}:
         if source.startswith("palette_"):
-            return PlaceToolOnWorkbenchService(service).run(
-                experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id=tool_id)
-            )
+            return PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id=tool_id))
         if source == "basket_bag":
-            return PlaceReceivedBagOnWorkbenchService(service).run(
-                experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2")
-            )
+            return PlaceReceivedBagOnWorkbenchService(service).run(experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2"))
         if source.startswith("workbench_"):
             return MoveToolBetweenWorkbenchSlotsService(service).run(
                 experiment_id,
@@ -224,9 +206,7 @@ def _execute_drop(
             )
     if target in {"empty_rack", "occupied_rack"}:
         if source.startswith("palette_"):
-            return PlaceToolInRackSlotService(service).run(
-                experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_2", tool_id=tool_id)
-            )
+            return PlaceToolInRackSlotService(service).run(experiment_id, PlaceToolInRackSlotRequest(rack_slot_id="rack_slot_2", tool_id=tool_id))
         if source == "workbench_vial":
             return PlaceWorkbenchToolInRackSlotService(service).run(
                 experiment_id,
@@ -244,14 +224,10 @@ def _execute_drop(
                 RestoreTrashedToolToRackSlotRequest(trash_tool_id=trash_tool_id, rack_slot_id="rack_slot_2"),
             )
         if source == "gross_balance_vial":
-            return MoveGrossBalanceToolToRackService(service).run(
-                experiment_id, MoveGrossBalanceToolToRackRequest(rack_slot_id="rack_slot_2")
-            )
+            return MoveGrossBalanceToolToRackService(service).run(experiment_id, MoveGrossBalanceToolToRackRequest(rack_slot_id="rack_slot_2"))
     if target == "gross_balance":
         if source.startswith("palette_"):
-            return PlaceToolOnGrossBalanceService(service).run(
-                experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id)
-            )
+            return PlaceToolOnGrossBalanceService(service).run(experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id))
         if source == "basket_bag":
             return MoveBasketToolToGrossBalanceService(service).run(experiment_id, EmptyRequest())
         if source.startswith("workbench_"):
@@ -259,9 +235,7 @@ def _execute_drop(
                 experiment_id, MoveWorkbenchToolToGrossBalanceRequest(source_slot_id="station_1")
             )
         if source == "rack_vial":
-            return MoveRackToolToGrossBalanceService(service).run(
-                experiment_id, MoveRackToolToGrossBalanceRequest(rack_slot_id="rack_slot_1")
-            )
+            return MoveRackToolToGrossBalanceService(service).run(experiment_id, MoveRackToolToGrossBalanceRequest(rack_slot_id="rack_slot_1"))
         if source.startswith("trash_"):
             assert trash_tool_id is not None
             return RestoreTrashedToolToGrossBalanceService(service).run(
@@ -269,19 +243,13 @@ def _execute_drop(
             )
     if target == "trash":
         if source.startswith("palette_"):
-            return DiscardToolFromPaletteService(service).run(
-                experiment_id, DiscardToolFromPaletteRequest(tool_id=tool_id)
-            )
+            return DiscardToolFromPaletteService(service).run(experiment_id, DiscardToolFromPaletteRequest(tool_id=tool_id))
         if source == "basket_bag":
             return DiscardBasketToolService(service).run(experiment_id, EmptyTrashRequest())
         if source.startswith("workbench_"):
-            return DiscardWorkbenchToolService(service).run(
-                experiment_id, WorkbenchSlotRequest(slot_id="station_1")
-            )
+            return DiscardWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_1"))
         if source == "rack_vial":
-            return DiscardRackToolService(service).run(
-                experiment_id, DiscardRackToolRequest(rack_slot_id="rack_slot_1")
-            )
+            return DiscardRackToolService(service).run(experiment_id, DiscardRackToolRequest(rack_slot_id="rack_slot_1"))
         if source == "gross_balance_vial":
             return DiscardGrossBalanceToolService(service).run(experiment_id, EmptyRequest())
     raise ValueError(f"Unsupported tool drop: {source} -> {target}")

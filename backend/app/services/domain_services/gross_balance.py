@@ -198,18 +198,12 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
             1,
         )
 
-    def _remove_gross_balance_produce_lot(
-        self, experiment: Experiment, produce_lot_id: str
-    ) -> tuple[ProduceLot, str, EntityOrigin]:
+    def _remove_gross_balance_produce_lot(self, experiment: Experiment, produce_lot_id: str) -> tuple[ProduceLot, str, EntityOrigin]:
         widget = self._find_gross_balance_widget(experiment)
         if widget.tool is not None:
-            produce_lot = next(
-                (lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None
-            )
+            produce_lot = next((lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None)
             if produce_lot is not None:
-                widget.tool.produce_lots = [
-                    lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id
-                ]
+                widget.tool.produce_lots = [lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id]
                 self._update_balance_measured_mass(experiment)
                 return (
                     produce_lot,
@@ -280,9 +274,7 @@ class GrossBalanceProduceLotTarget:
                     produce_mass_g = sum(lot.total_mass_g for lot in widget.tool.produce_lots)
                     liquid_mass_g = sum(liquid.volume_ml for liquid in widget.tool.liquids)
                     measured_mass_g = round(
-                        _TARE_BY_TOOL_TYPE_G.get(widget.tool.tool_type, 0)
-                        + produce_mass_g
-                        + liquid_mass_g,
+                        _TARE_BY_TOOL_TYPE_G.get(widget.tool.tool_type, 0) + produce_mass_g + liquid_mass_g,
                         1,
                     )
                 experiment.lims_reception.measured_gross_mass_g = measured_mass_g
@@ -294,9 +286,7 @@ class GrossBalanceProduceLotTarget:
         if self._service is not None:
             self._service._update_balance_measured_mass(experiment)
         else:
-            experiment.lims_reception.measured_gross_mass_g = round(
-                widget.produce_lots[0].total_mass_g, 1
-            )
+            experiment.lims_reception.measured_gross_mass_g = round(widget.produce_lots[0].total_mass_g, 1)
         return ProduceLotPlacement(target_label=widget.label, location_label=widget.label)
 
 
@@ -367,9 +357,7 @@ class RestoreTrashedToolToGrossBalanceService(GrossBalanceServiceBase):
     ) -> None:
         trashed_tool = find_trash_tool(experiment.trash, request.trash_tool_id)
         restored_tool = trashed_tool.tool
-        experiment.trash.tools = [
-            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
-        ]
+        experiment.trash.tools = [entry for entry in experiment.trash.tools if entry.id != trashed_tool.id]
         self._place_tool_on_balance(
             experiment,
             restored_tool,
@@ -418,9 +406,7 @@ class MoveGrossBalanceToolToRackService(GrossBalanceServiceBase):
         if rack_slot.tool is not None:
             raise ValueError(f"{rack_slot.label} already contains a tool.")
         rack_slot.tool = self._take_tool_from_balance(experiment)
-        self._append_tool_moved_from_balance_audit(
-            experiment, rack_slot.tool.label, rack_slot.label
-        )
+        self._append_tool_moved_from_balance_audit(experiment, rack_slot.tool.label, rack_slot.label)
 
 
 class DiscardGrossBalanceToolService(GrossBalanceServiceBase):
@@ -466,9 +452,7 @@ class MoveWorkspaceProduceLotToGrossBalanceService(GrossBalanceServiceBase):
             WorkspaceProduceLotSource(request.produce_lot_id),
             GrossBalanceProduceLotTarget(self),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class MoveWorkbenchProduceLotToGrossBalanceService(GrossBalanceServiceBase):
@@ -482,9 +466,7 @@ class MoveWorkbenchProduceLotToGrossBalanceService(GrossBalanceServiceBase):
             WorkbenchProduceLotSource(request.source_slot_id, request.produce_lot_id),
             GrossBalanceProduceLotTarget(self),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class MoveWidgetProduceLotToGrossBalanceService(GrossBalanceServiceBase):
@@ -498,9 +480,7 @@ class MoveWidgetProduceLotToGrossBalanceService(GrossBalanceServiceBase):
             GrinderProduceLotSource(request.widget_id, request.produce_lot_id),
             GrossBalanceProduceLotTarget(self),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class RestoreTrashedProduceLotToGrossBalanceService(GrossBalanceServiceBase):
@@ -514,9 +494,7 @@ class RestoreTrashedProduceLotToGrossBalanceService(GrossBalanceServiceBase):
             TrashProduceLotSource(request.trash_produce_lot_id),
             GrossBalanceProduceLotTarget(self),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class MoveGrossBalanceProduceLotToWorkbenchService(GrossBalanceServiceBase):
@@ -530,9 +508,7 @@ class MoveGrossBalanceProduceLotToWorkbenchService(GrossBalanceServiceBase):
             GrossBalanceProduceLotSource(self, request.produce_lot_id),
             WorkbenchProduceLotTarget(request.target_slot_id),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class MoveGrossBalanceProduceLotToWidgetService(GrossBalanceServiceBase):
@@ -546,9 +522,7 @@ class MoveGrossBalanceProduceLotToWidgetService(GrossBalanceServiceBase):
             GrossBalanceProduceLotSource(self, request.produce_lot_id),
             GrinderProduceLotTarget(request.widget_id),
         )
-        experiment.audit_log.append(
-            f"{result.entity.label} moved from {result.source_label} to {result.target_label}."
-        )
+        experiment.audit_log.append(f"{result.entity.label} moved from {result.source_label} to {result.target_label}.")
 
 
 class DiscardGrossBalanceProduceLotService(GrossBalanceServiceBase):

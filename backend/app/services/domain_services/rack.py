@@ -81,9 +81,7 @@ class PlaceWorkbenchToolInRackSlotService(WriteDomainService[PlaceWorkbenchToolI
 
         rack_slot.tool = source_slot.tool
         source_slot.tool = None
-        experiment.audit_log.append(
-            f"{rack_slot.tool.label} moved from {source_slot.label} to {rack_slot.label}."
-        )
+        experiment.audit_log.append(f"{rack_slot.tool.label} moved from {source_slot.label} to {rack_slot.label}.")
 
 
 class MoveRackToolBetweenSlotsService(WriteDomainService[MoveRackToolBetweenSlotsRequest]):
@@ -101,9 +99,7 @@ class MoveRackToolBetweenSlotsService(WriteDomainService[MoveRackToolBetweenSlot
 
         target_slot.tool = source_slot.tool
         source_slot.tool = None
-        experiment.audit_log.append(
-            f"{target_slot.tool.label} moved from {source_slot.label} to {target_slot.label}."
-        )
+        experiment.audit_log.append(f"{target_slot.tool.label} moved from {source_slot.label} to {target_slot.label}.")
 
 
 class RemoveRackToolToWorkbenchSlotService(WriteDomainService[RemoveRackToolToWorkbenchSlotRequest]):
@@ -121,9 +117,7 @@ class RemoveRackToolToWorkbenchSlotService(WriteDomainService[RemoveRackToolToWo
 
         target_slot.tool = rack_slot.tool
         rack_slot.tool = None
-        experiment.audit_log.append(
-            f"{target_slot.tool.label} moved from {rack_slot.label} to {target_slot.label}."
-        )
+        experiment.audit_log.append(f"{target_slot.tool.label} moved from {rack_slot.label} to {target_slot.label}.")
 
 
 class DiscardRackToolService(WriteDomainService[DiscardRackToolRequest]):
@@ -161,9 +155,5 @@ class RestoreTrashedToolToRackSlotService(WriteDomainService[RestoreTrashedToolT
             raise ValueError(f"{rack_slot.label} already contains a vial")
 
         rack_slot.tool = trashed_tool.tool
-        experiment.trash.tools = [
-            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
-        ]
-        experiment.audit_log.append(
-            f"{rack_slot.tool.label} restored from trash to {rack_slot.label}."
-        )
+        experiment.trash.tools = [entry for entry in experiment.trash.tools if entry.id != trashed_tool.id]
+        experiment.audit_log.append(f"{rack_slot.tool.label} restored from trash to {rack_slot.label}.")

@@ -95,30 +95,20 @@ LIQUID_DND_CASES: tuple[LiquidDndCase, ...] = (
 
 def _prepare_label_target(service: ExperimentRuntimeService, experiment_id: str, target: LabelTarget) -> None:
     if target == "workbench_tool":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag"))
 
 
 def _prepare_label_source(service: ExperimentRuntimeService, experiment_id: str, source: LabelSource) -> tuple[str | None, str | None]:
     if source == "palette_sample_label":
         return None, None
     if source == "workbench_sample_label":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag")
-        )
-        labeled = ApplySampleLabelToWorkbenchToolService(service).run(
-            experiment_id, WorkbenchSlotRequest(slot_id="station_1")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag"))
+        labeled = ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_1"))
         assert labeled.workbench.slots[0].tool is not None
         return labeled.workbench.slots[0].tool.labels[0].id, None
     if source == "trash_sample_label":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag")
-        )
-        labeled = ApplySampleLabelToWorkbenchToolService(service).run(
-            experiment_id, WorkbenchSlotRequest(slot_id="station_1")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag"))
+        labeled = ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_1"))
         assert labeled.workbench.slots[0].tool is not None
         discarded = DiscardSampleLabelFromWorkbenchToolService(service).run(
             experiment_id,
@@ -129,9 +119,7 @@ def _prepare_label_source(service: ExperimentRuntimeService, experiment_id: str,
         )
         return None, discarded.trash.sample_labels[0].id
     if source == "lims_ticket":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="sealed_sampling_bag"))
         CreateLimsReceptionService(service).run(
             experiment_id,
             CreateLimsReceptionRequest(
@@ -157,54 +145,38 @@ def _execute_label_drop(
 ):
     if target == "workbench_tool":
         if source == "palette_sample_label":
-            return ApplySampleLabelToWorkbenchToolService(service).run(
-                experiment_id, WorkbenchSlotRequest(slot_id="station_2")
-            )
+            return ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         if source == "workbench_sample_label":
             assert label_id is not None
             return MoveSampleLabelBetweenWorkbenchToolsService(service).run(
                 experiment_id,
-                MoveSampleLabelBetweenWorkbenchToolsRequest(
-                    source_slot_id="station_1", target_slot_id="station_2", label_id=label_id
-                ),
+                MoveSampleLabelBetweenWorkbenchToolsRequest(source_slot_id="station_1", target_slot_id="station_2", label_id=label_id),
             )
         if source == "trash_sample_label":
             assert trash_label_id is not None
             return RestoreTrashedSampleLabelToWorkbenchToolService(service).run(
                 experiment_id,
-                RestoreTrashedSampleLabelToWorkbenchToolRequest(
-                    trash_sample_label_id=trash_label_id, target_slot_id="station_2"
-                ),
+                RestoreTrashedSampleLabelToWorkbenchToolRequest(trash_sample_label_id=trash_label_id, target_slot_id="station_2"),
             )
         if source == "lims_ticket":
-            return ApplyPrintedLimsLabelService(service).run(
-                experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2")
-            )
+            return ApplyPrintedLimsLabelService(service).run(experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2"))
     if target == "empty_workbench":
         if source == "palette_sample_label":
-            return ApplySampleLabelToWorkbenchToolService(service).run(
-                experiment_id, WorkbenchSlotRequest(slot_id="station_2")
-            )
+            return ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         if source == "workbench_sample_label":
             assert label_id is not None
             return MoveSampleLabelBetweenWorkbenchToolsService(service).run(
                 experiment_id,
-                MoveSampleLabelBetweenWorkbenchToolsRequest(
-                    source_slot_id="station_1", target_slot_id="station_2", label_id=label_id
-                ),
+                MoveSampleLabelBetweenWorkbenchToolsRequest(source_slot_id="station_1", target_slot_id="station_2", label_id=label_id),
             )
         if source == "trash_sample_label":
             assert trash_label_id is not None
             return RestoreTrashedSampleLabelToWorkbenchToolService(service).run(
                 experiment_id,
-                RestoreTrashedSampleLabelToWorkbenchToolRequest(
-                    trash_sample_label_id=trash_label_id, target_slot_id="station_2"
-                ),
+                RestoreTrashedSampleLabelToWorkbenchToolRequest(trash_sample_label_id=trash_label_id, target_slot_id="station_2"),
             )
         if source == "lims_ticket":
-            return ApplyPrintedLimsLabelService(service).run(
-                experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2")
-            )
+            return ApplyPrintedLimsLabelService(service).run(experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2"))
     if target == "trash":
         if source == "palette_sample_label":
             return DiscardSampleLabelFromPaletteService(service).run(
@@ -249,20 +221,14 @@ def test_label_dnd_matrix(source: LabelSource, target: LabelTarget, allowed: boo
 
 def _prepare_liquid_target(service: ExperimentRuntimeService, experiment_id: str, target: LiquidTarget) -> None:
     if target == "open_tube":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="centrifuge_tube_50ml")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="centrifuge_tube_50ml"))
         return
     if target == "sealed_tube":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="centrifuge_tube_50ml")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="centrifuge_tube_50ml"))
         CloseWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
         return
     if target == "storage_jar":
-        PlaceToolOnWorkbenchService(service).run(
-            experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l")
-        )
+        PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="hdpe_storage_jar_2l"))
 
 
 def _prepare_liquid_source(service: ExperimentRuntimeService, experiment_id: str, source: LiquidSource) -> str | None:

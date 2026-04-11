@@ -31,12 +31,7 @@ def build_experiment() -> Experiment:
                 WorkbenchSlot(id="station_2", label="Station 2"),
             ]
         ),
-        rack=Rack(
-            slots=[
-                RackSlot(id=f"rack_slot_{index}", label=f"Position {index}")
-                for index in range(1, 13)
-            ]
-        ),
+        rack=Rack(slots=[RackSlot(id=f"rack_slot_{index}", label=f"Position {index}") for index in range(1, 13)]),
         trash=Trash(),
         workspace=Workspace(
             widgets=[

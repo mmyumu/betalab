@@ -48,10 +48,7 @@ class ReceivedAppleSampleSpec:
 
     @property
     def field_label_text(self) -> str:
-        return (
-            f"{self.orchard_name} • Harvest {self.harvest_date} • "
-            f"Approx. {self.theoretical_mass_g / 1000:.2f} kg"
-        )
+        return f"{self.orchard_name} • Harvest {self.harvest_date} • Approx. {self.theoretical_mass_g / 1000:.2f} kg"
 
     @property
     def gross_mass_g(self) -> float:
@@ -70,9 +67,7 @@ def generate_received_apple_sample_spec(rng: random.Random | None = None) -> Rec
         weights=[weight for _days, weight in _HARVEST_DAYS_BACK_WEIGHTS],
         k=1,
     )[0]
-    harvest_date = (
-        datetime.now(UTC).date() - timedelta(days=harvest_days_back)
-    ).isoformat()
+    harvest_date = (datetime.now(UTC).date() - timedelta(days=harvest_days_back)).isoformat()
     theoretical_mass_g = rng.choices(
         [mass for mass, _weight in _THEORETICAL_LOT_MASS_WEIGHTS_G],
         weights=[weight for _mass, weight in _THEORETICAL_LOT_MASS_WEIGHTS_G],

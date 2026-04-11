@@ -26,9 +26,7 @@ class CreateDebugProduceLotToWidgetRequest:
     residual_co2_mass_g: float | None = None
 
 
-class CreateDebugProduceLotOnWorkbenchService(
-    WriteDomainService[CreateDebugProduceLotOnWorkbenchRequest]
-):
+class CreateDebugProduceLotOnWorkbenchService(WriteDomainService[CreateDebugProduceLotOnWorkbenchRequest]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
@@ -83,9 +81,7 @@ def _build_debug_produce_lot(
             temperature_c=temperature_c if temperature_c is not None else -62.0,
             grind_quality_label="powder_fine",
             homogeneity_score=0.96,
-            residual_co2_mass_g=(
-                residual_co2_mass_g if residual_co2_mass_g is not None else 18.0
-            ),
+            residual_co2_mass_g=(residual_co2_mass_g if residual_co2_mass_g is not None else 18.0),
         )
 
     raise ValueError("Unknown debug produce preset")

@@ -124,11 +124,7 @@ def test_analytical_balance_tare_works_with_liquid_in_tube() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workspace.widgets[2].tool
     assert tool is not None
-    tool.liquids.append(
-        WorkbenchLiquid(
-            id="liq1", liquid_id="acetonitrile", name="ACN", volume_ml=10.0, accent="blue"
-        )
-    )
+    tool.liquids.append(WorkbenchLiquid(id="liq1", liquid_id="acetonitrile", name="ACN", volume_ml=10.0, accent="blue"))
 
     updated = TareAnalyticalBalanceService(service).run(experiment.id, EmptyRequest())
     # 12g (tube) + 10g (liquid) = 22g tare
