@@ -87,6 +87,7 @@ type LabSceneViewProps = {
   };
   spatula: {
     activeActionId: string | null;
+    handleSpatulaAnalyticalBalancePointerDown: (tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
     handleSpatulaToolCardClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLElement>) => void;
     handleSpatulaToolIllustrationClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => void;
     handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
@@ -207,6 +208,7 @@ export function LabSceneView({
             experiment={experiment}
             rack={rack}
             spatula={{
+              handleSpatulaAnalyticalBalancePointerDown: spatula.handleSpatulaAnalyticalBalancePointerDown,
               handleSpatulaToolCardClick: spatula.handleSpatulaToolCardClick,
               handleSpatulaToolIllustrationClick: spatula.handleSpatulaToolIllustrationClick,
               handleSpatulaToolPointerDown: spatula.handleSpatulaToolPointerDown,

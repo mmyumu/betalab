@@ -90,6 +90,7 @@ type LabSceneWorkspaceCanvasProps = {
     rackSlotCount: number;
   };
   spatula: {
+    handleSpatulaAnalyticalBalancePointerDown: (tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
     handleSpatulaToolCardClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLElement>) => void;
     handleSpatulaToolIllustrationClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => void;
     handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
@@ -283,7 +284,13 @@ export function LabSceneWorkspaceCanvas({
   ) : null;
 
   const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
-    <div data-testid="analytical-balance-staged-item">
+    <div
+      data-testid="analytical-balance-staged-item"
+      onPointerDown={(event) =>
+        spatula.handleSpatulaAnalyticalBalancePointerDown(displayAnalyticalBalanceTool, event)
+      }
+      onPointerUp={spatula.handleSpatulaToolPointerUp}
+    >
       <BenchToolCard
         draggable
         onDragEnd={dnd.clearDropTargets}

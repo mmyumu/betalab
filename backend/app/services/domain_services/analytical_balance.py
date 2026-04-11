@@ -71,6 +71,11 @@ class MoveAnalyticalBalanceToolToRackRequest:
     rack_slot_id: str
 
 
+@dataclass(frozen=True, slots=True)
+class PourSpatulaIntoAnalyticalBalanceToolRequest:
+    delta_mass_g: float
+
+
 class AnalyticalBalanceServiceBase(WriteDomainService[object]):
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
@@ -258,6 +263,36 @@ class CloseAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         tool.closure_fault = None
         tool.internal_pressure_bar = max(tool.internal_pressure_bar, 1.0)
         experiment.audit_log.append(f"{tool.label} sealed on Analytical balance.")
+
+
+class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(
+        self, experiment: Experiment, request: PourSpatulaIntoAnalyticalBalanceToolRequest
+    ) -> None:
+        tool = self._require_balance_tool(experiment)
+        if tool.tool_type not in {"sample_vial", "centrifuge_tube"}:
+            raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
+        if tool.is_sealed:
+            raise ValueError(f"Open {tool.label} before adding powder.")
+        if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
+            raise ValueError("Load the spatula before pouring.")
+
+        requested_mass_g = max(float(request.delta_mass_g), 0.0)
+        if requested_mass_g <= 0:
+            return
+
+        transferred_mass_g = min(requested_mass_g, experiment.spatula.loaded_powder_mass_g)
+        tool.powder_mass_g = round(tool.powder_mass_g + transferred_mass_g, 3)
+        experiment.spatula.loaded_powder_mass_g = round(
+            max(experiment.spatula.loaded_powder_mass_g - transferred_mass_g, 0.0),
+            3,
+        )
+        if experiment.spatula.loaded_powder_mass_g <= 0:
+            experiment.spatula.is_loaded = False
+            experiment.spatula.loaded_powder_mass_g = 0.0
+            experiment.spatula.source_tool_id = None
+
+        experiment.audit_log.append(f"Powder transferred into {tool.label} on Analytical balance.")
 
 
 class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):

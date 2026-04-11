@@ -4,6 +4,7 @@ from app.schemas.experiment import (
     TargetWorkbenchSlotSchema,
     WorkbenchSlotReferenceSchema,
     WorkbenchToolPlacementSchema,
+    WorkbenchToolPowderPourSchema,
 )
 from app.services.domain_services.analytical_balance import (
     CloseAnalyticalBalanceToolService,
@@ -22,6 +23,8 @@ from app.services.domain_services.analytical_balance import (
     OpenAnalyticalBalanceToolService,
     PlaceToolOnAnalyticalBalanceRequest,
     PlaceToolOnAnalyticalBalanceService,
+    PourSpatulaIntoAnalyticalBalanceToolRequest,
+    PourSpatulaIntoAnalyticalBalanceToolService,
     RecordAnalyticalSampleMassService,
     RestoreTrashedToolToAnalyticalBalanceRequest,
     RestoreTrashedToolToAnalyticalBalanceService,
@@ -156,6 +159,19 @@ def tare_analytical_balance(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
         lambda: TareAnalyticalBalanceService(experiment_service).run(
             experiment_id, EmptyRequest()
+        )
+    )
+
+
+@router.post("/{experiment_id}/analytical-balance/spatula/pour", response_model=ExperimentSchema)
+def pour_spatula_into_analytical_balance_tool(
+    experiment_id: str,
+    request: WorkbenchToolPowderPourSchema,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: PourSpatulaIntoAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id,
+            PourSpatulaIntoAnalyticalBalanceToolRequest(delta_mass_g=request.delta_mass_g),
         )
     )
 

@@ -81,6 +81,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     isKnifeMode,
     isSpatulaMode,
     workspaceCursor,
+    handleSpatulaAnalyticalBalancePointerDown,
     handleSpatulaToolCardClick,
     handleSpatulaToolIllustrationClick,
     handleSpatulaToolPointerDown,
@@ -395,6 +396,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       }}
       spatula={{
         activeActionId,
+        handleSpatulaAnalyticalBalancePointerDown,
         handleSpatulaToolCardClick,
         handleSpatulaToolIllustrationClick,
         handleSpatulaToolPointerDown,

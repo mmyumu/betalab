@@ -18,6 +18,7 @@ type UseSpatulaInteractionOptions = {
   isSpatulaMode: boolean;
   onLoadFromTool: (payload: { slot_id: string }) => void;
   onPourIntoTool: (payload: { delta_mass_g: number; slot_id: string }) => void;
+  onPourIntoAnalyticalBalanceTool: (payload: { delta_mass_g: number }) => void;
   spatula: SpatulaState;
 };
 
@@ -25,6 +26,7 @@ export function useSpatulaInteraction({
   isSpatulaMode,
   onLoadFromTool,
   onPourIntoTool,
+  onPourIntoAnalyticalBalanceTool,
   spatula,
 }: UseSpatulaInteractionOptions) {
   const [spatulaCursorPosition, setSpatulaCursorPosition] = useState<{ x: number; y: number } | null>(null);
@@ -148,6 +150,43 @@ export function useSpatulaInteraction({
     [isSpatulaMode, loadSpatulaFromTool],
   );
 
+  const handleSpatulaAnalyticalBalancePointerDown = useCallback(
+    (tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => {
+      if (!isSpatulaMode || event.button !== 0) {
+        return;
+      }
+
+      if (tool.toolType !== "sample_vial" && tool.toolType !== "centrifuge_tube") {
+        return;
+      }
+
+      if (!spatula.isLoaded) {
+        setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur une jarre.");
+        return;
+      }
+
+      event.preventDefault();
+      stopSpatulaPour();
+      setSpatulaHintMessage("Versement en cours...");
+      spatulaPourStateRef.current = {
+        currentRateG: 0.08,
+        slotId: "analytical_balance",
+        startY: event.clientY,
+      };
+      spatulaPourIntervalRef.current = window.setInterval(() => {
+        const pourState = spatulaPourStateRef.current;
+        if (!pourState) {
+          return;
+        }
+
+        onPourIntoAnalyticalBalanceTool({
+          delta_mass_g: Number(pourState.currentRateG.toFixed(3)),
+        });
+      }, 100);
+    },
+    [isSpatulaMode, onPourIntoAnalyticalBalanceTool, spatula.isLoaded, stopSpatulaPour],
+  );
+
   const handleSpatulaToolCardClick = useCallback(
     (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLElement>) => {
       if (!isSpatulaMode) {
@@ -173,6 +212,7 @@ export function useSpatulaInteraction({
   );
 
   return {
+    handleSpatulaAnalyticalBalancePointerDown,
     handleSpatulaToolCardClick,
     handleSpatulaToolIllustrationClick,
     handleSpatulaToolPointerDown,

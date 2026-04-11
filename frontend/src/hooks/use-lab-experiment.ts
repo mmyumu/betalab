@@ -73,6 +73,7 @@ import {
   placeWorkbenchToolInRackSlot,
   printLimsLabel,
   pourSpatulaIntoWorkbenchTool,
+  pourSpatulaIntoAnalyticalBalanceTool,
   recordGrossWeight,
   recordAnalyticalSampleMass,
   setGrossBalanceContainerOffset,
@@ -147,6 +148,7 @@ import type {
   PlaceToolOnWorkbenchPayload,
   PlaceWorkbenchToolInRackSlotPayload,
   PourSpatulaIntoWorkbenchToolPayload,
+  PourSpatulaIntoAnalyticalBalanceToolPayload,
   PrintLimsLabelPayload,
   RecordGrossWeightPayload,
   RemoveLiquidFromWorkbenchToolPayload,
@@ -248,6 +250,7 @@ const mutationFns = {
   placeWorkbenchToolInRackSlot,
   printLimsLabel,
   pourSpatulaIntoWorkbenchTool,
+  pourSpatulaIntoAnalyticalBalanceTool,
   recordGrossWeight,
   recordAnalyticalSampleMass,
   setGrossBalanceContainerOffset,
@@ -559,6 +562,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.printLimsLabel, payload),
     pourSpatulaIntoWorkbenchTool: (payload: PourSpatulaIntoWorkbenchToolPayload) =>
       executeMutation(mutationFns.pourSpatulaIntoWorkbenchTool, payload),
+    pourSpatulaIntoAnalyticalBalanceTool: (payload: PourSpatulaIntoAnalyticalBalanceToolPayload) =>
+      executeMutation(mutationFns.pourSpatulaIntoAnalyticalBalanceTool, payload),
     recordGrossWeight: (payload?: RecordGrossWeightPayload) =>
       executeMutation(mutationFns.recordGrossWeight, payload),
     recordAnalyticalSampleMass: () =>

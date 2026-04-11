@@ -75,6 +75,10 @@ export type PourSpatulaIntoWorkbenchToolPayload = {
   delta_mass_g: number;
 };
 
+export type PourSpatulaIntoAnalyticalBalanceToolPayload = {
+  delta_mass_g: number;
+};
+
 export type RemoveLiquidFromWorkbenchToolPayload = {
   slot_id: string;
   liquid_entry_id: string;

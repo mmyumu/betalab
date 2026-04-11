@@ -143,6 +143,7 @@ export const closeWorkbenchTool = wrapCommand("close_workbench_tool");
 export const openWorkbenchTool = wrapCommand("open_workbench_tool");
 export const loadSpatulaFromWorkbenchTool = wrapCommand("load_spatula_from_workbench_tool");
 export const pourSpatulaIntoWorkbenchTool = wrapCommand("pour_spatula_into_workbench_tool");
+export const pourSpatulaIntoAnalyticalBalanceTool = wrapCommand("pour_spatula_into_analytical_balance_tool");
 export const updateWorkbenchToolSampleLabelText = wrapCommand("update_workbench_tool_sample_label_text");
 export const moveSampleLabelBetweenWorkbenchTools = wrapCommand("move_sample_label_between_workbench_tools");
 export const discardSampleLabelFromWorkbenchTool = wrapCommand("discard_sample_label_from_workbench_tool");

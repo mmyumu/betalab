@@ -1158,6 +1158,15 @@ export async function pourSpatulaIntoWorkbenchTool(experimentId: string, payload
   });
 }
 
+export async function pourSpatulaIntoAnalyticalBalanceTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/spatula/pour`,
+    body: { delta_mass_g: requireNumber(body, "delta_mass_g") },
+  });
+}
+
 export async function updateWorkbenchToolSampleLabelText(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
