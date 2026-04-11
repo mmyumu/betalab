@@ -10,7 +10,6 @@ type ActionDefinition = {
 type ActionBarPanelProps = {
   activeActionId: string | null;
   onToggleAction: (actionId: string) => void;
-  spatulaLoaded?: boolean;
 };
 
 const actions: ActionDefinition[] = [
@@ -100,10 +99,7 @@ function SpatulaIcon({ active }: { active: boolean }) {
 export function ActionBarPanel({
   activeActionId,
   onToggleAction,
-  spatulaLoaded = false,
 }: ActionBarPanelProps) {
-  const spatulaActive = activeActionId === "spatula";
-
   return (
     <section className="rounded-[1.2rem] border border-slate-200 bg-white p-2 shadow-sm">
       <p
@@ -131,9 +127,6 @@ export function ActionBarPanel({
               type="button"
             >
               <span className="sr-only">{action.label}</span>
-              {action.id === "spatula" && spatulaLoaded ? (
-                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-amber-300 ring-2 ring-white" />
-              ) : null}
               <div
                 className={`absolute inset-0 rounded-xl ${
                   isActive ? "shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]" : ""
@@ -146,26 +139,6 @@ export function ActionBarPanel({
           );
         })}
       </div>
-      {spatulaActive ? (
-        <div
-          className={`mt-2 rounded-xl border px-2.5 py-2 ${
-            spatulaLoaded
-              ? "border-amber-200 bg-amber-50"
-              : "border-slate-200 bg-slate-50"
-          }`}
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-            Spatula
-          </p>
-          <p
-            className={`mt-1 text-sm font-semibold ${
-              spatulaLoaded ? "text-amber-800" : "text-slate-700"
-            }`}
-          >
-            {spatulaLoaded ? "Loaded" : "Empty"}
-          </p>
-        </div>
-      ) : null}
     </section>
   );
 }

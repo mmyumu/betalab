@@ -230,7 +230,6 @@ export function LabSceneView({
                 spatula.stopSpatulaPour();
                 spatula.setActiveActionId((current) => (current === actionId ? null : actionId));
               }}
-              spatulaLoaded={spatula.spatula.isLoaded}
             />
           </div>
         </div>
