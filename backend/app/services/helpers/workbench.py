@@ -72,5 +72,5 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         labels=[],
         produce_lots=[],
         liquids=[],
-        powder_mass_g=60.0 if tool_definition.tool_type == "storage_jar" else 0.0,
+        powder_fractions=[],
     )

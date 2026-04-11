@@ -72,7 +72,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const spatula =
     state.status === "ready"
       ? state.experiment.spatula
-      : { isLoaded: false, loadedPowderMassG: 0, sourceToolId: null };
+      : { isLoaded: false, loadedFractions: [], sourceToolId: null };
 
   const {
     activeActionId,

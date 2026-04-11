@@ -10,6 +10,7 @@ from app.services.domain_services.analytical_balance import (
     CloseAnalyticalBalanceToolService,
     DiscardAnalyticalBalanceToolService,
     EmptyRequest,
+    LoadSpatulaFromAnalyticalBalanceToolService,
     MoveAnalyticalBalanceToolToRackRequest,
     MoveAnalyticalBalanceToolToRackService,
     MoveAnalyticalBalanceToolToWorkbenchRequest,
@@ -145,6 +146,13 @@ def close_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/analytical-balance/tare", response_model=ExperimentSchema)
 def tare_analytical_balance(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(lambda: TareAnalyticalBalanceService(experiment_service).run(experiment_id, EmptyRequest()))
+
+
+@router.post("/{experiment_id}/analytical-balance/spatula/load", response_model=ExperimentSchema)
+def load_spatula_from_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: LoadSpatulaFromAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest())
+    )
 
 
 @router.post("/{experiment_id}/analytical-balance/spatula/pour", response_model=ExperimentSchema)

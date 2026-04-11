@@ -371,7 +371,7 @@ function makeExperiment({
     basketTool,
     spatula: {
       isLoaded: false,
-      loadedPowderMassG: 0,
+      loadedFractions: [],
       sourceToolId: null,
     },
     analyticalBalance: {

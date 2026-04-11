@@ -60,6 +60,13 @@ class WorkbenchLiquid:
 
 
 @dataclass
+class PowderFraction:
+    id: str
+    source_lot_id: str
+    mass_g: float
+
+
+@dataclass
 class WorkbenchTool:
     id: str
     tool_id: str
@@ -76,13 +83,13 @@ class WorkbenchTool:
     labels: list[ContainerLabel] = field(default_factory=list)
     produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
-    powder_mass_g: float = 0.0
+    powder_fractions: list[PowderFraction] = field(default_factory=list)
 
 
 @dataclass
 class SpatulaState:
     is_loaded: bool = False
-    loaded_powder_mass_g: float = 0.0
+    loaded_fractions: list[PowderFraction] = field(default_factory=list)
     source_tool_id: str | None = None
 
 

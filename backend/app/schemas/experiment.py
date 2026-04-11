@@ -14,10 +14,29 @@ class WorkbenchLiquidSchema(BaseModel):
     accent: str
 
 
+class PowderFractionSchema(BaseModel):
+    id: str
+    source_lot_id: str
+    mass_g: float
+
+
 class SpatulaStateSchema(BaseModel):
     is_loaded: bool = False
-    loaded_powder_mass_g: float = 0.0
+    loaded_fractions: list[PowderFractionSchema] = Field(default_factory=list)
     source_tool_id: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        if "loaded_fractions" not in value and value.get("loaded_powder_mass_g", 0) > 0:
+            value["loaded_fractions"] = [{
+                "id": "legacy-spatula-fraction",
+                "source_lot_id": "legacy",
+                "mass_g": value["loaded_powder_mass_g"],
+            }]
+        return value
 
 
 class AnalyticalBalanceStateSchema(BaseModel):
@@ -106,13 +125,21 @@ class WorkbenchToolSchema(BaseModel):
     labels: list[ContainerLabelSchema] = Field(default_factory=list)
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
-    powder_mass_g: float = 0.0
+    powder_fractions: list[PowderFractionSchema] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
-    def _upgrade_legacy_sample_label_fields(cls, value: object) -> object:
+    def _upgrade_legacy_fields(cls, value: object) -> object:
         if not isinstance(value, dict):
             return value
+        # Migrate old powder_mass_g scalar to powder_fractions
+        if "powder_fractions" not in value and value.get("powder_mass_g", 0) > 0:
+            tool_id = value.get("tool_id", "unknown")
+            value["powder_fractions"] = [{
+                "id": f"legacy-powder-{tool_id}",
+                "source_lot_id": "legacy",
+                "mass_g": value["powder_mass_g"],
+            }]
         if "labels" in value:
             return value
 

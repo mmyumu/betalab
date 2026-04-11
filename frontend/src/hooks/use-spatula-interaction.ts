@@ -35,6 +35,7 @@ type UseSpatulaInteractionOptions = {
   isSpatulaMode: boolean;
   onDiscardSpatula: () => void;
   onLoadFromTool: (payload: { slot_id: string }) => void;
+  onLoadFromAnalyticalBalance: () => void;
   onPourIntoTool: (payload: { delta_mass_g: number; slot_id: string }) => void;
   onPourIntoAnalyticalBalanceTool: (payload: { delta_mass_g: number }) => void;
   spatula: SpatulaState;
@@ -44,6 +45,7 @@ export function useSpatulaInteraction({
   isSpatulaMode,
   onDiscardSpatula,
   onLoadFromTool,
+  onLoadFromAnalyticalBalance,
   onPourIntoTool,
   onPourIntoAnalyticalBalanceTool,
   spatula,
@@ -53,8 +55,9 @@ export function useSpatulaInteraction({
   const spatulaPourIntervalRef = useRef<number | null>(null);
   const spatulaPourHoldTimeoutRef = useRef<number | null>(null);
   const spatulaPourStateRef = useRef<PourState | null>(null);
-  // Prevents click-reload when spatula empties mid-hold and pointerup fires
+  // Prevents the synthetic click generated right after a pour from reloading the spatula.
   const justPouredRef = useRef(false);
+  const justPouredResetTimeoutRef = useRef<number | null>(null);
 
   const stopSpatulaPour = useCallback(() => {
     if (spatulaPourHoldTimeoutRef.current !== null) {
@@ -66,6 +69,17 @@ export function useSpatulaInteraction({
       spatulaPourIntervalRef.current = null;
     }
     spatulaPourStateRef.current = null;
+  }, []);
+
+  const armJustPouredGuard = useCallback(() => {
+    justPouredRef.current = true;
+    if (justPouredResetTimeoutRef.current !== null) {
+      window.clearTimeout(justPouredResetTimeoutRef.current);
+    }
+    justPouredResetTimeoutRef.current = window.setTimeout(() => {
+      justPouredRef.current = false;
+      justPouredResetTimeoutRef.current = null;
+    }, 0);
   }, []);
 
   useEffect(() => {
@@ -106,6 +120,10 @@ export function useSpatulaInteraction({
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     return () => {
+      if (justPouredResetTimeoutRef.current !== null) {
+        window.clearTimeout(justPouredResetTimeoutRef.current);
+        justPouredResetTimeoutRef.current = null;
+      }
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       stopSpatulaPour();
@@ -160,7 +178,7 @@ export function useSpatulaInteraction({
   const handleSpatulaToolPointerUp = useCallback(() => {
     const pourState = spatulaPourStateRef.current;
     if (pourState) {
-      justPouredRef.current = true;
+      armJustPouredGuard();
       if (!pourState.isHolding) {
         const delta = randomNormalIncrement();
         if (pourState.slotId === "analytical_balance") {
@@ -171,7 +189,7 @@ export function useSpatulaInteraction({
       }
     }
     stopSpatulaPour();
-  }, [onPourIntoAnalyticalBalanceTool, onPourIntoTool, stopSpatulaPour]);
+  }, [armJustPouredGuard, onPourIntoAnalyticalBalanceTool, onPourIntoTool, stopSpatulaPour]);
 
   const loadSpatulaFromTool = useCallback(
     (slotId: string) => {
@@ -185,6 +203,11 @@ export function useSpatulaInteraction({
   const handleSpatulaToolIllustrationClick = useCallback(
     (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => {
       if (!isSpatulaMode || !SPATULA_LOAD_SOURCE_TYPES.has(tool.toolType)) {
+        return;
+      }
+      if (justPouredRef.current) {
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
 
@@ -205,8 +228,18 @@ export function useSpatulaInteraction({
         return;
       }
 
+      const toolHasPowder = (tool.powderFractions ?? []).reduce((sum, f) => sum + f.massG, 0) > 0;
+
       if (!spatula.isLoaded) {
-        setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur un container ouvert.");
+        if (toolHasPowder) {
+          event.preventDefault();
+          // No justPouredRef guard here: on the balance there is no onClick path
+          // that could trigger a spurious reload, so every intentional click should load.
+          onLoadFromAnalyticalBalance();
+          setSpatulaHintMessage("Chargement de la spatule...");
+        } else {
+          setSpatulaHintMessage("La spatule est vide. Charge-la d'abord sur un container ouvert.");
+        }
         return;
       }
 
@@ -236,7 +269,7 @@ export function useSpatulaInteraction({
         });
       }, 100);
     },
-    [isSpatulaMode, onPourIntoAnalyticalBalanceTool, spatula.isLoaded, stopSpatulaPour],
+    [isSpatulaMode, onLoadFromAnalyticalBalance, onPourIntoAnalyticalBalanceTool, spatula.isLoaded, stopSpatulaPour],
   );
 
   const handleSpatulaToolCardClick = useCallback(
@@ -252,7 +285,7 @@ export function useSpatulaInteraction({
 
       if (SPATULA_LOAD_SOURCE_TYPES.has(tool.toolType) && !spatula.isLoaded) {
         if (justPouredRef.current) {
-          justPouredRef.current = false;
+          event.preventDefault();
           return;
         }
         event.preventDefault();

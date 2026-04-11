@@ -112,7 +112,7 @@ export function getApproximateToolMassG(tool: BenchToolInstance, decimals = 1) {
   const tareMassG = toolTareMassByType[tool.toolType] ?? 0;
   const produceMassG = (tool.produceLots ?? []).reduce((sum, lot) => sum + lot.totalMassG, 0);
   const liquidMassG = tool.liquids.reduce((sum, liquid) => sum + liquid.volume_ml, 0);
-  const powderMassG = tool.powderMassG ?? 0;
+  const powderMassG = (tool.powderFractions ?? []).reduce((sum, f) => sum + f.massG, 0);
   return roundMass(Math.max(tareMassG + produceMassG + liquidMassG + powderMassG, 0), decimals);
 }
 

@@ -11,7 +11,8 @@ export function SpatulaOverlay({ cursorPosition, isSpatulaMode, spatula }: Spatu
     return null;
   }
 
-  const mass = spatula.isLoaded ? Math.min(spatula.loadedPowderMassG, 2) : 0;
+  const totalMassG = spatula.loadedFractions.reduce((sum, f) => sum + f.massG, 0);
+  const mass = spatula.isLoaded ? Math.min(totalMassG, 2) : 0;
 
   return (
     <div

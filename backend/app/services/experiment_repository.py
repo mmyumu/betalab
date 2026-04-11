@@ -13,6 +13,7 @@ from app.domain.models import (
     ContainerLabel,
     EntityOrigin,
     Experiment,
+    PowderFraction,
     ExperimentStatus,
     LimsLabel,
     LimsReception,
@@ -286,7 +287,14 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         ),
         last_simulation_at=schema.last_simulation_at,
         basket_tool=_deserialize_workbench_tool(schema.basket_tool),
-        spatula=SpatulaState(**schema.spatula.model_dump()),
+        spatula=SpatulaState(
+            is_loaded=schema.spatula.is_loaded,
+            loaded_fractions=[
+                PowderFraction(id=f.id, source_lot_id=f.source_lot_id, mass_g=f.mass_g)
+                for f in schema.spatula.loaded_fractions
+            ],
+            source_tool_id=schema.spatula.source_tool_id,
+        ),
         lims_entries=_deserialize_lims_entries(schema),
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
@@ -375,7 +383,10 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         labels=[_deserialize_container_label(label) for label in tool_schema.labels],
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
-        powder_mass_g=tool_schema.powder_mass_g,
+        powder_fractions=[
+            PowderFraction(id=f.id, source_lot_id=f.source_lot_id, mass_g=f.mass_g)
+            for f in tool_schema.powder_fractions
+        ],
     )
 
 

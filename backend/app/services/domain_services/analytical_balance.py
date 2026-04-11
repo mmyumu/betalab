@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
-from app.domain.models import Experiment, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
+from app.domain.models import Experiment, PowderFraction, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
 from app.domain.rules import can_tool_be_sealed
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
@@ -103,8 +104,9 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
     def _calculate_tool_mass_g(self, tool: WorkbenchTool) -> float:
         produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
         liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
+        powder_mass_g = sum(f.mass_g for f in tool.powder_fractions)
         return round(
-            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0) + produce_mass_g + liquid_mass_g + tool.powder_mass_g,
+            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0) + produce_mass_g + liquid_mass_g + powder_mass_g,
             3,
         )
 
@@ -252,25 +254,62 @@ class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
             raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before adding powder.")
-        if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
+        total_loaded_g = sum(f.mass_g for f in experiment.spatula.loaded_fractions)
+        if not experiment.spatula.is_loaded or total_loaded_g <= 0:
             raise ValueError("Load the spatula before pouring.")
 
         requested_mass_g = max(float(request.delta_mass_g), 0.0)
         if requested_mass_g <= 0:
             return
 
-        transferred_mass_g = min(requested_mass_g, experiment.spatula.loaded_powder_mass_g)
-        tool.powder_mass_g = round(tool.powder_mass_g + transferred_mass_g, 3)
-        experiment.spatula.loaded_powder_mass_g = round(
-            max(experiment.spatula.loaded_powder_mass_g - transferred_mass_g, 0.0),
-            3,
-        )
-        if experiment.spatula.loaded_powder_mass_g <= 0:
+        transferred_mass_g = min(requested_mass_g, total_loaded_g)
+        transfer_ratio = transferred_mass_g / total_loaded_g
+        from app.services.domain_services.workbench import _pour_fractions_proportional
+        _pour_fractions_proportional(experiment.spatula.loaded_fractions, tool.powder_fractions, transfer_ratio)
+        experiment.spatula.loaded_fractions = [f for f in experiment.spatula.loaded_fractions if f.mass_g > 0]
+        if not experiment.spatula.loaded_fractions:
             experiment.spatula.is_loaded = False
-            experiment.spatula.loaded_powder_mass_g = 0.0
             experiment.spatula.source_tool_id = None
 
         experiment.audit_log.append(f"Powder transferred into {tool.label} on Analytical balance.")
+
+
+class LoadSpatulaFromAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
+        from app.services.domain_services.workbench import SPATULA_CAPACITY_G
+
+        tool = self._require_balance_tool(experiment)
+        if tool.tool_type in {"cutting_board", "sample_vial", "cleanup_tube"}:
+            raise ValueError("The spatula cannot be loaded from this container.")
+        if tool.is_sealed:
+            raise ValueError(f"Open {tool.label} before loading the spatula.")
+        if experiment.spatula.is_loaded and sum(f.mass_g for f in experiment.spatula.loaded_fractions) > 0:
+            raise ValueError("Empty the spatula before loading it again.")
+
+        total_powder_g = sum(f.mass_g for f in tool.powder_fractions)
+        if total_powder_g <= 0:
+            raise ValueError(f"{tool.label} is empty.")
+
+        fill_ratio = random.gauss(mu=0.675, sigma=0.15)
+        fill_ratio = max(0.30, min(1.0, fill_ratio))
+        loaded_mass_g = min(SPATULA_CAPACITY_G, total_powder_g, round(SPATULA_CAPACITY_G * fill_ratio, 3))
+        if loaded_mass_g <= 0:
+            raise ValueError(f"{tool.label} is empty.")
+
+        take_ratio = loaded_mass_g / total_powder_g
+        loaded_fractions: list[PowderFraction] = []
+        for fraction in tool.powder_fractions:
+            taken = round(fraction.mass_g * take_ratio, 3)
+            if taken <= 0:
+                continue
+            fraction.mass_g = round(max(fraction.mass_g - taken, 0.0), 3)
+            loaded_fractions.append(PowderFraction(id=new_id("powder"), source_lot_id=fraction.source_lot_id, mass_g=taken))
+        tool.powder_fractions = [f for f in tool.powder_fractions if f.mass_g > 0]
+
+        experiment.spatula.is_loaded = True
+        experiment.spatula.loaded_fractions = loaded_fractions
+        experiment.spatula.source_tool_id = tool.id
+        experiment.audit_log.append(f"Spatula loaded from {tool.label} on Analytical balance.")
 
 
 class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):

@@ -8,6 +8,7 @@ import type {
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   LimsReception,
+  PowderFraction,
   PrintedLabelTicket,
   RackSlot,
   SpatulaState,
@@ -1165,6 +1166,13 @@ export async function pourSpatulaIntoWorkbenchTool(experimentId: string, payload
   });
 }
 
+export async function loadSpatulaFromAnalyticalBalanceTool(experimentId: string, _payload: MutationPayload): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/spatula/load`,
+  });
+}
+
 export async function pourSpatulaIntoAnalyticalBalanceTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1372,14 +1380,23 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
       (tool.liquids as BenchLiquidPortion[] | undefined)?.map((liquid) =>
         normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
       ) ?? [],
-    powderMassG: Number(tool.powderMassG ?? tool.powder_mass_g ?? 0),
+    powderFractions: normalizePowderFractions(tool.powderFractions ?? tool.powder_fractions),
   };
+}
+
+function normalizePowderFractions(raw: unknown): PowderFraction[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((f: Record<string, unknown>) => ({
+    id: String(f.id ?? ""),
+    sourceLotId: String(f.sourceLotId ?? f.source_lot_id ?? ""),
+    massG: Number(f.massG ?? f.mass_g ?? 0),
+  }));
 }
 
 function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>): SpatulaState {
   return {
     isLoaded: Boolean(spatula.isLoaded ?? spatula.is_loaded ?? false),
-    loadedPowderMassG: Number(spatula.loadedPowderMassG ?? spatula.loaded_powder_mass_g ?? 0),
+    loadedFractions: normalizePowderFractions(spatula.loadedFractions ?? spatula.loaded_fractions),
     sourceToolId:
       spatula.sourceToolId !== undefined
         ? (spatula.sourceToolId as string | null)

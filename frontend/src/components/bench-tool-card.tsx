@@ -70,7 +70,7 @@ export function BenchToolCard({
   const produceLots = tool.produceLots ?? [];
   const totalVolumeMl = tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0);
   const fillRatio = tool.capacity_ml > 0 ? Math.min(totalVolumeMl / tool.capacity_ml, 1) : 0;
-  const powderMassG = tool.powderMassG ?? 0;
+  const powderMassG = (tool.powderFractions ?? []).reduce((sum, f) => sum + f.massG, 0);
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const liquidSegments = liquidVisualState.segments;
   const isSampleBag = tool.toolType === "sample_bag";

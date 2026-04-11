@@ -9,6 +9,7 @@ import type { SpatulaState } from "@/types/workbench";
 type ActionModeExperimentApi = {
   discardSpatula: () => void;
   loadSpatulaFromWorkbenchTool: (payload: { slot_id: string }) => void;
+  loadSpatulaFromAnalyticalBalanceTool: () => void;
   pourSpatulaIntoWorkbenchTool: (payload: { delta_mass_g: number; slot_id: string }) => void;
   pourSpatulaIntoAnalyticalBalanceTool: (payload: { delta_mass_g: number }) => void;
 };
@@ -62,6 +63,7 @@ export function useActionMode({ clearDropTargets, experimentApi, spatula }: UseA
     isSpatulaMode,
     onDiscardSpatula: () => { void experimentApi.discardSpatula(); },
     onLoadFromTool: (payload) => { void experimentApi.loadSpatulaFromWorkbenchTool(payload); },
+    onLoadFromAnalyticalBalance: () => { void experimentApi.loadSpatulaFromAnalyticalBalanceTool(); },
     onPourIntoTool: (payload) => { void experimentApi.pourSpatulaIntoWorkbenchTool(payload); },
     onPourIntoAnalyticalBalanceTool: (payload) => { void experimentApi.pourSpatulaIntoAnalyticalBalanceTool(payload); },
     spatula,

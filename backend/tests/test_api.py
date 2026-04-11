@@ -17,6 +17,7 @@ from app.core.config import Settings, settings
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
+from app.domain.models import PowderFraction
 from app.services.helpers.workbench import build_workbench_tool
 
 
@@ -375,7 +376,7 @@ def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        analytical_balance.tool.powder_mass_g = 10.124
+        analytical_balance.tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.124)]
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
 
@@ -391,7 +392,7 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        analytical_balance.tool.powder_mass_g = 10.5
+        analytical_balance.tool.powder_fractions = [PowderFraction(id="test-frac2", source_lot_id="test-lot", mass_g=10.5)]
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
         recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")

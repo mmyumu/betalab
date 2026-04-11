@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeAlias, TypeVar
 
-from app.domain.models import EntityOrigin, Experiment, ProduceLot
+from app.domain.models import EntityOrigin, Experiment, PowderFraction, ProduceLot, new_id
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.helpers.lookups import (
     find_produce_basket_lot,
@@ -227,6 +227,14 @@ class WorkbenchProduceLotTarget:
             )
 
         slot.tool.produce_lots.append(entity)
+        if entity.cut_state == "ground":
+            slot.tool.powder_fractions.append(
+                PowderFraction(
+                    id=new_id("powder"),
+                    source_lot_id=entity.id,
+                    mass_g=entity.total_mass_g,
+                )
+            )
         return TransferPlacement(
             target_label=slot.tool.label,
             location_label=f"{slot.tool.label} on {slot.label}",

@@ -326,12 +326,18 @@ export type BenchToolInstance = {
   labels?: BenchLabel[];
   produceLots?: ExperimentProduceLot[];
   liquids: BenchLiquidPortion[];
-  powderMassG?: number;
+  powderFractions: PowderFraction[];
+};
+
+export type PowderFraction = {
+  id: string;
+  sourceLotId: string;
+  massG: number;
 };
 
 export type SpatulaState = {
   isLoaded: boolean;
-  loadedPowderMassG: number;
+  loadedFractions: PowderFraction[];
   sourceToolId: string | null;
 };
 

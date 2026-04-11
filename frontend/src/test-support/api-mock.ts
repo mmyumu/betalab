@@ -141,7 +141,13 @@ export const removeLiquidFromWorkbenchTool = wrapCommand("remove_liquid_from_wor
 export const applySampleLabelToWorkbenchTool = wrapCommand("apply_sample_label_to_workbench_tool");
 export const closeWorkbenchTool = wrapCommand("close_workbench_tool");
 export const openWorkbenchTool = wrapCommand("open_workbench_tool");
+export const discardSpatula = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "discard_spatula", {}),
+);
 export const loadSpatulaFromWorkbenchTool = wrapCommand("load_spatula_from_workbench_tool");
+export const loadSpatulaFromAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "load_spatula_from_analytical_balance_tool", {}),
+);
 export const pourSpatulaIntoWorkbenchTool = wrapCommand("pour_spatula_into_workbench_tool");
 export const pourSpatulaIntoAnalyticalBalanceTool = wrapCommand("pour_spatula_into_analytical_balance_tool");
 export const updateWorkbenchToolSampleLabelText = wrapCommand("update_workbench_tool_sample_label_text");

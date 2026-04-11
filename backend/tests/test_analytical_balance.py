@@ -1,5 +1,6 @@
 import pytest
 
+from app.domain.models import PowderFraction
 from app.services.domain_services.analytical_balance import (
     CloseAnalyticalBalanceToolService,
     EmptyRequest,
@@ -41,7 +42,7 @@ def test_analytical_balance_records_precise_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    tool.powder_mass_g = 10.124
+    tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.124)]
     runtime_experiment.workspace.widgets[1].tool = None
     runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
@@ -65,7 +66,7 @@ def test_analytical_balance_rejects_out_of_spec_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    tool.powder_mass_g = 10.5
+    tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.5)]
     runtime_experiment.workspace.widgets[1].tool = None
     runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
