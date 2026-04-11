@@ -26,7 +26,9 @@ def isolated_api_experiment_service(tmp_path, monkeypatch):
         repository=SqliteExperimentRepository(str(tmp_path / "api-tests.sqlite3"))
     )
     monkeypatch.setattr(experiment_routes_common, "experiment_service", isolated_service)
-    monkeypatch.setattr(experiment_routes_analytical_balance, "experiment_service", isolated_service)
+    monkeypatch.setattr(
+        experiment_routes_analytical_balance, "experiment_service", isolated_service
+    )
     monkeypatch.setattr(experiment_routes_core, "experiment_service", isolated_service)
     monkeypatch.setattr(
         experiment_routes_gross_balance,
@@ -144,7 +146,9 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
         experiment_id = _create_experiment(client)
 
         # --- Réception ---
-        basket_moved_to_balance = client.post(f"/experiments/{experiment_id}/gross-balance/place-basket-tool")
+        basket_moved_to_balance = client.post(
+            f"/experiments/{experiment_id}/gross-balance/place-basket-tool"
+        )
         registered = client.post(
             f"/experiments/{experiment_id}/lims/reception",
             json={
@@ -207,9 +211,7 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
             json={"tool_id": "hdpe_storage_jar_2l"},
         )
         jar_tool_id = _find_slot(placed_jar.json(), "station_3")["tool"]["id"]
-        opened_jar = client.post(
-            f"/experiments/{experiment_id}/workbench/tools/{jar_tool_id}/open"
-        )
+        opened_jar = client.post(f"/experiments/{experiment_id}/workbench/tools/{jar_tool_id}/open")
         moved_to_jar = client.post(
             f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{produce_lot_id}/move-to-workbench-tool",
             json={"target_slot_id": "station_3"},
@@ -233,12 +235,17 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
     assert _find_slot(placed_board.json(), "station_2")["tool"]["id"] == board_tool_id
     assert moved_to_board.status_code == 200
     assert _find_slot(moved_to_board.json(), "station_1")["tool"]["produce_lots"] == []
-    assert _find_slot(moved_to_board.json(), "station_2")["tool"]["produce_lots"][0]["id"] == produce_lot_id
+    assert (
+        _find_slot(moved_to_board.json(), "station_2")["tool"]["produce_lots"][0]["id"]
+        == produce_lot_id
+    )
     assert cut.status_code == 200
     assert _find_slot(cut.json(), "station_2")["tool"]["produce_lots"][0]["cut_state"] == "cut"
     assert added_grinder.status_code == 200
     assert moved_to_grinder.status_code == 200
-    assert _find_widget(moved_to_grinder.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
+    assert (
+        _find_widget(moved_to_grinder.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
+    )
     assert cooled.status_code == 200
     cooled_grinder = _find_widget(cooled.json(), "grinder")
     assert cooled_grinder["liquids"][0]["liquid_id"] == "dry_ice_pellets"
@@ -389,7 +396,9 @@ def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
 
-        recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
+        recorded = client.post(
+            f"/experiments/{experiment_id}/analytical-balance/record-sample-mass"
+        )
 
     assert recorded.status_code == 200
     assert recorded.json()["lims_reception"]["measured_sample_mass_g"] == pytest.approx(10.124)
@@ -406,7 +415,9 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
         analytical_balance.tool.powder_mass_g = 10.5
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
-        recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
+        recorded = client.post(
+            f"/experiments/{experiment_id}/analytical-balance/record-sample-mass"
+        )
 
     assert recorded.status_code == 400
     assert "ERR_RANGE" in recorded.json()["detail"]
@@ -646,7 +657,9 @@ def test_workbench_sample_label_routes_round_trip_over_http() -> None:
         )
         first_tool_id = first_bag.json()["workbench"]["slots"][0]["tool"]["id"]
         second_tool_id = second_bag.json()["workbench"]["slots"][1]["tool"]["id"]
-        labeled = client.post(f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label")
+        labeled = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label"
+        )
         updated = client.patch(
             f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label",
             json={"sample_label_text": "LOT-2026-041"},
@@ -655,7 +668,9 @@ def test_workbench_sample_label_routes_round_trip_over_http() -> None:
             f"/experiments/{experiment_id}/workbench/tools/{first_tool_id}/sample-label/move-to-tool",
             json={"target_tool_id": second_tool_id},
         )
-        discarded = client.delete(f"/experiments/{experiment_id}/workbench/tools/{second_tool_id}/sample-label")
+        discarded = client.delete(
+            f"/experiments/{experiment_id}/workbench/tools/{second_tool_id}/sample-label"
+        )
         trash_entry_id = discarded.json()["trash"]["sample_labels"][0]["id"]
         restored = client.post(
             f"/experiments/{experiment_id}/trash/sample-labels/{trash_entry_id}/restore-to-workbench-tool",
@@ -734,7 +749,9 @@ def test_trash_tool_restore_routes_round_trip_over_http() -> None:
             json={"target_slot_id": "station_2"},
         )
         restored_tool_id = restored_to_bench.json()["workbench"]["slots"][1]["tool"]["id"]
-        discarded_again = client.post(f"/experiments/{experiment_id}/workbench/tools/{restored_tool_id}/discard")
+        discarded_again = client.post(
+            f"/experiments/{experiment_id}/workbench/tools/{restored_tool_id}/discard"
+        )
         second_entry_id = discarded_again.json()["trash"]["tools"][0]["id"]
         restored_to_rack = client.post(
             f"/experiments/{experiment_id}/trash/tools/{second_entry_id}/restore-to-rack",
@@ -760,7 +777,12 @@ def test_workspace_routes_round_trip_over_http() -> None:
 
             added_widget = client.post(
                 f"/experiments/{experiment_id}/workspace/widgets",
-                json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+                json={
+                    "widget_id": "grinder",
+                    "anchor": "top-right",
+                    "offset_x": 0,
+                    "offset_y": 420,
+                },
             )
             moved_widget = client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/move",
@@ -792,18 +814,30 @@ def test_workspace_routes_round_trip_over_http() -> None:
             discarded_produce_lot = client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{produce_lot_id}/discard"
             )
-            stored_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/store")
+            stored_widget = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/store"
+            )
     finally:
         experiment_service._now_fn = original_now_fn
 
     assert added_widget.status_code == 200
-    assert next(widget for widget in added_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
-        "is_present"
-    ] is True
+    assert (
+        next(
+            widget
+            for widget in added_widget.json()["workspace"]["widgets"]
+            if widget["id"] == "grinder"
+        )["is_present"]
+        is True
+    )
     assert moved_widget.status_code == 200
-    assert next(widget for widget in moved_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
-        "anchor"
-    ] == "top-left"
+    assert (
+        next(
+            widget
+            for widget in moved_widget.json()["workspace"]["widgets"]
+            if widget["id"] == "grinder"
+        )["anchor"]
+        == "top-left"
+    )
     assert produce_loaded.status_code == 200
     assert produce_loaded.json()["workspace"]["produce_basket_lots"] == []
     assert updated_liquid.status_code == 200
@@ -815,12 +849,22 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert discarded_produce_lot.status_code == 200
     assert _find_widget(discarded_produce_lot.json(), "grinder")["produce_lots"] == []
     assert stored_widget.status_code == 200
-    assert next(widget for widget in stored_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
-        "is_present"
-    ] is False
-    assert next(widget for widget in stored_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
-        "is_trashed"
-    ] is False
+    assert (
+        next(
+            widget
+            for widget in stored_widget.json()["workspace"]["widgets"]
+            if widget["id"] == "grinder"
+        )["is_present"]
+        is False
+    )
+    assert (
+        next(
+            widget
+            for widget in stored_widget.json()["workspace"]["widgets"]
+            if widget["id"] == "grinder"
+        )["is_trashed"]
+        is False
+    )
 
 
 def test_experiment_stream_pushes_updated_snapshots() -> None:
@@ -834,7 +878,12 @@ def test_experiment_stream_pushes_updated_snapshots() -> None:
             experiment_id = _create_experiment(client)
             client.post(
                 f"/experiments/{experiment_id}/workspace/widgets",
-                json={"widget_id": "grinder", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+                json={
+                    "widget_id": "grinder",
+                    "anchor": "top-right",
+                    "offset_x": 0,
+                    "offset_y": 420,
+                },
             )
             produced = client.post(
                 f"/experiments/{experiment_id}/workspace/produce-lots",
@@ -926,15 +975,26 @@ def test_produce_lot_routes_round_trip_over_http() -> None:
     assert cut.status_code == 200
     assert cut.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "cut"
     assert restored_to_board.status_code == 200
-    assert restored_to_board.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == first_lot_id
+    assert (
+        restored_to_board.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"]
+        == first_lot_id
+    )
     assert added_grinder.status_code == 200
     assert restored_to_widget.status_code == 200
-    assert _find_widget(restored_to_widget.json(), "grinder")["produce_lots"][0]["id"] == first_lot_id
+    assert (
+        _find_widget(restored_to_widget.json(), "grinder")["produce_lots"][0]["id"] == first_lot_id
+    )
     assert moved_to_bench.status_code == 200
-    assert moved_to_bench.json()["workbench"]["slots"][1]["surface_produce_lots"][0]["id"] == first_lot_id
+    assert (
+        moved_to_bench.json()["workbench"]["slots"][1]["surface_produce_lots"][0]["id"]
+        == first_lot_id
+    )
     assert restored_to_widget_again.status_code == 200
     assert discarded_from_widget.status_code == 200
-    assert discarded_from_widget.json()["trash"]["produce_lots"][0]["produce_lot"]["id"] == first_lot_id
+    assert (
+        discarded_from_widget.json()["trash"]["produce_lots"][0]["produce_lot"]["id"]
+        == first_lot_id
+    )
 
 
 def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
@@ -1003,7 +1063,12 @@ def test_move_gross_balance_produce_lot_to_workbench_over_http() -> None:
         experiment_id = _create_experiment(client)
         client.post(
             f"/experiments/{experiment_id}/workspace/widgets",
-            json={"widget_id": "gross_balance", "anchor": "top-right", "offset_x": 0, "offset_y": 420},
+            json={
+                "widget_id": "gross_balance",
+                "anchor": "top-right",
+                "offset_x": 0,
+                "offset_y": 420,
+            },
         )
         produced = client.post(
             f"/experiments/{experiment_id}/debug/produce-presets/apple_powder_residual_co2/spawn-on-widget",

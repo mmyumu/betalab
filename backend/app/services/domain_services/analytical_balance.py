@@ -92,8 +92,8 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
         return widget.tool
 
     def _validate_supported_tool(self, tool: WorkbenchTool) -> None:
-        if tool.tool_type != "centrifuge_tube":
-            raise ValueError("The analytical balance only accepts the 50 mL centrifuge tube.")
+        if tool.tool_type == "cutting_board":
+            raise ValueError("The analytical balance cannot accept the cutting board (too heavy).")
 
     def _calculate_tool_mass_g(self, tool: WorkbenchTool) -> float:
         produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
@@ -128,10 +128,10 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
         return removed_tool
 
 
-class MoveWorkbenchToolToAnalyticalBalanceService(
-    AnalyticalBalanceServiceBase
-):
-    def _run(self, experiment: Experiment, request: MoveWorkbenchToolToAnalyticalBalanceRequest) -> None:
+class MoveWorkbenchToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
+    def _run(
+        self, experiment: Experiment, request: MoveWorkbenchToolToAnalyticalBalanceRequest
+    ) -> None:
         source_slot = find_workbench_slot(experiment.workbench, request.source_slot_id)
         if source_slot.tool is None:
             raise ValueError(f"Place a tool on {source_slot.label} before moving it.")
@@ -157,14 +157,20 @@ class MoveRackToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
 
 
 class RestoreTrashedToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
-    def _run(self, experiment: Experiment, request: RestoreTrashedToolToAnalyticalBalanceRequest) -> None:
+    def _run(
+        self, experiment: Experiment, request: RestoreTrashedToolToAnalyticalBalanceRequest
+    ) -> None:
         trashed_tool = find_trash_tool(experiment.trash, request.trash_tool_id)
         self._place_tool_on_balance(experiment, trashed_tool.tool, action_verb="restored to")
-        experiment.trash.tools = [entry for entry in experiment.trash.tools if entry.id != trashed_tool.id]
+        experiment.trash.tools = [
+            entry for entry in experiment.trash.tools if entry.id != trashed_tool.id
+        ]
 
 
 class MoveGrossBalanceToolToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
-    def _run(self, experiment: Experiment, request: MoveGrossBalanceToolToAnalyticalBalanceRequest) -> None:
+    def _run(
+        self, experiment: Experiment, request: MoveGrossBalanceToolToAnalyticalBalanceRequest
+    ) -> None:
         gross_balance = find_workspace_widget(experiment.workspace, "gross_balance")
         if gross_balance.tool is None:
             raise ValueError("Gross balance does not contain a tool.")
@@ -175,7 +181,9 @@ class MoveGrossBalanceToolToAnalyticalBalanceService(AnalyticalBalanceServiceBas
 
 
 class MoveAnalyticalBalanceToolToWorkbenchService(AnalyticalBalanceServiceBase):
-    def _run(self, experiment: Experiment, request: MoveAnalyticalBalanceToolToWorkbenchRequest) -> None:
+    def _run(
+        self, experiment: Experiment, request: MoveAnalyticalBalanceToolToWorkbenchRequest
+    ) -> None:
         target_slot = find_workbench_slot(experiment.workbench, request.target_slot_id)
         if target_slot.tool is not None or target_slot.surface_produce_lots:
             raise ValueError(f"{target_slot.label} already contains a tool")
@@ -214,7 +222,9 @@ class DiscardAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
 class TareAnalyticalBalanceService(AnalyticalBalanceServiceBase):
     def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
         widget = self._find_analytical_balance_widget(experiment)
-        measured_mass_g = self._calculate_tool_mass_g(widget.tool) if widget.tool is not None else 0.0
+        measured_mass_g = (
+            self._calculate_tool_mass_g(widget.tool) if widget.tool is not None else 0.0
+        )
         experiment.analytical_balance.tare_mass_g = measured_mass_g
         experiment.audit_log.append(f"Analytical balance tared at {measured_mass_g:.3f} g.")
 
@@ -264,12 +274,11 @@ class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):
             )
 
         net_mass_g = round(measured_mass_g - tare_mass_g, 3)
-        if net_mass_g < _ANALYTICAL_BALANCE_TARGET_MIN_G or net_mass_g > _ANALYTICAL_BALANCE_TARGET_MAX_G:
-            raise ValueError(
-                "ERR_RANGE: Masse hors specifications. Ajustez la quantite de poudre."
-            )
+        if (
+            net_mass_g < _ANALYTICAL_BALANCE_TARGET_MIN_G
+            or net_mass_g > _ANALYTICAL_BALANCE_TARGET_MAX_G
+        ):
+            raise ValueError("ERR_RANGE: Masse hors specifications. Ajustez la quantite de poudre.")
 
         experiment.lims_reception.measured_sample_mass_g = net_mass_g
-        experiment.audit_log.append(
-            f"Analytical sample mass recorded at {net_mass_g:.3f} g."
-        )
+        experiment.audit_log.append(f"Analytical sample mass recorded at {net_mass_g:.3f} g.")

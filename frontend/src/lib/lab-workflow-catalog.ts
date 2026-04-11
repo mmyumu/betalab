@@ -1,5 +1,5 @@
 import { getLiquidDropTargets, getSampleLabelDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
-import type { BenchSlot, LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
+import type { LiquidCatalogItem, ToolCatalogItem, ToolbarCategory } from "@/types/workbench";
 
 export const labWorkflowCategories: ToolbarCategory[] = [
   {

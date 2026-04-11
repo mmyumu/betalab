@@ -176,9 +176,7 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
         target_label: str,
     ) -> None:
         widget = self._find_gross_balance_widget(experiment)
-        experiment.audit_log.append(
-            f"{tool_label} moved from {widget.label} to {target_label}."
-        )
+        experiment.audit_log.append(f"{tool_label} moved from {widget.label} to {target_label}.")
 
     def _update_balance_measured_mass(self, experiment: Experiment) -> None:
         widget = self._find_gross_balance_widget(experiment)
@@ -205,18 +203,24 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
     ) -> tuple[ProduceLot, str, EntityOrigin]:
         widget = self._find_gross_balance_widget(experiment)
         if widget.tool is not None:
-            produce_lot = next((lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None)
+            produce_lot = next(
+                (lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None
+            )
             if produce_lot is not None:
                 widget.tool.produce_lots = [
                     lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id
                 ]
                 self._update_balance_measured_mass(experiment)
-                return produce_lot, widget.label, EntityOrigin(
-                    kind="gross_balance_tool",
-                    location_id=widget.id,
-                    location_label=widget.label,
-                    container_id=widget.tool.id,
-                    container_label=widget.tool.label,
+                return (
+                    produce_lot,
+                    widget.label,
+                    EntityOrigin(
+                        kind="gross_balance_tool",
+                        location_id=widget.id,
+                        location_label=widget.label,
+                        container_id=widget.tool.id,
+                        container_label=widget.tool.label,
+                    ),
                 )
 
         produce_lot = next((lot for lot in widget.produce_lots if lot.id == produce_lot_id), None)
@@ -224,10 +228,14 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
             raise ValueError(f"{widget.label} does not contain produce lot {produce_lot_id}.")
         widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot_id]
         self._update_balance_measured_mass(experiment)
-        return produce_lot, widget.label, EntityOrigin(
-            kind="gross_balance_surface",
-            location_id=widget.id,
-            location_label=widget.label,
+        return (
+            produce_lot,
+            widget.label,
+            EntityOrigin(
+                kind="gross_balance_surface",
+                location_id=widget.id,
+                location_label=widget.label,
+            ),
         )
 
 
@@ -272,7 +280,9 @@ class GrossBalanceProduceLotTarget:
                     produce_mass_g = sum(lot.total_mass_g for lot in widget.tool.produce_lots)
                     liquid_mass_g = sum(liquid.volume_ml for liquid in widget.tool.liquids)
                     measured_mass_g = round(
-                        _TARE_BY_TOOL_TYPE_G.get(widget.tool.tool_type, 0) + produce_mass_g + liquid_mass_g,
+                        _TARE_BY_TOOL_TYPE_G.get(widget.tool.tool_type, 0)
+                        + produce_mass_g
+                        + liquid_mass_g,
                         1,
                     )
                 experiment.lims_reception.measured_gross_mass_g = measured_mass_g
@@ -284,7 +294,9 @@ class GrossBalanceProduceLotTarget:
         if self._service is not None:
             self._service._update_balance_measured_mass(experiment)
         else:
-            experiment.lims_reception.measured_gross_mass_g = round(widget.produce_lots[0].total_mass_g, 1)
+            experiment.lims_reception.measured_gross_mass_g = round(
+                widget.produce_lots[0].total_mass_g, 1
+            )
         return ProduceLotPlacement(target_label=widget.label, location_label=widget.label)
 
 
@@ -390,9 +402,7 @@ class MoveGrossBalanceToolToWorkbenchService(GrossBalanceServiceBase):
             raise ValueError(f"{target_slot.label} already contains a tool")
         moved_tool = self._take_tool_from_balance(experiment)
         target_slot.tool = moved_tool
-        self._append_tool_moved_from_balance_audit(
-            experiment, moved_tool.label, target_slot.label
-        )
+        self._append_tool_moved_from_balance_audit(experiment, moved_tool.label, target_slot.label)
 
 
 class MoveGrossBalanceToolToRackService(GrossBalanceServiceBase):
@@ -424,9 +434,7 @@ class DiscardGrossBalanceToolService(GrossBalanceServiceBase):
                 tool=removed_tool,
             )
         )
-        experiment.audit_log.append(
-            f"{removed_tool.label} discarded from {widget.label}."
-        )
+        experiment.audit_log.append(f"{removed_tool.label} discarded from {widget.label}.")
 
 
 class OpenGrossBalanceToolService(GrossBalanceServiceBase):

@@ -75,6 +75,18 @@ const toolItems = toolbarItems.filter((item): item is ToolCatalogItem => item.it
 const paletteItems = toolbarItems.filter((item) => item.itemType !== "sample_label");
 const sampleVialItem = labToolCatalog.sample_vial_lcms;
 const sampleBagItem = pesticideToolCatalog.sealed_sampling_bag;
+const weighableToolItems = toolItems.filter(
+  (item) => item.toolType !== "cutting_board" && item.toolType !== "sample_bag",
+);
+
+const analyticalBalanceCompatibleSourceIds = new Set<string>([
+  ...weighableToolItems.map((item) => `palette-${item.id}`),
+  ...weighableToolItems.map((item) => `workbench-${item.id}`),
+  ...weighableToolItems.map((item) => `trash-tool-${item.id}`),
+  "rack-sample_vial",
+  "gross-balance-sample-vial",
+]);
+
 const grossBalanceCompatibleSourceIds = new Set<string>([
   ...toolItems.map((item) => `palette-${item.id}`),
   ...toolItems.map((item) => `workbench-${item.id}`),
@@ -1581,6 +1593,7 @@ function createGrossBalanceToolSourceCase(): DndSourceCase {
       "bench-slot-station_2",
       "grinder-dropzone",
       "gross-balance-dropzone",
+      "analytical-balance-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
       "trash-dropzone",
@@ -1868,51 +1881,47 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
 }
 
 function getAnalyticalBalanceTargetExpectation(sourceCase: DndSourceCase) {
-  const isCentrifugeTubeSource =
-    sourceCase.id === "palette-centrifuge_tube_50ml" ||
-    sourceCase.id === "workbench-centrifuge_tube_50ml" ||
-    sourceCase.id === "trash-tool-centrifuge_tube_50ml";
-
-  if (!isCentrifugeTubeSource) {
-    return {
-      compatible: false,
-      command: null,
-    };
+  if (!analyticalBalanceCompatibleSourceIds.has(sourceCase.id)) {
+    return { compatible: false, command: null };
   }
 
-  if (sourceCase.id === "palette-centrifuge_tube_50ml") {
+  if (sourceCase.id.startsWith("palette-")) {
+    const toolId = sourceCase.id.replace("palette-", "");
     return {
       compatible: true,
-      command: {
-        type: "place_tool_on_analytical_balance",
-        payload: {
-          tool_id: "centrifuge_tube_50ml",
-        },
-      },
+      command: { type: "place_tool_on_analytical_balance", payload: { tool_id: toolId } },
     };
   }
 
-  if (sourceCase.id === "workbench-centrifuge_tube_50ml") {
+  if (sourceCase.id.startsWith("workbench-")) {
     return {
       compatible: true,
-      command: {
-        type: "move_workbench_tool_to_analytical_balance",
-        payload: {
-          source_slot_id: "station_1",
-        },
-      },
+      command: { type: "move_workbench_tool_to_analytical_balance", payload: { source_slot_id: "station_1" } },
     };
   }
 
-  return {
-    compatible: true,
-    command: {
-      type: "restore_trashed_tool_to_analytical_balance",
-      payload: {
-        trash_tool_id: "trash_tool_1",
-      },
-    },
-  };
+  if (sourceCase.id.startsWith("trash-tool-")) {
+    return {
+      compatible: true,
+      command: { type: "restore_trashed_tool_to_analytical_balance", payload: { trash_tool_id: "trash_tool_1" } },
+    };
+  }
+
+  if (sourceCase.id === "rack-sample_vial") {
+    return {
+      compatible: true,
+      command: { type: "move_rack_tool_to_analytical_balance", payload: { rack_slot_id: "rack_slot_1" } },
+    };
+  }
+
+  if (sourceCase.id === "gross-balance-sample-vial") {
+    return {
+      compatible: true,
+      command: { type: "move_gross_balance_tool_to_analytical_balance", payload: {} },
+    };
+  }
+
+  return { compatible: false, command: null };
 }
 
 export const dndSourceCases: DndSourceCase[] = baseDndSourceCases.map((sourceCase) => ({

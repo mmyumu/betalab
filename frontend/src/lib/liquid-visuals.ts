@@ -109,22 +109,3 @@ export function getContainerLiquidVisualState(
   };
 }
 
-export function buildCssLinearGradient(
-  segments: LiquidVisualSegment[],
-  direction = "90deg",
-) {
-  if (segments.length === 0) {
-    return undefined;
-  }
-
-  let offset = 0;
-  const stops = segments.flatMap((segment, index) => {
-    const start = offset;
-    offset += segment.ratio * 100;
-    const end = index === segments.length - 1 ? 100 : offset;
-
-    return [`${segment.color} ${start}%`, `${segment.color} ${end}%`];
-  });
-
-  return `linear-gradient(${direction}, ${stops.join(", ")})`;
-}

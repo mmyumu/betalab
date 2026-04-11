@@ -1,7 +1,6 @@
 export {
   canStoreWorkspaceWidget,
   getLiquidDropTargets,
-  isWorkspaceWidgetEmpty,
   canToolAcceptLiquids,
   canToolAcceptProduce,
   canToolReceiveContents,

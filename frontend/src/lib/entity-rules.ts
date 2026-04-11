@@ -12,7 +12,7 @@ export function getToolDropTargets(toolType: ToolType): DropTargetType[] {
   if (toolType === "sample_vial") {
     targets.splice(1, 0, "rack_slot");
   }
-  if (toolType === "centrifuge_tube") {
+  if (toolType !== "cutting_board" && toolType !== "sample_bag") {
     targets.push("analytical_balance_widget");
   }
 
@@ -72,7 +72,7 @@ export function canWorkspaceWidgetBeStored(widgetId: ExperimentWorkspaceWidgetId
   );
 }
 
-export function isWorkspaceWidgetEmpty(
+function isWorkspaceWidgetEmpty(
   widget: Pick<ExperimentWorkspaceWidget, "tool" | "produceLots" | "liquids">,
 ): boolean {
   return widget.tool == null && (widget.produceLots?.length ?? 0) === 0 && (widget.liquids?.length ?? 0) === 0;

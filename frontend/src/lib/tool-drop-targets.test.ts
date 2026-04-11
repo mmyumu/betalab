@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { canToolBeSealed } from "@/lib/entity-rules";
+import type { ToolType } from "@/types/workbench";
 import {
   canStoreWorkspaceWidget,
   canWorkspaceWidgetBeStored,
@@ -17,23 +18,24 @@ describe("tool drop targets", () => {
       "rack_slot",
       "trash_bin",
       "gross_balance_widget",
+      "analytical_balance_widget",
     ]);
   });
 
   it("keeps non-vial tools off the rack", () => {
-    expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
+    expect(getToolDropTargets("beaker")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget", "analytical_balance_widget"]);
     expect(getToolDropTargets("cutting_board")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
     expect(getToolDropTargets("sample_bag")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
-    expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget"]);
+    expect(getToolDropTargets("storage_jar")).toEqual(["workbench_slot", "trash_bin", "gross_balance_widget", "analytical_balance_widget"]);
   });
 
-  it("keeps the 50 mL tube compatible with the analytical balance from every origin", () => {
-    expect(getToolDropTargets("centrifuge_tube")).toEqual([
-      "workbench_slot",
-      "trash_bin",
-      "gross_balance_widget",
-      "analytical_balance_widget",
-    ]);
+  it("keeps all weighable tools compatible with the analytical balance, cutting board and sample bag excluded", () => {
+    const weighable: ToolType[] = ["centrifuge_tube", "cleanup_tube", "sample_vial", "beaker", "storage_jar"];
+    for (const t of weighable) {
+      expect(getToolDropTargets(t), `${t} should include analytical_balance_widget`).toContain("analytical_balance_widget");
+    }
+    expect(getToolDropTargets("cutting_board")).not.toContain("analytical_balance_widget");
+    expect(getToolDropTargets("sample_bag")).not.toContain("analytical_balance_widget");
   });
 
   it("keeps produce lot compatibility independent from origin and includes the grinder", () => {

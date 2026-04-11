@@ -14,14 +14,14 @@ from app.services.domain_services.analytical_balance import (
 from app.services.experiment_service import ExperimentRuntimeService
 
 
-def test_analytical_balance_only_accepts_the_50ml_tube() -> None:
+def test_analytical_balance_rejects_cutting_board() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
 
-    with pytest.raises(ValueError, match="only accepts the 50 mL centrifuge tube"):
+    with pytest.raises(ValueError, match="cutting board"):
         PlaceToolOnAnalyticalBalanceService(service).run(
             experiment.id,
-            PlaceToolOnAnalyticalBalanceRequest(tool_id="sample_vial_lcms"),
+            PlaceToolOnAnalyticalBalanceRequest(tool_id="cutting_board_hdpe"),
         )
 
 
@@ -124,7 +124,11 @@ def test_analytical_balance_tare_works_with_liquid_in_tube() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workspace.widgets[2].tool
     assert tool is not None
-    tool.liquids.append(WorkbenchLiquid(id="liq1", liquid_id="acetonitrile", name="ACN", volume_ml=10.0, accent="blue"))
+    tool.liquids.append(
+        WorkbenchLiquid(
+            id="liq1", liquid_id="acetonitrile", name="ACN", volume_ml=10.0, accent="blue"
+        )
+    )
 
     updated = TareAnalyticalBalanceService(service).run(experiment.id, EmptyRequest())
     # 12g (tube) + 10g (liquid) = 22g tare
