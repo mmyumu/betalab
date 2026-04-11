@@ -4465,7 +4465,7 @@ describe("LabScene", () => {
       "add_liquid_to_workbench_tool",
       { slot_id: "station_1", liquid_id: "acetonitrile_extraction", volume_ml: 10 },
     );
-    expect(screen.getByText("2 mL")).toBeInTheDocument();
+    expect(within(screen.getByTestId("bench-slot-station_1")).getByText("Acetonitrile")).toBeInTheDocument();
   });
 
   it("shows a syncing status and ignores additional commands while one is pending", async () => {
@@ -4571,7 +4571,7 @@ describe("LabScene", () => {
         volume_ml: 5,
       },
     );
-    expect(screen.getByText("15 mL")).toBeInTheDocument();
+    expect(within(screen.getByTestId("bench-slot-station_1")).getByText("Acetonitrile")).toBeInTheDocument();
   });
 
   it("lets the user remove a liquid from a tool through a backend command", async () => {

@@ -7,7 +7,6 @@ import { SampleIdentityLabel } from "@/components/sample-identity-label";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
 import { canToolAcceptProduce, canToolBeSealed } from "@/lib/entity-rules";
 import {
-  buildCssLinearGradient,
   getContainerLiquidVisualState,
   getLiquidAccentPalette,
 } from "@/lib/liquid-visuals";
@@ -36,11 +35,6 @@ type BenchToolCardProps = {
   onToolIllustrationClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   tool: BenchToolInstance;
 };
-
-const neutralToneClass = "from-slate-300 to-slate-100";
-function formatVolume(volumeMl: number) {
-  return Number.parseFloat(volumeMl.toFixed(3)).toString();
-}
 
 function formatLotMetadata(unitCount: number | null) {
   return unitCount === null ? "" : `${unitCount} unit${unitCount === 1 ? "" : "s"}`;
@@ -74,18 +68,11 @@ export function BenchToolCard({
   tool,
 }: BenchToolCardProps) {
   const produceLots = tool.produceLots ?? [];
-  const currentVolume = Number.parseFloat(
-    tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0).toFixed(3),
-  );
-  const fillRatio = tool.capacity_ml > 0 ? Math.min(currentVolume / tool.capacity_ml, 1) : 0;
+  const totalVolumeMl = tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0);
+  const fillRatio = tool.capacity_ml > 0 ? Math.min(totalVolumeMl / tool.capacity_ml, 1) : 0;
   const powderMassG = tool.powderMassG ?? 0;
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
-  const isFilled = liquidVisualState.hasVisibleLiquid;
-  const fillPercentage = (fillRatio * 100).toFixed(2);
   const liquidSegments = liquidVisualState.segments;
-  const fillBorderStyle = isFilled
-    ? { backgroundImage: buildCssLinearGradient(liquidSegments) }
-    : undefined;
   const isSampleBag = tool.toolType === "sample_bag";
   const isPowderTool = tool.toolType === "storage_jar" || tool.toolType === "sample_vial";
   const isProduceSurface = canToolAcceptProduce(tool.toolType);
@@ -229,36 +216,7 @@ export function BenchToolCard({
           ) : null
         ) : isProduceSurface ? (
           null
-        ) : (
-          <div
-            className={`rounded-[1rem] bg-gradient-to-r p-[1px] ${isFilled ? "" : neutralToneClass}`}
-            style={fillBorderStyle}
-          >
-            <div className="flex min-h-12 items-center rounded-[0.95rem] bg-white/90 px-2.5 py-1">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  {isPowderTool ? "Powder state" : "Current fill"}
-                </p>
-                <p className="mt-0.5 text-base font-semibold text-slate-950">
-                  {isPowderTool
-                    ? powderMassG > 0
-                      ? tool.toolType === "storage_jar"
-                        ? "Loaded"
-                        : "Receiving"
-                      : "Empty"
-                    : `${fillPercentage}%`}
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  {isPowderTool
-                    ? tool.toolType === "storage_jar"
-                      ? "Source jar for spatula transfers"
-                      : "Powder settles visually in the vial"
-                    : `${formatVolume(currentVolume)} / ${formatVolume(tool.capacity_ml)} mL`}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        ) : null}
 
         {hasLabels ? (
           <div className="space-y-2">
@@ -441,9 +399,6 @@ export function BenchToolCard({
                     </svg>
                   </button>
 
-                  <span className="text-[11px] font-semibold text-slate-600">
-                    {formatVolume(liquid.volume_ml)} mL
-                  </span>
                 </div>
               </div>
             ))

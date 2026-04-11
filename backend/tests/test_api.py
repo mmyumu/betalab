@@ -387,7 +387,6 @@ def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
         analytical_balance.tool.powder_mass_g = 10.124
         experiment.analytical_balance.tare_mass_g = 12.0
-        experiment.analytical_balance.tared_tool_id = analytical_balance.tool.id
         experiment_service._persist_mutation_and_to_schema(experiment)
 
         recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
@@ -406,7 +405,6 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
         analytical_balance.tool.powder_mass_g = 10.5
         experiment.analytical_balance.tare_mass_g = 12.0
-        experiment.analytical_balance.tared_tool_id = analytical_balance.tool.id
         experiment_service._persist_mutation_and_to_schema(experiment)
         recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")
 
@@ -791,6 +789,9 @@ def test_workspace_routes_round_trip_over_http() -> None:
             removed_liquid = client.delete(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/liquids/{liquid_id}"
             )
+            discarded_produce_lot = client.post(
+                f"/experiments/{experiment_id}/workspace/widgets/grinder/produce-lots/{produce_lot_id}/discard"
+            )
             stored_widget = client.post(f"/experiments/{experiment_id}/workspace/widgets/grinder/store")
     finally:
         experiment_service._now_fn = original_now_fn
@@ -811,6 +812,8 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert _find_widget(advanced.json(), "grinder")["produce_lots"][0]["temperature_c"] < 20.0
     assert removed_liquid.status_code == 200
     assert _find_widget(removed_liquid.json(), "grinder")["liquids"] == []
+    assert discarded_produce_lot.status_code == 200
+    assert _find_widget(discarded_produce_lot.json(), "grinder")["produce_lots"] == []
     assert stored_widget.status_code == 200
     assert next(widget for widget in stored_widget.json()["workspace"]["widgets"] if widget["id"] == "grinder")[
         "is_present"

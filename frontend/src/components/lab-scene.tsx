@@ -296,7 +296,9 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   );
   const analyticalBalanceMeasuredMassG = analyticalBalanceTool
     ? getApproximateToolMassG(analyticalBalanceTool, 3)
-    : null;
+    : state.experiment.analyticalBalance.tareMassG !== null
+      ? 0
+      : null;
   const analyticalBalanceNetMassG =
     analyticalBalanceMeasuredMassG === null ||
     state.experiment.analyticalBalance.tareMassG === null

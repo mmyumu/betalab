@@ -376,8 +376,6 @@ class MoveAnalyticalBalanceToolToGrossBalanceService(GrossBalanceServiceBase):
             raise ValueError("Analytical balance does not contain a tool.")
         moved_tool = analytical_balance.tool
         analytical_balance.tool = None
-        experiment.analytical_balance.tare_mass_g = None
-        experiment.analytical_balance.tared_tool_id = None
         self._place_tool_on_balance(experiment, moved_tool, action_verb="moved to")
 
 

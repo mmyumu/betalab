@@ -80,17 +80,19 @@ function SpatulaIcon({ active }: { active: boolean }) {
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <g transform="rotate(-30 12 12)">
-        <path
-          d="M6.5 13.2H15.4C17.4 13.2 19 11.6 19 9.6C19 8.8 18.4 8.2 17.6 8.2H6.5V13.2Z"
-          fill="currentColor"
-          opacity="0.18"
-        />
-        <path d="M4.8 12.7H14.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-        <path d="M4.8 10.2H14.4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-        <path d="M14.4 10.2C17 10.2 18.9 11.7 19.2 13.8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-        <rect fill="currentColor" height="2.6" rx="1.1" width="8.4" x="4.1" y="12.2" />
-        <path d="M8.3 8.9C9.7 7.6 11.9 7.3 13.8 8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+      <g transform="rotate(-20 12 12)">
+        {/* Handle (right side) */}
+        <rect fill="currentColor" height="3" opacity="0.9" rx="1.5" width="9.5" x="11.5" y="10.5" />
+        <rect height="3" rx="1.5" stroke="currentColor" strokeWidth="1.1" width="9.5" x="11.5" y="10.5" />
+        {/* Grip notches */}
+        <path d="M17 11V13" stroke={active ? "#e0f2fe" : "#f8fafc"} strokeLinecap="round" strokeWidth="0.7" />
+        <path d="M19.5 11V13" stroke={active ? "#e0f2fe" : "#f8fafc"} strokeLinecap="round" strokeWidth="0.7" />
+        {/* Bowl fill */}
+        <ellipse cx="6.5" cy="12" fill="currentColor" opacity="0.18" rx="5.5" ry="4" />
+        {/* Bowl outline */}
+        <ellipse cx="6.5" cy="12" rx="5.5" ry="4" stroke="currentColor" strokeWidth="1.15" />
+        {/* Bowl rim glint */}
+        <ellipse cx="5" cy="10.2" fill="none" opacity="0.5" rx="2.5" ry="1.2" stroke="currentColor" strokeWidth="0.6" />
       </g>
     </svg>
   );

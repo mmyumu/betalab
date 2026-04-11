@@ -15,7 +15,6 @@ from app.services.helpers.workbench import build_workbench_tool
 from app.services.physical_simulation_service import PhysicalSimulationService
 
 _ANALYTICAL_BALANCE_MAX_G = 220.0
-_ANALYTICAL_BALANCE_TARE_LIMIT_G = 12.0
 _ANALYTICAL_BALANCE_TARGET_MIN_G = 9.8
 _ANALYTICAL_BALANCE_TARGET_MAX_G = 10.2
 physical_simulation_service = PhysicalSimulationService()
@@ -96,10 +95,6 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
         if tool.tool_type != "centrifuge_tube":
             raise ValueError("The analytical balance only accepts the 50 mL centrifuge tube.")
 
-    def _clear_tare(self, experiment: Experiment) -> None:
-        experiment.analytical_balance.tare_mass_g = None
-        experiment.analytical_balance.tared_tool_id = None
-
     def _calculate_tool_mass_g(self, tool: WorkbenchTool) -> float:
         produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
         liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
@@ -121,8 +116,6 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
         self._validate_supported_tool(tool)
         widget = self._find_analytical_balance_widget(experiment)
         self._validate_balance_empty(widget)
-        if experiment.analytical_balance.tared_tool_id != tool.id:
-            self._clear_tare(experiment)
         widget.tool = tool
         experiment.audit_log.append(f"{tool.label} {action_verb} {widget.label}.")
 
@@ -220,15 +213,9 @@ class DiscardAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
 
 class TareAnalyticalBalanceService(AnalyticalBalanceServiceBase):
     def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
-        tool = self._require_balance_tool(experiment)
-        measured_mass_g = self._calculate_tool_mass_g(tool)
-        if measured_mass_g > _ANALYTICAL_BALANCE_TARE_LIMIT_G:
-            raise ValueError(
-                "ERR_TARE: Erreur de tare : le contenant semble trop lourd ou non remis a zero."
-            )
-
+        widget = self._find_analytical_balance_widget(experiment)
+        measured_mass_g = self._calculate_tool_mass_g(widget.tool) if widget.tool is not None else 0.0
         experiment.analytical_balance.tare_mass_g = measured_mass_g
-        experiment.analytical_balance.tared_tool_id = tool.id
         experiment.audit_log.append(f"Analytical balance tared at {measured_mass_g:.3f} g.")
 
 
@@ -271,7 +258,7 @@ class RecordAnalyticalSampleMassService(AnalyticalBalanceServiceBase):
             raise ValueError("ERR_OVER: OVERLOAD : Retirez l'objet immediatement du plateau.")
 
         tare_mass_g = experiment.analytical_balance.tare_mass_g
-        if tare_mass_g is None or experiment.analytical_balance.tared_tool_id != tool.id:
+        if tare_mass_g is None:
             raise ValueError(
                 "ERR_TARE: Erreur de tare : le contenant semble trop lourd ou non remis a zero."
             )
