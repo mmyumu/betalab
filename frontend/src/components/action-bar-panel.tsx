@@ -9,7 +9,6 @@ type ActionDefinition = {
 
 type ActionBarPanelProps = {
   activeActionId: string | null;
-  helperText?: string | null;
   onToggleAction: (actionId: string) => void;
   spatulaLoaded?: boolean;
 };
@@ -100,7 +99,6 @@ function SpatulaIcon({ active }: { active: boolean }) {
 
 export function ActionBarPanel({
   activeActionId,
-  helperText = null,
   onToggleAction,
   spatulaLoaded = false,
 }: ActionBarPanelProps) {
@@ -167,9 +165,6 @@ export function ActionBarPanel({
             {spatulaLoaded ? "Loaded" : "Empty"}
           </p>
         </div>
-      ) : null}
-      {helperText ? (
-        <p className="mt-2 max-w-[11rem] text-[11px] leading-4 text-slate-500">{helperText}</p>
       ) : null}
     </section>
   );

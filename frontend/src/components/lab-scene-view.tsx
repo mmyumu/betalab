@@ -92,6 +92,7 @@ type LabSceneViewProps = {
     handleSpatulaToolIllustrationClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => void;
     handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
     handleSpatulaToolPointerUp: () => void;
+    handleSpatulaTrashClick: () => void;
     isSpatulaMode: boolean;
     setActiveActionId: Dispatch<SetStateAction<string | null>>;
     spatula: SpatulaState;
@@ -213,6 +214,7 @@ export function LabSceneView({
               handleSpatulaToolIllustrationClick: spatula.handleSpatulaToolIllustrationClick,
               handleSpatulaToolPointerDown: spatula.handleSpatulaToolPointerDown,
               handleSpatulaToolPointerUp: spatula.handleSpatulaToolPointerUp,
+              handleSpatulaTrashClick: spatula.handleSpatulaTrashClick,
             }}
             ui={ui}
             workbench={workbench}
@@ -223,7 +225,6 @@ export function LabSceneView({
           <div className="xl:sticky xl:top-6 xl:self-start" data-testid="widget-actions">
             <ActionBarPanel
               activeActionId={spatula.activeActionId}
-              helperText={spatula.isSpatulaMode ? spatula.spatulaHintMessage : null}
               onToggleAction={(actionId) => {
                 dnd.clearDropTargets();
                 spatula.stopSpatulaPour();

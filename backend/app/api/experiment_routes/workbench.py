@@ -33,6 +33,7 @@ from app.services.domain_services.workbench import (
     DiscardSampleLabelFromWorkbenchToolService,
     DiscardToolFromPaletteRequest,
     DiscardToolFromPaletteService,
+    DiscardSpatulaService,
     DiscardWorkbenchToolService,
     EmptyWorkbenchRequest,
     LoadSpatulaFromWorkbenchToolService,
@@ -208,6 +209,13 @@ def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
             experiment_id,
             WorkbenchSlotRequest(slot_id=find_tool_slot(experiment_id, tool_id)),
         )
+    )
+
+
+@router.post("/{experiment_id}/spatula/discard", response_model=ExperimentSchema)
+def discard_spatula(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: DiscardSpatulaService(experiment_service).run(experiment_id, None)
     )
 
 

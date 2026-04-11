@@ -7,6 +7,7 @@ import { knifeCursor, spatulaCursor } from "@/lib/lab-scene-config";
 import type { SpatulaState } from "@/types/workbench";
 
 type ActionModeExperimentApi = {
+  discardSpatula: () => void;
   loadSpatulaFromWorkbenchTool: (payload: { slot_id: string }) => void;
   pourSpatulaIntoWorkbenchTool: (payload: { delta_mass_g: number; slot_id: string }) => void;
   pourSpatulaIntoAnalyticalBalanceTool: (payload: { delta_mass_g: number }) => void;
@@ -59,6 +60,7 @@ export function useActionMode({ clearDropTargets, experimentApi, spatula }: UseA
 
   const spatulaInteraction = useSpatulaInteraction({
     isSpatulaMode,
+    onDiscardSpatula: () => { void experimentApi.discardSpatula(); },
     onLoadFromTool: (payload) => { void experimentApi.loadSpatulaFromWorkbenchTool(payload); },
     onPourIntoTool: (payload) => { void experimentApi.pourSpatulaIntoWorkbenchTool(payload); },
     onPourIntoAnalyticalBalanceTool: (payload) => { void experimentApi.pourSpatulaIntoAnalyticalBalanceTool(payload); },

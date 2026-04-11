@@ -31,6 +31,7 @@ type TrashWidgetProps = {
     dataTransfer: DataTransfer,
   ) => void;
   onItemDragEnd: () => void;
+  onSpatulaDiscard?: () => void;
   onTrashSampleLabelDragStart: (
     trashSampleLabel: TrashSampleLabelEntry,
     dataTransfer: DataTransfer,
@@ -79,6 +80,7 @@ export function TrashWidget({
   onTrashedWidgetDragStart,
   onTrashProduceLotDragStart,
   onItemDragEnd,
+  onSpatulaDiscard,
   onTrashSampleLabelDragStart,
   trashedProduceLots,
   trashedSampleLabels,
@@ -100,7 +102,7 @@ export function TrashWidget({
       isOpen={isOpen}
       onDragOver={dndDisabled ? undefined : onDragOver}
       onDrop={dndDisabled ? undefined : onDrop}
-      onToggle={onToggle}
+      onToggle={onSpatulaDiscard ?? onToggle}
       overlayTestId="trash-dialog-overlay"
       overlayWidthClassName="w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
       title="Trash"

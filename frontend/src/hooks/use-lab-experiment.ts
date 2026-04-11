@@ -26,6 +26,7 @@ import {
   createProduceLot,
   cutWorkbenchProduceLot,
   discardBasketTool,
+  discardSpatula,
   discardGrossBalanceProduceLot,
   discardGrossBalanceTool,
   discardProduceLotFromWorkbenchTool,
@@ -242,6 +243,7 @@ const mutationFns = {
   moveWidgetProduceLotToWorkbenchTool,
   moveWorkbenchProduceLotToWidget,
   moveWorkspaceWidget,
+  discardSpatula,
   loadSpatulaFromWorkbenchTool,
   openWorkbenchTool,
   placeToolInRackSlot,
@@ -542,6 +544,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.moveWorkspaceProduceLotToGrossBalance, payload),
     moveWorkspaceWidget: (payload: MoveWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.moveWorkspaceWidget, payload),
+    discardSpatula: () =>
+      executeMutation(mutationFns.discardSpatula),
     loadSpatulaFromWorkbenchTool: (payload: LoadSpatulaFromWorkbenchToolPayload) =>
       executeMutation(mutationFns.loadSpatulaFromWorkbenchTool, payload),
     openGrossBalanceTool: () =>

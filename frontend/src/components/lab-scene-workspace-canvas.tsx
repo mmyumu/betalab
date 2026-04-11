@@ -95,6 +95,7 @@ type LabSceneWorkspaceCanvasProps = {
     handleSpatulaToolIllustrationClick: (slotId: string, tool: BenchToolInstance, event: ReactMouseEvent<HTMLButtonElement>) => void;
     handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
     handleSpatulaToolPointerUp: () => void;
+    handleSpatulaTrashClick: () => void;
   };
   ui: {
     isBasketOpen: boolean;
@@ -359,6 +360,7 @@ export function LabSceneWorkspaceCanvas({
             isOpen={ui.isTrashOpen}
             onDragOver={dnd.trash.handleTrashDragOver}
             onDrop={dnd.trash.handleTrashDrop}
+            onSpatulaDiscard={spatula.handleSpatulaTrashClick}
             onItemDragEnd={dnd.clearDropTargets}
             onToggle={() => ui.setIsTrashOpen((current) => !current)}
             onToolDragStart={dnd.trash.handleTrashToolDragStart}

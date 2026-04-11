@@ -1141,6 +1141,13 @@ export async function openWorkbenchTool(experimentId: string, payload: MutationP
   });
 }
 
+export async function discardSpatula(experimentId: string): Promise<Experiment> {
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/spatula/discard`,
+  });
+}
+
 export async function loadSpatulaFromWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {

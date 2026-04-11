@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 
 from app.domain.models import (
@@ -42,7 +43,7 @@ from app.services.transfer import (
 
 physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
-SPATULA_CAPACITY_G = 2.0
+SPATULA_CAPACITY_G = 5.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -594,8 +595,8 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
     def _run(self, experiment: Experiment, request: WorkbenchSlotRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.slot_id)
         tool = require_slot_tool(slot, "loading the spatula")
-        if tool.tool_type != "storage_jar":
-            raise ValueError("The spatula can only be loaded from a storage jar.")
+        if tool.tool_type in {"cutting_board", "sample_vial", "cleanup_tube"}:
+            raise ValueError("The spatula cannot be loaded from this container.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before loading the spatula.")
         if experiment.spatula.is_loaded and experiment.spatula.loaded_powder_mass_g > 0:
@@ -604,8 +605,9 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
             raise ValueError(f"{tool.label} is empty.")
 
         available_mass_g = max(tool.powder_mass_g, 0.0)
-        # Deterministic pseudo-random fill: varies between 45% and 90% of spatula capacity
-        fill_ratio = 0.45 + ((experiment.snapshot_version % 11) * 0.045)
+        # Normal distribution around 67.5% of capacity (σ = 15%), clamped to [30%, 100%]
+        fill_ratio = random.gauss(mu=0.675, sigma=0.15)
+        fill_ratio = max(0.30, min(1.0, fill_ratio))
         loaded_mass_g = min(
             SPATULA_CAPACITY_G,
             available_mass_g,
@@ -651,3 +653,18 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
             experiment.spatula.source_tool_id = None
 
         experiment.audit_log.append(f"Powder transferred into {tool.label}.")
+
+
+class DiscardSpatulaService(WriteDomainService[None]):
+    def __init__(self, runtime: ExperimentRuntime) -> None:
+        super().__init__(runtime)
+
+    def _run(self, experiment: Experiment, request: None) -> None:
+        if not experiment.spatula.is_loaded or experiment.spatula.loaded_powder_mass_g <= 0:
+            raise ValueError("The spatula is already empty.")
+
+        discarded_mass_g = experiment.spatula.loaded_powder_mass_g
+        experiment.spatula.is_loaded = False
+        experiment.spatula.loaded_powder_mass_g = 0.0
+        experiment.spatula.source_tool_id = None
+        experiment.audit_log.append(f"Spatula discarded ({discarded_mass_g} g).")
