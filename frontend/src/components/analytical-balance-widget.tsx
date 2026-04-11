@@ -38,7 +38,7 @@ export function AnalyticalBalanceWidget({
       ? "0.000"
       : measuredMassG.toFixed(3);
   const netText =
-    tareMassG === null || netMassG === null
+    isOverload || tareMassG === null || netMassG === null
       ? "---"
       : netMassG.toFixed(3);
 

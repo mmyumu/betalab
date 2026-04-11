@@ -39,6 +39,8 @@ describe("AnalyticalBalanceWidget", () => {
     );
 
     expect(screen.getByText("L-O-A-D")).toBeInTheDocument();
+    expect(screen.getByText("---")).toBeInTheDocument();
+    expect(screen.queryByText("209.000 g")).not.toBeInTheDocument();
     expect(screen.getByText("Tube on pan")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Tare" }));
