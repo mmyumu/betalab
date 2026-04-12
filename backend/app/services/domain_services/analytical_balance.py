@@ -265,6 +265,7 @@ class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         transferred_mass_g = min(requested_mass_g, total_loaded_g)
         transfer_ratio = transferred_mass_g / total_loaded_g
         from app.services.domain_services.workbench import _pour_fractions_proportional
+
         _pour_fractions_proportional(
             experiment.spatula.loaded_fractions,
             tool.powder_fractions,
@@ -304,6 +305,7 @@ class LoadSpatulaFromAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         take_ratio = loaded_mass_g / total_powder_g
         loaded_fractions: list[PowderFraction] = []
         from app.services.domain_services.workbench import _split_fraction
+
         for fraction in tool.powder_fractions:
             extracted_fraction = _split_fraction(fraction, take_ratio)
             if extracted_fraction is None:

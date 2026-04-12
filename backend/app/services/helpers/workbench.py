@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 
 from app.domain.models import ContainerLabel, WorkbenchLiquid, WorkbenchSlot, WorkbenchTool, new_id
 from app.domain.workbench_catalog import get_workbench_tool_definition
 from app.services.helpers.lookups import find_tool_label
-
 
 _CONTACT_IMPURITY_MG_PER_G_BY_TOOL_TYPE: dict[str, tuple[float, float]] = {
     "centrifuge_tube": (0.004, 0.012),
@@ -71,22 +71,24 @@ def get_next_workbench_slot_index(slots: list[WorkbenchSlot]) -> int:
 
 
 def sample_tool_contact_impurity_mg_per_g(tool_type: str, rng: random.Random | None = None) -> float:
-    rng = rng or random
+    generator = rng if rng is not None else random.Random(f"tool-contact:{tool_type}")  # nosec B311
     low, high = _CONTACT_IMPURITY_MG_PER_G_BY_TOOL_TYPE.get(tool_type, (0.004, 0.015))
-    return round(rng.uniform(low, high), 4)
+    return round(generator.uniform(low, high), 4)
 
 
-def build_workbench_tool(tool_id: str) -> WorkbenchTool:
+def build_workbench_tool(tool_id: str, *, id_factory: Callable[[str], str] = new_id) -> WorkbenchTool:
     tool_definition = get_workbench_tool_definition(tool_id)
+    instance_id = id_factory("bench_tool")
+    generator = random.Random(f"{tool_definition.id}:{instance_id}")  # nosec B311
     return WorkbenchTool(
-        id=new_id("bench_tool"),
+        id=instance_id,
         tool_id=tool_definition.id,
         label=tool_definition.name,
         subtitle=tool_definition.subtitle,
         accent=tool_definition.accent,
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
-        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g(tool_definition.tool_type),
+        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g(tool_definition.tool_type, generator),
         is_sealed=False,
         closure_fault=None,
         labels=[],

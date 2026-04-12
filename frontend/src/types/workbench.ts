@@ -320,6 +320,7 @@ export type BenchToolInstance = {
   accent: ToolbarAccent;
   toolType: ToolType;
   capacity_ml: number;
+  contactImpurityMgPerG?: number;
   isSealed?: boolean;
   closureFault?: string | null;
   fieldLabelText?: string | null;
@@ -333,6 +334,8 @@ export type PowderFraction = {
   id: string;
   sourceLotId: string;
   massG: number;
+  impurityMassMg?: number;
+  exposureContainerIds?: string[];
 };
 
 export type SpatulaState = {

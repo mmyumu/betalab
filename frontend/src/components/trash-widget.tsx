@@ -90,6 +90,11 @@ export function TrashWidget({
   const trashItemCount =
     trashedTools.length + trashedProduceLots.length + trashedSampleLabels.length + trashedWidgets.length;
 
+  const handleToggle = () => {
+    onToggle();
+    onSpatulaDiscard?.();
+  };
+
   return (
     <InventoryWidget
       buttonTestId="trash-dropzone"
@@ -102,7 +107,7 @@ export function TrashWidget({
       isOpen={isOpen}
       onDragOver={dndDisabled ? undefined : onDragOver}
       onDrop={dndDisabled ? undefined : onDrop}
-      onToggle={onSpatulaDiscard ?? onToggle}
+      onToggle={handleToggle}
       overlayTestId="trash-dialog-overlay"
       overlayWidthClassName="w-[26rem] max-w-[min(26rem,calc(100vw-2rem))]"
       title="Trash"

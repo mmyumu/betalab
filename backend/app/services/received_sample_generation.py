@@ -91,6 +91,8 @@ def generate_received_apple_sample_spec(rng: random.Random | None = None) -> Rec
 
 def build_received_sampling_bag(label: str = "Sealed sampling bag") -> WorkbenchTool:
     sample_spec = generate_received_apple_sample_spec()
+    tool_id = new_id("bench_tool")
+    generator = random.Random(f"sealed_sampling_bag:{tool_id}")  # nosec B311
     produce_lot = ProduceLot(
         id=new_id("produce"),
         label="Orchard apple lot",
@@ -99,14 +101,14 @@ def build_received_sampling_bag(label: str = "Sealed sampling bag") -> Workbench
         unit_count=sample_spec.unit_count,
     )
     return WorkbenchTool(
-        id=new_id("bench_tool"),
+        id=tool_id,
         tool_id="sealed_sampling_bag",
         label=label,
         subtitle="Field reception",
         accent="emerald",
         tool_type="sample_bag",
         capacity_ml=500.0,
-        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g("sample_bag"),
+        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g("sample_bag", generator),
         is_sealed=True,
         field_label_text=sample_spec.field_label_text,
         produce_lots=[produce_lot],

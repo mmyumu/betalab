@@ -1166,7 +1166,8 @@ export async function pourSpatulaIntoWorkbenchTool(experimentId: string, payload
   });
 }
 
-export async function loadSpatulaFromAnalyticalBalanceTool(experimentId: string, _payload: MutationPayload): Promise<Experiment> {
+export async function loadSpatulaFromAnalyticalBalanceTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  void payload;
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/spatula/load`,
@@ -1329,6 +1330,7 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     accent: tool.accent,
     toolType: String(tool.toolType ?? tool.tool_type) as BenchToolInstance["toolType"],
     capacity_ml: Number(tool.capacity_ml),
+    contactImpurityMgPerG: Number(tool.contactImpurityMgPerG ?? tool.contact_impurity_mg_per_g ?? 0),
     isSealed: Boolean(tool.isSealed ?? tool.is_sealed ?? false),
     closureFault:
       tool.closureFault !== undefined
@@ -1386,11 +1388,18 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
 
 function normalizePowderFractions(raw: unknown): PowderFraction[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((f: Record<string, unknown>) => ({
-    id: String(f.id ?? ""),
-    sourceLotId: String(f.sourceLotId ?? f.source_lot_id ?? ""),
-    massG: Number(f.massG ?? f.mass_g ?? 0),
-  }));
+  return raw.map((f: Record<string, unknown>) => {
+    const exposureIdsRaw = f.exposureContainerIds ?? f.exposure_container_ids;
+    return {
+      id: String(f.id ?? ""),
+      sourceLotId: String(f.sourceLotId ?? f.source_lot_id ?? ""),
+      massG: Number(f.massG ?? f.mass_g ?? 0),
+      impurityMassMg: Number(f.impurityMassMg ?? f.impurity_mass_mg ?? 0),
+      exposureContainerIds: Array.isArray(exposureIdsRaw)
+        ? exposureIdsRaw.map((id: unknown) => String(id))
+        : [],
+    };
+  });
 }
 
 function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>): SpatulaState {

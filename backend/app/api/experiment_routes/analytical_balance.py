@@ -150,9 +150,7 @@ def tare_analytical_balance(experiment_id: str) -> ExperimentSchema:
 
 @router.post("/{experiment_id}/analytical-balance/spatula/load", response_model=ExperimentSchema)
 def load_spatula_from_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: LoadSpatulaFromAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest())
-    )
+    return handle_service_errors(lambda: LoadSpatulaFromAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
 
 
 @router.post("/{experiment_id}/analytical-balance/spatula/pour", response_model=ExperimentSchema)

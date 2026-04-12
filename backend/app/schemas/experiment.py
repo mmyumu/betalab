@@ -33,11 +33,13 @@ class SpatulaStateSchema(BaseModel):
         if not isinstance(value, dict):
             return value
         if "loaded_fractions" not in value and value.get("loaded_powder_mass_g", 0) > 0:
-            value["loaded_fractions"] = [{
-                "id": "legacy-spatula-fraction",
-                "source_lot_id": "legacy",
-                "mass_g": value["loaded_powder_mass_g"],
-            }]
+            value["loaded_fractions"] = [
+                {
+                    "id": "legacy-spatula-fraction",
+                    "source_lot_id": "legacy",
+                    "mass_g": value["loaded_powder_mass_g"],
+                }
+            ]
         return value
 
 
@@ -138,11 +140,13 @@ class WorkbenchToolSchema(BaseModel):
         # Migrate old powder_mass_g scalar to powder_fractions
         if "powder_fractions" not in value and value.get("powder_mass_g", 0) > 0:
             tool_id = value.get("tool_id", "unknown")
-            value["powder_fractions"] = [{
-                "id": f"legacy-powder-{tool_id}",
-                "source_lot_id": "legacy",
-                "mass_g": value["powder_mass_g"],
-            }]
+            value["powder_fractions"] = [
+                {
+                    "id": f"legacy-powder-{tool_id}",
+                    "source_lot_id": "legacy",
+                    "mass_g": value["powder_mass_g"],
+                }
+            ]
         if "labels" in value:
             return value
 

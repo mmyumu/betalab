@@ -14,10 +14,10 @@ from app.api.experiment_routes import trash as experiment_routes_trash
 from app.api.experiment_routes import workbench as experiment_routes_workbench
 from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
+from app.domain.models import PowderFraction
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
-from app.domain.models import PowderFraction
 from app.services.helpers.workbench import build_workbench_tool
 
 
@@ -498,6 +498,8 @@ def test_workbench_routes_round_trip_over_http() -> None:
 
 
 def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> None:
+    frozen_now = datetime(2026, 4, 1, 12, 0, tzinfo=UTC)
+    experiment_service._now_fn = lambda: frozen_now
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)
 

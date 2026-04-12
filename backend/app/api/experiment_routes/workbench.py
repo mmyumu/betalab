@@ -31,9 +31,9 @@ from app.services.domain_services.workbench import (
     DiscardSampleLabelFromPaletteRequest,
     DiscardSampleLabelFromPaletteService,
     DiscardSampleLabelFromWorkbenchToolService,
+    DiscardSpatulaService,
     DiscardToolFromPaletteRequest,
     DiscardToolFromPaletteService,
-    DiscardSpatulaService,
     DiscardWorkbenchToolService,
     EmptyWorkbenchRequest,
     LoadSpatulaFromWorkbenchToolService,
@@ -214,9 +214,7 @@ def open_workbench_tool(experiment_id: str, tool_id: str) -> ExperimentSchema:
 
 @router.post("/{experiment_id}/spatula/discard", response_model=ExperimentSchema)
 def discard_spatula(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(
-        lambda: DiscardSpatulaService(experiment_service).run(experiment_id, None)
-    )
+    return handle_service_errors(lambda: DiscardSpatulaService(experiment_service).run(experiment_id, None))
 
 
 @router.post("/{experiment_id}/workbench/tools/{tool_id}/spatula/load", response_model=ExperimentSchema)

@@ -67,12 +67,7 @@ def _pour_fractions_proportional(
             exposure_container_ids.append(target_tool.id)
         contact_impurity_mg = round(to_transfer * target_tool.contact_impurity_mg_per_g, 6)
         existing = next(
-            (
-                f
-                for f in dest
-                if f.source_lot_id == fraction.source_lot_id
-                and f.exposure_container_ids == exposure_container_ids
-            ),
+            (f for f in dest if f.source_lot_id == fraction.source_lot_id and f.exposure_container_ids == exposure_container_ids),
             None,
         )
         if existing:
@@ -667,7 +662,7 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
         if total_powder_g <= 0:
             raise ValueError(f"{tool.label} is empty.")
 
-        # Normal distribution around 67.5% of capacity (σ = 15%), clamped to [30%, 100%]
+        # Normal distribution around 67.5% of capacity (stddev = 15%), clamped to [30%, 100%]
         fill_ratio = random.gauss(mu=0.675, sigma=0.15)
         fill_ratio = max(0.30, min(1.0, fill_ratio))
         loaded_mass_g = min(
