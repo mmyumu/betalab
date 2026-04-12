@@ -68,6 +68,29 @@ function VesselFrame({
   );
 }
 
+function PowderLayer({
+  bodyPath,
+  ridgePath,
+  fill,
+}: {
+  bodyPath: string;
+  ridgePath: string;
+  fill: string;
+}) {
+  return (
+    <>
+      <path
+        d={bodyPath}
+        data-powder-layer="true"
+        fill={fill}
+        opacity="0.92"
+        stroke="none"
+      />
+      <path d={ridgePath} opacity="0.5" />
+    </>
+  );
+}
+
 function VolumetricFlaskIcon({
   fillRatio,
   glow,
@@ -108,6 +131,7 @@ function CentrifugeTubeIcon({
   label,
   liquidDefs,
   liquidFill,
+  powderMassG = 0,
   stroke,
 }: {
   closureFault?: string | null;
@@ -117,9 +141,11 @@ function CentrifugeTubeIcon({
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
+  powderMassG?: number;
   stroke: string;
 }) {
   const liquidTop = 86 - fillRatio * 38;
+  const powderHeight = Math.min(Math.max(powderMassG * 0.9, 0), 16);
   const sealVisualState: SealVisualState =
     closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
@@ -142,6 +168,13 @@ function CentrifugeTubeIcon({
         stroke="none"
       />
       <path d={`M33 ${liquidTop}C39 ${liquidTop - 2} 49 ${liquidTop + 2} 55 ${liquidTop}`} opacity="0.65" />
+      {powderHeight > 0 ? (
+        <PowderLayer
+          bodyPath={`M34 ${95 - powderHeight}C38 ${92 - powderHeight} 49 ${93 - powderHeight} 54 ${95 - powderHeight}V80C54 83 53 86 51 89L46 96C45 97 43 97 42 96L37 89C35 86 34 83 34 80V${95 - powderHeight}Z`}
+          fill="#d6c6a8"
+          ridgePath={`M34 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 54 ${95 - powderHeight}`}
+        />
+      ) : null}
     </VesselFrame>
   );
 }
@@ -154,6 +187,7 @@ function CleanupTubeIcon({
   label,
   liquidDefs,
   liquidFill,
+  powderMassG = 0,
   stroke,
 }: {
   closureFault?: string | null;
@@ -163,9 +197,11 @@ function CleanupTubeIcon({
   label: string;
   liquidDefs?: ReactNode;
   liquidFill: string;
+  powderMassG?: number;
   stroke: string;
 }) {
   const liquidTop = 84 - fillRatio * 34;
+  const powderHeight = Math.min(Math.max(powderMassG * 0.9, 0), 14);
   const sealVisualState: SealVisualState =
     closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open";
 
@@ -188,6 +224,13 @@ function CleanupTubeIcon({
         stroke="none"
       />
       <path d={`M35 ${liquidTop}C40 ${liquidTop - 1} 48 ${liquidTop + 2} 53 ${liquidTop}`} opacity="0.65" />
+      {powderHeight > 0 ? (
+        <PowderLayer
+          bodyPath={`M36 ${95 - powderHeight}C40 ${91 - powderHeight} 48 ${92 - powderHeight} 52 ${95 - powderHeight}V82C52 86 49 90 44 94C39 90 36 86 36 82V${95 - powderHeight}Z`}
+          fill="#d6c6a8"
+          ridgePath={`M36 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 52 ${95 - powderHeight}`}
+        />
+      ) : null}
     </VesselFrame>
   );
 }
@@ -238,15 +281,11 @@ function SampleVialIcon({
       />
       <path d={`M34 ${liquidTop}C40 ${liquidTop - 2} 48 ${liquidTop + 2} 54 ${liquidTop}`} opacity="0.65" />
       {powderHeight > 0 ? (
-        <>
-          <path
-            d={`M35 ${98 - powderHeight}C39 ${94 - powderHeight} 49 ${95 - powderHeight} 53 ${98 - powderHeight}V91C53 95 49 98 44 98C39 98 35 95 35 91V${98 - powderHeight}Z`}
-            fill="#d6c6a8"
-            opacity="0.92"
-            stroke="none"
-          />
-          <path d={`M35 ${98 - powderHeight}C40 ${95 - powderHeight} 48 ${96 - powderHeight} 53 ${98 - powderHeight}`} opacity="0.5" />
-        </>
+        <PowderLayer
+          bodyPath={`M35 ${98 - powderHeight}C39 ${94 - powderHeight} 49 ${95 - powderHeight} 53 ${98 - powderHeight}V91C53 95 49 98 44 98C39 98 35 95 35 91V${98 - powderHeight}Z`}
+          fill="#d6c6a8"
+          ridgePath={`M35 ${98 - powderHeight}C40 ${95 - powderHeight} 48 ${96 - powderHeight} 53 ${98 - powderHeight}`}
+        />
       ) : null}
     </VesselFrame>
   );
@@ -597,15 +636,11 @@ function StorageJarIcon({
         <path d="M28 58H60V86C60 92 55 96 50 96H38C33 96 28 92 28 86V58Z" fill="#f8fafc" opacity="0.6" stroke="none" />
       )}
       {powderHeight > 0 ? (
-        <>
-          <path
-            d={`M27 ${92 - powderHeight}C33 ${85 - powderHeight} 54 ${86 - powderHeight} 61 ${90 - powderHeight}V84C61 91 54 96 44 98C34 96 27 91 27 84V${92 - powderHeight}Z`}
-            fill="#d7c9af"
-            opacity="0.88"
-            stroke="none"
-          />
-          <path d={`M27 ${92 - powderHeight}C34 ${87 - powderHeight} 54 ${88 - powderHeight} 61 ${90 - powderHeight}`} opacity="0.5" />
-        </>
+        <PowderLayer
+          bodyPath={`M27 ${92 - powderHeight}C33 ${85 - powderHeight} 54 ${86 - powderHeight} 61 ${90 - powderHeight}V84C61 91 54 96 44 98C34 96 27 91 27 84V${92 - powderHeight}Z`}
+          fill="#d7c9af"
+          ridgePath={`M27 ${92 - powderHeight}C34 ${87 - powderHeight} 54 ${88 - powderHeight} 61 ${90 - powderHeight}`}
+        />
       ) : null}
       <path d="M26 34H62" opacity="0.45" />
       <path d="M24 30H64" stroke={sealVisualState === "popped" ? "#e11d48" : undefined} />
@@ -682,10 +717,24 @@ export function LabAssetIcon({
       icon = <VolumetricFlaskIcon {...sharedProps} />;
       break;
     case "centrifuge_tube":
-      icon = <CentrifugeTubeIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
+      icon = (
+        <CentrifugeTubeIcon
+          {...sharedProps}
+          closureFault={closureFault}
+          isSealed={isSealed}
+          powderMassG={powderMassG}
+        />
+      );
       break;
     case "cleanup_tube":
-      icon = <CleanupTubeIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} />;
+      icon = (
+        <CleanupTubeIcon
+          {...sharedProps}
+          closureFault={closureFault}
+          isSealed={isSealed}
+          powderMassG={powderMassG}
+        />
+      );
       break;
     case "sample_vial":
       icon = <SampleVialIcon {...sharedProps} closureFault={closureFault} isSealed={isSealed} powderMassG={powderMassG} />;

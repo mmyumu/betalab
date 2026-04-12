@@ -172,6 +172,60 @@ describe("WorkbenchPanel", () => {
     ).toHaveAttribute("data-fill-segments", "2");
   });
 
+  it("renders powder layers inside powder-loaded tubes", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_tube",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Extraction ready",
+              accent: "sky",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+              liquids: [],
+              powderFractions: [{ id: "powder_1", sourceLotId: "lot_1", massG: 1.4 }],
+            },
+          },
+          {
+            id: "station_2",
+            label: "Station 2",
+            tool: {
+              id: "bench_tool_cleanup",
+              toolId: "cleanup_tube_dspe",
+              label: "d-SPE cleanup tube",
+              subtitle: "Cleanup ready",
+              accent: "sky",
+              toolType: "cleanup_tube",
+              capacity_ml: 15,
+              liquids: [],
+              powderFractions: [{ id: "powder_2", sourceLotId: "lot_2", massG: 0.8 }],
+            },
+          },
+        ]}
+        statusMessage="Bench ready."
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("bench-tool-card-bench_tool_tube")
+        .querySelector("[data-kind='centrifuge_tube'] [data-powder-layer='true']"),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByTestId("bench-tool-card-bench_tool_cleanup")
+        .querySelector("[data-kind='cleanup_tube'] [data-powder-layer='true']"),
+    ).toBeTruthy();
+  });
+
   it("marks sealable tool illustrations with their seal state", () => {
     render(
       <PesticideWorkbenchPanel

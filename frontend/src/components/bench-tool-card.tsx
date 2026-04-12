@@ -74,7 +74,11 @@ export function BenchToolCard({
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const liquidSegments = liquidVisualState.segments;
   const isSampleBag = tool.toolType === "sample_bag";
-  const isPowderTool = tool.toolType === "storage_jar" || tool.toolType === "sample_vial";
+  const isPowderTool =
+    tool.toolType === "storage_jar" ||
+    tool.toolType === "sample_vial" ||
+    tool.toolType === "centrifuge_tube" ||
+    tool.toolType === "cleanup_tube";
   const isProduceSurface = canToolAcceptProduce(tool.toolType);
   const isSealable = canToolBeSealed(tool.toolType);
   const isSealed = tool.isSealed ?? false;
