@@ -22,6 +22,31 @@ class PowderFractionSchema(BaseModel):
     exposure_container_ids: list[str] = Field(default_factory=list)
 
 
+class ProduceMaterialStateSchema(BaseModel):
+    id: str
+    produce_lot_id: str
+    cut_state: str = "whole"
+    temperature_c: float = 20.0
+    grind_quality_label: str | None = None
+    homogeneity_score: float | None = None
+    residual_co2_mass_g: float = 0.0
+    grinding_elapsed_seconds: float = 0.0
+    grinding_temperature_integral: float = 0.0
+
+
+class ProduceFractionSchema(BaseModel):
+    id: str
+    produce_lot_id: str
+    produce_material_state_id: str
+    mass_g: float
+    unit_count: int | None = None
+    is_contaminated: bool = False
+    location_kind: str | None = None
+    location_id: str | None = None
+    container_id: str | None = None
+    container_label: str | None = None
+
+
 class SpatulaStateSchema(BaseModel):
     is_loaded: bool = False
     loaded_fractions: list[PowderFractionSchema] = Field(default_factory=list)
@@ -131,6 +156,7 @@ class WorkbenchToolSchema(BaseModel):
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
     powder_fractions: list[PowderFractionSchema] = Field(default_factory=list)
+    produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
     @model_validator(mode="before")
     @classmethod
@@ -186,6 +212,7 @@ class WorkbenchSlotSchema(BaseModel):
     label: str
     tool: WorkbenchToolSchema | None = None
     surface_produce_lots: list[ProduceLotSchema]
+    surface_produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
 
 class WorkbenchSchema(BaseModel):
@@ -213,6 +240,7 @@ class TrashProduceLotEntrySchema(BaseModel):
     origin_label: str
     produce_lot: ProduceLotSchema
     origin: EntityOriginSchema | None = None
+    produce_fraction: ProduceFractionSchema | None = None
 
 
 class TrashSampleLabelEntrySchema(BaseModel):
@@ -263,11 +291,13 @@ class WorkspaceWidgetSchema(BaseModel):
     tool: WorkbenchToolSchema | None = None
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
+    produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
 
 class WorkspaceSchema(BaseModel):
     widgets: list[WorkspaceWidgetSchema]
     produce_basket_lots: list[ProduceLotSchema]
+    produce_basket_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
 
 class ExperimentSchema(BaseModel):
@@ -282,6 +312,7 @@ class ExperimentSchema(BaseModel):
     lims_reception: LimsReceptionSchema = Field(default_factory=build_default_lims_reception_schema)
     lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
     basket_tool: WorkbenchToolSchema | None = None
+    produce_material_states: list[ProduceMaterialStateSchema] = Field(default_factory=list)
     spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
     analytical_balance: AnalyticalBalanceStateSchema = Field(default_factory=AnalyticalBalanceStateSchema)
     audit_log: list[str]

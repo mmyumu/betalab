@@ -69,6 +69,33 @@ class PowderFraction:
 
 
 @dataclass
+class ProduceMaterialState:
+    id: str
+    produce_lot_id: str
+    cut_state: str = "whole"
+    temperature_c: float = 20.0
+    grind_quality_label: str | None = None
+    homogeneity_score: float | None = None
+    residual_co2_mass_g: float = 0.0
+    grinding_elapsed_seconds: float = 0.0
+    grinding_temperature_integral: float = 0.0
+
+
+@dataclass
+class ProduceFraction:
+    id: str
+    produce_lot_id: str
+    produce_material_state_id: str
+    mass_g: float
+    unit_count: int | None = None
+    is_contaminated: bool = False
+    location_kind: str | None = None
+    location_id: str | None = None
+    container_id: str | None = None
+    container_label: str | None = None
+
+
+@dataclass
 class WorkbenchTool:
     id: str
     tool_id: str
@@ -87,6 +114,7 @@ class WorkbenchTool:
     produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
     powder_fractions: list[PowderFraction] = field(default_factory=list)
+    produce_fractions: list[ProduceFraction] = field(default_factory=list)
 
 
 @dataclass
@@ -108,6 +136,7 @@ class WorkbenchSlot:
     label: str
     tool: WorkbenchTool | None = None
     surface_produce_lots: list[ProduceLot] = field(default_factory=list)
+    surface_produce_fractions: list[ProduceFraction] = field(default_factory=list)
 
 
 @dataclass
@@ -149,6 +178,7 @@ class TrashProduceLotEntry:
     origin_label: str
     produce_lot: ProduceLot
     origin: EntityOrigin | None = None
+    produce_fraction: ProduceFraction | None = None
 
 
 @dataclass
@@ -181,6 +211,7 @@ class WorkspaceWidget:
     tool: WorkbenchTool | None = None
     produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
+    produce_fractions: list[ProduceFraction] = field(default_factory=list)
 
 
 @dataclass
@@ -204,6 +235,7 @@ class ProduceLot:
 class Workspace:
     widgets: list[WorkspaceWidget] = field(default_factory=list)
     produce_basket_lots: list[ProduceLot] = field(default_factory=list)
+    produce_basket_fractions: list[ProduceFraction] = field(default_factory=list)
 
 
 @dataclass
@@ -217,6 +249,7 @@ class Experiment:
     lims_reception: LimsReception
     last_simulation_at: datetime
     basket_tool: WorkbenchTool | None = None
+    produce_material_states: list[ProduceMaterialState] = field(default_factory=list)
     spatula: SpatulaState = field(default_factory=SpatulaState)
     analytical_balance: AnalyticalBalanceState = field(default_factory=AnalyticalBalanceState)
     lims_entries: list[LimsReception] = field(default_factory=list)

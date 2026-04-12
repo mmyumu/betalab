@@ -19,7 +19,9 @@ from app.domain.models import (
     ManualLabel,
     PowderFraction,
     PrintedLabelTicket,
+    ProduceFraction,
     ProduceLot,
+    ProduceMaterialState,
     Rack,
     RackSlot,
     SpatulaState,
@@ -35,6 +37,7 @@ from app.domain.models import (
     WorkspaceWidget,
 )
 from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
+from app.services.helpers.produce_canonical import sync_canonical_produce_model
 
 
 class ExperimentRepository(Protocol):
@@ -220,7 +223,7 @@ def _serialize_experiment(experiment: Experiment) -> dict:
 
 def _deserialize_experiment(payload: dict) -> Experiment:
     schema = ExperimentSchema.model_validate(payload)
-    return Experiment(
+    experiment = Experiment(
         id=schema.id,
         status=ExperimentStatus(schema.status),
         workbench=Workbench(
@@ -230,6 +233,9 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     label=slot.label,
                     tool=_deserialize_workbench_tool(slot.tool),
                     surface_produce_lots=[_deserialize_produce_lot(lot) for lot in slot.surface_produce_lots],
+                    surface_produce_fractions=[
+                        _deserialize_produce_fraction(fraction) for fraction in slot.surface_produce_fractions
+                    ],
                 )
                 for slot in schema.workbench.slots
             ]
@@ -259,6 +265,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     origin_label=entry.origin_label,
                     produce_lot=_deserialize_produce_lot(entry.produce_lot),
                     origin=_deserialize_entity_origin(entry.origin),
+                    produce_fraction=_deserialize_produce_fraction(entry.produce_fraction),
                 )
                 for entry in schema.trash.produce_lots
             ],
@@ -287,6 +294,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         ),
         last_simulation_at=schema.last_simulation_at,
         basket_tool=_deserialize_workbench_tool(schema.basket_tool),
+        produce_material_states=[ProduceMaterialState(**state.model_dump()) for state in schema.produce_material_states],
         spatula=SpatulaState(
             is_loaded=schema.spatula.is_loaded,
             loaded_fractions=[
@@ -305,6 +313,8 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         snapshot_version=schema.snapshot_version,
         audit_log=list(schema.audit_log),
     )
+    sync_canonical_produce_model(experiment)
+    return experiment
 
 
 def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
@@ -325,11 +335,17 @@ def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
                 tool=_deserialize_workbench_tool(widget.tool),
                 produce_lots=[_deserialize_produce_lot(lot) for lot in widget.produce_lots],
                 liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids],
+                produce_fractions=[
+                    _deserialize_produce_fraction(fraction) for fraction in widget.produce_fractions
+                ],
             )
             for widget in schema.workspace.widgets
         ],
     )
     workspace.produce_basket_lots = [_deserialize_produce_lot(lot) for lot in schema.workspace.produce_basket_lots]
+    workspace.produce_basket_fractions = [
+        _deserialize_produce_fraction(fraction) for fraction in schema.workspace.produce_basket_fractions
+    ]
     return workspace
 
 
@@ -400,6 +416,7 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
             )
             for f in tool_schema.powder_fractions
         ],
+        produce_fractions=[_deserialize_produce_fraction(fraction) for fraction in tool_schema.produce_fractions],
     )
 
 
@@ -436,3 +453,9 @@ def _deserialize_entity_origin(origin_schema) -> EntityOrigin | None:
 def _deserialize_produce_lot(lot_schema) -> ProduceLot:
     payload = lot_schema.model_dump()
     return ProduceLot(**payload)
+
+
+def _deserialize_produce_fraction(fraction_schema) -> ProduceFraction | None:
+    if fraction_schema is None:
+        return None
+    return ProduceFraction(**fraction_schema.model_dump())

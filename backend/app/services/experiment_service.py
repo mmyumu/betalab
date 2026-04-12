@@ -9,6 +9,7 @@ from app.schemas.experiment import ExperimentListEntrySchema, ExperimentSchema
 from app.services.domain_services.workspace import advance_workspace_cryogenics_state
 from app.services.experiment_factory import build_experiment
 from app.services.experiment_repository import ExperimentRepository, InMemoryExperimentRepository
+from app.services.helpers.produce_canonical import sync_canonical_produce_model
 
 
 class ExperimentNotFoundError(KeyError):
@@ -72,6 +73,7 @@ class ExperimentRuntimeService:
         return True
 
     def _to_schema(self, experiment: Experiment) -> ExperimentSchema:
+        sync_canonical_produce_model(experiment)
         return ExperimentSchema.model_validate(
             {
                 "id": experiment.id,
@@ -85,6 +87,7 @@ class ExperimentRuntimeService:
                 "lims_reception": asdict(experiment.lims_reception),
                 "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
                 "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+                "produce_material_states": [asdict(state) for state in experiment.produce_material_states],
                 "spatula": asdict(experiment.spatula),
                 "analytical_balance": asdict(experiment.analytical_balance),
                 "audit_log": experiment.audit_log,
