@@ -233,6 +233,8 @@ class WorkbenchProduceLotTarget:
                     id=new_id("powder"),
                     source_lot_id=entity.id,
                     mass_g=entity.total_mass_g,
+                    impurity_mass_mg=round(entity.total_mass_g * slot.tool.contact_impurity_mg_per_g, 6),
+                    exposure_container_ids=[slot.tool.id],
                 )
             )
         return TransferPlacement(

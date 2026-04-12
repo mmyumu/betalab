@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from app.domain.models import ProduceLot, WorkbenchTool, new_id
+from app.services.helpers.workbench import sample_tool_contact_impurity_mg_per_g
 
 SAMPLE_BAG_TARE_MASS_G = 36.0
 _ORCHARD_NAME_WEIGHTS: tuple[tuple[str, float], ...] = (
@@ -105,6 +106,7 @@ def build_received_sampling_bag(label: str = "Sealed sampling bag") -> Workbench
         accent="emerald",
         tool_type="sample_bag",
         capacity_ml=500.0,
+        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g("sample_bag"),
         is_sealed=True,
         field_label_text=sample_spec.field_label_text,
         produce_lots=[produce_lot],

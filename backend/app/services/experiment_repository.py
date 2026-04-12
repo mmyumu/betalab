@@ -290,7 +290,13 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         spatula=SpatulaState(
             is_loaded=schema.spatula.is_loaded,
             loaded_fractions=[
-                PowderFraction(id=f.id, source_lot_id=f.source_lot_id, mass_g=f.mass_g)
+                PowderFraction(
+                    id=f.id,
+                    source_lot_id=f.source_lot_id,
+                    mass_g=f.mass_g,
+                    impurity_mass_mg=f.impurity_mass_mg,
+                    exposure_container_ids=list(f.exposure_container_ids),
+                )
                 for f in schema.spatula.loaded_fractions
             ],
             source_tool_id=schema.spatula.source_tool_id,
@@ -375,6 +381,7 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         accent=tool_schema.accent,
         tool_type=tool_schema.tool_type,
         capacity_ml=tool_schema.capacity_ml,
+        contact_impurity_mg_per_g=tool_schema.contact_impurity_mg_per_g,
         is_sealed=tool_schema.is_sealed,
         closure_fault=tool_schema.closure_fault,
         internal_pressure_bar=tool_schema.internal_pressure_bar,
@@ -384,7 +391,13 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
         powder_fractions=[
-            PowderFraction(id=f.id, source_lot_id=f.source_lot_id, mass_g=f.mass_g)
+            PowderFraction(
+                id=f.id,
+                source_lot_id=f.source_lot_id,
+                mass_g=f.mass_g,
+                impurity_mass_mg=f.impurity_mass_mg,
+                exposure_container_ids=list(f.exposure_container_ids),
+            )
             for f in tool_schema.powder_fractions
         ],
     )

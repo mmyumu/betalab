@@ -11,6 +11,7 @@ from app.domain.models import (
     TrashToolEntry,
     WorkbenchLiquid,
     WorkbenchSlot,
+    WorkbenchTool,
     new_id,
 )
 from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
@@ -51,18 +52,59 @@ def _pour_fractions_proportional(
     source: list[PowderFraction],
     dest: list[PowderFraction],
     ratio: float,
+    target_tool: WorkbenchTool,
 ) -> None:
-    """Transfer `ratio` of each source fraction into dest, merging by source_lot_id."""
+    """Transfer `ratio` of each source fraction into dest and apply target contact impurity."""
     for fraction in source:
         to_transfer = round(fraction.mass_g * ratio, 3)
         if to_transfer <= 0:
             continue
+        transferred_impurity_mg = round(fraction.impurity_mass_mg * ratio, 6)
         fraction.mass_g = round(max(fraction.mass_g - to_transfer, 0.0), 3)
-        existing = next((f for f in dest if f.source_lot_id == fraction.source_lot_id), None)
+        fraction.impurity_mass_mg = round(max(fraction.impurity_mass_mg - transferred_impurity_mg, 0.0), 6)
+        exposure_container_ids = list(fraction.exposure_container_ids)
+        if not exposure_container_ids or exposure_container_ids[-1] != target_tool.id:
+            exposure_container_ids.append(target_tool.id)
+        contact_impurity_mg = round(to_transfer * target_tool.contact_impurity_mg_per_g, 6)
+        existing = next(
+            (
+                f
+                for f in dest
+                if f.source_lot_id == fraction.source_lot_id
+                and f.exposure_container_ids == exposure_container_ids
+            ),
+            None,
+        )
         if existing:
             existing.mass_g = round(existing.mass_g + to_transfer, 3)
+            existing.impurity_mass_mg = round(existing.impurity_mass_mg + transferred_impurity_mg + contact_impurity_mg, 6)
         else:
-            dest.append(PowderFraction(id=new_id("powder"), source_lot_id=fraction.source_lot_id, mass_g=to_transfer))
+            dest.append(
+                PowderFraction(
+                    id=new_id("powder"),
+                    source_lot_id=fraction.source_lot_id,
+                    mass_g=to_transfer,
+                    impurity_mass_mg=round(transferred_impurity_mg + contact_impurity_mg, 6),
+                    exposure_container_ids=exposure_container_ids,
+                )
+            )
+
+
+def _split_fraction(fraction: PowderFraction, ratio: float) -> PowderFraction | None:
+    taken_mass_g = round(fraction.mass_g * ratio, 3)
+    if taken_mass_g <= 0:
+        return None
+
+    taken_impurity_mg = round(fraction.impurity_mass_mg * ratio, 6)
+    fraction.mass_g = round(max(fraction.mass_g - taken_mass_g, 0.0), 3)
+    fraction.impurity_mass_mg = round(max(fraction.impurity_mass_mg - taken_impurity_mg, 0.0), 6)
+    return PowderFraction(
+        id=new_id("powder"),
+        source_lot_id=fraction.source_lot_id,
+        mass_g=taken_mass_g,
+        impurity_mass_mg=taken_impurity_mg,
+        exposure_container_ids=list(fraction.exposure_container_ids),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -640,11 +682,10 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
         take_ratio = loaded_mass_g / total_powder_g
         loaded_fractions: list[PowderFraction] = []
         for fraction in tool.powder_fractions:
-            taken = round(fraction.mass_g * take_ratio, 3)
-            if taken <= 0:
+            extracted_fraction = _split_fraction(fraction, take_ratio)
+            if extracted_fraction is None:
                 continue
-            fraction.mass_g = round(max(fraction.mass_g - taken, 0.0), 3)
-            loaded_fractions.append(PowderFraction(id=new_id("powder"), source_lot_id=fraction.source_lot_id, mass_g=taken))
+            loaded_fractions.append(extracted_fraction)
         tool.powder_fractions = [f for f in tool.powder_fractions if f.mass_g > 0]
 
         experiment.spatula.is_loaded = True
@@ -674,7 +715,12 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
 
         transferred_mass_g = min(requested_mass_g, total_loaded_g)
         transfer_ratio = transferred_mass_g / total_loaded_g
-        _pour_fractions_proportional(experiment.spatula.loaded_fractions, tool.powder_fractions, transfer_ratio)
+        _pour_fractions_proportional(
+            experiment.spatula.loaded_fractions,
+            tool.powder_fractions,
+            transfer_ratio,
+            tool,
+        )
         experiment.spatula.loaded_fractions = [f for f in experiment.spatula.loaded_fractions if f.mass_g > 0]
         if not experiment.spatula.loaded_fractions:
             experiment.spatula.is_loaded = False

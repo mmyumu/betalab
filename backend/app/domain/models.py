@@ -64,6 +64,8 @@ class PowderFraction:
     id: str
     source_lot_id: str
     mass_g: float
+    impurity_mass_mg: float = 0.0
+    exposure_container_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -75,6 +77,7 @@ class WorkbenchTool:
     accent: str
     tool_type: str
     capacity_ml: float
+    contact_impurity_mg_per_g: float = 0.0
     is_sealed: bool = False
     closure_fault: str | None = None
     internal_pressure_bar: float = 1.0

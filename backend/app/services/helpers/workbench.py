@@ -1,8 +1,21 @@
 from __future__ import annotations
 
+import random
+
 from app.domain.models import ContainerLabel, WorkbenchLiquid, WorkbenchSlot, WorkbenchTool, new_id
 from app.domain.workbench_catalog import get_workbench_tool_definition
 from app.services.helpers.lookups import find_tool_label
+
+
+_CONTACT_IMPURITY_MG_PER_G_BY_TOOL_TYPE: dict[str, tuple[float, float]] = {
+    "centrifuge_tube": (0.004, 0.012),
+    "cleanup_tube": (0.006, 0.018),
+    "sample_vial": (0.003, 0.010),
+    "beaker": (0.010, 0.028),
+    "cutting_board": (0.020, 0.060),
+    "sample_bag": (0.001, 0.004),
+    "storage_jar": (0.002, 0.008),
+}
 
 
 def require_slot_tool(slot: WorkbenchSlot, action: str) -> WorkbenchTool:
@@ -57,6 +70,12 @@ def get_next_workbench_slot_index(slots: list[WorkbenchSlot]) -> int:
     return (max(existing_indices) if existing_indices else 0) + 1
 
 
+def sample_tool_contact_impurity_mg_per_g(tool_type: str, rng: random.Random | None = None) -> float:
+    rng = rng or random
+    low, high = _CONTACT_IMPURITY_MG_PER_G_BY_TOOL_TYPE.get(tool_type, (0.004, 0.015))
+    return round(rng.uniform(low, high), 4)
+
+
 def build_workbench_tool(tool_id: str) -> WorkbenchTool:
     tool_definition = get_workbench_tool_definition(tool_id)
     return WorkbenchTool(
@@ -67,6 +86,7 @@ def build_workbench_tool(tool_id: str) -> WorkbenchTool:
         accent=tool_definition.accent,
         tool_type=tool_definition.tool_type,
         capacity_ml=tool_definition.capacity_ml,
+        contact_impurity_mg_per_g=sample_tool_contact_impurity_mg_per_g(tool_definition.tool_type),
         is_sealed=False,
         closure_fault=None,
         labels=[],

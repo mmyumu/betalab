@@ -265,7 +265,12 @@ class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         transferred_mass_g = min(requested_mass_g, total_loaded_g)
         transfer_ratio = transferred_mass_g / total_loaded_g
         from app.services.domain_services.workbench import _pour_fractions_proportional
-        _pour_fractions_proportional(experiment.spatula.loaded_fractions, tool.powder_fractions, transfer_ratio)
+        _pour_fractions_proportional(
+            experiment.spatula.loaded_fractions,
+            tool.powder_fractions,
+            transfer_ratio,
+            tool,
+        )
         experiment.spatula.loaded_fractions = [f for f in experiment.spatula.loaded_fractions if f.mass_g > 0]
         if not experiment.spatula.loaded_fractions:
             experiment.spatula.is_loaded = False
@@ -298,12 +303,12 @@ class LoadSpatulaFromAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
 
         take_ratio = loaded_mass_g / total_powder_g
         loaded_fractions: list[PowderFraction] = []
+        from app.services.domain_services.workbench import _split_fraction
         for fraction in tool.powder_fractions:
-            taken = round(fraction.mass_g * take_ratio, 3)
-            if taken <= 0:
+            extracted_fraction = _split_fraction(fraction, take_ratio)
+            if extracted_fraction is None:
                 continue
-            fraction.mass_g = round(max(fraction.mass_g - taken, 0.0), 3)
-            loaded_fractions.append(PowderFraction(id=new_id("powder"), source_lot_id=fraction.source_lot_id, mass_g=taken))
+            loaded_fractions.append(extracted_fraction)
         tool.powder_fractions = [f for f in tool.powder_fractions if f.mass_g > 0]
 
         experiment.spatula.is_loaded = True
