@@ -17,7 +17,6 @@ from app.domain.models import (
     LimsLabel,
     LimsReception,
     ManualLabel,
-    PowderFraction,
     PrintedLabelTicket,
     ProduceFraction,
     ProduceLot,
@@ -215,6 +214,7 @@ def _serialize_experiment(experiment: Experiment) -> dict:
             "lims_reception": asdict(experiment.lims_reception),
             "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
             "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+            "produce_material_states": [asdict(state) for state in experiment.produce_material_states],
             "spatula": asdict(experiment.spatula),
             "audit_log": experiment.audit_log,
         }
@@ -233,9 +233,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
                     label=slot.label,
                     tool=_deserialize_workbench_tool(slot.tool),
                     surface_produce_lots=[_deserialize_produce_lot(lot) for lot in slot.surface_produce_lots],
-                    surface_produce_fractions=[
-                        _deserialize_produce_fraction(fraction) for fraction in slot.surface_produce_fractions
-                    ],
+                    surface_produce_fractions=[_deserialize_produce_fraction(fraction) for fraction in slot.surface_produce_fractions],
                 )
                 for slot in schema.workbench.slots
             ]
@@ -297,16 +295,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
         produce_material_states=[ProduceMaterialState(**state.model_dump()) for state in schema.produce_material_states],
         spatula=SpatulaState(
             is_loaded=schema.spatula.is_loaded,
-            loaded_fractions=[
-                PowderFraction(
-                    id=f.id,
-                    source_lot_id=f.source_lot_id,
-                    mass_g=f.mass_g,
-                    impurity_mass_mg=f.impurity_mass_mg,
-                    exposure_container_ids=list(f.exposure_container_ids),
-                )
-                for f in schema.spatula.loaded_fractions
-            ],
+            produce_fractions=[_deserialize_produce_fraction(f) for f in schema.spatula.produce_fractions],
             source_tool_id=schema.spatula.source_tool_id,
         ),
         lims_entries=_deserialize_lims_entries(schema),
@@ -335,17 +324,13 @@ def _deserialize_workspace(schema: ExperimentSchema) -> Workspace:
                 tool=_deserialize_workbench_tool(widget.tool),
                 produce_lots=[_deserialize_produce_lot(lot) for lot in widget.produce_lots],
                 liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in widget.liquids],
-                produce_fractions=[
-                    _deserialize_produce_fraction(fraction) for fraction in widget.produce_fractions
-                ],
+                produce_fractions=[_deserialize_produce_fraction(fraction) for fraction in widget.produce_fractions],
             )
             for widget in schema.workspace.widgets
         ],
     )
     workspace.produce_basket_lots = [_deserialize_produce_lot(lot) for lot in schema.workspace.produce_basket_lots]
-    workspace.produce_basket_fractions = [
-        _deserialize_produce_fraction(fraction) for fraction in schema.workspace.produce_basket_fractions
-    ]
+    workspace.produce_basket_fractions = [_deserialize_produce_fraction(fraction) for fraction in schema.workspace.produce_basket_fractions]
     return workspace
 
 
@@ -406,16 +391,6 @@ def _deserialize_workbench_tool(tool_schema) -> WorkbenchTool | None:
         labels=[_deserialize_container_label(label) for label in tool_schema.labels],
         produce_lots=[_deserialize_produce_lot(lot) for lot in tool_schema.produce_lots],
         liquids=[WorkbenchLiquid(**liquid.model_dump()) for liquid in tool_schema.liquids],
-        powder_fractions=[
-            PowderFraction(
-                id=f.id,
-                source_lot_id=f.source_lot_id,
-                mass_g=f.mass_g,
-                impurity_mass_mg=f.impurity_mass_mg,
-                exposure_container_ids=list(f.exposure_container_ids),
-            )
-            for f in tool_schema.powder_fractions
-        ],
         produce_fractions=[_deserialize_produce_fraction(fraction) for fraction in tool_schema.produce_fractions],
     )
 
@@ -455,7 +430,5 @@ def _deserialize_produce_lot(lot_schema) -> ProduceLot:
     return ProduceLot(**payload)
 
 
-def _deserialize_produce_fraction(fraction_schema) -> ProduceFraction | None:
-    if fraction_schema is None:
-        return None
+def _deserialize_produce_fraction(fraction_schema) -> ProduceFraction:
     return ProduceFraction(**fraction_schema.model_dump())

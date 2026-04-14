@@ -3,10 +3,12 @@ from app.schemas.experiment import (
     RackSlotReferenceSchema,
     TargetWorkbenchSlotSchema,
     WorkbenchSlotReferenceSchema,
+    WorkbenchToolSampleLabelUpdateSchema,
     WorkbenchToolPlacementSchema,
     WorkbenchToolPowderPourSchema,
 )
 from app.services.domain_services.analytical_balance import (
+    ApplySampleLabelToAnalyticalBalanceToolService,
     CloseAnalyticalBalanceToolService,
     DiscardAnalyticalBalanceToolService,
     EmptyRequest,
@@ -19,6 +21,8 @@ from app.services.domain_services.analytical_balance import (
     MoveGrossBalanceToolToAnalyticalBalanceService,
     MoveRackToolToAnalyticalBalanceRequest,
     MoveRackToolToAnalyticalBalanceService,
+    MoveWorkbenchSampleLabelToAnalyticalBalanceRequest,
+    MoveWorkbenchSampleLabelToAnalyticalBalanceService,
     MoveWorkbenchToolToAnalyticalBalanceRequest,
     MoveWorkbenchToolToAnalyticalBalanceService,
     OpenAnalyticalBalanceToolService,
@@ -27,9 +31,13 @@ from app.services.domain_services.analytical_balance import (
     PourSpatulaIntoAnalyticalBalanceToolRequest,
     PourSpatulaIntoAnalyticalBalanceToolService,
     RecordAnalyticalSampleMassService,
+    RestoreTrashedSampleLabelToAnalyticalBalanceRequest,
+    RestoreTrashedSampleLabelToAnalyticalBalanceService,
     RestoreTrashedToolToAnalyticalBalanceRequest,
     RestoreTrashedToolToAnalyticalBalanceService,
     TareAnalyticalBalanceService,
+    UpdateAnalyticalBalanceToolSampleLabelTextRequest,
+    UpdateAnalyticalBalanceToolSampleLabelTextService,
 )
 
 from .common import experiment_service, handle_service_errors, router
@@ -141,6 +149,74 @@ def open_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/analytical-balance/close-tool", response_model=ExperimentSchema)
 def close_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(lambda: CloseAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
+
+
+@router.post("/{experiment_id}/analytical-balance/sample-label", response_model=ExperimentSchema)
+def apply_sample_label_to_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: ApplySampleLabelToAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id,
+            EmptyRequest(),
+        )
+    )
+
+
+@router.patch(
+    "/{experiment_id}/analytical-balance/sample-labels/{label_id}",
+    response_model=ExperimentSchema,
+)
+def update_analytical_balance_tool_sample_label_text(
+    experiment_id: str,
+    label_id: str,
+    request: WorkbenchToolSampleLabelUpdateSchema,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: UpdateAnalyticalBalanceToolSampleLabelTextService(experiment_service).run(
+            experiment_id,
+            UpdateAnalyticalBalanceToolSampleLabelTextRequest(
+                label_id=label_id,
+                sample_label_text=request.sample_label_text,
+            ),
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/analytical-balance/sample-labels/{label_id}/move-from-workbench-tool",
+    response_model=ExperimentSchema,
+)
+def move_workbench_sample_label_to_analytical_balance(
+    experiment_id: str,
+    label_id: str,
+    request: WorkbenchSlotReferenceSchema,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: MoveWorkbenchSampleLabelToAnalyticalBalanceService(experiment_service).run(
+            experiment_id,
+            MoveWorkbenchSampleLabelToAnalyticalBalanceRequest(
+                source_slot_id=request.slot_id,
+                label_id=label_id,
+            ),
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/analytical-balance/restore-trash-sample-label/{trash_sample_label_id}",
+    response_model=ExperimentSchema,
+)
+def restore_trashed_sample_label_to_analytical_balance(
+    experiment_id: str,
+    trash_sample_label_id: str,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: RestoreTrashedSampleLabelToAnalyticalBalanceService(experiment_service).run(
+            experiment_id,
+            RestoreTrashedSampleLabelToAnalyticalBalanceRequest(
+                trash_sample_label_id=trash_sample_label_id,
+            ),
+        )
+    )
 
 
 @router.post("/{experiment_id}/analytical-balance/tare", response_model=ExperimentSchema)

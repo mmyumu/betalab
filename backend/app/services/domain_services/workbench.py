@@ -5,13 +5,11 @@ from dataclasses import dataclass
 
 from app.domain.models import (
     Experiment,
-    PowderFraction,
     TrashProduceLotEntry,
     TrashSampleLabelEntry,
     TrashToolEntry,
     WorkbenchLiquid,
     WorkbenchSlot,
-    WorkbenchTool,
     new_id,
 )
 from app.domain.rules import can_tool_accept_liquids, can_tool_be_sealed, can_tool_receive_contents
@@ -25,6 +23,13 @@ from app.services.helpers.lookups import (
     find_workbench_slot,
     format_volume,
     round_volume,
+)
+from app.services.helpers.produce_canonical import (
+    get_spatula_total_produce_mass_g,
+    get_tool_total_powder_mass_g,
+    pour_spatula_into_tool,
+    split_tool_powder_into_spatula,
+    sync_canonical_produce_model,
 )
 from app.services.helpers.workbench import (
     build_workbench_tool,
@@ -46,60 +51,6 @@ from app.services.transfer import (
 physical_simulation_service = PhysicalSimulationService()
 produce_lot_transfer_service = ProduceLotTransferService()
 SPATULA_CAPACITY_G = 5.0
-
-
-def _pour_fractions_proportional(
-    source: list[PowderFraction],
-    dest: list[PowderFraction],
-    ratio: float,
-    target_tool: WorkbenchTool,
-) -> None:
-    """Transfer `ratio` of each source fraction into dest and apply target contact impurity."""
-    for fraction in source:
-        to_transfer = round(fraction.mass_g * ratio, 3)
-        if to_transfer <= 0:
-            continue
-        transferred_impurity_mg = round(fraction.impurity_mass_mg * ratio, 6)
-        fraction.mass_g = round(max(fraction.mass_g - to_transfer, 0.0), 3)
-        fraction.impurity_mass_mg = round(max(fraction.impurity_mass_mg - transferred_impurity_mg, 0.0), 6)
-        exposure_container_ids = list(fraction.exposure_container_ids)
-        if not exposure_container_ids or exposure_container_ids[-1] != target_tool.id:
-            exposure_container_ids.append(target_tool.id)
-        contact_impurity_mg = round(to_transfer * target_tool.contact_impurity_mg_per_g, 6)
-        existing = next(
-            (f for f in dest if f.source_lot_id == fraction.source_lot_id and f.exposure_container_ids == exposure_container_ids),
-            None,
-        )
-        if existing:
-            existing.mass_g = round(existing.mass_g + to_transfer, 3)
-            existing.impurity_mass_mg = round(existing.impurity_mass_mg + transferred_impurity_mg + contact_impurity_mg, 6)
-        else:
-            dest.append(
-                PowderFraction(
-                    id=new_id("powder"),
-                    source_lot_id=fraction.source_lot_id,
-                    mass_g=to_transfer,
-                    impurity_mass_mg=round(transferred_impurity_mg + contact_impurity_mg, 6),
-                    exposure_container_ids=exposure_container_ids,
-                )
-            )
-
-
-def _split_fraction(fraction: PowderFraction, ratio: float) -> PowderFraction | None:
-    taken_mass_g = round(fraction.mass_g * ratio, 3)
-    if taken_mass_g <= 0:
-        return None
-
-    taken_impurity_mg = round(fraction.impurity_mass_mg * ratio, 6)
-    fraction.mass_g = round(max(fraction.mass_g - taken_mass_g, 0.0), 3)
-    fraction.impurity_mass_mg = round(max(fraction.impurity_mass_mg - taken_impurity_mg, 0.0), 6)
-    return PowderFraction(
-        id=new_id("powder"),
-        source_lot_id=fraction.source_lot_id,
-        mass_g=taken_mass_g,
-        impurity_mass_mg=taken_impurity_mg,
-        exposure_container_ids=list(fraction.exposure_container_ids),
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -493,6 +444,7 @@ class DiscardProduceLotFromWorkbenchToolService(WriteDomainService[WorkbenchProd
                 origin=removal.origin,
             )
         )
+        sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{removal.entity.label} discarded from {removal.source_label}.")
 
 
@@ -510,6 +462,7 @@ class CutWorkbenchProduceLotService(WriteDomainService[WorkbenchProduceLotReques
             return
 
         produce_lot.cut_state = "cut"
+        sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
 
 
@@ -655,10 +608,10 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
             raise ValueError("The spatula cannot be loaded from this container.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before loading the spatula.")
-        if experiment.spatula.is_loaded and sum(f.mass_g for f in experiment.spatula.loaded_fractions) > 0:
+        if experiment.spatula.is_loaded and get_spatula_total_produce_mass_g(experiment.spatula) > 0:
             raise ValueError("Empty the spatula before loading it again.")
 
-        total_powder_g = sum(f.mass_g for f in tool.powder_fractions)
+        total_powder_g = get_tool_total_powder_mass_g(tool, material_states=experiment.produce_material_states)
         if total_powder_g <= 0:
             raise ValueError(f"{tool.label} is empty.")
 
@@ -673,19 +626,12 @@ class LoadSpatulaFromWorkbenchToolService(WriteDomainService[WorkbenchSlotReques
         if loaded_mass_g <= 0:
             raise ValueError(f"{tool.label} is empty.")
 
-        # Proportional sampling across fractions
-        take_ratio = loaded_mass_g / total_powder_g
-        loaded_fractions: list[PowderFraction] = []
-        for fraction in tool.powder_fractions:
-            extracted_fraction = _split_fraction(fraction, take_ratio)
-            if extracted_fraction is None:
-                continue
-            loaded_fractions.append(extracted_fraction)
-        tool.powder_fractions = [f for f in tool.powder_fractions if f.mass_g > 0]
-
-        experiment.spatula.is_loaded = True
-        experiment.spatula.loaded_fractions = loaded_fractions
-        experiment.spatula.source_tool_id = tool.id
+        split_tool_powder_into_spatula(
+            tool,
+            experiment.spatula,
+            loaded_mass_g=loaded_mass_g,
+            material_states=experiment.produce_material_states,
+        )
         experiment.audit_log.append(f"Spatula loaded from {tool.label}.")
 
 
@@ -700,7 +646,7 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
             raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before adding powder.")
-        total_loaded_g = sum(f.mass_g for f in experiment.spatula.loaded_fractions)
+        total_loaded_g = get_spatula_total_produce_mass_g(experiment.spatula)
         if not experiment.spatula.is_loaded or total_loaded_g <= 0:
             raise ValueError("Load the spatula before pouring.")
 
@@ -709,17 +655,14 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
             return
 
         transferred_mass_g = min(requested_mass_g, total_loaded_g)
-        transfer_ratio = transferred_mass_g / total_loaded_g
-        _pour_fractions_proportional(
-            experiment.spatula.loaded_fractions,
-            tool.powder_fractions,
-            transfer_ratio,
+        pour_spatula_into_tool(
+            experiment.spatula,
             tool,
+            transferred_mass_g=transferred_mass_g,
+            material_states=experiment.produce_material_states,
+            location_kind="workbench_tool",
+            location_id=slot.id,
         )
-        experiment.spatula.loaded_fractions = [f for f in experiment.spatula.loaded_fractions if f.mass_g > 0]
-        if not experiment.spatula.loaded_fractions:
-            experiment.spatula.is_loaded = False
-            experiment.spatula.source_tool_id = None
 
         experiment.audit_log.append(f"Powder transferred into {tool.label}.")
 
@@ -729,11 +672,11 @@ class DiscardSpatulaService(WriteDomainService[None]):
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: None) -> None:
-        total_loaded_g = sum(f.mass_g for f in experiment.spatula.loaded_fractions)
+        total_loaded_g = get_spatula_total_produce_mass_g(experiment.spatula)
         if not experiment.spatula.is_loaded or total_loaded_g <= 0:
             raise ValueError("The spatula is already empty.")
 
         experiment.spatula.is_loaded = False
-        experiment.spatula.loaded_fractions = []
+        experiment.spatula.produce_fractions = []
         experiment.spatula.source_tool_id = None
         experiment.audit_log.append(f"Spatula discarded ({round(total_loaded_g, 3)} g).")

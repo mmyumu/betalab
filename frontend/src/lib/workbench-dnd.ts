@@ -756,6 +756,7 @@ export function readSampleLabelDragPayload(
         (targetType): targetType is DropTargetType =>
           targetType === "workbench_slot" ||
           targetType === "gross_balance_widget" ||
+          targetType === "analytical_balance_widget" ||
           targetType === "trash_bin" ||
           targetType === "grinder_widget",
       ) ?? [];

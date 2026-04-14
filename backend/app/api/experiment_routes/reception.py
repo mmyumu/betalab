@@ -11,6 +11,7 @@ from app.services.domain_services.reception import (
     ApplyPrintedLimsLabelRequest,
     ApplyPrintedLimsLabelService,
     ApplyPrintedLimsLabelToBasketBagService,
+    ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
     ApplyPrintedLimsLabelToGrossBalanceBagService,
     CreateLimsReceptionRequest,
     CreateLimsReceptionService,
@@ -137,4 +138,16 @@ def apply_printed_lims_label_to_basket_bag(experiment_id: str) -> ExperimentSche
 def apply_printed_lims_label_to_gross_balance_bag(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
         lambda: ApplyPrintedLimsLabelToGrossBalanceBagService(experiment_service).run(experiment_id, EmptyReceptionRequest())
+    )
+
+
+@router.post(
+    "/{experiment_id}/lims/apply-label-to-analytical-balance-tool",
+    response_model=ExperimentSchema,
+)
+def apply_printed_lims_label_to_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: ApplyPrintedLimsLabelToAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id, EmptyReceptionRequest()
+        )
     )

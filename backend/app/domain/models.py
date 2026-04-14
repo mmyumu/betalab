@@ -60,15 +60,6 @@ class WorkbenchLiquid:
 
 
 @dataclass
-class PowderFraction:
-    id: str
-    source_lot_id: str
-    mass_g: float
-    impurity_mass_mg: float = 0.0
-    exposure_container_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
 class ProduceMaterialState:
     id: str
     produce_lot_id: str
@@ -89,6 +80,8 @@ class ProduceFraction:
     mass_g: float
     unit_count: int | None = None
     is_contaminated: bool = False
+    impurity_mass_mg: float = 0.0
+    exposure_container_ids: list[str] = field(default_factory=list)
     location_kind: str | None = None
     location_id: str | None = None
     container_id: str | None = None
@@ -113,14 +106,13 @@ class WorkbenchTool:
     labels: list[ContainerLabel] = field(default_factory=list)
     produce_lots: list[ProduceLot] = field(default_factory=list)
     liquids: list[WorkbenchLiquid] = field(default_factory=list)
-    powder_fractions: list[PowderFraction] = field(default_factory=list)
     produce_fractions: list[ProduceFraction] = field(default_factory=list)
 
 
 @dataclass
 class SpatulaState:
     is_loaded: bool = False
-    loaded_fractions: list[PowderFraction] = field(default_factory=list)
+    produce_fractions: list[ProduceFraction] = field(default_factory=list)
     source_tool_id: str | None = None
 
 

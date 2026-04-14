@@ -94,5 +94,4 @@ def build_workbench_tool(tool_id: str, *, id_factory: Callable[[str], str] = new
         labels=[],
         produce_lots=[],
         liquids=[],
-        powder_fractions=[],
     )

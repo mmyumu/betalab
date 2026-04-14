@@ -5,7 +5,9 @@ import {
   readAnalyticalBalanceToolDragPayload,
   readBenchToolDragPayload,
   readGrossBalanceToolDragPayload,
+  readLimsLabelTicketDragPayload,
   readRackToolDragPayload,
+  readSampleLabelDragPayload,
   readToolbarDragPayload,
   readTrashToolDragPayload,
   toDragDescriptor,
@@ -22,11 +24,24 @@ import type {
 } from "@/types/api-payloads";
 
 type AnalyticalBalanceDndExperimentApi = {
+  applyPrintedLimsLabelToAnalyticalBalanceTool: () => void;
+  applySampleLabelToAnalyticalBalanceTool: () => void;
   moveGrossBalanceToolToAnalyticalBalance: () => void;
   moveRackToolToAnalyticalBalance: (payload: MoveRackToolToAnalyticalBalancePayload) => void;
+  moveWorkbenchSampleLabelToAnalyticalBalance: (payload: {
+    source_slot_id: string;
+    label_id: string;
+  }) => void;
   moveWorkbenchToolToAnalyticalBalance: (payload: MoveWorkbenchToolToAnalyticalBalancePayload) => void;
   placeToolOnAnalyticalBalance: (payload: PlaceToolOnAnalyticalBalancePayload) => void;
+  restoreTrashedSampleLabelToAnalyticalBalance: (payload: {
+    trash_sample_label_id: string;
+  }) => void;
   restoreTrashedToolToAnalyticalBalance: (payload: RestoreTrashedToolToAnalyticalBalancePayload) => void;
+  updateAnalyticalBalanceToolSampleLabelText: (payload: {
+    label_id: string;
+    sample_label_text: string;
+  }) => void;
 };
 
 type AnalyticalBalanceDndOptions = {
@@ -34,12 +49,17 @@ type AnalyticalBalanceDndOptions = {
   dndDisabledByAction: boolean;
   dragState: Pick<DragStateApi, "clearDropTargets" | "setActiveDragItem" | "showDropTargets">;
   experimentApi: AnalyticalBalanceDndExperimentApi;
+  hasPrintedLabelTicket: boolean;
 };
 
 export type AnalyticalBalanceDndApi = {
-  handleAnalyticalBalanceDragOver: (event: DragEvent<HTMLDivElement>) => void;
-  handleAnalyticalBalanceDrop: (event: DragEvent<HTMLDivElement>) => void;
+  handleAnalyticalBalanceDragOver: (event: DragEvent<HTMLElement>) => void;
+  handleAnalyticalBalanceDrop: (event: DragEvent<HTMLElement>) => void;
   handleAnalyticalBalanceItemDragStart: (dataTransfer: DataTransfer) => void;
+  handleAnalyticalBalanceSampleLabelTextChange: (
+    labelId: string,
+    sampleLabelText: string,
+  ) => void;
 };
 
 export function useAnalyticalBalanceDnd({
@@ -47,11 +67,32 @@ export function useAnalyticalBalanceDnd({
   dndDisabledByAction,
   dragState,
   experimentApi,
+  hasPrintedLabelTicket,
 }: AnalyticalBalanceDndOptions): AnalyticalBalanceDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
+  const toolHasLimsLabel =
+    analyticalBalanceTool !== null &&
+    (analyticalBalanceTool.labels ?? []).some((label) => label.labelKind === "lims");
 
-  const handleAnalyticalBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
+  const handleAnalyticalBalanceDragOver = (event: DragEvent<HTMLElement>) => {
     if (dndDisabledByAction) {
+      return;
+    }
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
+    const isSampleLabelDrag =
+      toolbarPayload?.itemType === "sample_label" || sampleLabelPayload !== null;
+    if (isSampleLabelDrag && analyticalBalanceTool === null) {
+      return;
+    }
+    if (
+      limsTicketPayload &&
+      hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")
+    ) {
+      if (analyticalBalanceTool !== null && hasPrintedLabelTicket && !toolHasLimsLabel) {
+        event.preventDefault();
+      }
       return;
     }
     if (hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
@@ -59,7 +100,7 @@ export function useAnalyticalBalanceDnd({
     }
   };
 
-  const handleAnalyticalBalanceDrop = (event: DragEvent<HTMLDivElement>) => {
+  const handleAnalyticalBalanceDrop = (event: DragEvent<HTMLElement>) => {
     if (dndDisabledByAction) {
       return;
     }
@@ -68,6 +109,52 @@ export function useAnalyticalBalanceDnd({
     }
 
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
+    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
+
+    if (limsTicketPayload && analyticalBalanceTool === null) {
+      return;
+    }
+
+    if (analyticalBalanceTool !== null) {
+      if (limsTicketPayload && hasPrintedLabelTicket && !toolHasLimsLabel) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearDropTargets();
+        void experimentApi.applyPrintedLimsLabelToAnalyticalBalanceTool();
+        return;
+      }
+
+      if (toolbarPayload?.itemType === "sample_label") {
+        event.preventDefault();
+        event.stopPropagation();
+        clearDropTargets();
+        void experimentApi.applySampleLabelToAnalyticalBalanceTool();
+        return;
+      }
+
+      if (sampleLabelPayload?.sourceKind === "workbench" && sampleLabelPayload.sourceSlotId) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearDropTargets();
+        void experimentApi.moveWorkbenchSampleLabelToAnalyticalBalance({
+          source_slot_id: sampleLabelPayload.sourceSlotId,
+          label_id: sampleLabelPayload.sampleLabelId,
+        });
+        return;
+      }
+
+      if (sampleLabelPayload?.sourceKind === "trash" && sampleLabelPayload.trashSampleLabelId) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearDropTargets();
+        void experimentApi.restoreTrashedSampleLabelToAnalyticalBalance({
+          trash_sample_label_id: sampleLabelPayload.trashSampleLabelId,
+        });
+        return;
+      }
+    }
+
     const toolPayload =
       (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
       readBenchToolDragPayload(event.dataTransfer) ??
@@ -137,9 +224,20 @@ export function useAnalyticalBalanceDnd({
     setActiveDragItem(toDragDescriptor(payload));
   };
 
+  const handleAnalyticalBalanceSampleLabelTextChange = (
+    labelId: string,
+    sampleLabelText: string,
+  ) => {
+    void experimentApi.updateAnalyticalBalanceToolSampleLabelText({
+      label_id: labelId,
+      sample_label_text: sampleLabelText,
+    });
+  };
+
   return {
     handleAnalyticalBalanceDragOver,
     handleAnalyticalBalanceDrop,
     handleAnalyticalBalanceItemDragStart,
+    handleAnalyticalBalanceSampleLabelTextChange,
   };
 }

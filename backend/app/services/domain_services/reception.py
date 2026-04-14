@@ -235,6 +235,21 @@ class ApplyPrintedLimsLabelToGrossBalanceBagService(WriteDomainService[EmptyRece
         experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {balance_tool.label}.")
 
 
+class ApplyPrintedLimsLabelToAnalyticalBalanceToolService(WriteDomainService[EmptyReceptionRequest]):
+    def __init__(self, runtime: ExperimentRuntime) -> None:
+        super().__init__(runtime)
+
+    def _run(self, experiment: Experiment, request: EmptyReceptionRequest) -> None:
+        balance_widget = find_workspace_widget(experiment.workspace, "analytical_balance")
+        balance_tool = balance_widget.tool
+        if balance_tool is None:
+            raise ValueError("The analytical balance does not contain a tool.")
+        ticket = _require_printed_lims_ticket(experiment)
+        _apply_ticket_to_tool(balance_tool, ticket)
+        _consume_printed_lims_ticket(experiment, ticket)
+        experiment.audit_log.append(f"LIMS label {ticket.sample_code} applied to {balance_tool.label}.")
+
+
 def _build_sample_code(experiment: Experiment) -> str:
     existing_suffixes = [
         int(entry.lab_sample_code.rsplit("-", 1)[-1])

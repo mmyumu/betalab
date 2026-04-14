@@ -281,11 +281,11 @@ function makeWorkbenchExperiment({
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceBasketLots: basketProduceLots, widgets: workspaceWidgets },
     basketTool,
-    spatula: {
-      isLoaded: false,
-      loadedFractions: [],
-      sourceToolId: null,
-    },
+      spatula: {
+        isLoaded: false,
+        produceFractions: [],
+        sourceToolId: null,
+      },
     analyticalBalance,
     limsReception,
     limsEntries,
@@ -4804,6 +4804,237 @@ describe("LabScene", () => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
         "tare_analytical_balance",
+        {},
+      );
+    });
+  });
+
+  it("applies a sample label onto a tube staged on the analytical balance", async () => {
+    const analyticalTube = makeTool({
+      id: "analytical_tube_1",
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "Tube on balance",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      sampleLabelText: null,
+    });
+
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({
+          tool: {
+            ...analyticalTube,
+            labels: [
+              {
+                id: "analytical_label_1",
+                labelKind: "manual",
+                text: "",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const labelItem = await screen.findByTestId("toolbar-item-sampling_bag_label");
+    const balance = screen.getByTestId("analytical-balance-dropzone");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(labelItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(balance, { dataTransfer: transfer });
+    fireEvent(balance, dragOverEvent);
+    fireEvent.drop(balance, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_sample_label_to_analytical_balance_tool",
+        {},
+      );
+    });
+    expect(await screen.findByLabelText("Sample label text")).toBeInTheDocument();
+  });
+
+  it("applies a sample label when dropped directly on the analytical balance tube card", async () => {
+    const analyticalTube = makeTool({
+      id: "analytical_tube_1",
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "Tube on balance",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      sampleLabelText: null,
+    });
+
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({
+          tool: {
+            ...analyticalTube,
+            labels: [
+              {
+                id: "analytical_label_1",
+                labelKind: "manual",
+                text: "",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const labelItem = await screen.findByTestId("toolbar-item-sampling_bag_label");
+    const tubeCard = screen.getByTestId("bench-tool-card-analytical-analytical_tube_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(labelItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(tubeCard, { dataTransfer: transfer });
+    fireEvent(tubeCard, dragOverEvent);
+    fireEvent.drop(tubeCard, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_sample_label_to_analytical_balance_tool",
+        {},
+      );
+    });
+  });
+
+  it("applies a sample label when dropped on the analytical balance tube illustration button", async () => {
+    const analyticalTube = makeTool({
+      id: "analytical_tube_1",
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "Tube on balance",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      sampleLabelText: null,
+    });
+
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({
+          tool: {
+            ...analyticalTube,
+            labels: [
+              {
+                id: "analytical_label_1",
+                labelKind: "manual",
+                text: "",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const labelItem = await screen.findByTestId("toolbar-item-sampling_bag_label");
+    const illustration = screen.getByTestId("bench-tool-illustration-analytical-analytical_tube_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(labelItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(illustration, { dataTransfer: transfer });
+    fireEvent(illustration, dragOverEvent);
+    fireEvent.drop(illustration, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_sample_label_to_analytical_balance_tool",
+        {},
+      );
+    });
+  });
+
+  it("applies a printed LIMS ticket onto a tube staged on the analytical balance", async () => {
+    const analyticalTube = makeTool({
+      id: "analytical_tube_1",
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "Tube on balance",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+      sampleLabelText: null,
+    });
+
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: makePrintedLimsTicket(),
+        }),
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({
+          tool: {
+            ...analyticalTube,
+            labels: [
+              {
+                id: "analytical_lims_label_1",
+                labelKind: "lims",
+                text: "APP-2026-0001",
+                sampleCode: "APP-2026-0001",
+                receivedDate: "2026-04-03",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const tubeCard = screen.getByTestId("bench-tool-card-analytical-analytical_tube_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(tubeCard, { dataTransfer: transfer });
+    fireEvent(tubeCard, dragOverEvent);
+    fireEvent.drop(tubeCard, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label_to_analytical_balance_tool",
         {},
       );
     });

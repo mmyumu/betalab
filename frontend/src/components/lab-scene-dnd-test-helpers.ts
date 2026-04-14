@@ -371,7 +371,7 @@ function makeExperiment({
     basketTool,
     spatula: {
       isLoaded: false,
-      loadedFractions: [],
+      produceFractions: [],
       sourceToolId: null,
     },
     analyticalBalance: {
@@ -425,6 +425,7 @@ function createPaletteSourceCase(item: ToolbarItem): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -507,6 +508,7 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -517,6 +519,11 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
         slots: makeSlots([
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: "LOT-1" }) },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: null }) },
+        ]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
         ]),
       }),
     targetExpectations: {
@@ -532,6 +539,13 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
         command: {
           type: "apply_sample_label_to_workbench_tool",
           payload: { slot_id: "station_2" },
+        },
+      },
+      "analytical-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "apply_sample_label_to_analytical_balance_tool",
+          payload: {},
         },
       },
       "grinder-dropzone": {
@@ -622,6 +636,7 @@ function createWorkbenchToolSourceCase(item: ToolCatalogItem): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1416,6 +1431,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1426,6 +1442,11 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         slots: makeSlots([
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: "LOT-2026-041" }) },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: null }) },
+        ]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
         ]),
       }),
     targetExpectations: {
@@ -1438,6 +1459,16 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
             label_id: "bench_tool_bag-legacy-label",
             source_slot_id: "station_1",
             target_slot_id: "station_2",
+          },
+        },
+      },
+      "analytical-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "move_workbench_sample_label_to_analytical_balance",
+          payload: {
+            label_id: "bench_tool_bag-legacy-label",
+            source_slot_id: "station_1",
           },
         },
       },
@@ -1469,6 +1500,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1481,6 +1513,11 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: "LOT-1" }) },
         ]),
         trashSampleLabels: [makeTrashSampleLabelEntry()],
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
+        ]),
       }),
     targetExpectations: {
       "bench-slot-station_1": {
@@ -1504,6 +1541,15 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
           },
         },
       },
+      "analytical-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "restore_trashed_sample_label_to_analytical_balance",
+          payload: {
+            trash_sample_label_id: "trash_sample_label_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
       "trash-dropzone": { compatible: true, command: null },
@@ -1512,6 +1558,16 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
 }
 
 function createLimsPrintedTicketSourceCase(): DndSourceCase {
+  const analyticalTube = makeTool(sampleVialItem, {
+    id: "analytical_tube_1",
+    label: "50 mL centrifuge tube",
+    subtitle: "Tube on balance",
+    toolId: "centrifuge_tube_50ml",
+    toolType: "centrifuge_tube",
+    capacity_ml: 50,
+    sampleLabelText: null,
+  });
+
   return {
     id: "lims-printed-ticket",
     label: "LIMS printed ticket",
@@ -1522,6 +1578,7 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
     availableTargets: [
       "bench-slot-station_1",
       "bench-slot-station_2",
+      "analytical-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1542,6 +1599,11 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           status: "awaiting_label_application",
           printedLabelTicket: makePrintedLimsTicket(),
         }),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          {},
+          { tool: analyticalTube },
+        ]),
       }),
     targetExpectations: {
       "bench-slot-station_1": {
@@ -1562,6 +1624,13 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           },
         },
       },
+      "analytical-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "apply_printed_lims_label_to_analytical_balance_tool",
+          payload: {},
+        },
+      },
       "grinder-dropzone": { compatible: false, command: null },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
@@ -1572,10 +1641,7 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           payload: {},
         },
       },
-      "gross-balance-dropzone": {
-        compatible: false,
-        command: null,
-      },
+      "gross-balance-dropzone": { compatible: false, command: null },
     },
   };
 }

@@ -287,6 +287,8 @@ export function LabSceneWorkspaceCanvas({
   const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
     <div
       data-testid="analytical-balance-staged-item"
+      onDragOver={dnd.analyticalBalance.handleAnalyticalBalanceDragOver}
+      onDrop={dnd.analyticalBalance.handleAnalyticalBalanceDrop}
       onPointerDown={(event) =>
         spatula.handleSpatulaAnalyticalBalancePointerDown(displayAnalyticalBalanceTool, event)
       }
@@ -298,6 +300,9 @@ export function LabSceneWorkspaceCanvas({
         onDragStart={(event) =>
           dnd.analyticalBalance.handleAnalyticalBalanceItemDragStart(event.dataTransfer)
         }
+        onDragOver={dnd.analyticalBalance.handleAnalyticalBalanceDragOver}
+        onDrop={dnd.analyticalBalance.handleAnalyticalBalanceDrop}
+        onSampleLabelTextChange={dnd.analyticalBalance.handleAnalyticalBalanceSampleLabelTextChange}
         onToggleSeal={workspaceActions.handleAnalyticalBalanceToolSealToggle}
         onRemoveLiquid={() => {}}
         tool={{ ...displayAnalyticalBalanceTool, id: `analytical-${displayAnalyticalBalanceTool.id}` }}

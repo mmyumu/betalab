@@ -1,18 +1,34 @@
 import pytest
 
-from app.domain.models import PowderFraction
+from app.domain.models import ProduceFraction, ProduceMaterialState, TrashSampleLabelEntry
+from app.services.domain_services.reception import (
+    ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
+    CreateLimsReceptionRequest,
+    CreateLimsReceptionService,
+    PrintLimsLabelRequest,
+    PrintLimsLabelService,
+)
+from app.services.helpers.lookups import build_manual_label
 from app.services.domain_services.analytical_balance import (
+    ApplySampleLabelToAnalyticalBalanceToolService,
     CloseAnalyticalBalanceToolService,
     EmptyRequest,
     MoveAnalyticalBalanceToolToWorkbenchRequest,
     MoveAnalyticalBalanceToolToWorkbenchService,
+    MoveWorkbenchSampleLabelToAnalyticalBalanceRequest,
+    MoveWorkbenchSampleLabelToAnalyticalBalanceService,
     OpenAnalyticalBalanceToolService,
     PlaceToolOnAnalyticalBalanceRequest,
     PlaceToolOnAnalyticalBalanceService,
     RecordAnalyticalSampleMassService,
+    RestoreTrashedSampleLabelToAnalyticalBalanceRequest,
+    RestoreTrashedSampleLabelToAnalyticalBalanceService,
     TareAnalyticalBalanceService,
+    UpdateAnalyticalBalanceToolSampleLabelTextRequest,
+    UpdateAnalyticalBalanceToolSampleLabelTextService,
 )
 from app.services.experiment_service import ExperimentRuntimeService
+from app.services.helpers.workbench import build_workbench_tool
 
 
 def test_analytical_balance_rejects_cutting_board() -> None:
@@ -42,7 +58,19 @@ def test_analytical_balance_records_precise_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.124)]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="test-frac",
+            produce_lot_id="test-lot",
+            produce_material_state_id="state_1",
+            mass_g=10.124,
+            location_kind="workbench_tool",
+            location_id="station_1",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
     runtime_experiment.workspace.widgets[1].tool = None
     runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
@@ -66,13 +94,56 @@ def test_analytical_balance_rejects_out_of_spec_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.5)]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="test-frac",
+            produce_lot_id="test-lot",
+            produce_material_state_id="state_1",
+            mass_g=10.5,
+            location_kind="workbench_tool",
+            location_id="station_1",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
     runtime_experiment.workspace.widgets[1].tool = None
     runtime_experiment.workspace.widgets[2].tool = tool
     runtime_experiment.workbench.slots[0].tool = None
 
     with pytest.raises(ValueError, match="ERR_RANGE"):
         RecordAnalyticalSampleMassService(service).run(experiment.id, EmptyRequest())
+
+
+def test_analytical_balance_records_sample_mass_from_canonical_produce_fractions() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    PlaceToolOnAnalyticalBalanceService(service).run(
+        experiment.id,
+        PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
+    )
+    runtime_experiment = service._require_experiment(experiment.id)
+    tool = runtime_experiment.workspace.widgets[2].tool
+    assert tool is not None
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="fraction_1",
+            produce_lot_id="lot_1",
+            produce_material_state_id="state_1",
+            mass_g=10.124,
+            location_kind="workspace_widget_tool",
+            location_id="analytical_balance",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.analytical_balance.tare_mass_g = 12.0
+
+    updated = RecordAnalyticalSampleMassService(service).run(experiment.id, EmptyRequest())
+
+    assert updated.lims_reception.measured_sample_mass_g == pytest.approx(10.124)
 
 
 def test_analytical_balance_tare_persists_when_different_tube_placed() -> None:
@@ -150,3 +221,109 @@ def test_analytical_balance_tool_can_be_closed_and_reopened() -> None:
     reopened_tool = reopened.workspace.widgets[2].tool
     assert reopened_tool is not None
     assert reopened_tool.is_sealed is False
+
+
+def test_analytical_balance_accepts_manual_sample_label_operations() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    PlaceToolOnAnalyticalBalanceService(service).run(
+        experiment.id,
+        PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
+    )
+
+    labeled = ApplySampleLabelToAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
+    tool = labeled.workspace.widgets[2].tool
+    assert tool is not None
+    assert len(tool.labels) == 1
+
+    label_id = tool.labels[0].id
+    updated = UpdateAnalyticalBalanceToolSampleLabelTextService(service).run(
+        experiment.id,
+        UpdateAnalyticalBalanceToolSampleLabelTextRequest(
+            label_id=label_id,
+            sample_label_text="LOT-2026-041",
+        ),
+    )
+    updated_tool = updated.workspace.widgets[2].tool
+    assert updated_tool is not None
+    assert updated_tool.labels[0].text == "LOT-2026-041"
+
+
+def test_sample_label_can_move_from_workbench_and_trash_to_analytical_balance() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    PlaceToolOnAnalyticalBalanceService(service).run(
+        experiment.id,
+        PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
+    )
+    runtime_experiment = service._require_experiment(experiment.id)
+    runtime_experiment.workbench.slots[0].tool = build_workbench_tool("sample_vial_lcms")
+    runtime_experiment.workbench.slots[0].tool.labels.append(build_manual_label(text="WB-1"))
+
+    moved = MoveWorkbenchSampleLabelToAnalyticalBalanceService(service).run(
+        experiment.id,
+        MoveWorkbenchSampleLabelToAnalyticalBalanceRequest(
+            source_slot_id="station_1",
+            label_id=runtime_experiment.workbench.slots[0].tool.labels[0].id,
+        ),
+    )
+    moved_tool = moved.workspace.widgets[2].tool
+    assert moved_tool is not None
+    assert [label.text for label in moved_tool.labels] == ["WB-1"]
+    assert moved.workbench.slots[0].tool is not None
+    assert moved.workbench.slots[0].tool.labels == []
+
+    moved_runtime = service._require_experiment(experiment.id)
+    moved_runtime.trash.sample_labels.append(
+        TrashSampleLabelEntry(
+            id="trash_sample_label_1",
+            origin_label="Autosampler vial",
+            label=build_manual_label(text="TRASH-1"),
+        )
+    )
+
+    restored = RestoreTrashedSampleLabelToAnalyticalBalanceService(service).run(
+        experiment.id,
+        RestoreTrashedSampleLabelToAnalyticalBalanceRequest(
+            trash_sample_label_id="trash_sample_label_1",
+        ),
+    )
+    restored_tool = restored.workspace.widgets[2].tool
+    assert restored_tool is not None
+    assert [label.text for label in restored_tool.labels] == ["WB-1", "TRASH-1"]
+    assert restored.trash.sample_labels == []
+
+
+def test_printed_lims_ticket_can_apply_to_analytical_balance_tool() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    PlaceToolOnAnalyticalBalanceService(service).run(
+        experiment.id,
+        PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
+    )
+    CreateLimsReceptionService(service).run(
+        experiment.id,
+        CreateLimsReceptionRequest(
+            orchard_name="Verger Saint-Martin",
+            harvest_date="2026-03-29",
+            indicative_mass_g=2500.0,
+            measured_gross_mass_g=2486.0,
+            measured_sample_mass_g=10.0,
+        ),
+    )
+    PrintLimsLabelService(service).run(experiment.id, PrintLimsLabelRequest())
+
+    updated = ApplyPrintedLimsLabelToAnalyticalBalanceToolService(service).run(
+        experiment.id,
+        EmptyRequest(),
+    )
+
+    analytical_widget = next(widget for widget in updated.workspace.widgets if widget.id == "analytical_balance")
+    assert analytical_widget.tool is not None
+    assert analytical_widget.tool.labels[0].label_kind == "lims"
+    assert analytical_widget.tool.labels[0].sample_code is not None
+    assert analytical_widget.tool.labels[0].sample_code.startswith("APP-2026-")
+    assert updated.lims_reception.printed_label_ticket is None

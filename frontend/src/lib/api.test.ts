@@ -48,9 +48,10 @@ const makeExperiment = (): Experiment => ({
   },
   limsEntries: [],
   basketTool: null,
+  produceMaterialStates: [],
   spatula: {
     isLoaded: false,
-    loadedFractions: [],
+    produceFractions: [],
     sourceToolId: null,
   },
   analyticalBalance: {
@@ -177,7 +178,7 @@ describe("api client", () => {
               labels: [],
               produce_lots: [],
               liquids: [],
-              powder_fractions: [],
+              produce_fractions: [],
             },
           },
         ],
@@ -246,7 +247,7 @@ describe("api client", () => {
               labels: [],
               produce_lots: [],
               liquids: [],
-              powder_fractions: [],
+              produce_fractions: [],
             },
           },
         ],
@@ -303,6 +304,93 @@ describe("api client", () => {
         method: "POST",
       },
     );
+  });
+
+  it("normalizes canonical produce fractions for tools and spatula", async () => {
+    const experiment = {
+      ...makeExperiment(),
+      produceMaterialStates: [
+        {
+          id: "state_ground",
+          produceLotId: "lot_1",
+          cutState: "ground",
+        },
+      ],
+      workbench: {
+        slots: [
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_1",
+              tool_id: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Extraction ready",
+              accent: "sky",
+              tool_type: "centrifuge_tube",
+              capacity_ml: 50,
+              contact_impurity_mg_per_g: 0.02,
+              produce_lots: [],
+              produce_fractions: [
+                {
+                  id: "produce_fraction_1",
+                  produce_lot_id: "lot_1",
+                  produce_material_state_id: "state_ground",
+                  mass_g: 1.25,
+                  impurity_mass_mg: 0.08,
+                  exposure_container_ids: ["tube_1"],
+                },
+              ],
+              liquids: [],
+              labels: [],
+            },
+          },
+        ],
+      },
+      spatula: {
+        is_loaded: true,
+        produce_fractions: [
+          {
+            id: "produce_fraction_2",
+            produce_lot_id: "lot_1",
+            produce_material_state_id: "state_ground",
+            mass_g: 0.4,
+            impurity_mass_mg: 0.01,
+            exposure_container_ids: ["spatula"],
+          },
+        ],
+        source_tool_id: "bench_tool_1",
+      },
+    } satisfies Experiment;
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => experiment,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const normalized = await getExperiment("experiment_123");
+    expect(normalized.workbench.slots[0].tool?.produceFractions).toMatchObject([
+      {
+        id: "produce_fraction_1",
+        produceLotId: "lot_1",
+        produceMaterialStateId: "state_ground",
+        massG: 1.25,
+        impurityMassMg: 0.08,
+        exposureContainerIds: ["tube_1"],
+      },
+    ]);
+    expect(normalized.spatula.produceFractions).toMatchObject([
+      {
+        id: "produce_fraction_2",
+        produceLotId: "lot_1",
+        produceMaterialStateId: "state_ground",
+        massG: 0.4,
+        impurityMassMg: 0.01,
+        exposureContainerIds: ["spatula"],
+      },
+    ]);
   });
 
   it("sends debug produce overrides when spawning on the workbench", async () => {

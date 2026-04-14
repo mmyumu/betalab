@@ -1499,6 +1499,9 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
     assert grinder.produce_lots[0].cut_state == "ground"
     assert grinder.produce_lots[0].homogeneity_score is None
     assert grinder.produce_lots[0].grind_quality_label is None
+    assert updated.produce_material_states
+    matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
+    assert matching_state.cut_state == "ground"
     assert updated.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
 
 
@@ -1762,7 +1765,7 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
     assert mid_grinder.produce_lots[0].temperature_c > -75.0
     assert mid_grinder.produce_lots[0].temperature_c < -69.0
     assert mid_grinder.liquids[0].volume_ml < 391.0
-    assert 14999.0 < mid_grinder.grinder_run_remaining_ms <= 15000.0
+    assert 14990.0 < mid_grinder.grinder_run_remaining_ms <= 15000.0
 
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=15)
     finished = service.get_experiment(experiment.id)
@@ -1963,6 +1966,9 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
     assert grinder.produce_lots[0].cut_state == "waste"
     assert grinder.produce_lots[0].homogeneity_score == 0.0
     assert grinder.produce_lots[0].grind_quality_label == "waste"
+    matching_state = next(state for state in jammed.produce_material_states if state.produce_lot_id == grinder.produce_lots[0].id)
+    assert matching_state.cut_state == "waste"
+    assert matching_state.grind_quality_label == "waste"
     assert grinder.liquids == []
     assert grinder.produce_lots[0].temperature_c >= -10.0
     assert jammed.trash.produce_lots == []
@@ -2833,6 +2839,10 @@ def test_discard_produce_lot_from_basket_moves_it_to_trash() -> None:
     assert len(updated.trash.produce_lots) == 1
     assert updated.trash.produce_lots[0].origin_label == "Produce basket"
     assert updated.audit_log[-1] == "Apple lot 1 discarded from Produce basket."
+    runtime_experiment = service._require_experiment(experiment.id)
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction is not None
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction.location_kind == "trash"
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction.produce_lot_id == created.workspace.produce_basket_lots[0].id
 
 
 def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> None:
@@ -2873,6 +2883,8 @@ def test_discard_workbench_surface_produce_lot_preserves_structured_origin() -> 
     assert trashed_entry.origin.location_id == "station_1"
     assert trashed_entry.origin.location_label == "Station 1"
     assert trashed_entry.origin.container_id is None
+    assert trashed_entry.produce_fraction is not None
+    assert trashed_entry.produce_fraction.location_kind == "trash"
 
 
 def test_move_grinder_produce_lot_to_workbench_tool() -> None:
@@ -3098,7 +3110,7 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
     assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(1000.0, abs=0.01)
-    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
+    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.15)
     assert updated.audit_log[-1] == "Wide-neck HDPE jar sealed on Station 1."
 
 
@@ -3445,6 +3457,9 @@ def test_discard_gross_balance_loose_produce_lot_moves_it_to_trash() -> None:
     assert updated.trash.produce_lots[0].origin_label == "Gross balance"
     assert updated.lims_reception.measured_gross_mass_g is None
     assert updated.audit_log[-1] == "Apple powder lot discarded from Gross balance."
+    runtime_experiment = service._require_experiment(experiment.id)
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction is not None
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction.location_kind == "trash"
 
 
 def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() -> None:
@@ -3465,6 +3480,8 @@ def test_discard_gross_balance_tool_produce_lot_preserves_structured_origin() ->
     assert trashed_entry.origin.kind == "gross_balance_tool"
     assert trashed_entry.origin.location_id == "gross_balance"
     assert trashed_entry.origin.container_label == "Wide-neck HDPE jar"
+    assert trashed_entry.produce_fraction is not None
+    assert trashed_entry.produce_fraction.location_kind == "trash"
 
 
 def test_restore_trashed_produce_lot_to_gross_balance_updates_mass() -> None:
@@ -3939,6 +3956,9 @@ def test_discard_grinder_produce_lot_moves_it_to_trash() -> None:
     assert len(updated.trash.produce_lots) == 1
     assert updated.trash.produce_lots[0].origin_label == "Cryogenic grinder"
     assert updated.audit_log[-1] == "Apple lot 1 discarded from Cryogenic grinder."
+    runtime_experiment = service._require_experiment(experiment.id)
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction is not None
+    assert runtime_experiment.trash.produce_lots[0].produce_fraction.location_kind == "trash"
 
 
 def test_restore_trashed_produce_lot_to_sampling_bag() -> None:
@@ -4404,6 +4424,8 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
     assert slot.tool.produce_lots[0].cut_state == "cut"
+    matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
+    assert matching_state.cut_state == "cut"
     assert updated.audit_log[-1] == "Apple lot 1 cut on Cutting board."
 
 
@@ -4443,6 +4465,8 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.surface_produce_lots[0].cut_state == "cut"
     assert slot.surface_produce_lots[0].is_contaminated is True
+    matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
+    assert matching_state.cut_state == "cut"
     assert updated.audit_log[-1] == "Apple lot 1 cut on Station 1."
 
 

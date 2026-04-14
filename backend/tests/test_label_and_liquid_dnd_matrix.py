@@ -8,12 +8,17 @@ import pytest
 from app.services.domain_services.reception import (
     ApplyPrintedLimsLabelRequest,
     ApplyPrintedLimsLabelService,
+    ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
     CreateLimsReceptionRequest,
     CreateLimsReceptionService,
     DiscardPrintedLimsLabelService,
     EmptyReceptionRequest,
     PrintLimsLabelRequest,
     PrintLimsLabelService,
+)
+from app.services.domain_services.analytical_balance import (
+    PlaceToolOnAnalyticalBalanceRequest,
+    PlaceToolOnAnalyticalBalanceService,
 )
 from app.services.domain_services.workbench import (
     AddLiquidToWorkbenchToolRequest,
@@ -41,7 +46,7 @@ from app.services.domain_services.workspace import (
 from app.services.experiment_service import ExperimentRuntimeService
 
 LabelSource = Literal["palette_sample_label", "workbench_sample_label", "trash_sample_label", "lims_ticket"]
-LabelTarget = Literal["workbench_tool", "empty_workbench", "trash"]
+LabelTarget = Literal["workbench_tool", "analytical_balance_tool", "empty_workbench", "trash"]
 LiquidSource = Literal["palette_standard_liquid", "palette_dry_ice", "grinder_liquid"]
 LiquidTarget = Literal["open_tube", "sealed_tube", "storage_jar", "grinder", "trash"]
 
@@ -70,6 +75,7 @@ LABEL_DND_CASES: tuple[LabelDndCase, ...] = (
     LabelDndCase("trash_sample_label", "workbench_tool", True),
     LabelDndCase("trash_sample_label", "empty_workbench", False),
     LabelDndCase("lims_ticket", "workbench_tool", True),
+    LabelDndCase("lims_ticket", "analytical_balance_tool", True),
     LabelDndCase("lims_ticket", "empty_workbench", False),
     LabelDndCase("lims_ticket", "trash", True),
 )
@@ -96,6 +102,10 @@ LIQUID_DND_CASES: tuple[LiquidDndCase, ...] = (
 def _prepare_label_target(service: ExperimentRuntimeService, experiment_id: str, target: LabelTarget) -> None:
     if target == "workbench_tool":
         PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag"))
+    if target == "analytical_balance_tool":
+        PlaceToolOnAnalyticalBalanceService(service).run(
+            experiment_id, PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml")
+        )
 
 
 def _prepare_label_source(service: ExperimentRuntimeService, experiment_id: str, source: LabelSource) -> tuple[str | None, str | None]:
@@ -160,6 +170,11 @@ def _execute_label_drop(
             )
         if source == "lims_ticket":
             return ApplyPrintedLimsLabelService(service).run(experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2"))
+    if target == "analytical_balance_tool":
+        if source == "lims_ticket":
+            return ApplyPrintedLimsLabelToAnalyticalBalanceToolService(service).run(
+                experiment_id, EmptyReceptionRequest()
+            )
     if target == "empty_workbench":
         if source == "palette_sample_label":
             return ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))
@@ -214,6 +229,11 @@ def test_label_dnd_matrix(source: LabelSource, target: LabelTarget, allowed: boo
         target_slot = next(slot for slot in updated.workbench.slots if slot.id == "station_2")
         assert target_slot.tool is not None
         assert target_slot.tool.labels
+        return
+    if target == "analytical_balance_tool":
+        analytical_balance = next(widget for widget in updated.workspace.widgets if widget.id == "analytical_balance")
+        assert analytical_balance.tool is not None
+        assert analytical_balance.tool.labels
         return
     if target == "trash":
         assert updated.trash.sample_labels

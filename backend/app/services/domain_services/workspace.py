@@ -20,6 +20,7 @@ from app.services.helpers.lookups import (
     format_volume,
     round_volume,
 )
+from app.services.helpers.produce_canonical import sync_canonical_produce_model
 from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.received_sample_generation import build_received_sampling_bag
 from app.services.transfer import (
@@ -413,6 +414,7 @@ class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProdu
                 produce_lot=produce_lot,
             )
         )
+        sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{produce_lot.label} discarded from Produce basket.")
 
 
@@ -430,6 +432,7 @@ class DiscardWidgetProduceLotService(WriteDomainService[DiscardWidgetProduceLotR
                 produce_lot=produce_lot,
             )
         )
+        sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{produce_lot.label} discarded from {widget.label}.")
 
 
@@ -501,6 +504,7 @@ def complete_grinder_cycle(experiment: Experiment, widget_id: str) -> None:
     widget.grinder_run_remaining_ms = 0.0
     widget.grinder_fault = None
     widget.liquids = [liquid for liquid in widget.liquids if liquid.liquid_id != "dry_ice_pellets"]
+    sync_canonical_produce_model(experiment)
     experiment.audit_log.append(f"{produce_lot.label} ground in {widget.label}.")
 
 
@@ -526,6 +530,7 @@ def _discard_jammed_grinder_contents(
     produce_lot.grind_quality_label = "waste"
     produce_lot.homogeneity_score = 0.0
     widget.liquids = []
+    sync_canonical_produce_model(experiment)
     experiment.audit_log.append(f"{produce_lot.label} jammed {widget.label} motor and became waste.")
 
 

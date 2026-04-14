@@ -19,6 +19,11 @@ from app.services.helpers.lookups import (
     find_workbench_slot,
     find_workspace_widget,
 )
+from app.services.helpers.produce_canonical import (
+    get_tool_total_produce_mass_g,
+    get_widget_total_produce_mass_g,
+    sync_canonical_produce_model,
+)
 from app.services.helpers.workbench import build_workbench_tool
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
 from app.services.transfer import (
@@ -184,14 +189,14 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
             measured_mass_g = resolve_received_bag_gross_mass_g(widget.tool)
             if measured_mass_g is None:
                 measured_mass_g = self._estimate_tool_mass(widget.tool)
-        elif widget.produce_lots:
-            measured_mass_g = round(widget.produce_lots[0].total_mass_g, 1)
+        elif widget.produce_lots or widget.produce_fractions:
+            measured_mass_g = round(get_widget_total_produce_mass_g(widget), 1)
         else:
             measured_mass_g = None
         experiment.lims_reception.measured_gross_mass_g = measured_mass_g
 
     def _estimate_tool_mass(self, tool: WorkbenchTool) -> float:
-        produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
+        produce_mass_g = get_tool_total_produce_mass_g(tool)
         liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
         return round(
             _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0) + produce_mass_g + liquid_mass_g,
@@ -204,6 +209,7 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
             produce_lot = next((lot for lot in widget.tool.produce_lots if lot.id == produce_lot_id), None)
             if produce_lot is not None:
                 widget.tool.produce_lots = [lot for lot in widget.tool.produce_lots if lot.id != produce_lot_id]
+                widget.tool.produce_fractions = [fraction for fraction in widget.tool.produce_fractions if fraction.produce_lot_id != produce_lot_id]
                 self._update_balance_measured_mass(experiment)
                 return (
                     produce_lot,
@@ -221,6 +227,7 @@ class GrossBalanceServiceBase(WriteDomainService[object]):
         if produce_lot is None:
             raise ValueError(f"{widget.label} does not contain produce lot {produce_lot_id}.")
         widget.produce_lots = [lot for lot in widget.produce_lots if lot.id != produce_lot_id]
+        widget.produce_fractions = [fraction for fraction in widget.produce_fractions if fraction.produce_lot_id != produce_lot_id]
         self._update_balance_measured_mass(experiment)
         return (
             produce_lot,
@@ -543,4 +550,5 @@ class DiscardGrossBalanceProduceLotService(GrossBalanceServiceBase):
                 origin=origin,
             )
         )
+        sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{produce_lot.label} discarded from {source_label}.")

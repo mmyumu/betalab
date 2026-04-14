@@ -117,8 +117,14 @@ export const applyPrintedLimsLabel = wrapCommand("apply_printed_lims_label");
 export const applyPrintedLimsLabelToGrossBalanceBag = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "apply_printed_lims_label_to_gross_balance_bag", {}),
 );
+export const applyPrintedLimsLabelToAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "apply_printed_lims_label_to_analytical_balance_tool", {}),
+);
 export const applyPrintedLimsLabelToBasketBag = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "apply_printed_lims_label_to_basket_bag", {}),
+);
+export const applySampleLabelToAnalyticalBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "apply_sample_label_to_analytical_balance_tool", {}),
 );
 export const createDebugProduceLotOnWorkbench = wrapCommand("create_debug_produce_lot_on_workbench");
 export const createDebugProduceLotToWidget = wrapCommand("create_debug_produce_lot_to_widget");
@@ -150,9 +156,12 @@ export const loadSpatulaFromAnalyticalBalanceTool = vi.fn((experimentId: string)
 );
 export const pourSpatulaIntoWorkbenchTool = wrapCommand("pour_spatula_into_workbench_tool");
 export const pourSpatulaIntoAnalyticalBalanceTool = wrapCommand("pour_spatula_into_analytical_balance_tool");
+export const updateAnalyticalBalanceToolSampleLabelText = wrapCommand("update_analytical_balance_tool_sample_label_text");
 export const updateWorkbenchToolSampleLabelText = wrapCommand("update_workbench_tool_sample_label_text");
+export const moveWorkbenchSampleLabelToAnalyticalBalance = wrapCommand("move_workbench_sample_label_to_analytical_balance");
 export const moveSampleLabelBetweenWorkbenchTools = wrapCommand("move_sample_label_between_workbench_tools");
 export const discardSampleLabelFromWorkbenchTool = wrapCommand("discard_sample_label_from_workbench_tool");
+export const restoreTrashedSampleLabelToAnalyticalBalance = wrapCommand("restore_trashed_sample_label_to_analytical_balance");
 export const restoreTrashedSampleLabelToWorkbenchTool = wrapCommand("restore_trashed_sample_label_to_workbench_tool");
 export const subscribeToExperimentStream = vi.fn((experimentId: string, handlers: {
   onError?: (error: Error) => void;

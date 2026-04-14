@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Generic, Protocol, TypeAlias, TypeVar
 
-from app.domain.models import EntityOrigin, Experiment, PowderFraction, ProduceLot, new_id
+from app.domain.models import EntityOrigin, Experiment, ProduceLot
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.helpers.lookups import (
     find_produce_basket_lot,
@@ -11,6 +11,7 @@ from app.services.helpers.lookups import (
     find_workbench_slot,
     find_workspace_widget,
 )
+from app.services.helpers.produce_canonical import sync_canonical_produce_model
 
 EntityT = TypeVar("EntityT")
 SourceEntityT = TypeVar("SourceEntityT")
@@ -61,6 +62,7 @@ class TransferService(Generic[EntityT]):
         target.validate(experiment)
         removal = source.remove(experiment)
         placement = target.place(experiment, removal.entity)
+        sync_canonical_produce_model(experiment)
         return TransferResult(
             entity=removal.entity,
             source_label=removal.source_label,
@@ -227,16 +229,6 @@ class WorkbenchProduceLotTarget:
             )
 
         slot.tool.produce_lots.append(entity)
-        if entity.cut_state == "ground":
-            slot.tool.powder_fractions.append(
-                PowderFraction(
-                    id=new_id("powder"),
-                    source_lot_id=entity.id,
-                    mass_g=entity.total_mass_g,
-                    impurity_mass_mg=round(entity.total_mass_g * slot.tool.contact_impurity_mg_per_g, 6),
-                    exposure_container_ids=[slot.tool.id],
-                )
-            )
         return TransferPlacement(
             target_label=slot.tool.label,
             location_label=f"{slot.tool.label} on {slot.label}",

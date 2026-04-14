@@ -3,16 +3,26 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from app.domain.models import Experiment, PowderFraction, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
+from app.domain.models import Experiment, TrashToolEntry, WorkbenchTool, WorkspaceWidget, new_id
 from app.domain.rules import can_tool_be_sealed
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
+    build_manual_label,
+    find_tool_label,
+    find_trash_sample_label,
     find_rack_slot,
     find_trash_tool,
     find_workbench_slot,
     find_workspace_widget,
 )
-from app.services.helpers.workbench import build_workbench_tool
+from app.services.helpers.produce_canonical import (
+    get_spatula_total_produce_mass_g,
+    get_tool_total_powder_mass_g,
+    get_tool_total_produce_mass_g,
+    pour_spatula_into_tool,
+    split_tool_powder_into_spatula,
+)
+from app.services.helpers.workbench import build_workbench_tool, pop_tool_label
 from app.services.physical_simulation_service import PhysicalSimulationService
 
 _ANALYTICAL_BALANCE_MAX_G = 220.0
@@ -73,6 +83,23 @@ class MoveAnalyticalBalanceToolToRackRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveWorkbenchSampleLabelToAnalyticalBalanceRequest:
+    source_slot_id: str
+    label_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreTrashedSampleLabelToAnalyticalBalanceRequest:
+    trash_sample_label_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class UpdateAnalyticalBalanceToolSampleLabelTextRequest:
+    label_id: str
+    sample_label_text: str
+
+
+@dataclass(frozen=True, slots=True)
 class PourSpatulaIntoAnalyticalBalanceToolRequest:
     delta_mass_g: float
 
@@ -102,11 +129,10 @@ class AnalyticalBalanceServiceBase(WriteDomainService[object]):
             raise ValueError("The analytical balance cannot accept the cutting board (too heavy).")
 
     def _calculate_tool_mass_g(self, tool: WorkbenchTool) -> float:
-        produce_mass_g = sum(lot.total_mass_g for lot in tool.produce_lots)
+        produce_mass_g = get_tool_total_produce_mass_g(tool)
         liquid_mass_g = sum(liquid.volume_ml for liquid in tool.liquids)
-        powder_mass_g = sum(f.mass_g for f in tool.powder_fractions)
         return round(
-            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0) + produce_mass_g + liquid_mass_g + powder_mass_g,
+            _TARE_BY_TOOL_TYPE_G.get(tool.tool_type, 0.0) + produce_mass_g + liquid_mass_g,
             3,
         )
 
@@ -247,14 +273,64 @@ class CloseAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         experiment.audit_log.append(f"{tool.label} sealed on Analytical balance.")
 
 
+class ApplySampleLabelToAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
+        tool = self._require_balance_tool(experiment)
+        tool.labels.append(build_manual_label())
+        experiment.audit_log.append(f"Manual label applied to {tool.label} on Analytical balance.")
+
+
+class MoveWorkbenchSampleLabelToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: MoveWorkbenchSampleLabelToAnalyticalBalanceRequest) -> None:
+        source_slot = find_workbench_slot(experiment.workbench, request.source_slot_id)
+        if source_slot.tool is None:
+            raise ValueError(f"Place a tool on {source_slot.label} before moving its sample label.")
+
+        source_tool = source_slot.tool
+        target_tool = self._require_balance_tool(experiment)
+        label = pop_tool_label(source_tool, request.label_id)
+        target_tool.labels.append(label)
+        experiment.audit_log.append(
+            f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Analytical balance."
+        )
+
+
+class RestoreTrashedSampleLabelToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: RestoreTrashedSampleLabelToAnalyticalBalanceRequest) -> None:
+        trashed_sample_label = find_trash_sample_label(experiment.trash, request.trash_sample_label_id)
+        target_tool = self._require_balance_tool(experiment)
+        target_tool.labels.append(trashed_sample_label.label)
+        experiment.trash.sample_labels = [
+            entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id
+        ]
+        experiment.audit_log.append(f"Label restored from trash to {target_tool.label} on Analytical balance.")
+
+
+class UpdateAnalyticalBalanceToolSampleLabelTextService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: UpdateAnalyticalBalanceToolSampleLabelTextRequest) -> None:
+        tool = self._require_balance_tool(experiment)
+        label = find_tool_label(tool, request.label_id)
+        if label.label_kind != "manual":
+            raise ValueError("Only manual labels can be edited.")
+
+        next_text = request.sample_label_text.strip()
+        label.text = next_text
+        if next_text:
+            experiment.audit_log.append(f"Sample label updated to {next_text} on {tool.label} on Analytical balance.")
+            return
+
+        experiment.audit_log.append(f"Sample label cleared on {tool.label} on Analytical balance.")
+
+
 class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
     def _run(self, experiment: Experiment, request: PourSpatulaIntoAnalyticalBalanceToolRequest) -> None:
+        widget = self._find_analytical_balance_widget(experiment)
         tool = self._require_balance_tool(experiment)
         if tool.tool_type not in {"sample_vial", "centrifuge_tube"}:
             raise ValueError("The spatula can only pour into an autosampler vial or centrifuge tube.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before adding powder.")
-        total_loaded_g = sum(f.mass_g for f in experiment.spatula.loaded_fractions)
+        total_loaded_g = get_spatula_total_produce_mass_g(experiment.spatula)
         if not experiment.spatula.is_loaded or total_loaded_g <= 0:
             raise ValueError("Load the spatula before pouring.")
 
@@ -263,19 +339,14 @@ class PourSpatulaIntoAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
             return
 
         transferred_mass_g = min(requested_mass_g, total_loaded_g)
-        transfer_ratio = transferred_mass_g / total_loaded_g
-        from app.services.domain_services.workbench import _pour_fractions_proportional
-
-        _pour_fractions_proportional(
-            experiment.spatula.loaded_fractions,
-            tool.powder_fractions,
-            transfer_ratio,
+        pour_spatula_into_tool(
+            experiment.spatula,
             tool,
+            transferred_mass_g=transferred_mass_g,
+            material_states=experiment.produce_material_states,
+            location_kind="workspace_widget_tool",
+            location_id=widget.id,
         )
-        experiment.spatula.loaded_fractions = [f for f in experiment.spatula.loaded_fractions if f.mass_g > 0]
-        if not experiment.spatula.loaded_fractions:
-            experiment.spatula.is_loaded = False
-            experiment.spatula.source_tool_id = None
 
         experiment.audit_log.append(f"Powder transferred into {tool.label} on Analytical balance.")
 
@@ -289,10 +360,10 @@ class LoadSpatulaFromAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
             raise ValueError("The spatula cannot be loaded from this container.")
         if tool.is_sealed:
             raise ValueError(f"Open {tool.label} before loading the spatula.")
-        if experiment.spatula.is_loaded and sum(f.mass_g for f in experiment.spatula.loaded_fractions) > 0:
+        if experiment.spatula.is_loaded and get_spatula_total_produce_mass_g(experiment.spatula) > 0:
             raise ValueError("Empty the spatula before loading it again.")
 
-        total_powder_g = sum(f.mass_g for f in tool.powder_fractions)
+        total_powder_g = get_tool_total_powder_mass_g(tool, material_states=experiment.produce_material_states)
         if total_powder_g <= 0:
             raise ValueError(f"{tool.label} is empty.")
 
@@ -302,20 +373,12 @@ class LoadSpatulaFromAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         if loaded_mass_g <= 0:
             raise ValueError(f"{tool.label} is empty.")
 
-        take_ratio = loaded_mass_g / total_powder_g
-        loaded_fractions: list[PowderFraction] = []
-        from app.services.domain_services.workbench import _split_fraction
-
-        for fraction in tool.powder_fractions:
-            extracted_fraction = _split_fraction(fraction, take_ratio)
-            if extracted_fraction is None:
-                continue
-            loaded_fractions.append(extracted_fraction)
-        tool.powder_fractions = [f for f in tool.powder_fractions if f.mass_g > 0]
-
-        experiment.spatula.is_loaded = True
-        experiment.spatula.loaded_fractions = loaded_fractions
-        experiment.spatula.source_tool_id = tool.id
+        split_tool_powder_into_spatula(
+            tool,
+            experiment.spatula,
+            loaded_mass_g=loaded_mass_g,
+            material_states=experiment.produce_material_states,
+        )
         experiment.audit_log.append(f"Spatula loaded from {tool.label} on Analytical balance.")
 
 

@@ -15,8 +15,10 @@ export type AddProduceLotToWorkbenchToolPayload = {
 };
 
 export type ApplyPrintedLimsLabelPayload = { slot_id: string };
+export type ApplyPrintedLimsLabelToAnalyticalBalanceToolPayload = Record<string, never>;
 
 export type ApplySampleLabelToWorkbenchToolPayload = { slot_id: string };
+export type ApplySampleLabelToAnalyticalBalanceToolPayload = Record<string, never>;
 
 export type CloseWorkbenchToolPayload = { slot_id: string };
 
@@ -237,6 +239,20 @@ export type PlaceToolOnAnalyticalBalancePayload = { tool_id: string };
 
 export type RestoreTrashedToolToAnalyticalBalancePayload = {
   trash_tool_id: string;
+};
+
+export type MoveWorkbenchSampleLabelToAnalyticalBalancePayload = {
+  source_slot_id: string;
+  label_id: string;
+};
+
+export type RestoreTrashedSampleLabelToAnalyticalBalancePayload = {
+  trash_sample_label_id: string;
+};
+
+export type UpdateAnalyticalBalanceToolSampleLabelTextPayload = {
+  label_id: string;
+  sample_label_text: string;
 };
 
 // ── Rack ─────────────────────────────────────────────────────────────────────

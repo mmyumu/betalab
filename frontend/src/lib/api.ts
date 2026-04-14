@@ -8,7 +8,8 @@ import type {
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   LimsReception,
-  PowderFraction,
+  ProduceFraction,
+  ProduceMaterialState,
   PrintedLabelTicket,
   RackSlot,
   SpatulaState,
@@ -929,6 +930,17 @@ export async function applyPrintedLimsLabelToGrossBalanceBag(
   });
 }
 
+export async function applyPrintedLimsLabelToAnalyticalBalanceTool(
+  experimentId: string,
+  payload?: MutationPayload,
+): Promise<Experiment> {
+  void payload;
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/lims/apply-label-to-analytical-balance-tool`,
+  });
+}
+
 export async function createDebugProduceLotOnWorkbench(
   experimentId: string,
   payload: MutationPayload,
@@ -1126,6 +1138,17 @@ export async function applySampleLabelToWorkbenchTool(experimentId: string, payl
   });
 }
 
+export async function applySampleLabelToAnalyticalBalanceTool(
+  experimentId: string,
+  payload?: MutationPayload,
+): Promise<Experiment> {
+  void payload;
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/sample-label`,
+  });
+}
+
 export async function closeWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1192,6 +1215,18 @@ export async function updateWorkbenchToolSampleLabelText(experimentId: string, p
   });
 }
 
+export async function updateAnalyticalBalanceToolSampleLabelText(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "PATCH",
+    path: `/experiments/${experimentId}/analytical-balance/sample-labels/${requireString(body, "label_id")}`,
+    body: { sample_label_text: requireString(body, "sample_label_text") },
+  });
+}
+
 export async function moveSampleLabelBetweenWorkbenchTools(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1218,9 +1253,39 @@ export async function restoreTrashedSampleLabelToWorkbenchTool(experimentId: str
   });
 }
 
+export async function moveWorkbenchSampleLabelToAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/sample-labels/${requireString(body, "label_id")}/move-from-workbench-tool`,
+    body: { slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
+export async function restoreTrashedSampleLabelToAnalyticalBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/restore-trash-sample-label/${requireString(body, "trash_sample_label_id")}`,
+  });
+}
+
 function normalizeExperiment(experiment: Experiment): Experiment {
   const rawTrash = experiment.trash as Experiment["trash"] & Record<string, unknown>;
   const rawWorkspace = experiment.workspace as Experiment["workspace"] & Record<string, unknown>;
+  const materialStates = ((
+    (experiment as Experiment & Record<string, unknown>).produceMaterialStates ??
+    (experiment as Experiment & Record<string, unknown>).produce_material_states ??
+    []
+  ) as unknown[]).map((state) =>
+    normalizeProduceMaterialState(state as ProduceMaterialState & Record<string, unknown>),
+  );
 
   return {
     ...experiment,
@@ -1235,10 +1300,10 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       0,
     ),
     workbench: {
-      slots: experiment.workbench.slots.map(normalizeBenchSlot),
+      slots: experiment.workbench.slots.map((slot) => normalizeBenchSlot(slot, materialStates)),
     },
     rack: {
-      slots: experiment.rack.slots.map(normalizeRackSlot),
+      slots: experiment.rack.slots.map((slot) => normalizeRackSlot(slot, materialStates)),
     },
     trash: {
       produceLots: (
@@ -1255,7 +1320,7 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       ).map(
           normalizeTrashSampleLabel,
         ),
-      tools: experiment.trash.tools.map(normalizeTrashTool),
+      tools: experiment.trash.tools.map((entry) => normalizeTrashTool(entry, materialStates)),
     },
     workspace: {
       produceBasketLots: (
@@ -1265,7 +1330,7 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       ).map(
           normalizeProduceLot,
         ),
-      widgets: experiment.workspace.widgets.map(normalizeWorkspaceWidget),
+      widgets: experiment.workspace.widgets.map((widget) => normalizeWorkspaceWidget(widget, materialStates)),
     },
     limsReception: normalizeLimsReception(
       (
@@ -1280,11 +1345,14 @@ function normalizeExperiment(experiment: Experiment): Experiment {
     ).map((entry) =>
       normalizeLimsReception(entry as LimsReception & Record<string, unknown>),
     ),
+    produceMaterialStates: materialStates,
     basketTool: (() => {
       const rawBasketTool =
         (experiment as Experiment & Record<string, unknown>).basketTool ??
         (experiment as Experiment & Record<string, unknown>).basket_tool;
-      return rawBasketTool ? normalizeBenchTool(rawBasketTool as BenchToolInstance & Record<string, unknown>) : null;
+      return rawBasketTool
+        ? normalizeBenchTool(rawBasketTool as BenchToolInstance & Record<string, unknown>, materialStates)
+        : null;
     })(),
     spatula: normalizeSpatulaState(
       ((experiment as Experiment & Record<string, unknown>).spatula ?? {}) as
@@ -1301,7 +1369,7 @@ function normalizeExperiment(experiment: Experiment): Experiment {
   };
 }
 
-function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
+function normalizeBenchSlot(slot: BenchSlot, materialStates: ProduceMaterialState[] = []): BenchSlot {
   const rawSlot = slot as BenchSlot & Record<string, unknown>;
   const rawSurfaceProduceLots = (
     slot.surfaceProduceLots ??
@@ -1315,12 +1383,19 @@ function normalizeBenchSlot(slot: BenchSlot): BenchSlot {
     surfaceProduceLots: rawSurfaceProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
-    tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
+    tool: slot.tool
+      ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>, materialStates)
+      : null,
   };
 }
 
-function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): BenchToolInstance {
+function normalizeBenchTool(
+  tool: BenchToolInstance & Record<string, unknown>,
+  materialStates: ProduceMaterialState[],
+): BenchToolInstance {
   const rawProduceLots = (tool.produceLots ?? tool.produce_lots ?? []) as unknown[];
+  const produceFractions = normalizeProduceFractions(tool.produceFractions ?? tool.produce_fractions);
+  const powderMassG = getGroundProduceMassG(produceFractions, materialStates);
 
   return {
     id: tool.id,
@@ -1378,34 +1453,96 @@ function normalizeBenchTool(tool: BenchToolInstance & Record<string, unknown>): 
     produceLots: rawProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
+    produceFractions,
+    powderMassG,
     liquids:
       (tool.liquids as BenchLiquidPortion[] | undefined)?.map((liquid) =>
         normalizeBenchLiquid(liquid as BenchLiquidPortion & Record<string, unknown>),
       ) ?? [],
-    powderFractions: normalizePowderFractions(tool.powderFractions ?? tool.powder_fractions),
   };
 }
 
-function normalizePowderFractions(raw: unknown): PowderFraction[] {
+function normalizeProduceMaterialState(
+  state: ProduceMaterialState & Record<string, unknown>,
+): ProduceMaterialState {
+  return {
+    id: String(state.id ?? ""),
+    produceLotId: String(state.produceLotId ?? state.produce_lot_id ?? ""),
+    cutState: String(state.cutState ?? state.cut_state ?? "whole") as ProduceMaterialState["cutState"],
+    temperatureC: Number(state.temperatureC ?? state.temperature_c ?? 20),
+    grindQualityLabel:
+      state.grindQualityLabel !== undefined
+        ? (state.grindQualityLabel as string | null)
+        : state.grind_quality_label !== undefined
+          ? (state.grind_quality_label as string | null)
+          : null,
+    homogeneityScore:
+      state.homogeneityScore !== undefined && state.homogeneityScore !== null
+        ? Number(state.homogeneityScore)
+        : state.homogeneity_score !== undefined && state.homogeneity_score !== null
+          ? Number(state.homogeneity_score)
+          : null,
+    residualCo2MassG: Number(state.residualCo2MassG ?? state.residual_co2_mass_g ?? 0),
+  };
+}
+
+function normalizeProduceFractions(raw: unknown): ProduceFraction[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((f: Record<string, unknown>) => {
-    const exposureIdsRaw = f.exposureContainerIds ?? f.exposure_container_ids;
+  return raw.map((fraction: Record<string, unknown>) => {
+    const exposureIdsRaw = fraction.exposureContainerIds ?? fraction.exposure_container_ids;
     return {
-      id: String(f.id ?? ""),
-      sourceLotId: String(f.sourceLotId ?? f.source_lot_id ?? ""),
-      massG: Number(f.massG ?? f.mass_g ?? 0),
-      impurityMassMg: Number(f.impurityMassMg ?? f.impurity_mass_mg ?? 0),
+      id: String(fraction.id ?? ""),
+      produceLotId: String(fraction.produceLotId ?? fraction.produce_lot_id ?? ""),
+      produceMaterialStateId: String(
+        fraction.produceMaterialStateId ?? fraction.produce_material_state_id ?? "",
+      ),
+      massG: Number(fraction.massG ?? fraction.mass_g ?? 0),
+      unitCount:
+        fraction.unitCount !== undefined && fraction.unitCount !== null
+          ? Number(fraction.unitCount)
+          : fraction.unit_count !== undefined && fraction.unit_count !== null
+            ? Number(fraction.unit_count)
+            : null,
+      isContaminated: Boolean(fraction.isContaminated ?? fraction.is_contaminated ?? false),
+      impurityMassMg: Number(fraction.impurityMassMg ?? fraction.impurity_mass_mg ?? 0),
       exposureContainerIds: Array.isArray(exposureIdsRaw)
         ? exposureIdsRaw.map((id: unknown) => String(id))
         : [],
+      locationKind:
+        fraction.locationKind !== undefined
+          ? (fraction.locationKind as string | null)
+          : fraction.location_kind !== undefined
+            ? (fraction.location_kind as string | null)
+            : null,
+      locationId:
+        fraction.locationId !== undefined
+          ? (fraction.locationId as string | null)
+          : fraction.location_id !== undefined
+            ? (fraction.location_id as string | null)
+            : null,
+      containerId:
+        fraction.containerId !== undefined
+          ? (fraction.containerId as string | null)
+          : fraction.container_id !== undefined
+            ? (fraction.container_id as string | null)
+            : null,
+      containerLabel:
+        fraction.containerLabel !== undefined
+          ? (fraction.containerLabel as string | null)
+          : fraction.container_label !== undefined
+            ? (fraction.container_label as string | null)
+            : null,
     };
   });
 }
 
-function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>): SpatulaState {
+function normalizeSpatulaState(
+  spatula: SpatulaState & Record<string, unknown>,
+): SpatulaState {
+  const produceFractions = normalizeProduceFractions(spatula.produceFractions ?? spatula.produce_fractions);
   return {
     isLoaded: Boolean(spatula.isLoaded ?? spatula.is_loaded ?? false),
-    loadedFractions: normalizePowderFractions(spatula.loadedFractions ?? spatula.loaded_fractions),
+    produceFractions,
     sourceToolId:
       spatula.sourceToolId !== undefined
         ? (spatula.sourceToolId as string | null)
@@ -1413,6 +1550,18 @@ function normalizeSpatulaState(spatula: SpatulaState & Record<string, unknown>):
           ? (spatula.source_tool_id as string | null)
           : null,
   };
+}
+
+function getGroundProduceMassG(
+  produceFractions: ProduceFraction[],
+  materialStates: ProduceMaterialState[],
+): number {
+  const statesById = new Map(materialStates.map((state) => [state.id, state]));
+  return produceFractions.reduce(
+    (sum, fraction) =>
+      statesById.get(fraction.produceMaterialStateId)?.cutState === "ground" ? sum + fraction.massG : sum,
+    0,
+  );
 }
 
 function normalizeAnalyticalBalanceState(
@@ -1514,11 +1663,13 @@ function normalizeLimsReception(
   };
 }
 
-function normalizeRackSlot(slot: RackSlot): RackSlot {
+function normalizeRackSlot(slot: RackSlot, materialStates: ProduceMaterialState[] = []): RackSlot {
   return {
     id: slot.id,
     label: slot.label,
-    tool: slot.tool ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>) : null,
+    tool: slot.tool
+      ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>, materialStates)
+      : null,
   };
 }
 
@@ -1532,11 +1683,14 @@ function normalizeBenchLiquid(liquid: BenchLiquidPortion & Record<string, unknow
   };
 }
 
-function normalizeTrashTool(entry: TrashToolEntry & Record<string, unknown>): TrashToolEntry {
+function normalizeTrashTool(
+  entry: TrashToolEntry & Record<string, unknown>,
+  materialStates: ProduceMaterialState[] = [],
+): TrashToolEntry {
   return {
     id: entry.id,
     originLabel: String(entry.originLabel ?? entry.origin_label),
-    tool: normalizeBenchTool(entry.tool as BenchToolInstance & Record<string, unknown>),
+    tool: normalizeBenchTool(entry.tool as BenchToolInstance & Record<string, unknown>, materialStates),
   };
 }
 
@@ -1569,6 +1723,7 @@ function normalizeTrashSampleLabel(entry: TrashSampleLabelEntry & Record<string,
 
 function normalizeWorkspaceWidget(
   widget: ExperimentWorkspaceWidget & Record<string, unknown>,
+  materialStates: ProduceMaterialState[] = [],
 ): ExperimentWorkspaceWidget {
   const legacyX = Number(widget.x ?? 0);
   const legacyY = Number(widget.y ?? 0);
@@ -1597,7 +1752,12 @@ function normalizeWorkspaceWidget(
     y: legacyY,
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
-    tool: rawTool === undefined ? undefined : rawTool === null ? null : normalizeBenchTool(rawTool),
+    tool:
+      rawTool === undefined
+        ? undefined
+        : rawTool === null
+          ? null
+          : normalizeBenchTool(rawTool, materialStates),
     produceLots: rawProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),

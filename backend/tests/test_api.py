@@ -14,7 +14,7 @@ from app.api.experiment_routes import trash as experiment_routes_trash
 from app.api.experiment_routes import workbench as experiment_routes_workbench
 from app.api.experiment_routes import workspace as experiment_routes_workspace
 from app.core.config import Settings, settings
-from app.domain.models import PowderFraction
+from app.domain.models import ProduceFraction, ProduceMaterialState
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
@@ -251,6 +251,67 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
     assert moved_to_jar.json()["audit_log"][-1] == ("Orchard apple lot moved from Cryogenic grinder to Wide-neck HDPE jar.")
 
 
+def test_analytical_balance_sample_label_routes_work_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        placed = client.post(
+            f"/experiments/{experiment_id}/analytical-balance/place-tool",
+            json={"tool_id": "centrifuge_tube_50ml"},
+        )
+        applied = client.post(f"/experiments/{experiment_id}/analytical-balance/sample-label")
+
+        assert placed.status_code == 200
+        assert applied.status_code == 200
+        tool = _find_widget(applied.json(), "analytical_balance")["tool"]
+        assert tool is not None
+        assert len(tool["labels"]) == 1
+
+        label_id = tool["labels"][0]["id"]
+        updated = client.patch(
+            f"/experiments/{experiment_id}/analytical-balance/sample-labels/{label_id}",
+            json={"sample_label_text": "LOT-2026-041"},
+        )
+
+    assert updated.status_code == 200
+    updated_tool = _find_widget(updated.json(), "analytical_balance")["tool"]
+    assert updated_tool is not None
+    assert updated_tool["labels"][0]["text"] == "LOT-2026-041"
+
+
+def test_printed_lims_label_can_apply_to_analytical_balance_tool_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Verger Saint-Martin",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": 2486.0,
+                "measured_sample_mass_g": 10.0,
+            },
+        )
+        printed = client.post(f"/experiments/{experiment_id}/lims/print-label")
+        placed = client.post(
+            f"/experiments/{experiment_id}/analytical-balance/place-tool",
+            json={"tool_id": "centrifuge_tube_50ml"},
+        )
+        applied = client.post(
+            f"/experiments/{experiment_id}/lims/apply-label-to-analytical-balance-tool"
+        )
+
+    assert printed.status_code == 200
+    assert placed.status_code == 200
+    assert applied.status_code == 200
+    updated_tool = _find_widget(applied.json(), "analytical_balance")["tool"]
+    assert updated_tool is not None
+    assert updated_tool["labels"][0]["label_kind"] == "lims"
+    assert updated_tool["labels"][0]["sample_code"].startswith("APP-2026-")
+    assert applied.json()["lims_reception"]["printed_label_ticket"] is None
+
+
 def test_lims_reception_route_allows_missing_gross_weight_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)
@@ -376,7 +437,19 @@ def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        analytical_balance.tool.powder_fractions = [PowderFraction(id="test-frac", source_lot_id="test-lot", mass_g=10.124)]
+        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+        analytical_balance.tool.produce_fractions = [
+            ProduceFraction(
+                id="test-frac",
+                produce_lot_id="test-lot",
+                produce_material_state_id="state_1",
+                mass_g=10.124,
+                location_kind="workspace_widget_tool",
+                location_id="analytical_balance",
+                container_id=analytical_balance.tool.id,
+                container_label=analytical_balance.tool.label,
+            )
+        ]
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
 
@@ -392,7 +465,19 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        analytical_balance.tool.powder_fractions = [PowderFraction(id="test-frac2", source_lot_id="test-lot", mass_g=10.5)]
+        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+        analytical_balance.tool.produce_fractions = [
+            ProduceFraction(
+                id="test-frac2",
+                produce_lot_id="test-lot",
+                produce_material_state_id="state_1",
+                mass_g=10.5,
+                location_kind="workspace_widget_tool",
+                location_id="analytical_balance",
+                container_id=analytical_balance.tool.id,
+                container_label=analytical_balance.tool.label,
+            )
+        ]
         experiment.analytical_balance.tare_mass_g = 12.0
         experiment_service._persist_mutation_and_to_schema(experiment)
         recorded = client.post(f"/experiments/{experiment_id}/analytical-balance/record-sample-mass")

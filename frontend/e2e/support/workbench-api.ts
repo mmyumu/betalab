@@ -185,7 +185,7 @@ function makeTool(toolId: string): BenchToolInstance {
     id: `bench_tool_${toolId}`,
     contactImpurityMgPerG: 0,
     ...baseTool,
-    powderFractions: [],
+    produceFractions: [],
   };
 }
 
@@ -211,7 +211,7 @@ function makeExperiment(): Experiment {
     },
     rack: { slots: makeRackSlots() },
     snapshot_version: 1,
-    spatula: { isLoaded: false, loadedFractions: [], sourceToolId: null },
+    spatula: { isLoaded: false, produceFractions: [], sourceToolId: null },
     status: "preparing",
     trash: { produceLots: [], sampleLabels: [], tools: [] },
     workbench: { slots: makeSlots() },

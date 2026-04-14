@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from app.domain.models import ProduceLot, WorkbenchTool, new_id
+from app.services.helpers.produce_canonical import get_tool_total_produce_mass_g
 from app.services.helpers.workbench import sample_tool_contact_impurity_mg_per_g
 
 SAMPLE_BAG_TARE_MASS_G = 36.0
@@ -119,5 +120,5 @@ def resolve_received_bag_gross_mass_g(received_bag: WorkbenchTool | None) -> flo
     if received_bag is None or received_bag.tool_type != "sample_bag":
         return None
 
-    produce_mass_g = sum(produce_lot.total_mass_g for produce_lot in received_bag.produce_lots)
+    produce_mass_g = get_tool_total_produce_mass_g(received_bag)
     return round(produce_mass_g + SAMPLE_BAG_TARE_MASS_G, 1)

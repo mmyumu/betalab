@@ -70,7 +70,7 @@ export function BenchToolCard({
   const produceLots = tool.produceLots ?? [];
   const totalVolumeMl = tool.liquids.reduce((total, liquid) => total + liquid.volume_ml, 0);
   const fillRatio = tool.capacity_ml > 0 ? Math.min(totalVolumeMl / tool.capacity_ml, 1) : 0;
-  const powderMassG = (tool.powderFractions ?? []).reduce((sum, f) => sum + f.massG, 0);
+  const powderMassG = tool.powderMassG ?? 0;
   const liquidVisualState = getContainerLiquidVisualState(tool.liquids, tool.accent);
   const liquidSegments = liquidVisualState.segments;
   const isSampleBag = tool.toolType === "sample_bag";
@@ -120,6 +120,8 @@ export function BenchToolCard({
           : "border-slate-200"
       } ${className ?? ""}`.trim()}
       data-drop-highlighted={dataDropHighlighted ? "true" : "false"}
+      onDragOverCapture={onDragOver}
+      onDropCapture={onDrop}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
@@ -130,7 +132,11 @@ export function BenchToolCard({
           draggable={draggable}
           onClick={onClick}
           onDragEnd={onDragEnd}
+          onDragOverCapture={onDragOver}
+          onDragOver={onDragOver}
           onDragStart={onDragStart}
+          onDropCapture={onDrop}
+          onDrop={onDrop}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
         >
@@ -165,6 +171,8 @@ export function BenchToolCard({
               className="shrink-0 rounded-xl"
               data-testid={`bench-tool-illustration-${tool.id}`}
               draggable={false}
+              onDragOverCapture={onDragOver}
+              onDropCapture={onDrop}
               onClick={onToolIllustrationClick}
               type="button"
             >

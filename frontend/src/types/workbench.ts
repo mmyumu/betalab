@@ -326,22 +326,40 @@ export type BenchToolInstance = {
   fieldLabelText?: string | null;
   labels?: BenchLabel[];
   produceLots?: ExperimentProduceLot[];
+  produceFractions?: ProduceFraction[];
+  powderMassG?: number;
   liquids: BenchLiquidPortion[];
-  powderFractions: PowderFraction[];
-};
-
-export type PowderFraction = {
-  id: string;
-  sourceLotId: string;
-  massG: number;
-  impurityMassMg?: number;
-  exposureContainerIds?: string[];
 };
 
 export type SpatulaState = {
   isLoaded: boolean;
-  loadedFractions: PowderFraction[];
+  produceFractions?: ProduceFraction[];
   sourceToolId: string | null;
+};
+
+export type ProduceMaterialState = {
+  id: string;
+  produceLotId: string;
+  cutState?: ProduceCutState;
+  temperatureC?: number;
+  grindQualityLabel?: string | null;
+  homogeneityScore?: number | null;
+  residualCo2MassG?: number;
+};
+
+export type ProduceFraction = {
+  id: string;
+  produceLotId: string;
+  produceMaterialStateId: string;
+  massG: number;
+  unitCount?: number | null;
+  isContaminated?: boolean;
+  impurityMassMg?: number;
+  exposureContainerIds?: string[];
+  locationKind?: string | null;
+  locationId?: string | null;
+  containerId?: string | null;
+  containerLabel?: string | null;
 };
 
 export type BenchSlot = {

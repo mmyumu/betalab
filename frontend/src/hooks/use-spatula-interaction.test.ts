@@ -7,7 +7,7 @@ import type { BenchToolInstance, SpatulaState } from "@/types/workbench";
 function makeSpatulaState(overrides: Partial<SpatulaState> = {}): SpatulaState {
   return {
     isLoaded: false,
-    loadedFractions: [],
+    produceFractions: [],
     sourceToolId: null,
     ...overrides,
   };
@@ -24,8 +24,8 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     capacity_ml: 2,
     sampleLabelText: null,
     produceLots: [],
+    produceFractions: [],
     liquids: [],
-    powderFractions: [],
     ...overrides,
   };
 }
@@ -60,7 +60,8 @@ describe("useSpatulaInteraction", () => {
     const onPourIntoTool = vi.fn();
     const onPourIntoAnalyticalBalanceTool = vi.fn();
     const analyticalTool = makeTool({
-      powderFractions: [{ id: "powder_tool_1", sourceLotId: "lot_1", massG: 0.18 }],
+      powderMassG: 0.18,
+      produceFractions: [{ id: "powder_tool_1", produceLotId: "lot_1", produceMaterialStateId: "state_ground", massG: 0.18 }],
     });
 
     const { result, rerender } = renderHook(
@@ -78,7 +79,7 @@ describe("useSpatulaInteraction", () => {
         initialProps: {
           spatula: makeSpatulaState({
             isLoaded: true,
-            loadedFractions: [{ id: "powder_spatula_1", sourceLotId: "lot_1", massG: 0.05 }],
+            produceFractions: [{ id: "powder_spatula_1", produceLotId: "lot_1", produceMaterialStateId: "state_ground", massG: 0.05 }],
             sourceToolId: "bench_tool_jar",
           }),
         },
@@ -120,7 +121,8 @@ describe("useSpatulaInteraction", () => {
       subtitle: "Bulk powder storage",
       toolType: "storage_jar",
       capacity_ml: 2000,
-      powderFractions: [{ id: "powder_tool_1", sourceLotId: "lot_1", massG: 2.5 }],
+      powderMassG: 2.5,
+      produceFractions: [{ id: "powder_tool_1", produceLotId: "lot_1", produceMaterialStateId: "state_ground", massG: 2.5 }],
     });
 
     const { result, rerender } = renderHook(
@@ -138,7 +140,7 @@ describe("useSpatulaInteraction", () => {
         initialProps: {
           spatula: makeSpatulaState({
             isLoaded: true,
-            loadedFractions: [{ id: "powder_spatula_1", sourceLotId: "lot_1", massG: 0.05 }],
+            produceFractions: [{ id: "powder_spatula_1", produceLotId: "lot_1", produceMaterialStateId: "state_ground", massG: 0.05 }],
             sourceToolId: "bench_tool_jar",
           }),
         },

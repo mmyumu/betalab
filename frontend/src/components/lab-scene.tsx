@@ -72,7 +72,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   const spatula =
     state.status === "ready"
       ? state.experiment.spatula
-      : { isLoaded: false, loadedFractions: [], sourceToolId: null };
+      : { isLoaded: false, produceFractions: [], sourceToolId: null };
 
   const {
     activeActionId,
@@ -203,6 +203,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     dndDisabledByAction,
     dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
     experimentApi,
+    hasPrintedLabelTicket,
   });
 
   const trashDnd = useTrashDnd({

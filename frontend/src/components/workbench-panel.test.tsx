@@ -190,8 +190,11 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "centrifuge_tube",
               capacity_ml: 50,
+              powderMassG: 1.4,
               liquids: [],
-              powderFractions: [{ id: "powder_1", sourceLotId: "lot_1", massG: 1.4 }],
+              produceFractions: [
+                { id: "powder_1", produceLotId: "lot_1", produceMaterialStateId: "state_ground_1", massG: 1.4 },
+              ],
             },
           },
           {
@@ -205,8 +208,11 @@ describe("WorkbenchPanel", () => {
               accent: "sky",
               toolType: "cleanup_tube",
               capacity_ml: 15,
+              powderMassG: 0.8,
               liquids: [],
-              powderFractions: [{ id: "powder_2", sourceLotId: "lot_2", massG: 0.8 }],
+              produceFractions: [
+                { id: "powder_2", produceLotId: "lot_2", produceMaterialStateId: "state_ground_2", massG: 0.8 },
+              ],
             },
           },
         ]}

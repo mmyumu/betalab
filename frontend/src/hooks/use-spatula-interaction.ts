@@ -228,7 +228,7 @@ export function useSpatulaInteraction({
         return;
       }
 
-      const toolHasPowder = (tool.powderFractions ?? []).reduce((sum, f) => sum + f.massG, 0) > 0;
+      const toolHasPowder = (tool.powderMassG ?? 0) > 0;
 
       if (!spatula.isLoaded) {
         if (toolHasPowder) {
