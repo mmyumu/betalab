@@ -187,7 +187,7 @@ export function TrashWidget({
             key={trashSampleLabel.id}
             onDragEnd={dndDisabled ? undefined : onItemDragEnd}
             onDragStart={
-              dndDisabled
+              dndDisabled || trashSampleLabel.label?.isDraggable === false
                 ? undefined
                 : (dataTransfer) => onTrashSampleLabelDragStart(trashSampleLabel, dataTransfer)
             }

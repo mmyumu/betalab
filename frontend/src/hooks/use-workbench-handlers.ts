@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DropDraft } from "@/hooks/use-drop-draft";
+import { canResolveActiveLabelDragOnTool } from "@/lib/label-drop-resolver";
 import { labLiquidCatalog } from "@/lib/lab-workflow-catalog";
 import {
   canToolAcceptLiquids,
@@ -221,9 +222,13 @@ export function useWorkbenchHandlers({
     if (dndDisabledByAction || !activeDragItem) {
       return false;
     }
+    const slotDropTargetTypes = slot.dropTargetTypes ?? [];
 
     if (activeDragItem.entityKind === "tool") {
-      if (!activeDropTargets.includes("workbench_slot")) {
+      if (
+        !slotDropTargetTypes.includes("workbench_slot") ||
+        !activeDropTargets.includes("workbench_slot")
+      ) {
         return false;
       }
       if (activeDragItem.sourceKind === "workbench") {
@@ -246,7 +251,10 @@ export function useWorkbenchHandlers({
     }
 
     if (activeDragItem.entityKind === "liquid") {
-      if (!activeDropTargets.includes("workbench_slot")) {
+      if (
+        !slotDropTargetTypes.includes("workbench_slot") ||
+        !activeDropTargets.includes("workbench_slot")
+      ) {
         return false;
       }
       return (
@@ -257,7 +265,10 @@ export function useWorkbenchHandlers({
     }
 
     if (activeDragItem.entityKind === "produce") {
-      if (!activeDropTargets.includes("workbench_slot")) {
+      if (
+        !slotDropTargetTypes.includes("workbench_slot") ||
+        !activeDropTargets.includes("workbench_slot")
+      ) {
         return false;
       }
       if (slot.tool !== null) {
@@ -271,17 +282,19 @@ export function useWorkbenchHandlers({
     }
 
     if (activeDragItem.entityKind === "sample_label") {
-      if (!activeDropTargets.includes("workbench_slot")) {
-        return false;
-      }
-      return slot.tool !== null;
+      return canResolveActiveLabelDragOnTool(activeDragItem, {
+        parentDropTargetTypes: slotDropTargetTypes,
+        tool: slot.tool,
+      });
     }
 
     if (activeDragItem.entityKind === "lims_label_ticket") {
-      if (!activeDropTargets.includes("sample_bag_tool")) {
-        return false;
-      }
-      return canApplyLimsTicketToSlot(slot);
+      return (
+        canResolveActiveLabelDragOnTool(activeDragItem, {
+          parentDropTargetTypes: slotDropTargetTypes,
+          tool: slot.tool,
+        }) && canApplyLimsTicketToSlot(slot)
+      );
     }
 
     return false;

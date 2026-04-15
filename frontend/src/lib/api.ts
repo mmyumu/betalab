@@ -5,6 +5,7 @@ import type {
   BenchLiquidPortion,
   BenchSlot,
   BenchToolInstance,
+  DropTargetType,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   LimsReception,
@@ -33,6 +34,14 @@ type StreamHandlers = {
   onError?: (error: Error) => void;
   onMessage: (experiment: Experiment) => void;
 };
+
+function normalizeAllowedDropTargets(raw: unknown): DropTargetType[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.filter((target): target is DropTargetType => typeof target === "string");
+}
 
 async function buildApiError(response: Response, fallbackMessage: string): Promise<Error> {
   try {
@@ -1149,6 +1158,17 @@ export async function applySampleLabelToAnalyticalBalanceTool(
   });
 }
 
+export async function applySampleLabelToGrossBalanceTool(
+  experimentId: string,
+  payload?: MutationPayload,
+): Promise<Experiment> {
+  void payload;
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/sample-label`,
+  });
+}
+
 export async function closeWorkbenchTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
   const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
@@ -1253,6 +1273,18 @@ export async function restoreTrashedSampleLabelToWorkbenchTool(experimentId: str
   });
 }
 
+export async function moveWorkbenchSampleLabelToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/sample-labels/${requireString(body, "label_id")}/move-from-workbench-tool`,
+    body: { slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
 export async function moveWorkbenchSampleLabelToAnalyticalBalance(
   experimentId: string,
   payload: MutationPayload,
@@ -1262,6 +1294,17 @@ export async function moveWorkbenchSampleLabelToAnalyticalBalance(
     method: "POST",
     path: `/experiments/${experimentId}/analytical-balance/sample-labels/${requireString(body, "label_id")}/move-from-workbench-tool`,
     body: { slot_id: requireString(body, "source_slot_id") },
+  });
+}
+
+export async function restoreTrashedSampleLabelToGrossBalance(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/gross-balance/restore-trash-sample-label/${requireString(body, "trash_sample_label_id")}`,
   });
 }
 
@@ -1380,6 +1423,7 @@ function normalizeBenchSlot(slot: BenchSlot, materialStates: ProduceMaterialStat
   return {
     id: slot.id,
     label: slot.label,
+    dropTargetTypes: normalizeAllowedDropTargets(slot.dropTargetTypes ?? rawSlot.drop_target_types),
     surfaceProduceLots: rawSurfaceProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
@@ -1421,35 +1465,11 @@ function normalizeBenchTool(
         : tool.field_label_text !== undefined
           ? (tool.field_label_text as string | null)
           : null,
-    labels:
-      tool.labels !== undefined
-        ? (tool.labels as Array<BenchLabel & Record<string, unknown>>).map((label) =>
-            normalizeBenchLabel(label),
-          )
-        : tool.sampleLabelText !== undefined || tool.sample_label_text !== undefined
-          ? [
-              {
-                id: `${String(tool.id)}-legacy-label`,
-                labelKind:
-                  tool.sampleLabelReceivedDate !== undefined ||
-                  tool.sample_label_received_date !== undefined
-                    ? "lims"
-                    : "manual",
-                text: String(tool.sampleLabelText ?? tool.sample_label_text ?? ""),
-                receivedDate:
-                  tool.sampleLabelReceivedDate !== undefined
-                    ? (tool.sampleLabelReceivedDate as string | null)
-                    : tool.sample_label_received_date !== undefined
-                      ? (tool.sample_label_received_date as string | null)
-                      : null,
-                sampleCode:
-                  tool.sampleLabelReceivedDate !== undefined ||
-                  tool.sample_label_received_date !== undefined
-                    ? String(tool.sampleLabelText ?? tool.sample_label_text ?? "")
-                    : null,
-              },
-            ]
-          : [],
+    isDraggable: Boolean(tool.isDraggable ?? tool.is_draggable),
+    allowedDropTargets: normalizeAllowedDropTargets(tool.allowedDropTargets ?? tool.allowed_drop_targets),
+    labels: ((tool.labels ?? []) as Array<BenchLabel & Record<string, unknown>>).map((label) =>
+      normalizeBenchLabel(label),
+    ),
     produceLots: rawProduceLots.map((lot) =>
       normalizeProduceLot(lot as ExperimentProduceLot & Record<string, unknown>),
     ),
@@ -1600,6 +1620,8 @@ function normalizeBenchLabel(label: BenchLabel & Record<string, unknown>): Bench
         : label.sample_code !== undefined
           ? (label.sample_code as string | null)
           : null,
+    isDraggable: Boolean(label.isDraggable ?? label.is_draggable),
+    allowedDropTargets: normalizeAllowedDropTargets(label.allowedDropTargets ?? label.allowed_drop_targets),
   };
 }
 
@@ -1611,6 +1633,8 @@ function normalizePrintedLabelTicket(
     sampleCode: String(ticket.sampleCode ?? ticket.sample_code),
     labelText: String(ticket.labelText ?? ticket.label_text),
     receivedDate: String(ticket.receivedDate ?? ticket.received_date ?? ""),
+    isDraggable: Boolean(ticket.isDraggable ?? ticket.is_draggable),
+    allowedDropTargets: normalizeAllowedDropTargets(ticket.allowedDropTargets ?? ticket.allowed_drop_targets),
   };
 }
 
@@ -1667,6 +1691,10 @@ function normalizeRackSlot(slot: RackSlot, materialStates: ProduceMaterialState[
   return {
     id: slot.id,
     label: slot.label,
+    dropTargetTypes: normalizeAllowedDropTargets(
+      (slot as RackSlot & Record<string, unknown>).dropTargetTypes ??
+      (slot as RackSlot & Record<string, unknown>).drop_target_types,
+    ),
     tool: slot.tool
       ? normalizeBenchTool(slot.tool as BenchToolInstance & Record<string, unknown>, materialStates)
       : null,
@@ -1708,16 +1736,7 @@ function normalizeTrashSampleLabel(entry: TrashSampleLabelEntry & Record<string,
   return {
     id: String(entry.id),
     originLabel: String(entry.originLabel ?? entry.origin_label),
-    label:
-      entry.label !== undefined
-        ? normalizeBenchLabel((entry.label ?? {}) as BenchLabel & Record<string, unknown>)
-        : {
-            id: `${String(entry.id)}-legacy-label`,
-            labelKind: "manual",
-            text: String(entry.sampleLabelText ?? entry.sample_label_text ?? ""),
-            receivedDate: null,
-            sampleCode: null,
-          },
+    label: normalizeBenchLabel((entry.label ?? {}) as BenchLabel & Record<string, unknown>),
   };
 }
 
@@ -1737,6 +1756,9 @@ function normalizeWorkspaceWidget(
     id: String(widget.id) as ExperimentWorkspaceWidget["id"],
     widgetType: String(widget.widgetType ?? widget.widget_type) as ExperimentWorkspaceWidget["widgetType"],
     label: String(widget.label),
+    dropTargetTypes: normalizeAllowedDropTargets(widget.dropTargetTypes ?? widget.drop_target_types),
+    isDraggable: Boolean(widget.isDraggable ?? widget.is_draggable ?? false),
+    allowedDropTargets: normalizeAllowedDropTargets(widget.allowedDropTargets ?? widget.allowed_drop_targets),
     anchor: String(widget.anchor ?? "top-left") as WidgetAnchor,
     grinderRunDurationMs: Number(widget.grinderRunDurationMs ?? widget.grinder_run_duration_ms ?? 0),
     grinderRunRemainingMs: Number(widget.grinderRunRemainingMs ?? widget.grinder_run_remaining_ms ?? 0),
@@ -1787,6 +1809,8 @@ function normalizeProduceLot(lot: ExperimentProduceLot & Record<string, unknown>
           : null,
     id: String(lot.id),
     isContaminated: Boolean(lot.isContaminated ?? lot.is_contaminated),
+    isDraggable: Boolean(lot.isDraggable ?? lot.is_draggable ?? true),
+    allowedDropTargets: normalizeAllowedDropTargets(lot.allowedDropTargets ?? lot.allowed_drop_targets),
     label: String(lot.label),
     produceType: String(lot.produceType ?? lot.produce_type) as ExperimentProduceLot["produceType"],
     residualCo2MassG: Number(lot.residualCo2MassG ?? lot.residual_co2_mass_g ?? 0),

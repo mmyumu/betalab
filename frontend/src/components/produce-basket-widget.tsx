@@ -16,11 +16,7 @@ type ProduceBasketWidgetProps = {
   onCreateAppleLot: () => void;
   onBagDragStart?: (tool: BenchToolInstance, dataTransfer: DataTransfer) => void;
   onItemDragEnd?: () => void;
-  onProduceDragStart?: (
-    produceLotId: string,
-    produceType: "apple",
-    dataTransfer: DataTransfer,
-  ) => void;
+  onProduceDragStart?: (produceLot: ExperimentProduceLot, dataTransfer: DataTransfer) => void;
   onToggle: () => void;
   produceLots: ExperimentProduceLot[];
 };
@@ -132,7 +128,7 @@ export function ProduceBasketWidget({
                   onDragStart={
                     dndDisabled || !onProduceDragStart
                       ? undefined
-                      : (dataTransfer) => onProduceDragStart(lot.id, lot.produceType, dataTransfer)
+                      : (dataTransfer) => onProduceDragStart(lot, dataTransfer)
                   }
                   subtitle={
                     <span className="block truncate text-xs text-slate-500">

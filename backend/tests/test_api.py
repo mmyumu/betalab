@@ -134,6 +134,74 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
     assert applied.json()["lims_reception"]["status"] == "received"
 
 
+def test_snapshot_exposes_dnd_contract_fields_over_http() -> None:
+    with TestClient(app) as client:
+        experiment_id = _create_experiment(client)
+
+        placed = client.post(
+            f"/experiments/{experiment_id}/reception/bag/place-on-workbench",
+            json={"target_slot_id": "station_1"},
+        )
+        registered = client.post(
+            f"/experiments/{experiment_id}/lims/reception",
+            json={
+                "orchard_name": "Verger Saint-Martin",
+                "harvest_date": "2026-03-29",
+                "indicative_mass_g": 2500.0,
+                "measured_gross_mass_g": None,
+                "measured_sample_mass_g": 10.0,
+            },
+        )
+        printed = client.post(f"/experiments/{experiment_id}/lims/print-label")
+        applied = client.post(
+            f"/experiments/{experiment_id}/lims/apply-label-to-workbench-bag",
+            json={"slot_id": "station_1"},
+        )
+
+    assert placed.status_code == 200
+    assert registered.status_code == 200
+    assert printed.status_code == 200
+    assert applied.status_code == 200
+
+    printed_ticket = printed.json()["lims_reception"]["printed_label_ticket"]
+    assert printed_ticket["is_draggable"] is True
+    assert printed_ticket["allowed_drop_targets"] == [
+        "workbench_slot",
+        "gross_balance_widget",
+        "analytical_balance_widget",
+        "trash_bin",
+    ]
+    placed_slot = placed.json()["workbench"]["slots"][0]
+    assert placed_slot["drop_target_types"] == ["workbench_slot"]
+
+    tool = applied.json()["workbench"]["slots"][0]["tool"]
+    applied_slot = applied.json()["workbench"]["slots"][0]
+    assert applied_slot["drop_target_types"] == ["workbench_slot"]
+    assert tool["is_draggable"] is True
+    assert tool["allowed_drop_targets"] == [
+        "workbench_slot",
+        "trash_bin",
+        "gross_balance_widget",
+    ]
+    assert tool["labels"][0]["is_draggable"] is True
+    assert tool["labels"][0]["allowed_drop_targets"] == [
+        "workbench_slot",
+        "gross_balance_widget",
+        "analytical_balance_widget",
+        "trash_bin",
+    ]
+    gross_balance_widget = next(
+        widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "gross_balance"
+    )
+    analytical_balance_widget = next(
+        widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "analytical_balance"
+    )
+    grinder_widget = next(widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "grinder")
+    assert gross_balance_widget["drop_target_types"] == ["gross_balance_widget"]
+    assert analytical_balance_widget["drop_target_types"] == ["analytical_balance_widget"]
+    assert grinder_widget["drop_target_types"] == ["grinder_widget"]
+
+
 def _find_slot(payload: dict, slot_id: str) -> dict:
     return next(s for s in payload["workbench"]["slots"] if s["id"] == slot_id)
 

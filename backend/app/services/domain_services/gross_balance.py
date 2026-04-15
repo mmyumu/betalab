@@ -14,7 +14,10 @@ from app.domain.models import (
 from app.domain.rules import can_tool_accept_produce, can_tool_be_sealed, can_tool_receive_contents
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
+    build_manual_label,
     find_rack_slot,
+    find_tool_label,
+    find_trash_sample_label,
     find_trash_tool,
     find_workbench_slot,
     find_workspace_widget,
@@ -24,7 +27,7 @@ from app.services.helpers.produce_canonical import (
     get_widget_total_produce_mass_g,
     sync_canonical_produce_model,
 )
-from app.services.helpers.workbench import build_workbench_tool
+from app.services.helpers.workbench import build_workbench_tool, pop_tool_label
 from app.services.received_sample_generation import resolve_received_bag_gross_mass_g
 from app.services.transfer import (
     GrinderProduceLotSource,
@@ -91,6 +94,17 @@ class MoveGrossBalanceToolToWorkbenchRequest:
 @dataclass(frozen=True, slots=True)
 class MoveGrossBalanceToolToRackRequest:
     rack_slot_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class MoveWorkbenchSampleLabelToGrossBalanceRequest:
+    source_slot_id: str
+    label_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class RestoreTrashedSampleLabelToGrossBalanceRequest:
+    trash_sample_label_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -446,6 +460,39 @@ class CloseGrossBalanceToolService(GrossBalanceServiceBase):
             raise ValueError(f"{tool.label} does not support sealing.")
         tool.is_sealed = True
         experiment.audit_log.append(f"{tool.label} sealed on Gross balance.")
+
+
+class ApplySampleLabelToGrossBalanceToolService(GrossBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
+        tool = self._require_gross_balance_tool(experiment)
+        tool.labels.append(build_manual_label())
+        experiment.audit_log.append(f"Manual label applied to {tool.label} on Gross balance.")
+
+
+class MoveWorkbenchSampleLabelToGrossBalanceService(GrossBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: MoveWorkbenchSampleLabelToGrossBalanceRequest) -> None:
+        source_slot = find_workbench_slot(experiment.workbench, request.source_slot_id)
+        if source_slot.tool is None:
+            raise ValueError(f"Place a tool on {source_slot.label} before moving its sample label.")
+
+        source_tool = source_slot.tool
+        target_tool = self._require_gross_balance_tool(experiment)
+        label = pop_tool_label(source_tool, request.label_id)
+        target_tool.labels.append(label)
+        experiment.audit_log.append(
+            f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Gross balance."
+        )
+
+
+class RestoreTrashedSampleLabelToGrossBalanceService(GrossBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: RestoreTrashedSampleLabelToGrossBalanceRequest) -> None:
+        trashed_sample_label = find_trash_sample_label(experiment.trash, request.trash_sample_label_id)
+        target_tool = self._require_gross_balance_tool(experiment)
+        target_tool.labels.append(trashed_sample_label.label)
+        experiment.trash.sample_labels = [
+            entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id
+        ]
+        experiment.audit_log.append(f"Label restored from trash to {target_tool.label} on Gross balance.")
 
 
 class MoveWorkspaceProduceLotToGrossBalanceService(GrossBalanceServiceBase):

@@ -286,7 +286,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
             measured_sample_mass_g=schema.lims_reception.measured_sample_mass_g,
             lab_sample_code=schema.lims_reception.lab_sample_code,
             status=schema.lims_reception.status,
-            printed_label_ticket=PrintedLabelTicket(**schema.lims_reception.printed_label_ticket.model_dump())
+            printed_label_ticket=_deserialize_printed_label_ticket(schema.lims_reception.printed_label_ticket)
             if schema.lims_reception.printed_label_ticket is not None
             else None,
         ),
@@ -346,7 +346,7 @@ def _deserialize_lims_entries(schema: ExperimentSchema) -> list[LimsReception]:
                 measured_sample_mass_g=entry.measured_sample_mass_g,
                 lab_sample_code=entry.lab_sample_code,
                 status=entry.status,
-                printed_label_ticket=PrintedLabelTicket(**entry.printed_label_ticket.model_dump())
+                printed_label_ticket=_deserialize_printed_label_ticket(entry.printed_label_ticket)
                 if entry.printed_label_ticket is not None
                 else None,
             )
@@ -402,6 +402,12 @@ def _deserialize_non_null_workbench_tool(tool_schema) -> WorkbenchTool:
     return tool
 
 
+def _deserialize_printed_label_ticket(ticket_schema) -> PrintedLabelTicket:
+    computed = set(ticket_schema.model_computed_fields.keys())
+    payload = ticket_schema.model_dump(exclude=computed)
+    return PrintedLabelTicket(**payload)
+
+
 def _deserialize_container_label(label_schema) -> ContainerLabel:
     if label_schema.label_kind == "lims":
         return LimsLabel(
@@ -426,7 +432,8 @@ def _deserialize_entity_origin(origin_schema) -> EntityOrigin | None:
 
 
 def _deserialize_produce_lot(lot_schema) -> ProduceLot:
-    payload = lot_schema.model_dump()
+    computed = set(type(lot_schema).model_computed_fields.keys())
+    payload = lot_schema.model_dump(exclude=computed)
     return ProduceLot(**payload)
 
 

@@ -17,12 +17,6 @@ import {
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
-import {
-  getProduceLotDropTargets,
-  getSampleLabelDropTargets,
-  getToolDropTargets,
-  getTrashedWorkspaceWidgetDropTargets,
-} from "@/lib/tool-drop-targets";
 import type {
   BenchLabel,
   ExperimentWorkspaceWidget,
@@ -260,7 +254,10 @@ export function useTrashDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getToolDropTargets(trashTool.tool.toolType);
+    if (trashTool.tool.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = trashTool.tool.allowedDropTargets ?? [];
 
     writeTrashToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -289,7 +286,10 @@ export function useTrashDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getTrashedWorkspaceWidgetDropTargets();
+    if (widget.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = widget.allowedDropTargets ?? [];
 
     writeWorkspaceWidgetDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -317,7 +317,7 @@ export function useTrashDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getProduceLotDropTargets();
+    const allowedDropTargets = trashProduceLot.produceLot.allowedDropTargets ?? [];
 
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -347,18 +347,11 @@ export function useTrashDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const label =
-      trashSampleLabel.label ??
-      ({
-        id: trashSampleLabel.id,
-        labelKind: "manual",
-        text:
-          (trashSampleLabel as TrashSampleLabelEntry & { sampleLabelText?: string })
-            .sampleLabelText ?? "",
-        receivedDate: null,
-        sampleCode: null,
-      } satisfies BenchLabel);
-    const allowedDropTargets = getSampleLabelDropTargets();
+    const label = trashSampleLabel.label;
+    if (label.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = label.allowedDropTargets ?? [];
 
     writeSampleLabelDragPayload(dataTransfer, {
       allowedDropTargets,

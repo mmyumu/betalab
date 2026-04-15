@@ -46,11 +46,11 @@ export function getProduceLotDropTargets(): DropTargetType[] {
 }
 
 export function getSampleLabelDropTargets(): DropTargetType[] {
-  return ["workbench_slot", "analytical_balance_widget", "trash_bin"];
+  return ["workbench_slot", "gross_balance_widget", "analytical_balance_widget", "trash_bin"];
 }
 
 export function getLimsLabelTicketDropTargets(): DropTargetType[] {
-  return ["sample_bag_tool", "analytical_balance_widget", "trash_bin"];
+  return getSampleLabelDropTargets();
 }
 
 export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {

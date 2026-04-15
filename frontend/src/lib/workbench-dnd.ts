@@ -38,7 +38,6 @@ function getDropTargetMime(targetType: DropTargetType) {
 function isDropTargetType(targetType: unknown): targetType is DropTargetType {
   return (
     targetType === "workbench_slot" ||
-    targetType === "sample_bag_tool" ||
     targetType === "workspace_canvas" ||
     targetType === "inventory_panel" ||
     targetType === "rack_slot" ||
@@ -751,15 +750,7 @@ export function readSampleLabelDragPayload(
 
   try {
     const parsed = JSON.parse(rawPayload) as Partial<SampleLabelDragPayload>;
-    const allowedDropTargets =
-      parsed.allowedDropTargets?.filter(
-        (targetType): targetType is DropTargetType =>
-          targetType === "workbench_slot" ||
-          targetType === "gross_balance_widget" ||
-          targetType === "analytical_balance_widget" ||
-          targetType === "trash_bin" ||
-          targetType === "grinder_widget",
-      ) ?? [];
+    const allowedDropTargets = parsed.allowedDropTargets?.filter(isDropTargetType) ?? [];
 
     if (
       parsed.entityKind === "sample_label" &&
@@ -771,14 +762,7 @@ export function readSampleLabelDragPayload(
       ((parsed.sourceKind === "workbench" && typeof parsed.sourceSlotId === "string") ||
         (parsed.sourceKind === "trash" && typeof parsed.trashSampleLabelId === "string"))
     ) {
-      const label: BenchLabel =
-        parsed.label && typeof parsed.label === "object"
-          ? (parsed.label as BenchLabel)
-          : {
-              id: parsed.sampleLabelId,
-              labelKind: "manual",
-              text: parsed.sampleLabelText,
-            };
+      const label: BenchLabel = parsed.label as BenchLabel;
 
       return {
         allowedDropTargets,

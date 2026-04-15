@@ -1,21 +1,19 @@
 import type { DragEvent } from "react";
 
+import { canResolveActiveLabelDragOnTool, canResolveLabelDropOnTool, readLabelDragPayload } from "@/lib/label-drop-resolver";
 import {
   hasCompatibleDropTarget,
   readAnalyticalBalanceToolDragPayload,
   readBasketToolDragPayload,
   readBenchToolDragPayload,
-  readLimsLabelTicketDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
-  readSampleLabelDragPayload,
   readToolbarDragPayload,
   readTrashToolDragPayload,
   toDragDescriptor,
   writeGrossBalanceToolDragPayload,
   writeProduceDragPayload,
 } from "@/lib/workbench-dnd";
-import { getProduceLotDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
 import type {
   BenchToolInstance,
   ExperimentProduceLot,
@@ -37,16 +35,24 @@ import type {
 
 type GrossBalanceDndExperimentApi = {
   applyPrintedLimsLabelToGrossBalanceBag: () => void;
+  applySampleLabelToGrossBalanceTool: () => void;
   moveAnalyticalBalanceToolToGrossBalance: () => void;
   moveBasketToolToGrossBalance: () => void;
   moveGrossBalanceToolToAnalyticalBalance: () => void;
   moveRackToolToGrossBalance: (payload: MoveRackToolToGrossBalancePayload) => void;
+  moveWorkbenchSampleLabelToGrossBalance: (payload: {
+    source_slot_id: string;
+    label_id: string;
+  }) => void;
   moveWidgetProduceLotToGrossBalance: (payload: MoveWidgetProduceLotToGrossBalancePayload) => void;
   moveWorkbenchProduceLotToGrossBalance: (payload: MoveWorkbenchProduceLotToGrossBalancePayload) => void;
   moveWorkbenchToolToGrossBalance: (payload: MoveWorkbenchToolToGrossBalancePayload) => void;
   moveWorkspaceProduceLotToGrossBalance: (payload: MoveWorkspaceProduceLotToGrossBalancePayload) => void;
   placeToolOnGrossBalance: (payload: PlaceToolOnGrossBalancePayload) => void;
   restoreTrashedProduceLotToGrossBalance: (payload: RestoreTrashedProduceLotToGrossBalancePayload) => void;
+  restoreTrashedSampleLabelToGrossBalance: (payload: {
+    trash_sample_label_id: string;
+  }) => void;
   restoreTrashedToolToGrossBalance: (payload: RestoreTrashedToolToGrossBalancePayload) => void;
 };
 
@@ -81,10 +87,6 @@ export type GrossBalanceDndApi = {
   isGrossBalanceSampleBagHighlighted: boolean;
 };
 
-function getToolHasLimsLabel(tool: BenchToolInstance | null | undefined) {
-  return (tool?.labels ?? []).some((label) => label.labelKind === "lims");
-}
-
 export function useGrossBalanceDnd({
   buildDebugProduceDraftFields,
   dndDisabledByAction,
@@ -92,24 +94,10 @@ export function useGrossBalanceDnd({
   experimentApi,
   grossBalanceProduceLot,
   grossBalanceTool,
-  hasPrintedLabelTicket,
+  hasPrintedLabelTicket: _hasPrintedLabelTicket,
   setPendingDropDraft,
 }: GrossBalanceDndOptions): GrossBalanceDndApi {
-  const { activeDropTargets, activeDragItem, clearDropTargets, setActiveDragItem, showDropTargets } =
-    dragState;
-
-  const getGrossBalanceLabelTarget = () => {
-    if (!grossBalanceTool) {
-      return null;
-    }
-    return { kind: "gross_balance" as const, tool: grossBalanceTool };
-  };
-
-  const canApplyLimsTicketToLabelTarget = (
-    target: { tool: BenchToolInstance } | null,
-  ) => {
-    return target !== null && !getToolHasLimsLabel(target.tool) && hasPrintedLabelTicket;
-  };
+  const { activeDragItem, clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
 
   const applyLimsTicketToGrossBalance = () => {
     clearDropTargets();
@@ -117,33 +105,24 @@ export function useGrossBalanceDnd({
   };
 
   const canAcceptBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceLabelTarget();
-    if (!labelTarget || !canApplyLimsTicketToLabelTarget(labelTarget)) {
-      return false;
-    }
-    if (!hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool")) {
-      return false;
-    }
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "sample_label") {
-      return false;
-    }
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload?.sourceKind === "workbench" || sampleLabelPayload?.sourceKind === "trash") {
-      return false;
-    }
-    return readLimsLabelTicketDragPayload(event.dataTransfer) !== null;
+    return canResolveLabelDropOnTool(event.dataTransfer, {
+      parentDropTargetTypes: ["gross_balance_widget"],
+      tool: grossBalanceTool,
+    });
   };
 
   const handleGrossBalanceDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (dndDisabledByAction) {
       return;
     }
-    if (
-      hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget") ||
-      (canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
-        hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool"))
-    ) {
+    if (canResolveLabelDropOnTool(event.dataTransfer, {
+      parentDropTargetTypes: ["gross_balance_widget"],
+      tool: grossBalanceTool,
+    })) {
+      event.preventDefault();
+      return;
+    }
+    if (hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget")) {
       event.preventDefault();
     }
   };
@@ -152,27 +131,43 @@ export function useGrossBalanceDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const canDropOnBalanceWidget = hasCompatibleDropTarget(
-      event.dataTransfer,
-      "gross_balance_widget",
-    );
-    const canDropOnBalanceBag =
-      canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget()) &&
-      hasCompatibleDropTarget(event.dataTransfer, "sample_bag_tool");
-    if (!canDropOnBalanceWidget && !canDropOnBalanceBag) {
-      return;
-    }
+    const labelDragPayload = readLabelDragPayload(event.dataTransfer);
+    if (
+      labelDragPayload &&
+      canResolveLabelDropOnTool(event.dataTransfer, {
+        parentDropTargetTypes: ["gross_balance_widget"],
+        tool: grossBalanceTool,
+      })
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
 
-    if (canDropOnBalanceBag) {
-      const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-      if (limsTicketPayload) {
-        event.preventDefault();
-        event.stopPropagation();
+      if (labelDragPayload.kind === "lims_label_ticket") {
         applyLimsTicketToGrossBalance();
         return;
       }
+      if (labelDragPayload.kind === "palette_sample_label") {
+        void experimentApi.applySampleLabelToGrossBalanceTool();
+        return;
+      }
+      if (labelDragPayload.kind === "workbench_sample_label") {
+        void experimentApi.moveWorkbenchSampleLabelToGrossBalance({
+          source_slot_id: labelDragPayload.payload.sourceSlotId!,
+          label_id: labelDragPayload.payload.sampleLabelId,
+        });
+        return;
+      }
+      void experimentApi.restoreTrashedSampleLabelToGrossBalance({
+        trash_sample_label_id: labelDragPayload.payload.trashSampleLabelId!,
+      });
+      return;
     }
 
+    const canDropOnBalanceWidget = hasCompatibleDropTarget(event.dataTransfer, "gross_balance_widget");
+    if (!canDropOnBalanceWidget) {
+      return;
+    }
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
     const toolPayload =
       (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
@@ -261,7 +256,10 @@ export function useGrossBalanceDnd({
 
   const handleBalanceItemDragStart = (dataTransfer: DataTransfer) => {
     if (grossBalanceTool) {
-      const allowedDropTargets = getToolDropTargets(grossBalanceTool.toolType);
+      if (grossBalanceTool.isDraggable === false) {
+        return;
+      }
+      const allowedDropTargets = grossBalanceTool.allowedDropTargets ?? [];
       writeGrossBalanceToolDragPayload(dataTransfer, {
         allowedDropTargets,
         entityKind: "tool",
@@ -287,7 +285,7 @@ export function useGrossBalanceDnd({
     }
 
     const payload: ProduceDragPayload = {
-      allowedDropTargets: getProduceLotDropTargets(),
+      allowedDropTargets: grossBalanceProduceLot.allowedDropTargets ?? [],
       entityKind: "produce",
       produceLotId: grossBalanceProduceLot.id,
       produceType: grossBalanceProduceLot.produceType,
@@ -303,9 +301,8 @@ export function useGrossBalanceDnd({
     produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
   ) => {
-    const allowedDropTargets = getProduceLotDropTargets();
     const payload: ProduceDragPayload = {
-      allowedDropTargets,
+      allowedDropTargets: produceLot.allowedDropTargets ?? [],
       entityKind: "produce",
       produceLotId: produceLot.id,
       produceType: produceLot.produceType,
@@ -325,31 +322,41 @@ export function useGrossBalanceDnd({
   };
 
   const handleBalanceStagedToolDrop = (event: DragEvent<HTMLElement>) => {
-    const labelTarget = getGrossBalanceLabelTarget();
-    if (!labelTarget || !canAcceptBalanceStagedToolDrop(event)) {
+    if (!canAcceptBalanceStagedToolDrop(event)) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
+    clearDropTargets();
 
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "sample_label") {
-      return;
-    }
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload) {
-      return;
-    }
-    const limsLabelTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    if (limsLabelTicketPayload) {
+    const labelDragPayload = readLabelDragPayload(event.dataTransfer);
+    if (labelDragPayload?.kind === "lims_label_ticket") {
       applyLimsTicketToGrossBalance();
+      return;
+    }
+    if (labelDragPayload?.kind === "palette_sample_label") {
+      void experimentApi.applySampleLabelToGrossBalanceTool();
+      return;
+    }
+    if (labelDragPayload?.kind === "workbench_sample_label") {
+      void experimentApi.moveWorkbenchSampleLabelToGrossBalance({
+        source_slot_id: labelDragPayload.payload.sourceSlotId!,
+        label_id: labelDragPayload.payload.sampleLabelId,
+      });
+      return;
+    }
+    if (labelDragPayload?.kind === "trash_sample_label") {
+      void experimentApi.restoreTrashedSampleLabelToGrossBalance({
+        trash_sample_label_id: labelDragPayload.payload.trashSampleLabelId!,
+      });
     }
   };
 
   const isGrossBalanceSampleBagHighlighted =
-    activeDragItem?.entityKind === "lims_label_ticket" &&
-    activeDropTargets.includes("sample_bag_tool") &&
-    canApplyLimsTicketToLabelTarget(getGrossBalanceLabelTarget());
+    canResolveActiveLabelDragOnTool(activeDragItem, {
+      parentDropTargetTypes: ["gross_balance_widget"],
+      tool: grossBalanceTool,
+    });
 
   return {
     handleBalanceItemDragStart,

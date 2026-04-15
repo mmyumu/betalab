@@ -9,7 +9,6 @@ import {
   readTrashToolDragPayload,
   writeRackToolDragPayload,
 } from "@/lib/workbench-dnd";
-import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import { labToolCatalog } from "@/lib/lab-workflow-catalog";
 import type { BenchToolInstance, RackSlot } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
@@ -37,7 +36,7 @@ type RackDndOptions = {
 };
 
 export type RackDndApi = {
-  handleRackSlotDragOver: (event: DragEvent<HTMLDivElement>) => void;
+  handleRackSlotDragOver: (event: DragEvent<HTMLDivElement>, targetRackSlot: RackSlot) => void;
   handleRackSlotDrop: (event: DragEvent<HTMLDivElement>, slotIndex: number) => void;
   handleRackToolDragStart: (
     rackSlot: RackSlot,
@@ -54,11 +53,14 @@ export function useRackDnd({
 }: RackDndOptions): RackDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
 
-  const handleRackSlotDragOver = (event: DragEvent<HTMLDivElement>) => {
+  const handleRackSlotDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    targetRackSlot: RackSlot,
+  ) => {
     if (dndDisabledByAction) {
       return;
     }
-    if (hasCompatibleDropTarget(event.dataTransfer, "rack_slot")) {
+    if ((targetRackSlot.dropTargetTypes ?? []).some((targetType) => hasCompatibleDropTarget(event.dataTransfer, targetType))) {
       event.preventDefault();
     }
   };
@@ -145,7 +147,10 @@ export function useRackDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getToolDropTargets(tool.toolType);
+    if (tool.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = tool.allowedDropTargets ?? [];
     writeRackToolDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "tool",

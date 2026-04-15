@@ -5,10 +5,7 @@ import type { DropDraftField } from "@/components/drop-draft-card";
 import type { DropDraft } from "@/hooks/use-drop-draft";
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import {
-  getLimsLabelTicketDropTargets,
   getProduceLotDropTargets,
-  getSampleLabelDropTargets,
-  getToolDropTargets,
 } from "@/lib/tool-drop-targets";
 import {
   toDragDescriptor,
@@ -74,11 +71,7 @@ type WorkbenchDndOptions = {
 
 export type WorkbenchDndApi = {
   canDragBenchTool: (slotId: string, tool: BenchToolInstance) => boolean;
-  handleBasketProduceDragStart: (
-    produceLotId: string,
-    produceType: "apple",
-    dataTransfer: DataTransfer,
-  ) => void;
+  handleBasketProduceDragStart: (produceLot: ExperimentProduceLot, dataTransfer: DataTransfer) => void;
   handleBasketToolDragStart: (tool: BenchToolInstance, dataTransfer: DataTransfer) => void;
   handleBenchToolDragStart: (
     slotId: string,
@@ -124,11 +117,13 @@ export function useWorkbenchDnd({
 }: WorkbenchDndOptions): WorkbenchDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
 
-  const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) =>
-    getToolDropTargets(tool.toolType);
+  const getBenchToolAllowedDropTargets = (tool: BenchToolInstance) => tool.allowedDropTargets ?? [];
 
   const canDragBenchTool = (_slotId: string, tool: BenchToolInstance) => {
     if (dndDisabledByAction) {
+      return false;
+    }
+    if (tool.isDraggable === false) {
       return false;
     }
     return getBenchToolAllowedDropTargets(tool).length > 0;
@@ -231,7 +226,10 @@ export function useWorkbenchDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getToolDropTargets(tool.toolType);
+    if (tool.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = tool.allowedDropTargets ?? [];
 
     writeBasketToolDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -253,7 +251,10 @@ export function useWorkbenchDnd({
   };
 
   const handleLimsTicketDragStart = (ticket: PrintedLabelTicket, dataTransfer: DataTransfer) => {
-    const allowedDropTargets = getLimsLabelTicketDropTargets();
+    if (ticket.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = ticket.allowedDropTargets ?? [];
     const payload: LimsLabelTicketDragPayload = {
       allowedDropTargets,
       entityKind: "lims_label_ticket",
@@ -346,30 +347,29 @@ export function useWorkbenchDnd({
   };
 
   const handleBasketProduceDragStart = (
-    produceLotId: string,
-    produceType: "apple",
+    produceLot: ExperimentProduceLot,
     dataTransfer: DataTransfer,
   ) => {
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getProduceLotDropTargets();
+    const allowedDropTargets = produceLot.allowedDropTargets ?? [];
 
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "produce",
-      produceLotId,
-      produceType,
-      sourceId: produceLotId,
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType as "apple",
+      sourceId: produceLot.id,
       sourceKind: "basket",
     });
     showDropTargets(allowedDropTargets);
     setActiveDragItem({
       allowedDropTargets,
       entityKind: "produce",
-      produceLotId,
-      produceType,
-      sourceId: produceLotId,
+      produceLotId: produceLot.id,
+      produceType: produceLot.produceType as "apple",
+      sourceId: produceLot.id,
       sourceKind: "basket",
     });
   };
@@ -412,7 +412,7 @@ export function useWorkbenchDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getProduceLotDropTargets();
+    const allowedDropTargets = produceLot.allowedDropTargets ?? [];
 
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,
@@ -443,7 +443,10 @@ export function useWorkbenchDnd({
     if (dndDisabledByAction) {
       return;
     }
-    const allowedDropTargets = getSampleLabelDropTargets();
+    if (label.isDraggable === false) {
+      return;
+    }
+    const allowedDropTargets = label.allowedDropTargets ?? [];
 
     writeSampleLabelDragPayload(dataTransfer, {
       allowedDropTargets,

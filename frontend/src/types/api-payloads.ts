@@ -16,6 +16,7 @@ export type AddProduceLotToWorkbenchToolPayload = {
 
 export type ApplyPrintedLimsLabelPayload = { slot_id: string };
 export type ApplyPrintedLimsLabelToAnalyticalBalanceToolPayload = Record<string, never>;
+export type ApplySampleLabelToGrossBalanceToolPayload = Record<string, never>;
 
 export type ApplySampleLabelToWorkbenchToolPayload = { slot_id: string };
 export type ApplySampleLabelToAnalyticalBalanceToolPayload = Record<string, never>;
@@ -196,6 +197,11 @@ export type MoveGrossBalanceToolToWorkbenchPayload = {
   target_slot_id: string;
 };
 
+export type MoveWorkbenchSampleLabelToGrossBalancePayload = {
+  source_slot_id: string;
+  label_id: string;
+};
+
 export type MoveRackToolToGrossBalancePayload = { rack_slot_id: string };
 
 export type MoveWorkbenchProduceLotToGrossBalancePayload = {
@@ -213,6 +219,10 @@ export type RecordGrossWeightPayload = { measured_gross_mass_g?: number };
 
 export type RestoreTrashedProduceLotToGrossBalancePayload = {
   trash_produce_lot_id: string;
+};
+
+export type RestoreTrashedSampleLabelToGrossBalancePayload = {
+  trash_sample_label_id: string;
 };
 
 export type RestoreTrashedToolToGrossBalancePayload = { trash_tool_id: string };

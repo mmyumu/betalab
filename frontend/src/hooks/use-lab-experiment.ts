@@ -14,6 +14,7 @@ import {
   applyPrintedLimsLabelToAnalyticalBalanceTool,
   applyPrintedLimsLabel,
   applyPrintedLimsLabelToBasketBag,
+  applySampleLabelToGrossBalanceTool,
   applySampleLabelToAnalyticalBalanceTool,
   applySampleLabelToWorkbenchTool,
   closeAnalyticalBalanceTool,
@@ -56,6 +57,7 @@ import {
   moveRackToolBetweenSlots,
   moveRackToolToGrossBalance,
   moveRackToolToAnalyticalBalance,
+  moveWorkbenchSampleLabelToGrossBalance,
   moveWorkbenchSampleLabelToAnalyticalBalance,
   moveWorkbenchProduceLotToGrossBalance,
   moveWorkbenchToolToAnalyticalBalance,
@@ -88,6 +90,7 @@ import {
   removeWorkbenchSlot,
   restoreTrashedProduceLotToWorkbenchTool,
   restoreTrashedProduceLotToGrossBalance,
+  restoreTrashedSampleLabelToGrossBalance,
   restoreTrashedProduceLotToWidget,
   restoreTrashedSampleLabelToAnalyticalBalance,
   restoreTrashedToolToAnalyticalBalance,
@@ -110,6 +113,7 @@ import type {
   AddWorkspaceWidgetPayload,
   ApplyPrintedLimsLabelPayload,
   ApplyPrintedLimsLabelToAnalyticalBalanceToolPayload,
+  ApplySampleLabelToGrossBalanceToolPayload,
   ApplySampleLabelToAnalyticalBalanceToolPayload,
   ApplySampleLabelToWorkbenchToolPayload,
   CloseWorkbenchToolPayload,
@@ -139,6 +143,7 @@ import type {
   MoveRackToolBetweenSlotsPayload,
   MoveRackToolToAnalyticalBalancePayload,
   MoveRackToolToGrossBalancePayload,
+  MoveWorkbenchSampleLabelToGrossBalancePayload,
   MoveWorkbenchSampleLabelToAnalyticalBalancePayload,
   MoveSampleLabelBetweenWorkbenchToolsPayload,
   MoveToolBetweenWorkbenchSlotsPayload,
@@ -168,6 +173,7 @@ import type {
   RestoreTrashedProduceLotToGrossBalancePayload,
   RestoreTrashedProduceLotToWidgetPayload,
   RestoreTrashedProduceLotToWorkbenchToolPayload,
+  RestoreTrashedSampleLabelToGrossBalancePayload,
   RestoreTrashedSampleLabelToAnalyticalBalancePayload,
   RestoreTrashedSampleLabelToWorkbenchToolPayload,
   RestoreTrashedToolToAnalyticalBalancePayload,
@@ -205,6 +211,7 @@ const mutationFns = {
   applyPrintedLimsLabelToAnalyticalBalanceTool,
   applyPrintedLimsLabel,
   applyPrintedLimsLabelToBasketBag,
+  applySampleLabelToGrossBalanceTool,
   applySampleLabelToAnalyticalBalanceTool,
   applySampleLabelToWorkbenchTool,
   closeAnalyticalBalanceTool,
@@ -244,6 +251,7 @@ const mutationFns = {
   moveRackToolBetweenSlots,
   moveRackToolToGrossBalance,
   moveRackToolToAnalyticalBalance,
+  moveWorkbenchSampleLabelToGrossBalance,
   moveWorkbenchSampleLabelToAnalyticalBalance,
   moveWorkbenchProduceLotToGrossBalance,
   moveWorkbenchToolToAnalyticalBalance,
@@ -277,6 +285,7 @@ const mutationFns = {
   removeWorkbenchSlot,
   restoreTrashedProduceLotToWorkbenchTool,
   restoreTrashedProduceLotToGrossBalance,
+  restoreTrashedSampleLabelToGrossBalance,
   restoreTrashedProduceLotToWidget,
   restoreTrashedSampleLabelToAnalyticalBalance,
   restoreTrashedToolToAnalyticalBalance,
@@ -464,6 +473,9 @@ export function useLabExperiment({
     ) => executeMutation(mutationFns.applyPrintedLimsLabelToAnalyticalBalanceTool, payload),
     applyPrintedLimsLabelToBasketBag: () =>
       executeMutation(mutationFns.applyPrintedLimsLabelToBasketBag),
+    applySampleLabelToGrossBalanceTool: (
+      payload?: ApplySampleLabelToGrossBalanceToolPayload,
+    ) => executeMutation(mutationFns.applySampleLabelToGrossBalanceTool, payload),
     applySampleLabelToAnalyticalBalanceTool: (
       payload?: ApplySampleLabelToAnalyticalBalanceToolPayload,
     ) => executeMutation(mutationFns.applySampleLabelToAnalyticalBalanceTool, payload),
@@ -547,6 +559,9 @@ export function useLabExperiment({
       executeMutation(mutationFns.moveRackToolToAnalyticalBalance, payload),
     moveRackToolToGrossBalance: (payload: MoveRackToolToGrossBalancePayload) =>
       executeMutation(mutationFns.moveRackToolToGrossBalance, payload),
+    moveWorkbenchSampleLabelToGrossBalance: (
+      payload: MoveWorkbenchSampleLabelToGrossBalancePayload,
+    ) => executeMutation(mutationFns.moveWorkbenchSampleLabelToGrossBalance, payload),
     moveWorkbenchSampleLabelToAnalyticalBalance: (
       payload: MoveWorkbenchSampleLabelToAnalyticalBalancePayload,
     ) => executeMutation(mutationFns.moveWorkbenchSampleLabelToAnalyticalBalance, payload),
@@ -618,6 +633,9 @@ export function useLabExperiment({
       executeMutation(mutationFns.restoreTrashedProduceLotToWorkbenchTool, payload),
     restoreTrashedProduceLotToWidget: (payload: RestoreTrashedProduceLotToWidgetPayload) =>
       executeMutation(mutationFns.restoreTrashedProduceLotToWidget, payload),
+    restoreTrashedSampleLabelToGrossBalance: (
+      payload: RestoreTrashedSampleLabelToGrossBalancePayload,
+    ) => executeMutation(mutationFns.restoreTrashedSampleLabelToGrossBalance, payload),
     restoreTrashedSampleLabelToAnalyticalBalance: (
       payload: RestoreTrashedSampleLabelToAnalyticalBalancePayload,
     ) => executeMutation(mutationFns.restoreTrashedSampleLabelToAnalyticalBalance, payload),

@@ -1,7 +1,6 @@
 export type ToolbarAccent = "amber" | "emerald" | "rose" | "sky";
 export type DropTargetType =
   | "workbench_slot"
-  | "sample_bag_tool"
   | "workspace_canvas"
   | "inventory_panel"
   | "rack_slot"
@@ -109,6 +108,8 @@ export type BenchLabel = {
   text: string;
   receivedDate?: string | null;
   sampleCode?: string | null;
+  isDraggable: boolean;
+  allowedDropTargets: DropTargetType[];
 };
 
 export type ToolbarItem =
@@ -324,6 +325,8 @@ export type BenchToolInstance = {
   isSealed?: boolean;
   closureFault?: string | null;
   fieldLabelText?: string | null;
+  isDraggable: boolean;
+  allowedDropTargets: DropTargetType[];
   labels?: BenchLabel[];
   produceLots?: ExperimentProduceLot[];
   produceFractions?: ProduceFraction[];
@@ -365,6 +368,7 @@ export type ProduceFraction = {
 export type BenchSlot = {
   id: string;
   label: string;
+  dropTargetTypes?: DropTargetType[];
   surfaceProduceLots?: ExperimentProduceLot[];
   tool: BenchToolInstance | null;
 };
@@ -372,6 +376,7 @@ export type BenchSlot = {
 export type RackSlot = {
   id: string;
   label: string;
+  dropTargetTypes?: DropTargetType[];
   tool: BenchToolInstance | null;
 };
 
@@ -386,6 +391,8 @@ export type PrintedLabelTicket = {
   sampleCode: string;
   labelText: string;
   receivedDate: string;
+  isDraggable: boolean;
+  allowedDropTargets: DropTargetType[];
 };
 
 export type LimsReception = {
@@ -422,6 +429,9 @@ export type ExperimentWorkspaceWidget = {
   id: ExperimentWorkspaceWidgetId;
   widgetType: ExperimentWorkspaceWidgetType;
   label: string;
+  dropTargetTypes?: DropTargetType[];
+  isDraggable: boolean;
+  allowedDropTargets: DropTargetType[];
   anchor: WidgetAnchor;
   offsetX: number;
   offsetY: number;
@@ -443,6 +453,8 @@ export type ExperimentProduceLot = {
   homogeneityScore?: number | null;
   id: string;
   isContaminated?: boolean;
+  isDraggable: boolean;
+  allowedDropTargets: DropTargetType[];
   label: string;
   produceType: ProduceLotType;
   residualCo2MassG?: number;

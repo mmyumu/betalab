@@ -123,6 +123,9 @@ export const applyPrintedLimsLabelToAnalyticalBalanceTool = vi.fn((experimentId:
 export const applyPrintedLimsLabelToBasketBag = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "apply_printed_lims_label_to_basket_bag", {}),
 );
+export const applySampleLabelToGrossBalanceTool = vi.fn((experimentId: string) =>
+  sendExperimentCommand(experimentId, "apply_sample_label_to_gross_balance_tool", {}),
+);
 export const applySampleLabelToAnalyticalBalanceTool = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "apply_sample_label_to_analytical_balance_tool", {}),
 );
@@ -158,9 +161,11 @@ export const pourSpatulaIntoWorkbenchTool = wrapCommand("pour_spatula_into_workb
 export const pourSpatulaIntoAnalyticalBalanceTool = wrapCommand("pour_spatula_into_analytical_balance_tool");
 export const updateAnalyticalBalanceToolSampleLabelText = wrapCommand("update_analytical_balance_tool_sample_label_text");
 export const updateWorkbenchToolSampleLabelText = wrapCommand("update_workbench_tool_sample_label_text");
+export const moveWorkbenchSampleLabelToGrossBalance = wrapCommand("move_workbench_sample_label_to_gross_balance");
 export const moveWorkbenchSampleLabelToAnalyticalBalance = wrapCommand("move_workbench_sample_label_to_analytical_balance");
 export const moveSampleLabelBetweenWorkbenchTools = wrapCommand("move_sample_label_between_workbench_tools");
 export const discardSampleLabelFromWorkbenchTool = wrapCommand("discard_sample_label_from_workbench_tool");
+export const restoreTrashedSampleLabelToGrossBalance = wrapCommand("restore_trashed_sample_label_to_gross_balance");
 export const restoreTrashedSampleLabelToAnalyticalBalance = wrapCommand("restore_trashed_sample_label_to_analytical_balance");
 export const restoreTrashedSampleLabelToWorkbenchTool = wrapCommand("restore_trashed_sample_label_to_workbench_tool");
 export const subscribeToExperimentStream = vi.fn((experimentId: string, handlers: {

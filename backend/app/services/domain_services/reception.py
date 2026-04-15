@@ -225,10 +225,9 @@ class ApplyPrintedLimsLabelToGrossBalanceBagService(WriteDomainService[EmptyRece
 
     def _run(self, experiment: Experiment, request: EmptyReceptionRequest) -> None:
         balance_widget = find_workspace_widget(experiment.workspace, "gross_balance")
-        balance_tool = _require_received_sampling_bag(
-            balance_widget.tool,
-            "The gross balance does not contain the received sampling bag.",
-        )
+        balance_tool = balance_widget.tool
+        if balance_tool is None:
+            raise ValueError("The gross balance does not contain a tool.")
         ticket = _require_printed_lims_ticket(experiment)
         _apply_ticket_to_tool(balance_tool, ticket)
         _consume_printed_lims_ticket(experiment, ticket)

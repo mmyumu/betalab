@@ -11,11 +11,40 @@ import {
 } from "@/lib/workbench-dnd";
 import type { BenchSlot } from "@/types/workbench";
 
+import { getProduceLotDropTargets, getSampleLabelDropTargets, getToolDropTargets } from "@/lib/tool-drop-targets";
+import type { BenchLabel, ExperimentProduceLot } from "@/types/workbench";
+
+function makeProduceLot(overrides: Partial<ExperimentProduceLot> & { id: string }): ExperimentProduceLot {
+  return {
+    label: "Apple lot 1",
+    produceType: "apple",
+    totalMassG: 2450,
+    unitCount: 12,
+    isContaminated: false,
+    isDraggable: true,
+    allowedDropTargets: getProduceLotDropTargets(),
+    ...overrides,
+  };
+}
+
+function makeSampleBagLabel(overrides: Partial<BenchLabel> = {}): BenchLabel {
+  return {
+    id: "bench_tool_bag-sample-label",
+    labelKind: "manual",
+    text: "LOT-2026-041",
+    receivedDate: null,
+    sampleCode: null,
+    isDraggable: true,
+    allowedDropTargets: getSampleLabelDropTargets(),
+    ...overrides,
+  };
+}
+
 const PesticideWorkbenchPanel = WorkbenchPanel;
 
 const slots: BenchSlot[] = [
-  { id: "station_1", label: "Station 1", tool: null },
-  { id: "station_2", label: "Station 2", tool: null },
+  { id: "station_1", label: "Station 1", tool: null, dropTargetTypes: ["workbench_slot"] },
+  { id: "station_2", label: "Station 2", tool: null, dropTargetTypes: ["workbench_slot"] },
 ];
 
 type MockDataTransfer = DataTransfer & {
@@ -340,14 +369,7 @@ describe("WorkbenchPanel", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  cutState: "cut",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1", cutState: "cut" }),
               ],
               liquids: [],
             },
@@ -381,14 +403,7 @@ describe("WorkbenchPanel", () => {
             id: "station_1",
             label: "Station 1",
             surfaceProduceLots: [
-              {
-                id: "produce_1",
-                cutState: "ground",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1", cutState: "ground" }),
             ],
             tool: null,
           },
@@ -412,14 +427,7 @@ describe("WorkbenchPanel", () => {
             label: "Station 1",
             tool: null,
             surfaceProduceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-                isContaminated: true,
-              },
+              makeProduceLot({ id: "produce_1", isContaminated: true }),
             ],
           },
         ]}
@@ -444,14 +452,7 @@ describe("WorkbenchPanel", () => {
             label: "Station 1",
             tool: null,
             surfaceProduceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-                temperatureC: 4.2,
-              },
+              makeProduceLot({ id: "produce_1", temperatureC: 4.2 }),
             ],
           },
         ]}
@@ -481,14 +482,7 @@ describe("WorkbenchPanel", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                  isContaminated: false,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
               liquids: [],
             },
@@ -522,15 +516,7 @@ describe("WorkbenchPanel", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                  cutState: "cut",
-                  isContaminated: false,
-                },
+                makeProduceLot({ id: "produce_1", cutState: "cut" }),
               ],
               liquids: [],
             },
@@ -561,7 +547,9 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              sampleLabelText: "LOT-2026-041",
+              isDraggable: true,
+              allowedDropTargets: getToolDropTargets("sample_bag"),
+              labels: [makeSampleBagLabel({ text: "LOT-2026-041" })],
               produceLots: [],
               liquids: [],
             },
@@ -761,6 +749,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag",
               toolId: "sealed_sampling_bag",
@@ -769,7 +758,9 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              sampleLabelText: null,
+              isDraggable: true,
+              allowedDropTargets: getToolDropTargets("sample_bag"),
+              labels: [],
               liquids: [],
               produceLots: [],
             },
@@ -795,6 +786,7 @@ describe("WorkbenchPanel", () => {
     writeSampleLabelDragPayload(dataTransfer, {
       allowedDropTargets: ["workbench_slot", "trash_bin"],
       entityKind: "sample_label",
+      label: makeSampleBagLabel({ text: "LOT-2026-041" }),
       sampleLabelId: "bench_tool_bag-sample-label",
       sampleLabelText: "LOT-2026-041",
       sourceId: "station_1",
@@ -813,6 +805,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag",
               toolId: "sealed_sampling_bag",
@@ -821,7 +814,9 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              sampleLabelText: "LOT-2026-041",
+              isDraggable: true,
+              allowedDropTargets: getToolDropTargets("sample_bag"),
+              labels: [makeSampleBagLabel({ id: "bench_tool_bag-sample-label", text: "LOT-2026-041" })],
               liquids: [],
               produceLots: [],
             },
@@ -829,6 +824,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_2",
             label: "Station 2",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag_2",
               toolId: "sealed_sampling_bag",
@@ -837,7 +833,9 @@ describe("WorkbenchPanel", () => {
               accent: "emerald",
               toolType: "sample_bag",
               capacity_ml: 500,
-              sampleLabelText: null,
+              isDraggable: true,
+              allowedDropTargets: getToolDropTargets("sample_bag"),
+              labels: [],
               liquids: [],
               produceLots: [],
             },
@@ -1052,13 +1050,7 @@ describe("WorkbenchPanel", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
               liquids: [],
             },

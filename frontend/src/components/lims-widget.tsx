@@ -330,9 +330,9 @@ export function LimsWidget({
         </div>
         {displayedTicket ? (
           <div
-            className="cursor-grab rounded-[0.9rem] border border-dashed border-sky-300 bg-sky-50 px-3 py-1.5"
+            className={`${displayedTicket.isDraggable ?? true ? "cursor-grab" : "cursor-default opacity-70"} rounded-[0.9rem] border border-dashed border-sky-300 bg-sky-50 px-3 py-1.5`.trim()}
             data-testid="lims-printed-ticket"
-            draggable
+            draggable={displayedTicket.isDraggable ?? true}
             onDragEnd={onTicketDragEnd}
             onDragStart={(event) => {
               onTicketDragStart?.(displayedTicket, event.dataTransfer);

@@ -6,6 +6,36 @@ from typing import Literal
 from pydantic import BaseModel, Field, computed_field, model_validator
 
 
+def _get_tool_allowed_drop_targets(tool_type: str) -> list[str]:
+    targets = ["workbench_slot", "trash_bin", "gross_balance_widget"]
+
+    if tool_type == "sample_vial":
+        targets.insert(1, "rack_slot")
+    if tool_type not in {"cutting_board", "sample_bag"}:
+        targets.append("analytical_balance_widget")
+
+    return targets
+
+
+def _get_sample_label_allowed_drop_targets() -> list[str]:
+    return ["workbench_slot", "gross_balance_widget", "analytical_balance_widget", "trash_bin"]
+
+
+def _get_lims_label_ticket_allowed_drop_targets() -> list[str]:
+    return _get_sample_label_allowed_drop_targets()
+
+
+def _get_produce_lot_allowed_drop_targets() -> list[str]:
+    return ["workbench_slot", "grinder_widget", "trash_bin", "gross_balance_widget"]
+
+
+_STORABLE_WIDGET_IDS = {"lims", "rack", "instrument", "grinder", "gross_balance", "analytical_balance"}
+
+
+def _tool_exposes_sample_bag_label_target(tool: "WorkbenchToolSchema | None") -> bool:
+    return tool is not None
+
+
 class WorkbenchLiquidSchema(BaseModel):
     id: str
     liquid_id: str
@@ -65,12 +95,28 @@ class ProduceLotSchema(BaseModel):
     homogeneity_score: float | None = None
     residual_co2_mass_g: float = 0.0
 
+    @computed_field
+    def is_draggable(self) -> bool:
+        return True
+
+    @computed_field
+    def allowed_drop_targets(self) -> list[str]:
+        return _get_produce_lot_allowed_drop_targets()
+
 
 class PrintedLabelTicketSchema(BaseModel):
     id: str
     sample_code: str
     label_text: str
     received_date: str = ""
+
+    @computed_field
+    def is_draggable(self) -> bool:
+        return True
+
+    @computed_field
+    def allowed_drop_targets(self) -> list[str]:
+        return _get_lims_label_ticket_allowed_drop_targets()
 
 
 class ContainerLabelSchema(BaseModel):
@@ -79,6 +125,14 @@ class ContainerLabelSchema(BaseModel):
     text: str
     sample_code: str | None = None
     received_date: str | None = None
+
+    @computed_field
+    def is_draggable(self) -> bool:
+        return True
+
+    @computed_field
+    def allowed_drop_targets(self) -> list[str]:
+        return _get_sample_label_allowed_drop_targets()
 
 
 class EntityOriginSchema(BaseModel):
@@ -174,6 +228,14 @@ class WorkbenchToolSchema(BaseModel):
         lims_label = next((label for label in self.labels if label.label_kind == "lims"), None)
         return lims_label.received_date if lims_label is not None else None
 
+    @computed_field
+    def is_draggable(self) -> bool:
+        return len(self.allowed_drop_targets) > 0
+
+    @computed_field
+    def allowed_drop_targets(self) -> list[str]:
+        return _get_tool_allowed_drop_targets(self.tool_type)
+
 
 class WorkbenchSlotSchema(BaseModel):
     id: str
@@ -181,6 +243,10 @@ class WorkbenchSlotSchema(BaseModel):
     tool: WorkbenchToolSchema | None = None
     surface_produce_lots: list[ProduceLotSchema]
     surface_produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
+
+    @computed_field
+    def drop_target_types(self) -> list[str]:
+        return ["workbench_slot"]
 
 
 class WorkbenchSchema(BaseModel):
@@ -191,6 +257,10 @@ class RackSlotSchema(BaseModel):
     id: str
     label: str
     tool: WorkbenchToolSchema | None = None
+
+    @computed_field
+    def drop_target_types(self) -> list[str]:
+        return ["rack_slot"]
 
 
 class RackSchema(BaseModel):
@@ -259,6 +329,30 @@ class WorkspaceWidgetSchema(BaseModel):
     tool: WorkbenchToolSchema | None = None
     produce_lots: list[ProduceLotSchema] = Field(default_factory=list)
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
+
+    @computed_field
+    def drop_target_types(self) -> list[str]:
+        targets: list[str] = []
+        if self.widget_type == "cryogenic_grinder":
+            targets.append("grinder_widget")
+        if self.widget_type == "gross_balance":
+            targets.append("gross_balance_widget")
+        if self.widget_type == "analytical_balance":
+            targets.append("analytical_balance_widget")
+        return targets
+
+    @computed_field
+    def is_draggable(self) -> bool:
+        if self.id not in _STORABLE_WIDGET_IDS:
+            return False
+        if self.is_trashed:
+            return True
+        return self.tool is None and len(self.produce_lots) == 0 and len(self.liquids) == 0
+
+    @computed_field
+    def allowed_drop_targets(self) -> list[str]:
+        return ["workspace_canvas"] if self.is_draggable else []
+
     produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
 

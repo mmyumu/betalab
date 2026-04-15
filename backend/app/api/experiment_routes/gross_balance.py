@@ -10,6 +10,7 @@ from app.schemas.experiment import (
     WorkspaceWidgetProduceLotCreateSchema,
 )
 from app.services.domain_services.gross_balance import (
+    ApplySampleLabelToGrossBalanceToolService,
     CloseGrossBalanceToolService,
     DiscardGrossBalanceProduceLotRequest,
     DiscardGrossBalanceProduceLotService,
@@ -28,6 +29,8 @@ from app.services.domain_services.gross_balance import (
     MoveGrossBalanceToolToWorkbenchService,
     MoveRackToolToGrossBalanceRequest,
     MoveRackToolToGrossBalanceService,
+    MoveWorkbenchSampleLabelToGrossBalanceRequest,
+    MoveWorkbenchSampleLabelToGrossBalanceService,
     MoveWidgetProduceLotToGrossBalanceRequest,
     MoveWidgetProduceLotToGrossBalanceService,
     MoveWorkbenchProduceLotToGrossBalanceRequest,
@@ -41,6 +44,8 @@ from app.services.domain_services.gross_balance import (
     PlaceToolOnGrossBalanceService,
     RestoreTrashedProduceLotToGrossBalanceRequest,
     RestoreTrashedProduceLotToGrossBalanceService,
+    RestoreTrashedSampleLabelToGrossBalanceRequest,
+    RestoreTrashedSampleLabelToGrossBalanceService,
     RestoreTrashedToolToGrossBalanceRequest,
     RestoreTrashedToolToGrossBalanceService,
 )
@@ -156,6 +161,54 @@ def open_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/gross-balance/close-tool", response_model=ExperimentSchema)
 def close_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(lambda: CloseGrossBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
+
+
+@router.post("/{experiment_id}/gross-balance/sample-label", response_model=ExperimentSchema)
+def apply_sample_label_to_gross_balance_tool(experiment_id: str) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: ApplySampleLabelToGrossBalanceToolService(experiment_service).run(
+            experiment_id,
+            EmptyRequest(),
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/gross-balance/sample-labels/{label_id}/move-from-workbench-tool",
+    response_model=ExperimentSchema,
+)
+def move_workbench_sample_label_to_gross_balance(
+    experiment_id: str,
+    label_id: str,
+    request: WorkbenchSlotReferenceSchema,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: MoveWorkbenchSampleLabelToGrossBalanceService(experiment_service).run(
+            experiment_id,
+            MoveWorkbenchSampleLabelToGrossBalanceRequest(
+                source_slot_id=request.slot_id,
+                label_id=label_id,
+            ),
+        )
+    )
+
+
+@router.post(
+    "/{experiment_id}/gross-balance/restore-trash-sample-label/{trash_sample_label_id}",
+    response_model=ExperimentSchema,
+)
+def restore_trashed_sample_label_to_gross_balance(
+    experiment_id: str,
+    trash_sample_label_id: str,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: RestoreTrashedSampleLabelToGrossBalanceService(experiment_service).run(
+            experiment_id,
+            RestoreTrashedSampleLabelToGrossBalanceRequest(
+                trash_sample_label_id=trash_sample_label_id,
+            ),
+        )
+    )
 
 
 @router.post(

@@ -386,6 +386,12 @@ export function LabSceneWorkspaceCanvas({
             if (!widget) {
               return null;
             }
+            const widgetDropTargets = widget.dropTargetTypes ?? [];
+            const grossBalanceTargetType = widgetDropTargets.find((target) => target === "gross_balance_widget");
+            const analyticalBalanceTargetType = widgetDropTargets.find(
+              (target) => target === "analytical_balance_widget",
+            );
+            const grinderTargetType = widgetDropTargets.find((target) => target === "grinder_widget");
 
             return (
             <FloatingWidget
@@ -439,7 +445,9 @@ export function LabSceneWorkspaceCanvas({
               ) : widgetId === "gross_balance" ? (
                 <GrossBalanceWidget
                   headerAction={renderStoreWidgetAction(widget)}
-                  isDropHighlighted={dnd.isDropTargetHighlighted("gross_balance_widget")}
+                  isDropHighlighted={
+                    grossBalanceTargetType ? dnd.isDropTargetHighlighted(grossBalanceTargetType) : false
+                  }
                   grossMassOffsetG={experiment.limsReception.grossMassOffsetG}
                   measuredGrossMassG={experiment.limsReception.measuredGrossMassG}
                   netMassG={balances.grossBalanceNetMassG}
@@ -451,7 +459,11 @@ export function LabSceneWorkspaceCanvas({
               ) : widgetId === "analytical_balance" ? (
                 <AnalyticalBalanceWidget
                   headerAction={renderStoreWidgetAction(widget)}
-                  isDropHighlighted={dnd.isDropTargetHighlighted("analytical_balance_widget")}
+                  isDropHighlighted={
+                    analyticalBalanceTargetType
+                      ? dnd.isDropTargetHighlighted(analyticalBalanceTargetType)
+                      : false
+                  }
                   measuredMassG={balances.analyticalBalanceMeasuredMassG}
                   netMassG={balances.analyticalBalanceNetMassG}
                   onDragOver={dnd.analyticalBalance.handleAnalyticalBalanceDragOver}
@@ -494,7 +506,9 @@ export function LabSceneWorkspaceCanvas({
                 </WorkspaceEquipmentWidget>
               ) : (
                 <WorkspaceEquipmentWidget
-                  dataDropHighlighted={dnd.isDropTargetHighlighted("grinder_widget") ? "true" : "false"}
+                  dataDropHighlighted={
+                    grinderTargetType && dnd.isDropTargetHighlighted(grinderTargetType) ? "true" : "false"
+                  }
                   dropZoneTestId="grinder-dropzone"
                   eyebrow="Cryogenic grinder"
                   headerAction={renderStoreWidgetAction(widget)}

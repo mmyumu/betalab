@@ -2,11 +2,18 @@ import {
   labToolCatalog,
   labWorkflowCategories,
 } from "@/lib/lab-workflow-catalog";
+import {
+  getLimsLabelTicketDropTargets,
+  getProduceLotDropTargets,
+  getSampleLabelDropTargets,
+  getToolDropTargets,
+} from "@/lib/tool-drop-targets";
 import { getWorkspaceEquipmentWidgetId } from "@/lib/workspace-widget-ids";
 import type { Experiment } from "@/types/experiment";
 import type {
   BenchSlot,
   BenchToolInstance,
+  ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   LimsReception,
   RackSlot,
@@ -20,6 +27,19 @@ import type {
 import { expect } from "vitest";
 
 const pesticideToolCatalog = labToolCatalog;
+
+function makeProduceLot(overrides: Partial<ExperimentProduceLot> & { id: string }): ExperimentProduceLot {
+  return {
+    label: "Apple lot 1",
+    produceType: "apple",
+    totalMassG: 2450,
+    unitCount: 12,
+    isContaminated: false,
+    isDraggable: true,
+    allowedDropTargets: getProduceLotDropTargets(),
+    ...overrides,
+  };
+}
 
 type MockDataTransfer = {
   data: Map<string, string>;
@@ -141,16 +161,25 @@ function makeSlots(overrides: Partial<BenchSlot>[] = [], count = Math.max(2, ove
     tool: null,
   }));
 
-  return baseSlots.map((slot, index) => ({
-    ...slot,
-    ...(overrides[index] ?? {}),
-  }));
+  return baseSlots
+    .map((slot, index) => ({
+      ...slot,
+      ...(overrides[index] ?? {}),
+    }))
+    .map((slot) => ({
+      ...slot,
+      dropTargetTypes:
+        slot.dropTargetTypes && slot.dropTargetTypes.length > 0
+          ? slot.dropTargetTypes
+          : ["workbench_slot"],
+    }));
 }
 
 function makeRackSlots(overrides: Partial<RackSlot>[] = []): RackSlot[] {
   const baseSlots: RackSlot[] = Array.from({ length: 12 }, (_, index) => ({
     id: `rack_slot_${index + 1}`,
     label: `Position ${index + 1}`,
+    dropTargetTypes: ["rack_slot"],
     tool: null,
   }));
 
@@ -172,6 +201,7 @@ function makeWorkspaceWidgets(
       id: "lims",
       widgetType: "lims_terminal",
       label: "LIMS terminal",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 24,
       offsetY: 886,
@@ -182,6 +212,7 @@ function makeWorkspaceWidgets(
       id: "gross_balance",
       widgetType: "gross_balance",
       label: "Gross balance",
+      dropTargetTypes: ["gross_balance_widget"],
       anchor: "top-left",
       offsetX: 364,
       offsetY: 886,
@@ -192,6 +223,7 @@ function makeWorkspaceWidgets(
       id: "analytical_balance",
       widgetType: "analytical_balance",
       label: "Analytical balance",
+      dropTargetTypes: ["analytical_balance_widget"],
       anchor: "top-left",
       offsetX: 688,
       offsetY: 886,
@@ -202,6 +234,7 @@ function makeWorkspaceWidgets(
       id: "workbench",
       widgetType: "workbench",
       label: "Workbench",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 234,
       offsetY: 0,
@@ -212,6 +245,7 @@ function makeWorkspaceWidgets(
       id: "trash",
       widgetType: "trash",
       label: "Trash",
+      dropTargetTypes: [],
       anchor: "top-right",
       offsetX: 0,
       offsetY: 0,
@@ -222,6 +256,7 @@ function makeWorkspaceWidgets(
       id: "rack",
       widgetType: "autosampler_rack",
       label: "Autosampler rack",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 234,
       offsetY: 886,
@@ -232,6 +267,7 @@ function makeWorkspaceWidgets(
       id: "instrument",
       widgetType: "lc_msms_instrument",
       label: "LC-MS/MS",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 812,
       offsetY: 886,
@@ -242,6 +278,7 @@ function makeWorkspaceWidgets(
       id: "basket",
       widgetType: "produce_basket",
       label: "Produce basket",
+      dropTargetTypes: [],
       anchor: "top-right",
       offsetX: 70,
       offsetY: 248,
@@ -252,6 +289,7 @@ function makeWorkspaceWidgets(
       id: "grinder",
       widgetType: "cryogenic_grinder",
       label: "Cryogenic grinder",
+      dropTargetTypes: ["grinder_widget"],
       anchor: "top-left",
       offsetX: 980,
       offsetY: 886,
@@ -260,10 +298,22 @@ function makeWorkspaceWidgets(
     },
   ];
 
-  return baseWidgets.map((widget, index) => ({
-    ...widget,
-    ...(normalizedOverrides[index] ?? {}),
-  }));
+  const storableWidgetIds = new Set(["lims", "rack", "instrument", "grinder", "gross_balance", "analytical_balance"]);
+
+  return baseWidgets.map((widget, index) => {
+    const merged = { ...widget, ...(normalizedOverrides[index] ?? {}) };
+    const isDraggable =
+      storableWidgetIds.has(merged.id) &&
+      (merged.isTrashed ||
+        (merged.tool == null &&
+          (merged.produceLots?.length ?? 0) === 0 &&
+          (merged.liquids?.length ?? 0) === 0));
+    return {
+      ...merged,
+      isDraggable,
+      allowedDropTargets: isDraggable ? (["workspace_canvas"] as const) : [],
+    };
+  });
 }
 
 function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
@@ -282,6 +332,8 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
             text: legacySampleLabelText,
             receivedDate: legacySampleLabelReceivedDate ?? null,
             sampleCode: legacySampleLabelReceivedDate ? legacySampleLabelText : null,
+            isDraggable: true,
+            allowedDropTargets: getSampleLabelDropTargets(),
           },
         ]
       : []);
@@ -294,6 +346,8 @@ function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> =
     accent: item.accent,
     toolType: item.toolType,
     capacity_ml: item.capacity_ml,
+    isDraggable: true,
+    allowedDropTargets: getToolDropTargets(item.toolType),
     labels: derivedLabels,
     produceLots: [],
     liquids: [],
@@ -313,14 +367,7 @@ function makeTrashProduceLotEntry(): TrashProduceLotEntry {
   return {
     id: "trash_produce_lot_1",
     originLabel: "Produce basket",
-    produceLot: {
-      id: "produce_1",
-      isContaminated: false,
-      label: "Apple lot 1",
-      produceType: "apple",
-      totalMassG: 2450,
-      unitCount: 12,
-    },
+    produceLot: makeProduceLot({ id: "produce_1" }),
   };
 }
 
@@ -334,6 +381,8 @@ function makeTrashSampleLabelEntry(): TrashSampleLabelEntry {
       text: "LOT-2026-041",
       receivedDate: null,
       sampleCode: null,
+      isDraggable: true,
+      allowedDropTargets: getSampleLabelDropTargets(),
     },
   };
 }
@@ -408,6 +457,8 @@ function makePrintedLimsTicket(
     sampleCode: "APP-2026-0001",
     labelText: "APP-2026-0001",
     receivedDate: "2026-04-03",
+    isDraggable: true,
+    allowedDropTargets: getLimsLabelTicketDropTargets(),
     ...overrides,
   };
 }
@@ -919,16 +970,7 @@ function createBasketProduceSourceCase(): DndSourceCase {
         slots: makeSlots([
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag" }) },
         ]),
-        produceBasketLots: [
-          {
-            id: "produce_1",
-            isContaminated: false,
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
-        ],
+        produceBasketLots: [makeProduceLot({ id: "produce_1" })],
         workspaceWidgets: makeWorkspaceWidgets(),
       }),
     targetExpectations: {
@@ -1054,16 +1096,7 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
           {
             tool: makeTool(sampleBagItem, {
               id: "bench_tool_bag",
-              produceLots: [
-                {
-                  id: "produce_1",
-                  isContaminated: false,
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
-              ],
+              produceLots: [makeProduceLot({ id: "produce_1" })],
             }),
           },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2" }) },
@@ -1138,16 +1171,7 @@ function createWorkbenchSurfaceProduceLotSourceCase(): DndSourceCase {
       makeExperiment({
         slots: makeSlots([
           {
-            surfaceProduceLots: [
-              {
-                id: "produce_1",
-                isContaminated: true,
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
-            ],
+            surfaceProduceLots: [makeProduceLot({ id: "produce_1", isContaminated: true })],
           },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2" }) },
         ]),
@@ -1230,16 +1254,7 @@ function createGrinderProduceLotSourceCase(): DndSourceCase {
           {},
           {
             isPresent: true,
-            produceLots: [
-              {
-                id: "produce_1",
-                isContaminated: false,
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
-            ],
+            produceLots: [makeProduceLot({ id: "produce_1" })],
           },
         ]),
       }),
@@ -1736,16 +1751,7 @@ function createGrossBalanceProduceSourceCase(): DndSourceCase {
           {},
           {
             isPresent: true,
-            produceLots: [
-              {
-                id: "produce_1",
-                isContaminated: false,
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
-            ],
+            produceLots: [makeProduceLot({ id: "produce_1" })],
           },
           {},
           {},
@@ -2018,14 +2024,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
         },
         {
           surfaceProduceLots: [
-            {
-              id: "produce_1",
-              isContaminated: true,
-              label: "Apple powder 1",
-              produceType: "apple",
-              totalMassG: 10,
-              cutState: "ground",
-            },
+            makeProduceLot({ id: "produce_1", isContaminated: true, label: "Apple powder 1", totalMassG: 10, cutState: "ground", unitCount: null }),
           ],
         },
       ]),
@@ -2034,14 +2033,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
         {
           isPresent: true,
           produceLots: [
-            {
-              id: "produce_1",
-              isContaminated: false,
-              label: "Apple powder 2",
-              produceType: "apple",
-              totalMassG: 12,
-              cutState: "ground",
-            },
+            makeProduceLot({ id: "produce_1", label: "Apple powder 2", totalMassG: 12, cutState: "ground", unitCount: null }),
           ],
         },
         {},
@@ -2077,14 +2069,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
             },
           ],
           produceLots: [
-            {
-              id: "produce_1",
-              isContaminated: false,
-              label: "Apple lot 1",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1" }),
           ],
         }),
       },
@@ -2095,16 +2080,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
     trashProduceLots: [makeTrashProduceLotEntry()],
     trashSampleLabels: [makeTrashSampleLabelEntry()],
     trashTools: [makeTrashToolEntry(sampleVialItem)],
-    produceBasketLots: [
-      {
-        id: "produce_1",
-        isContaminated: false,
-        label: "Apple lot 1",
-        produceType: "apple",
-        totalMassG: 2450,
-        unitCount: 12,
-      },
-    ],
+    produceBasketLots: [makeProduceLot({ id: "produce_1" })],
     workspaceWidgets: makeWorkspaceWidgets([
       {},
       { isPresent: true, tool: makeTool(sampleVialItem) },
@@ -2125,15 +2101,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
           },
         ],
         produceLots: [
-          {
-            id: "produce_1",
-            isContaminated: false,
-            label: "Apple powder 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-            cutState: "ground",
-          },
+          makeProduceLot({ id: "produce_1", label: "Apple powder 1", cutState: "ground" }),
         ],
       },
     ]),

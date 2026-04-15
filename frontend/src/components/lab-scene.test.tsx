@@ -2,10 +2,18 @@ import { act, createEvent, fireEvent, render, screen, waitFor, within } from "@t
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LabScene } from "@/components/lab-scene";
+import {
+  getLimsLabelTicketDropTargets,
+  getProduceLotDropTargets,
+  getSampleLabelDropTargets,
+  getToolDropTargets,
+} from "@/lib/tool-drop-targets";
 import type { Experiment } from "@/types/experiment";
 import type {
+  BenchLabel,
   BenchSlot,
   BenchToolInstance,
+  ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   LimsReception,
   RackSlot,
@@ -93,10 +101,18 @@ function makeSlots(overrides: Partial<BenchSlot>[] = [], count = Math.max(2, ove
     tool: null,
   }));
 
-  return baseSlots.map((slot, index) => ({
-    ...slot,
-    ...(overrides[index] ?? {}),
-  }));
+  return baseSlots
+    .map((slot, index) => ({
+      ...slot,
+      ...(overrides[index] ?? {}),
+    }))
+    .map((slot) => ({
+      ...slot,
+      dropTargetTypes:
+        slot.dropTargetTypes && slot.dropTargetTypes.length > 0
+          ? slot.dropTargetTypes
+          : ["workbench_slot"],
+    }));
 }
 
 function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
@@ -108,9 +124,24 @@ function makeTool(overrides: Partial<BenchToolInstance> = {}): BenchToolInstance
     accent: "sky",
     toolType: "sample_vial",
     capacity_ml: 2,
-    sampleLabelText: null,
+    isDraggable: true,
+    allowedDropTargets: getToolDropTargets("sample_vial"),
+    labels: [],
     produceLots: [],
     liquids: [],
+    ...overrides,
+  };
+}
+
+function makeSampleBagLabel(overrides: Partial<BenchLabel> = {}): BenchLabel {
+  return {
+    id: "bench_tool_1-sample-label",
+    labelKind: "manual",
+    text: "LOT-2026-041",
+    receivedDate: null,
+    sampleCode: null,
+    isDraggable: true,
+    allowedDropTargets: getSampleLabelDropTargets(),
     ...overrides,
   };
 }
@@ -119,6 +150,7 @@ function makeRackSlots(overrides: Partial<RackSlot>[] = []): RackSlot[] {
   const baseSlots: RackSlot[] = Array.from({ length: 12 }, (_, index) => ({
     id: `rack_slot_${index + 1}`,
     label: `Position ${index + 1}`,
+    dropTargetTypes: ["rack_slot"],
     tool: null,
   }));
 
@@ -140,6 +172,7 @@ function makeWorkspaceWidgets(
       id: "lims",
       widgetType: "lims_terminal",
       label: "LIMS terminal",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 24,
       offsetY: 886,
@@ -150,6 +183,7 @@ function makeWorkspaceWidgets(
       id: "gross_balance",
       widgetType: "gross_balance",
       label: "Gross balance",
+      dropTargetTypes: ["gross_balance_widget"],
       anchor: "top-left",
       offsetX: 364,
       offsetY: 886,
@@ -160,6 +194,7 @@ function makeWorkspaceWidgets(
       id: "analytical_balance",
       widgetType: "analytical_balance",
       label: "Analytical balance",
+      dropTargetTypes: ["analytical_balance_widget"],
       anchor: "top-left",
       offsetX: 688,
       offsetY: 886,
@@ -170,6 +205,7 @@ function makeWorkspaceWidgets(
       id: "workbench",
       widgetType: "workbench",
       label: "Workbench",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 24,
       offsetY: 24,
@@ -180,6 +216,7 @@ function makeWorkspaceWidgets(
       id: "trash",
       widgetType: "trash",
       label: "Trash",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 1276,
       offsetY: 24,
@@ -190,6 +227,7 @@ function makeWorkspaceWidgets(
       id: "rack",
       widgetType: "autosampler_rack",
       label: "Autosampler rack",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 234,
       offsetY: 886,
@@ -200,6 +238,7 @@ function makeWorkspaceWidgets(
       id: "instrument",
       widgetType: "lc_msms_instrument",
       label: "LC-MS/MS",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 812,
       offsetY: 886,
@@ -210,6 +249,7 @@ function makeWorkspaceWidgets(
       id: "basket",
       widgetType: "produce_basket",
       label: "Produce basket",
+      dropTargetTypes: [],
       anchor: "top-left",
       offsetX: 1276,
       offsetY: 262,
@@ -220,6 +260,7 @@ function makeWorkspaceWidgets(
       id: "grinder",
       widgetType: "cryogenic_grinder",
       label: "Cryogenic grinder",
+      dropTargetTypes: ["grinder_widget"],
       anchor: "top-left",
       offsetX: 980,
       offsetY: 886,
@@ -228,10 +269,35 @@ function makeWorkspaceWidgets(
     },
   ];
 
-  return baseWidgets.map((widget, index) => ({
-    ...widget,
-    ...(normalizedOverrides[index] ?? {}),
-  }));
+  const storableWidgetIds = new Set(["lims", "rack", "instrument", "grinder", "gross_balance", "analytical_balance"]);
+
+  return baseWidgets.map((widget, index) => {
+    const merged = { ...widget, ...(normalizedOverrides[index] ?? {}) };
+    const isDraggable =
+      storableWidgetIds.has(merged.id) &&
+      (merged.isTrashed ||
+        (merged.tool == null &&
+          (merged.produceLots?.length ?? 0) === 0 &&
+          (merged.liquids?.length ?? 0) === 0));
+    return {
+      ...merged,
+      isDraggable,
+      allowedDropTargets: isDraggable ? (["workspace_canvas"] as const) : [],
+    };
+  });
+}
+
+function makeProduceLot(overrides: Partial<ExperimentProduceLot> & { id: string }): ExperimentProduceLot {
+  return {
+    label: "Apple lot 1",
+    produceType: "apple",
+    totalMassG: 2450,
+    unitCount: 12,
+    isContaminated: false,
+    isDraggable: true,
+    allowedDropTargets: getProduceLotDropTargets(),
+    ...overrides,
+  };
 }
 
 function makeWorkbenchExperiment({
@@ -252,13 +318,7 @@ function makeWorkbenchExperiment({
 }: {
   analyticalBalance?: Experiment["analyticalBalance"];
   auditLog?: string[];
-  basketProduceLots?: {
-    id: string;
-    label: string;
-    produceType: "apple";
-    totalMassG: number;
-    unitCount: number | null;
-  }[];
+  basketProduceLots?: ExperimentProduceLot[];
   basketTool?: BenchToolInstance | null;
   lastSimulationAt?: string;
   limsEntries?: LimsReception[];
@@ -317,6 +377,8 @@ function makePrintedLimsTicket(
     sampleCode: "APP-2026-0001",
     labelText: "APP-2026-0001",
     receivedDate: "2026-04-03",
+    isDraggable: true,
+    allowedDropTargets: getLimsLabelTicketDropTargets(),
     ...overrides,
   };
 }
@@ -349,13 +411,7 @@ function makeTrashProduceLotEntry(
   return {
     id: "trash_produce_lot_1",
     originLabel: "Produce basket",
-    produceLot: {
-      id: "produce_1",
-      label: "Apple lot 1",
-      produceType: "apple",
-      totalMassG: 2450,
-      unitCount: 12,
-    },
+    produceLot: makeProduceLot({ id: "produce_1" }),
     ...overrides,
   };
 }
@@ -366,7 +422,15 @@ function makeTrashSampleLabelEntry(
   return {
     id: "trash_sample_label_1",
     originLabel: "Sealed sampling bag",
-    sampleLabelText: "LOT-2026-041",
+    label: {
+      id: "trash_sample_label_label_1",
+      labelKind: "manual",
+      text: "LOT-2026-041",
+      receivedDate: null,
+      sampleCode: null,
+      isDraggable: true,
+      allowedDropTargets: getSampleLabelDropTargets(),
+    },
     ...overrides,
   };
 }
@@ -500,6 +564,28 @@ describe("LabScene", () => {
     );
   });
 
+  it("uses snapshot draggability for a workbench tool card", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              allowedDropTargets: ["trash_bin"],
+              isDraggable: false,
+            }),
+          },
+        ]),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    expect(await screen.findByTestId("bench-tool-card-bench_tool_1")).toHaveAttribute(
+      "draggable",
+      "false",
+    );
+  });
+
   it("keeps inventory and actions panels in sticky sidebars outside the workspace", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
 
@@ -559,16 +645,14 @@ describe("LabScene", () => {
               toolType: "storage_jar",
               capacity_ml: 2000,
               produceLots: [
-                {
+                makeProduceLot({
                   id: "produce_debug_1",
                   label: "Apple powder lot",
-                  produceType: "apple",
-                  totalMassG: 2450,
                   unitCount: null,
                   cutState: "ground",
                   residualCo2MassG: 18,
                   temperatureC: -62,
-                },
+                }),
               ],
             }),
           },
@@ -1364,13 +1448,7 @@ describe("LabScene", () => {
           {
             id: "trash_produce_lot_1",
             originLabel: "Sealed sampling bag",
-            produceLot: {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            produceLot: makeProduceLot({ id: "produce_1" }),
           },
         ],
         trashTools: [
@@ -1439,13 +1517,7 @@ describe("LabScene", () => {
           subtitle: "Field reception",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1" }),
           ],
         }),
       }),
@@ -1503,13 +1575,7 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1" }),
         ],
         slots: makeSlots([{ tool: makeSampleBagTool() }]),
       }),
@@ -1521,13 +1587,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -1572,13 +1632,7 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1" }),
         ],
       }),
     );
@@ -1590,14 +1644,7 @@ describe("LabScene", () => {
           {},
           {
             surfaceProduceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-                isContaminated: true,
-              },
+              makeProduceLot({ id: "produce_1", isContaminated: true }),
             ],
           },
         ]),
@@ -1635,13 +1682,7 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1" }),
         ],
         workspaceWidgets: makeWorkspaceWithGrinderVisible(),
       }),
@@ -1651,13 +1692,7 @@ describe("LabScene", () => {
         basketProduceLots: [],
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1" }),
           ],
         }),
       }),
@@ -1822,15 +1857,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              cutState: "whole",
-              produceType: "apple",
-              temperatureC: 2,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", cutState: "whole", temperatureC: 2 }),
           ],
         }),
       }),
@@ -1857,15 +1884,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              cutState: "cut",
-              produceType: "apple",
-              temperatureC: 12,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: 12 }),
           ],
         }),
       }),
@@ -1893,15 +1912,7 @@ describe("LabScene", () => {
         grinderRunDurationMs: 0,
         grinderRunRemainingMs: 0,
         produceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            cutState: "cut",
-            produceType: "apple",
-            temperatureC: -45,
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -45 }),
         ],
         liquids: [
           {
@@ -1921,15 +1932,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 30000,
           grinderRunRemainingMs: 30000,
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              cutState: "cut",
-              produceType: "apple",
-              temperatureC: -75,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -75 }),
           ],
           liquids: [
             {
@@ -1974,15 +1977,7 @@ describe("LabScene", () => {
             grinderRunDurationMs: 30000,
             grinderRunRemainingMs: 15000,
             produceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                cutState: "cut",
-                produceType: "apple",
-                temperatureC: -69.2,
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -69.2 }),
             ],
             liquids: [
               {
@@ -2032,16 +2027,7 @@ describe("LabScene", () => {
             grinderRunDurationMs: 0,
             grinderRunRemainingMs: 0,
             produceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                cutState: "ground",
-                produceType: "apple",
-                residualCo2MassG: 381.7,
-                temperatureC: -65.1,
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1", cutState: "ground", residualCo2MassG: 381.7, temperatureC: -65.1 }),
             ],
           }),
         }),
@@ -2066,14 +2052,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              temperatureC: 12,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", temperatureC: 12 }),
           ],
           liquids: [
             {
@@ -2110,14 +2089,7 @@ describe("LabScene", () => {
           snapshotVersion: 2,
           workspaceWidgets: makeWorkspaceWithGrinderVisible({
             produceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                temperatureC: 8,
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1", temperatureC: 8 }),
             ],
             liquids: [
               {
@@ -2146,15 +2118,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 30000,
           grinderRunRemainingMs: 10000,
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              cutState: "cut",
-              produceType: "apple",
-              temperatureC: -15,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -15 }),
           ],
           liquids: [
             {
@@ -2186,15 +2150,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 0,
           grinderRunRemainingMs: 0,
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple lot 1",
-              cutState: "cut",
-              produceType: "apple",
-              temperatureC: -8,
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -8 }),
           ],
         }),
       }),
@@ -2216,14 +2172,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  temperatureC: 4.2,
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1", temperatureC: 4.2 }),
               ],
             }),
           },
@@ -2246,14 +2195,7 @@ describe("LabScene", () => {
             {
               tool: makeSampleBagTool({
                 produceLots: [
-                  {
-                    id: "produce_1",
-                    label: "Apple lot 1",
-                    produceType: "apple",
-                    temperatureC: 6.1,
-                    totalMassG: 2450,
-                    unitCount: 12,
-                  },
+                  makeProduceLot({ id: "produce_1", temperatureC: 6.1 }),
                 ],
               }),
             },
@@ -2275,16 +2217,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  cutState: "ground",
-                  produceType: "apple",
-                  residualCo2MassG: 42.5,
-                  temperatureC: -58.1,
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1", cutState: "ground", residualCo2MassG: 42.5, temperatureC: -58.1 }),
               ],
             }),
           },
@@ -2331,13 +2264,7 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1" }),
         ],
         rackSlots: makeRackSlots([
           {
@@ -2364,15 +2291,7 @@ describe("LabScene", () => {
           {
             isPresent: true,
             produceLots: [
-              {
-                id: "grinder_produce_1",
-                label: "Cold apple lot",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-                cutState: "cut",
-                temperatureC: -35,
-              },
+              makeProduceLot({ id: "grinder_produce_1", label: "Cold apple lot", cutState: "cut", temperatureC: -35 }),
             ],
           },
         ]),
@@ -2487,15 +2406,7 @@ describe("LabScene", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                  cutState: "whole",
-                  isContaminated: false,
-                },
+                makeProduceLot({ id: "produce_1", cutState: "whole" }),
               ],
               liquids: [],
             },
@@ -2517,15 +2428,7 @@ describe("LabScene", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                  cutState: "cut",
-                  isContaminated: false,
-                },
+                makeProduceLot({ id: "produce_1", cutState: "cut" }),
               ],
               liquids: [],
             },
@@ -2554,12 +2457,12 @@ describe("LabScene", () => {
   it("applies a sampling label from the palette onto an unlabeled sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool() }]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "" }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool({ labels: [makeSampleBagLabel({ text: "" })] }) }]),
       }),
     );
 
@@ -2593,13 +2496,7 @@ describe("LabScene", () => {
           id: "received_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Orchard apple lot",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            makeProduceLot({ id: "produce_1", label: "Orchard apple lot" }),
           ],
         }),
       }),
@@ -2643,13 +2540,7 @@ describe("LabScene", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -2669,13 +2560,7 @@ describe("LabScene", () => {
             toolType: "sample_bag",
             capacity_ml: 500,
             produceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1" }),
             ],
           }),
         }),
@@ -2939,7 +2824,6 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: null,
             }),
           },
         ]),
@@ -2958,7 +2842,159 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: "APP-2026-0001",
+              labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label",
+        { slot_id: "station_1" },
+      );
+    });
+  });
+
+  it("applies a LIMS ticket onto a tube on the workbench", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_tube_1",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Tube on bench",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: makePrintedLimsTicket(),
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_tube_1",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Tube on bench",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+              labels: [
+                makeSampleBagLabel({
+                  id: "bench_tube_1-lims-label",
+                  labelKind: "lims",
+                  text: "APP-2026-0001",
+                  sampleCode: "APP-2026-0001",
+                  receivedDate: "2026-04-03",
+                }),
+              ],
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "received",
+          printedLabelTicket: null,
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const ticket = await screen.findByTestId("lims-printed-ticket");
+    const station = screen.getByTestId("bench-slot-station_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(ticket, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(station, { dataTransfer: transfer });
+    fireEvent(station, dragOverEvent);
+    fireEvent.drop(station, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "apply_printed_lims_label",
+        { slot_id: "station_1" },
+      );
+    });
+  });
+
+  it("applies a LIMS ticket onto a jar on the workbench", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_jar_1",
+              toolId: "storage_jar_250ml",
+              label: "Storage jar",
+              subtitle: "Jar on bench",
+              toolType: "storage_jar",
+              capacity_ml: 250,
+            }),
+          },
+        ]),
+        limsReception: makeLimsReception({
+          measuredGrossMassG: 2486,
+          labSampleCode: "APP-2026-0001",
+          status: "awaiting_label_application",
+          printedLabelTicket: makePrintedLimsTicket(),
+        }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        slots: makeSlots([
+          {
+            tool: makeTool({
+              id: "bench_jar_1",
+              toolId: "storage_jar_250ml",
+              label: "Storage jar",
+              subtitle: "Jar on bench",
+              toolType: "storage_jar",
+              capacity_ml: 250,
+              labels: [
+                makeSampleBagLabel({
+                  id: "bench_jar_1-lims-label",
+                  labelKind: "lims",
+                  text: "APP-2026-0001",
+                  sampleCode: "APP-2026-0001",
+                  receivedDate: "2026-04-03",
+                }),
+              ],
             }),
           },
         ]),
@@ -3000,7 +3036,6 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: null,
             }),
           },
         ]),
@@ -3021,7 +3056,6 @@ describe("LabScene", () => {
               tool: makeSampleBagTool({
                 id: "bench_tool_1",
                 fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-                sampleLabelText: null,
               }),
             },
           ]),
@@ -3035,7 +3069,6 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: null,
             }),
           }),
         });
@@ -3047,7 +3080,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: "APP-2026-0001",
+              labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
             }),
           },
         ]),
@@ -3061,7 +3094,7 @@ describe("LabScene", () => {
           tool: makeSampleBagTool({
             id: "bench_tool_1",
             fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-            sampleLabelText: "APP-2026-0001",
+            labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
           }),
         }),
       });
@@ -3102,7 +3135,6 @@ describe("LabScene", () => {
         basketTool: makeSampleBagTool({
           id: "basket_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-          sampleLabelText: null,
         }),
         limsReception: makeLimsReception({
           measuredGrossMassG: 2486,
@@ -3119,7 +3151,6 @@ describe("LabScene", () => {
           basketTool: makeSampleBagTool({
             id: "basket_bag_1",
             fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-            sampleLabelText: null,
           }),
           limsReception: makeLimsReception({
             measuredGrossMassG: 2486,
@@ -3131,7 +3162,6 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "basket_bag_1",
               fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-              sampleLabelText: null,
             }),
           }),
         });
@@ -3141,7 +3171,7 @@ describe("LabScene", () => {
         basketTool: makeSampleBagTool({
           id: "basket_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-          sampleLabelText: "APP-2026-0001",
+          labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
         }),
         limsReception: makeLimsReception({
           measuredGrossMassG: 2486,
@@ -3153,7 +3183,7 @@ describe("LabScene", () => {
           tool: makeSampleBagTool({
             id: "basket_bag_1",
             fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-            sampleLabelText: "APP-2026-0001",
+            labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
           }),
         }),
       });
@@ -3198,13 +3228,7 @@ describe("LabScene", () => {
             id: "balance_bag_1",
             isSealed: false,
             produceLots: [
-              {
-                id: "produce_1",
-                label: "Apple lot 1",
-                produceType: "apple",
-                totalMassG: 2450,
-                unitCount: 12,
-              },
+              makeProduceLot({ id: "produce_1" }),
             ],
           }),
         }),
@@ -3217,13 +3241,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_1",
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -3267,13 +3285,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple powder 1",
-              produceType: "apple",
-              totalMassG: 10,
-              cutState: "ground",
-            },
+            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
           ],
         }),
       }),
@@ -3283,13 +3295,7 @@ describe("LabScene", () => {
         slots: makeSlots([
           {
             surfaceProduceLots: [
-              {
-                id: "produce_1",
-                label: "Apple powder 1",
-                produceType: "apple",
-                totalMassG: 10,
-                cutState: "ground",
-              },
+              makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
             ],
           },
         ]),
@@ -3328,13 +3334,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
           produceLots: [
-            {
-              id: "produce_1",
-              label: "Apple powder 1",
-              produceType: "apple",
-              totalMassG: 10,
-              cutState: "ground",
-            },
+            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
           ],
         }),
       }),
@@ -3345,13 +3345,7 @@ describe("LabScene", () => {
           {
             id: "trash_produce_1",
             originLabel: "Gross balance",
-            produceLot: {
-              id: "produce_1",
-              label: "Apple powder 1",
-              produceType: "apple",
-              totalMassG: 10,
-              cutState: "ground",
-            },
+            produceLot: makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
           },
         ],
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
@@ -3406,7 +3400,7 @@ describe("LabScene", () => {
           {
             id: "trash_sample_label_1",
             originLabel: "LIMS terminal",
-            sampleLabelText: "APP-2026-0001",
+            labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
           },
         ],
       }),
@@ -3457,12 +3451,12 @@ describe("LabScene", () => {
   it("updates the sampling label text on blur", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "" }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool({ labels: [makeSampleBagLabel({ text: "" })] }) }]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool({ labels: [makeSampleBagLabel({ text: "LOT-2026-041" })] }) }]),
       }),
     );
 
@@ -3476,7 +3470,7 @@ describe("LabScene", () => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
         "update_workbench_tool_sample_label_text",
-        { slot_id: "station_1", sample_label_text: "LOT-2026-041" },
+        { label_id: "bench_tool_1-sample-label", slot_id: "station_1", sample_label_text: "LOT-2026-041" },
       );
     });
   });
@@ -3484,12 +3478,12 @@ describe("LabScene", () => {
   it("discards a sampling bag label from the bench into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool({ labels: [makeSampleBagLabel({ text: "LOT-2026-041" })] }) }]),
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool() }]),
         trashSampleLabels: [makeTrashSampleLabelEntry()],
       }),
     );
@@ -3511,7 +3505,7 @@ describe("LabScene", () => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
         "discard_sample_label_from_workbench_tool",
-        { slot_id: "station_1" },
+        { label_id: "bench_tool_1-sample-label", slot_id: "station_1" },
       );
     });
   });
@@ -3519,13 +3513,13 @@ describe("LabScene", () => {
   it("restores a trashed sampling bag label onto an unlabeled sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: null }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool() }]),
         trashSampleLabels: [makeTrashSampleLabelEntry()],
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        slots: makeSlots([{ tool: makeSampleBagTool({ sampleLabelText: "LOT-2026-041" }) }]),
+        slots: makeSlots([{ tool: makeSampleBagTool({ labels: [makeSampleBagLabel({ text: "LOT-2026-041" })] }) }]),
         trashSampleLabels: [],
       }),
     );
@@ -3560,13 +3554,7 @@ describe("LabScene", () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
         basketProduceLots: [
-          {
-            id: "produce_1",
-            label: "Apple lot 1",
-            produceType: "apple",
-            totalMassG: 2450,
-            unitCount: 12,
-          },
+          makeProduceLot({ id: "produce_1" }),
         ],
       }),
     );
@@ -3612,13 +3600,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -3634,13 +3616,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               id: "bench_tool_2",
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -3686,13 +3662,7 @@ describe("LabScene", () => {
             tool: makeSampleBagTool({
               isSealed: true,
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -3752,13 +3722,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -3772,13 +3736,7 @@ describe("LabScene", () => {
           {
             id: "trash_produce_lot_1",
             originLabel: "Sealed sampling bag",
-            produceLot: {
-              id: "produce_1",
-              label: "Apple lot 1",
-              produceType: "apple",
-              totalMassG: 2450,
-              unitCount: 12,
-            },
+            produceLot: makeProduceLot({ id: "produce_1" }),
           },
         ],
         slots: makeSlots([{ tool: makeSampleBagTool() }]),
@@ -3828,13 +3786,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                {
-                  id: "produce_1",
-                  label: "Apple lot 1",
-                  produceType: "apple",
-                  totalMassG: 2450,
-                  unitCount: 12,
-                },
+                makeProduceLot({ id: "produce_1" }),
               ],
             }),
           },
@@ -4817,7 +4769,6 @@ describe("LabScene", () => {
       subtitle: "Tube on balance",
       toolType: "centrifuge_tube",
       capacity_ml: 50,
-      sampleLabelText: null,
     });
 
     vi.mocked(createExperiment).mockResolvedValue(
@@ -4872,7 +4823,6 @@ describe("LabScene", () => {
       subtitle: "Tube on balance",
       toolType: "centrifuge_tube",
       capacity_ml: 50,
-      sampleLabelText: null,
     });
 
     vi.mocked(createExperiment).mockResolvedValue(
@@ -4926,7 +4876,6 @@ describe("LabScene", () => {
       subtitle: "Tube on balance",
       toolType: "centrifuge_tube",
       capacity_ml: 50,
-      sampleLabelText: null,
     });
 
     vi.mocked(createExperiment).mockResolvedValue(
@@ -4980,7 +4929,6 @@ describe("LabScene", () => {
       subtitle: "Tube on balance",
       toolType: "centrifuge_tube",
       capacity_ml: 50,
-      sampleLabelText: null,
     });
 
     vi.mocked(createExperiment).mockResolvedValue(

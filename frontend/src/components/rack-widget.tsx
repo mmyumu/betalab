@@ -16,7 +16,7 @@ type RackWidgetProps = {
   occupiedSlotLiquids: Record<number, BenchToolInstance["liquids"]>;
   occupiedSlots: number[];
   onItemDragEnd: () => void;
-  onRackSlotDragOver: (event: DragEvent<HTMLDivElement>) => void;
+  onRackSlotDragOver: (event: DragEvent<HTMLDivElement>, rackSlot: RackSlot) => void;
   onRackSlotDrop: (event: DragEvent<HTMLDivElement>, slotIndex: number) => void;
   onRackToolDragStart: (
     rackSlot: RackSlot,
@@ -72,7 +72,7 @@ export function RackWidget({
                 draggable={Boolean(tool) && !dndDisabled}
                 key={rackSlot.id}
                 onDragEnd={onItemDragEnd}
-                onDragOver={dndDisabled ? undefined : onRackSlotDragOver}
+                onDragOver={dndDisabled ? undefined : (event) => onRackSlotDragOver(event, rackSlot)}
                 onDragStart={(event) => {
                   if (!tool || dndDisabled) {
                     return;

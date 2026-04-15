@@ -1,6 +1,7 @@
 import type { DebugProducePreset } from "@/components/debug-produce-palette";
 import type { DropDraftField } from "@/components/drop-draft-card";
 import type { WidgetLayout } from "@/hooks/use-workspace-layout";
+import { getProduceLotDropTargets } from "@/lib/tool-drop-targets";
 import type {
   BenchToolInstance,
   ExperimentProduceLot,
@@ -62,6 +63,8 @@ export const debugProducePresets: DebugProducePreset[] = [
       temperatureC: -62,
       grindQualityLabel: "powder_fine",
       homogeneityScore: 0.96,
+      isDraggable: true,
+      allowedDropTargets: getProduceLotDropTargets(),
     },
   },
 ];

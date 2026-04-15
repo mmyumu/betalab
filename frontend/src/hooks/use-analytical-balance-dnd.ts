@@ -1,19 +1,17 @@
 import type { DragEvent } from "react";
 
+import { canResolveLabelDropOnTool, readLabelDragPayload } from "@/lib/label-drop-resolver";
 import {
   hasCompatibleDropTarget,
   readAnalyticalBalanceToolDragPayload,
   readBenchToolDragPayload,
   readGrossBalanceToolDragPayload,
-  readLimsLabelTicketDragPayload,
   readRackToolDragPayload,
-  readSampleLabelDragPayload,
   readToolbarDragPayload,
   readTrashToolDragPayload,
   toDragDescriptor,
   writeAnalyticalBalanceToolDragPayload,
 } from "@/lib/workbench-dnd";
-import { getToolDropTargets } from "@/lib/tool-drop-targets";
 import type { AnalyticalBalanceToolDragPayload, BenchToolInstance } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type {
@@ -67,34 +65,24 @@ export function useAnalyticalBalanceDnd({
   dndDisabledByAction,
   dragState,
   experimentApi,
-  hasPrintedLabelTicket,
+  hasPrintedLabelTicket: _hasPrintedLabelTicket,
 }: AnalyticalBalanceDndOptions): AnalyticalBalanceDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
-  const toolHasLimsLabel =
-    analyticalBalanceTool !== null &&
-    (analyticalBalanceTool.labels ?? []).some((label) => label.labelKind === "lims");
 
   const handleAnalyticalBalanceDragOver = (event: DragEvent<HTMLElement>) => {
     if (dndDisabledByAction) {
       return;
     }
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    const isSampleLabelDrag =
-      toolbarPayload?.itemType === "sample_label" || sampleLabelPayload !== null;
-    if (isSampleLabelDrag && analyticalBalanceTool === null) {
-      return;
-    }
     if (
-      limsTicketPayload &&
-      hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")
+      canResolveLabelDropOnTool(event.dataTransfer, {
+        parentDropTargetTypes: ["analytical_balance_widget"],
+        tool: analyticalBalanceTool,
+      })
     ) {
-      if (analyticalBalanceTool !== null && hasPrintedLabelTicket && !toolHasLimsLabel) {
-        event.preventDefault();
-      }
+      event.preventDefault();
       return;
     }
+
     if (hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
       event.preventDefault();
     }
@@ -104,56 +92,44 @@ export function useAnalyticalBalanceDnd({
     if (dndDisabledByAction) {
       return;
     }
+    const labelDragPayload = readLabelDragPayload(event.dataTransfer);
+    if (
+      labelDragPayload &&
+      canResolveLabelDropOnTool(event.dataTransfer, {
+        parentDropTargetTypes: ["analytical_balance_widget"],
+        tool: analyticalBalanceTool,
+      })
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+
+      if (labelDragPayload.kind === "lims_label_ticket") {
+        void experimentApi.applyPrintedLimsLabelToAnalyticalBalanceTool();
+        return;
+      }
+      if (labelDragPayload.kind === "palette_sample_label") {
+        void experimentApi.applySampleLabelToAnalyticalBalanceTool();
+        return;
+      }
+      if (labelDragPayload.kind === "workbench_sample_label") {
+        void experimentApi.moveWorkbenchSampleLabelToAnalyticalBalance({
+          source_slot_id: labelDragPayload.payload.sourceSlotId!,
+          label_id: labelDragPayload.payload.sampleLabelId,
+        });
+        return;
+      }
+      void experimentApi.restoreTrashedSampleLabelToAnalyticalBalance({
+        trash_sample_label_id: labelDragPayload.payload.trashSampleLabelId!,
+      });
+      return;
+    }
+
     if (!hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
       return;
     }
 
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-
-    if (limsTicketPayload && analyticalBalanceTool === null) {
-      return;
-    }
-
-    if (analyticalBalanceTool !== null) {
-      if (limsTicketPayload && hasPrintedLabelTicket && !toolHasLimsLabel) {
-        event.preventDefault();
-        event.stopPropagation();
-        clearDropTargets();
-        void experimentApi.applyPrintedLimsLabelToAnalyticalBalanceTool();
-        return;
-      }
-
-      if (toolbarPayload?.itemType === "sample_label") {
-        event.preventDefault();
-        event.stopPropagation();
-        clearDropTargets();
-        void experimentApi.applySampleLabelToAnalyticalBalanceTool();
-        return;
-      }
-
-      if (sampleLabelPayload?.sourceKind === "workbench" && sampleLabelPayload.sourceSlotId) {
-        event.preventDefault();
-        event.stopPropagation();
-        clearDropTargets();
-        void experimentApi.moveWorkbenchSampleLabelToAnalyticalBalance({
-          source_slot_id: sampleLabelPayload.sourceSlotId,
-          label_id: sampleLabelPayload.sampleLabelId,
-        });
-        return;
-      }
-
-      if (sampleLabelPayload?.sourceKind === "trash" && sampleLabelPayload.trashSampleLabelId) {
-        event.preventDefault();
-        event.stopPropagation();
-        clearDropTargets();
-        void experimentApi.restoreTrashedSampleLabelToAnalyticalBalance({
-          trash_sample_label_id: sampleLabelPayload.trashSampleLabelId,
-        });
-        return;
-      }
-    }
 
     const toolPayload =
       (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
@@ -208,8 +184,11 @@ export function useAnalyticalBalanceDnd({
     if (!analyticalBalanceTool) {
       return;
     }
+    if (analyticalBalanceTool.isDraggable === false) {
+      return;
+    }
 
-    const allowedDropTargets = getToolDropTargets(analyticalBalanceTool.toolType);
+    const allowedDropTargets = analyticalBalanceTool.allowedDropTargets ?? [];
     const payload: AnalyticalBalanceToolDragPayload = {
       allowedDropTargets,
       entityKind: "tool",

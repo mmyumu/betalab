@@ -83,23 +83,7 @@ export function BenchToolCard({
   const isSealable = canToolBeSealed(tool.toolType);
   const isSealed = tool.isSealed ?? false;
   const canDragContainedProduce = !isSealed;
-  const legacySampleLabelText = (tool as BenchToolInstance & { sampleLabelText?: string | null }).sampleLabelText;
-  const legacySampleLabelReceivedDate = (
-    tool as BenchToolInstance & { sampleLabelReceivedDate?: string | null }
-  ).sampleLabelReceivedDate;
-  const labels =
-    tool.labels ??
-    (legacySampleLabelText !== null && legacySampleLabelText !== undefined
-      ? [
-          {
-            id: `${tool.id}-legacy-label`,
-            labelKind: legacySampleLabelReceivedDate ? "lims" : "manual",
-            text: legacySampleLabelText,
-            receivedDate: legacySampleLabelReceivedDate ?? null,
-            sampleCode: legacySampleLabelReceivedDate ? legacySampleLabelText : null,
-          } satisfies BenchLabel,
-        ]
-      : []);
+  const labels = tool.labels ?? [];
   const hasLabels = labels.length > 0;
   const hasFieldLabel = isSampleBag && tool.fieldLabelText !== null && tool.fieldLabelText !== undefined;
   const displayLabelText = isSampleBag ? getPrimaryToolLabelText(labels) : null;
@@ -238,13 +222,13 @@ export function BenchToolCard({
                   label.labelKind === "lims"
                     ? "border-sky-200 bg-sky-50/70"
                     : "border-slate-200 bg-slate-50/90"
-                } ${onSampleLabelDragStart ? dragAffordanceClassName : ""}`.trim()}
+                } ${onSampleLabelDragStart && (label.isDraggable ?? true) ? dragAffordanceClassName : ""}`.trim()}
                 data-testid={
                   labels.length === 1
                     ? `sample-label-card-${tool.id}`
                     : `sample-label-card-${tool.id}-${label.id}`
                 }
-                draggable={Boolean(onSampleLabelDragStart)}
+                draggable={Boolean(onSampleLabelDragStart) && (label.isDraggable ?? true)}
                 key={label.id}
                 onDragEnd={onSampleLabelDragEnd}
                 onDragStart={(event) => {

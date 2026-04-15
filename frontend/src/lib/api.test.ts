@@ -112,6 +112,102 @@ describe("api client", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/experiments");
   });
 
+  it("normalizes DnD contract fields from the experiment snapshot", async () => {
+    const rawExperiment = {
+      ...makeExperiment(),
+      id: "experiment_dnd_contract",
+      workbench: {
+        slots: [
+          {
+            id: "station_1",
+            label: "Station 1",
+            drop_target_types: ["workbench_slot"],
+            tool: {
+              id: "bench_tool_1",
+              tool_id: "sample_bag_1",
+              label: "Sample bag",
+              subtitle: "Reception bag",
+              accent: "emerald",
+              tool_type: "sample_bag",
+              capacity_ml: 2500,
+              is_draggable: false,
+              allowed_drop_targets: ["trash_bin"],
+              labels: [
+                {
+                  id: "label_1",
+                  label_kind: "manual",
+                  text: "Manual note",
+                  is_draggable: true,
+                  allowed_drop_targets: ["workbench_slot", "analytical_balance_widget", "trash_bin"],
+                },
+              ],
+              produce_lots: [],
+              liquids: [],
+              produce_fractions: [],
+            },
+          },
+        ],
+      },
+      limsReception: {
+        ...makeExperiment().limsReception,
+        printedLabelTicket: {
+          id: "ticket_1",
+          sampleCode: "APP-2026-001",
+          labelText: "APP-2026-001",
+          receivedDate: "2026-04-14",
+          isDraggable: true,
+          allowedDropTargets: ["workbench_slot", "gross_balance_widget", "analytical_balance_widget", "trash_bin"],
+        },
+      },
+      workspace: {
+        produceBasketLots: [],
+        widgets: [
+          {
+            id: "gross_balance",
+            widget_type: "gross_balance",
+            label: "Gross balance",
+            drop_target_types: ["gross_balance_widget"],
+            anchor: "top-left",
+            offset_x: 0,
+            offset_y: 0,
+            is_present: true,
+            is_trashed: false,
+            tool: null,
+            produce_lots: [],
+            liquids: [],
+          },
+        ],
+      },
+    } satisfies Record<string, unknown>;
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => rawExperiment,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const experiment = await getExperiment("experiment_dnd_contract");
+
+    expect(experiment.workbench.slots[0].tool).toMatchObject({
+      isDraggable: false,
+      allowedDropTargets: ["trash_bin"],
+      labels: [
+        {
+          id: "label_1",
+          isDraggable: true,
+          allowedDropTargets: ["workbench_slot", "analytical_balance_widget", "trash_bin"],
+        },
+      ],
+    });
+    expect(experiment.workbench.slots[0].dropTargetTypes).toEqual(["workbench_slot"]);
+    expect(experiment.limsReception.printedLabelTicket).toMatchObject({
+      id: "ticket_1",
+      isDraggable: true,
+      allowedDropTargets: ["workbench_slot", "gross_balance_widget", "analytical_balance_widget", "trash_bin"],
+    });
+    expect(experiment.workspace.widgets[0].dropTargetTypes).toEqual(["gross_balance_widget"]);
+  });
+
   it("deletes a saved experiment", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

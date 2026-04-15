@@ -9,7 +9,6 @@ import {
   writeProduceDragPayload,
   writeWorkspaceLiquidDragPayload,
 } from "@/lib/workbench-dnd";
-import { getProduceLotDropTargets } from "@/lib/tool-drop-targets";
 import { labLiquidCatalog } from "@/lib/lab-workflow-catalog";
 import type {
   ExperimentProduceLot,
@@ -400,7 +399,7 @@ export function useGrinderDnd({
     if (grinderDndDisabled) {
       return;
     }
-    const allowedDropTargets = getProduceLotDropTargets();
+    const allowedDropTargets = produceLot.allowedDropTargets ?? [];
     writeProduceDragPayload(dataTransfer, {
       allowedDropTargets,
       entityKind: "produce",
