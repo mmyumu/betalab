@@ -11,6 +11,30 @@ import { ProduceBasketIllustration } from "@/components/illustrations/produce-ba
 import { WorkspaceEquipmentWidget } from "@/components/workspace-equipment-widget";
 
 describe("workspace equipment illustrations", () => {
+  it("renders powder above the liquid surface inside a sample vial", () => {
+    render(
+      <LabAssetIcon
+        accent="sky"
+        className="h-22 w-16"
+        fillRatio={0.5}
+        kind="sample_vial"
+        powderMassG={1.2}
+      />,
+    );
+
+    const icon = screen.getByLabelText("sample vial").parentElement;
+    const liquidLayer = icon?.querySelector("path[fill='#38bdf8']");
+    const powderLayer = icon?.querySelector("[data-powder-layer='true']");
+    const powderPath = powderLayer?.getAttribute("d") ?? "";
+    const liquidTopY = Number(liquidLayer?.getAttribute("d")?.match(/^M\d+(?:\.\d+)?\s+(\d+(?:\.\d+)?)/)?.[1]);
+    const powderTopY = Number(powderLayer?.getAttribute("d")?.match(/^M\d+(?:\.\d+)?\s+(\d+(?:\.\d+)?)/)?.[1]);
+
+    expect(liquidLayer).toBeTruthy();
+    expect(powderLayer).toBeTruthy();
+    expect(powderTopY).toBeLessThan(liquidTopY);
+    expect(powderTopY).toBeGreaterThan(34);
+  });
+
   it("renders rack occupancy as data attributes", () => {
     render(
       <AutosamplerRackIllustration

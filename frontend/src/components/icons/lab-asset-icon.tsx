@@ -91,6 +91,22 @@ function PowderLayer({
   );
 }
 
+function getPowderSurfaceBaseY({
+  liquidTop,
+  settledBaseY,
+  surfaceDepthY = 6,
+}: {
+  liquidTop?: number;
+  settledBaseY: number;
+  surfaceDepthY?: number;
+}) {
+  if (liquidTop === undefined) {
+    return settledBaseY;
+  }
+
+  return Math.min(liquidTop + surfaceDepthY, settledBaseY);
+}
+
 function VolumetricFlaskIcon({
   fillRatio,
   glow,
@@ -169,11 +185,19 @@ function CentrifugeTubeIcon({
       />
       <path d={`M33 ${liquidTop}C39 ${liquidTop - 2} 49 ${liquidTop + 2} 55 ${liquidTop}`} opacity="0.65" />
       {powderHeight > 0 ? (
-        <PowderLayer
-          bodyPath={`M34 ${95 - powderHeight}C38 ${92 - powderHeight} 49 ${93 - powderHeight} 54 ${95 - powderHeight}V80C54 83 53 86 51 89L46 96C45 97 43 97 42 96L37 89C35 86 34 83 34 80V${95 - powderHeight}Z`}
-          fill="#d6c6a8"
-          ridgePath={`M34 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 54 ${95 - powderHeight}`}
-        />
+        fillRatio > 0 ? (
+          <PowderLayer
+            bodyPath={`M34 ${liquidTop + 2}C38 ${liquidTop - powderHeight - 2} 50 ${liquidTop - powderHeight - 2} 54 ${liquidTop + 2}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M34 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 54 ${liquidTop + 2}`}
+          />
+        ) : (
+          <PowderLayer
+            bodyPath={`M34 ${95 - powderHeight}C38 ${92 - powderHeight} 49 ${93 - powderHeight} 54 ${95 - powderHeight}V80C54 83 53 86 51 89L46 96C45 97 43 97 42 96L37 89C35 86 34 83 34 80V${95 - powderHeight}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M34 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 54 ${95 - powderHeight}`}
+          />
+        )
       ) : null}
     </VesselFrame>
   );
@@ -225,11 +249,19 @@ function CleanupTubeIcon({
       />
       <path d={`M35 ${liquidTop}C40 ${liquidTop - 1} 48 ${liquidTop + 2} 53 ${liquidTop}`} opacity="0.65" />
       {powderHeight > 0 ? (
-        <PowderLayer
-          bodyPath={`M36 ${95 - powderHeight}C40 ${91 - powderHeight} 48 ${92 - powderHeight} 52 ${95 - powderHeight}V82C52 86 49 90 44 94C39 90 36 86 36 82V${95 - powderHeight}Z`}
-          fill="#d6c6a8"
-          ridgePath={`M36 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 52 ${95 - powderHeight}`}
-        />
+        fillRatio > 0 ? (
+          <PowderLayer
+            bodyPath={`M36 ${liquidTop + 2}C40 ${liquidTop - powderHeight - 2} 48 ${liquidTop - powderHeight - 2} 52 ${liquidTop + 2}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M36 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 52 ${liquidTop + 2}`}
+          />
+        ) : (
+          <PowderLayer
+            bodyPath={`M36 ${95 - powderHeight}C40 ${91 - powderHeight} 48 ${92 - powderHeight} 52 ${95 - powderHeight}V82C52 86 49 90 44 94C39 90 36 86 36 82V${95 - powderHeight}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M36 ${95 - powderHeight}C40 ${92 - powderHeight} 48 ${93 - powderHeight} 52 ${95 - powderHeight}`}
+          />
+        )
       ) : null}
     </VesselFrame>
   );
@@ -281,11 +313,19 @@ function SampleVialIcon({
       />
       <path d={`M34 ${liquidTop}C40 ${liquidTop - 2} 48 ${liquidTop + 2} 54 ${liquidTop}`} opacity="0.65" />
       {powderHeight > 0 ? (
-        <PowderLayer
-          bodyPath={`M35 ${98 - powderHeight}C39 ${94 - powderHeight} 49 ${95 - powderHeight} 53 ${98 - powderHeight}V91C53 95 49 98 44 98C39 98 35 95 35 91V${98 - powderHeight}Z`}
-          fill="#d6c6a8"
-          ridgePath={`M35 ${98 - powderHeight}C40 ${95 - powderHeight} 48 ${96 - powderHeight} 53 ${98 - powderHeight}`}
-        />
+        fillRatio > 0 ? (
+          <PowderLayer
+            bodyPath={`M35 ${liquidTop + 2}C39 ${liquidTop - powderHeight - 2} 49 ${liquidTop - powderHeight - 2} 53 ${liquidTop + 2}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M35 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 53 ${liquidTop + 2}`}
+          />
+        ) : (
+          <PowderLayer
+            bodyPath={`M35 ${98 - powderHeight}C39 ${94 - powderHeight} 49 ${95 - powderHeight} 53 ${98 - powderHeight}V91C53 95 49 98 44 98C39 98 35 95 35 91V${98 - powderHeight}Z`}
+            fill="#d6c6a8"
+            ridgePath={`M35 ${98 - powderHeight}C40 ${95 - powderHeight} 48 ${96 - powderHeight} 53 ${98 - powderHeight}`}
+          />
+        )
       ) : null}
     </VesselFrame>
   );
