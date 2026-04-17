@@ -1571,6 +1571,28 @@ describe("LabScene", () => {
     });
   });
 
+  it("does not open the trash view when clicking the trash icon in spatula mode", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Powder spatula" }));
+    fireEvent.click(await screen.findByTestId("trash-dropzone"));
+
+    expect(screen.queryByTestId("trash-dialog-overlay")).not.toBeInTheDocument();
+  });
+
+  it("does not open the produce basket when clicking it in spatula mode", async () => {
+    vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment());
+
+    render(<PesticideWorkbench />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Powder spatula" }));
+    fireEvent.click(await screen.findByTestId("basket-open-button"));
+
+    expect(screen.queryByTestId("basket-dialog-overlay")).not.toBeInTheDocument();
+  });
+
   it("moves basket produce into a sealed sampling bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({

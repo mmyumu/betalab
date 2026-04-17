@@ -215,6 +215,7 @@ export function LabSceneView({
               handleSpatulaToolPointerDown: spatula.handleSpatulaToolPointerDown,
               handleSpatulaToolPointerUp: spatula.handleSpatulaToolPointerUp,
               handleSpatulaTrashClick: spatula.handleSpatulaTrashClick,
+              isSpatulaMode: spatula.isSpatulaMode,
             }}
             ui={ui}
             workbench={workbench}

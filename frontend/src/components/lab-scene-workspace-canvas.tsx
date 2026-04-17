@@ -96,6 +96,7 @@ type LabSceneWorkspaceCanvasProps = {
     handleSpatulaToolPointerDown: (slotId: string, tool: BenchToolInstance, event: ReactPointerEvent<HTMLElement>) => void;
     handleSpatulaToolPointerUp: () => void;
     handleSpatulaTrashClick: () => void;
+    isSpatulaMode: boolean;
   };
   ui: {
     isBasketOpen: boolean;
@@ -367,7 +368,12 @@ export function LabSceneWorkspaceCanvas({
             onDrop={dnd.trash.handleTrashDrop}
             onSpatulaDiscard={spatula.handleSpatulaTrashClick}
             onItemDragEnd={dnd.clearDropTargets}
-            onToggle={() => ui.setIsTrashOpen((current) => !current)}
+            onToggle={() => {
+              if (spatula.isSpatulaMode) {
+                return;
+              }
+              ui.setIsTrashOpen((current) => !current);
+            }}
             onToolDragStart={dnd.trash.handleTrashToolDragStart}
             onTrashedWidgetDragStart={dnd.trash.handleTrashedWidgetDragStart}
             onTrashProduceLotDragStart={dnd.trash.handleTrashProduceLotDragStart}
@@ -439,7 +445,12 @@ export function LabSceneWorkspaceCanvas({
                   onCreateAppleLot={workspaceActions.handleCreateAppleLot}
                   onItemDragEnd={dnd.clearDropTargets}
                   onProduceDragStart={dnd.workbench.handleBasketProduceDragStart}
-                  onToggle={() => ui.setIsBasketOpen((current) => !current)}
+                  onToggle={() => {
+                    if (spatula.isSpatulaMode) {
+                      return;
+                    }
+                    ui.setIsBasketOpen((current) => !current);
+                  }}
                   produceLots={display.basketProduceLots}
                 />
               ) : widgetId === "gross_balance" ? (
