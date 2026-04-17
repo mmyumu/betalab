@@ -1,4 +1,5 @@
 from app.schemas.experiment import (
+    BasketToolReferenceSchema,
     ExperimentSchema,
     GrossBalanceMoveProduceLotToWorkbenchSchema,
     RackSlotReferenceSchema,
@@ -18,6 +19,7 @@ from app.services.domain_services.gross_balance import (
     EmptyRequest,
     MoveAnalyticalBalanceToolToGrossBalanceRequest,
     MoveAnalyticalBalanceToolToGrossBalanceService,
+    MoveBasketToolToGrossBalanceRequest,
     MoveBasketToolToGrossBalanceService,
     MoveGrossBalanceProduceLotToWidgetRequest,
     MoveGrossBalanceProduceLotToWidgetService,
@@ -67,8 +69,12 @@ def move_workbench_tool_to_gross_balance(
 
 
 @router.post("/{experiment_id}/gross-balance/place-basket-tool", response_model=ExperimentSchema)
-def move_basket_tool_to_gross_balance(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(lambda: MoveBasketToolToGrossBalanceService(experiment_service).run(experiment_id, EmptyRequest()))
+def move_basket_tool_to_gross_balance(experiment_id: str, request: BasketToolReferenceSchema) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: MoveBasketToolToGrossBalanceService(experiment_service).run(
+            experiment_id, MoveBasketToolToGrossBalanceRequest(tool_id=request.tool_id)
+        )
+    )
 
 
 @router.post("/{experiment_id}/gross-balance/place-tool", response_model=ExperimentSchema)

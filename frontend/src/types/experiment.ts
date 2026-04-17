@@ -43,7 +43,7 @@ export type Experiment = {
   workspace: ExperimentWorkspace;
   limsReception: LimsReception;
   limsEntries: LimsReception[];
-  basketTool: BenchToolInstance | null;
+  basketTools: BenchToolInstance[];
   produceMaterialStates?: ProduceMaterialState[];
   spatula: SpatulaState;
   analyticalBalance: AnalyticalBalanceState;

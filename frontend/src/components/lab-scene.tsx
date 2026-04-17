@@ -290,7 +290,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
   }
 
   const slots = state.experiment.workbench.slots;
-  const basketTool = state.experiment.basketTool;
+  const basketTools = state.experiment.basketTools;
   const trashedProduceLots = state.experiment.trash.produceLots;
   const trashedSampleLabels = state.experiment.trash.sampleLabels;
   const trashedTools = state.experiment.trash.tools;
@@ -357,7 +357,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
       }}
       display={{
         basketProduceLots: state.experiment.workspace.produceBasketLots,
-        basketTool,
+        basketTools,
         rackSlots,
         slots,
         trashProduceLots: trashedProduceLots,

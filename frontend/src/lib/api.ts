@@ -471,15 +471,16 @@ export async function placeReceivedBagOnWorkbench(experimentId: string, payload:
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/reception/bag/place-on-workbench`,
-    body: { target_slot_id: requireString(body, "target_slot_id") },
+    body: { target_slot_id: requireString(body, "target_slot_id"), tool_id: requireString(body, "tool_id") },
   });
 }
 
-export async function discardBasketTool(experimentId: string, payload?: MutationPayload): Promise<Experiment> {
-  void payload;
+export async function discardBasketTool(experimentId: string, payload: MutationPayload): Promise<Experiment> {
+  const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/reception/bag/discard`,
+    body: { tool_id: requireString(body, "tool_id") },
   });
 }
 
@@ -509,12 +510,13 @@ export async function moveWorkbenchToolToAnalyticalBalance(
 
 export async function moveBasketToolToGrossBalance(
   experimentId: string,
-  payload?: MutationPayload,
+  payload: MutationPayload,
 ): Promise<Experiment> {
-  void payload;
+  const body = requirePayload(payload);
   return sendMutationRequest(experimentId, {
     method: "POST",
     path: `/experiments/${experimentId}/gross-balance/place-basket-tool`,
+    body: { tool_id: requireString(body, "tool_id") },
   });
 }
 
@@ -1389,13 +1391,15 @@ function normalizeExperiment(experiment: Experiment): Experiment {
       normalizeLimsReception(entry as LimsReception & Record<string, unknown>),
     ),
     produceMaterialStates: materialStates,
-    basketTool: (() => {
-      const rawBasketTool =
-        (experiment as Experiment & Record<string, unknown>).basketTool ??
-        (experiment as Experiment & Record<string, unknown>).basket_tool;
-      return rawBasketTool
-        ? normalizeBenchTool(rawBasketTool as BenchToolInstance & Record<string, unknown>, materialStates)
-        : null;
+    basketTools: (() => {
+      const raw = experiment as Experiment & Record<string, unknown>;
+      const rawList =
+        (raw.basketTools as unknown[]) ??
+        (raw.basket_tools as unknown[]) ??
+        [];
+      return rawList.map((t) =>
+        normalizeBenchTool(t as BenchToolInstance & Record<string, unknown>, materialStates),
+      );
     })(),
     spatula: normalizeSpatulaState(
       ((experiment as Experiment & Record<string, unknown>).spatula ?? {}) as

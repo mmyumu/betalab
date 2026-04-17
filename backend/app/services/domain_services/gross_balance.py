@@ -338,12 +338,20 @@ class MoveWorkbenchToolToGrossBalanceService(GrossBalanceServiceBase):
         self._place_tool_on_balance(experiment, moved_tool)
 
 
+@dataclass(frozen=True, slots=True)
+class MoveBasketToolToGrossBalanceRequest:
+    tool_id: str
+
+
 class MoveBasketToolToGrossBalanceService(GrossBalanceServiceBase):
-    def _run(self, experiment: Experiment, request: EmptyRequest) -> None:
-        if experiment.basket_tool is None:
-            raise ValueError("The produce basket does not contain a tool.")
-        moved_tool = experiment.basket_tool
-        experiment.basket_tool = None
+    def _run(self, experiment: Experiment, request: MoveBasketToolToGrossBalanceRequest) -> None:
+        tool_index = next(
+            (i for i, t in enumerate(experiment.basket_tools) if t.id == request.tool_id),
+            None,
+        )
+        if tool_index is None:
+            raise ValueError("The specified bag is not in the produce basket.")
+        moved_tool = experiment.basket_tools.pop(tool_index)
         self._place_tool_on_balance(experiment, moved_tool)
 
 

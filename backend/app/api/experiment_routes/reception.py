@@ -1,4 +1,5 @@
 from app.schemas.experiment import (
+    BasketToolReferenceSchema,
     ExperimentSchema,
     GrossMassOffsetUpdateSchema,
     GrossWeightRecordSchema,
@@ -26,7 +27,7 @@ from app.services.domain_services.reception import (
     SetGrossMassOffsetRequest,
     SetGrossMassOffsetService,
 )
-from app.services.domain_services.trash import DiscardBasketToolService, EmptyTrashRequest
+from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService
 
 from .common import experiment_service, handle_service_errors, router
 
@@ -39,14 +40,21 @@ def place_received_bag_on_workbench(
     return handle_service_errors(
         lambda: PlaceReceivedBagOnWorkbenchService(experiment_service).run(
             experiment_id,
-            PlaceReceivedBagOnWorkbenchRequest(target_slot_id=request.target_slot_id),
+            PlaceReceivedBagOnWorkbenchRequest(
+                target_slot_id=request.target_slot_id,
+                tool_id=request.tool_id,
+            ),
         )
     )
 
 
 @router.post("/{experiment_id}/reception/bag/discard", response_model=ExperimentSchema)
-def discard_received_bag(experiment_id: str) -> ExperimentSchema:
-    return handle_service_errors(lambda: DiscardBasketToolService(experiment_service).run(experiment_id, EmptyTrashRequest()))
+def discard_received_bag(experiment_id: str, request: BasketToolReferenceSchema) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: DiscardBasketToolService(experiment_service).run(
+            experiment_id, DiscardBasketToolRequest(tool_id=request.tool_id)
+        )
+    )
 
 
 @router.post("/{experiment_id}/reception/gross-weight/record", response_model=ExperimentSchema)

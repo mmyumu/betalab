@@ -304,7 +304,7 @@ function makeWorkbenchExperiment({
   analyticalBalance = { tareMassG: null, taredToolId: null },
   auditLog = ["Experiment created", "Receive the grower bag, weigh it, then register it in the LIMS."],
   basketProduceLots = [],
-  basketTool = null,
+  basketTools = [],
   lastSimulationAt = "2026-03-28T19:00:00Z",
   limsReception = makeLimsReception(),
   limsEntries = limsReception.labSampleCode ? [limsReception] : [],
@@ -319,7 +319,7 @@ function makeWorkbenchExperiment({
   analyticalBalance?: Experiment["analyticalBalance"];
   auditLog?: string[];
   basketProduceLots?: ExperimentProduceLot[];
-  basketTool?: BenchToolInstance | null;
+  basketTools?: BenchToolInstance[];
   lastSimulationAt?: string;
   limsEntries?: LimsReception[];
   limsReception?: LimsReception;
@@ -340,7 +340,7 @@ function makeWorkbenchExperiment({
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceBasketLots: basketProduceLots, widgets: workspaceWidgets },
-    basketTool,
+    basketTools,
       spatula: {
         isLoaded: false,
         produceFractions: [],
@@ -1511,7 +1511,7 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
         auditLog: ["Apple lot 1 created in a received sampling bag."],
-        basketTool: makeSampleBagTool({
+        basketTools: [makeSampleBagTool({
           id: "bench_tool_bag",
           label: "Received sampling bag",
           subtitle: "Field reception",
@@ -1519,7 +1519,7 @@ describe("LabScene", () => {
           produceLots: [
             makeProduceLot({ id: "produce_1" }),
           ],
-        }),
+        })],
       }),
     );
 
@@ -2492,18 +2492,18 @@ describe("LabScene", () => {
   it("moves the received basket bag onto an empty bench station", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketTool: makeSampleBagTool({
+        basketTools: [makeSampleBagTool({
           id: "received_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
           produceLots: [
             makeProduceLot({ id: "produce_1", label: "Orchard apple lot" }),
           ],
-        }),
+        })],
       }),
     );
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketTool: null,
+        basketTools: [],
         slots: makeSlots([{ tool: makeSampleBagTool({ id: "received_bag_1" }) }]),
       }),
     );
@@ -2524,7 +2524,7 @@ describe("LabScene", () => {
     expect(sendExperimentCommand).toHaveBeenCalledWith(
       "experiment_pesticides",
       "place_received_bag_on_workbench",
-      { target_slot_id: "station_1" },
+      { target_slot_id: "station_1", tool_id: "received_bag_1" },
     );
   });
 
@@ -2755,14 +2755,14 @@ describe("LabScene", () => {
 
   it("discards the received sampling bag from the basket into the trash", async () => {
     vi.mocked(createExperiment).mockResolvedValue(makeWorkbenchExperiment({
-      basketTool: makeSampleBagTool({
+      basketTools: [makeSampleBagTool({
         id: "basket_bag_1",
         fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-      }),
+      })],
     }));
     vi.mocked(sendExperimentCommand).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketTool: null,
+        basketTools: [],
         trashTools: [
           {
             id: "trash_tool_1",
@@ -2793,7 +2793,7 @@ describe("LabScene", () => {
       expect(sendExperimentCommand).toHaveBeenCalledWith(
         "experiment_pesticides",
         "discard_basket_tool",
-        {},
+        { tool_id: "basket_bag_1" },
       );
     });
   });
@@ -2801,11 +2801,11 @@ describe("LabScene", () => {
   it("keeps the basket create button visible even when the basket already contains a received bag", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketTool: makeSampleBagTool({
+        basketTools: [makeSampleBagTool({
           id: "basket_bag_1",
           isSealed: true,
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-        }),
+        })],
       }),
     );
 
@@ -3132,10 +3132,10 @@ describe("LabScene", () => {
   it("applies a LIMS ticket onto a basket bag while it is staged on the gross balance", async () => {
     vi.mocked(createExperiment).mockResolvedValue(
       makeWorkbenchExperiment({
-        basketTool: makeSampleBagTool({
+        basketTools: [makeSampleBagTool({
           id: "basket_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-        }),
+        })],
         limsReception: makeLimsReception({
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",
@@ -3148,10 +3148,7 @@ describe("LabScene", () => {
     vi.mocked(sendExperimentCommand).mockImplementation(async (_experimentId, type) => {
       if (type === "move_basket_tool_to_gross_balance") {
         return makeWorkbenchExperiment({
-          basketTool: makeSampleBagTool({
-            id: "basket_bag_1",
-            fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
-          }),
+          basketTools: [],
           limsReception: makeLimsReception({
             measuredGrossMassG: 2486,
             labSampleCode: "APP-2026-0001",
@@ -3168,11 +3165,11 @@ describe("LabScene", () => {
       }
 
       return makeWorkbenchExperiment({
-        basketTool: makeSampleBagTool({
+        basketTools: [makeSampleBagTool({
           id: "basket_bag_1",
           fieldLabelText: "Martin Orchard • Harvest 2026-03-29 • Approx. 2.50 kg",
           labels: [makeSampleBagLabel({ text: "APP-2026-0001" })],
-        }),
+        })],
         limsReception: makeLimsReception({
           measuredGrossMassG: 2486,
           labSampleCode: "APP-2026-0001",

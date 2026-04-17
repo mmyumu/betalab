@@ -213,7 +213,7 @@ def _serialize_experiment(experiment: Experiment) -> dict:
             "workspace": asdict(experiment.workspace),
             "lims_reception": asdict(experiment.lims_reception),
             "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
-            "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+            "basket_tools": [asdict(t) for t in experiment.basket_tools],
             "produce_material_states": [asdict(state) for state in experiment.produce_material_states],
             "spatula": asdict(experiment.spatula),
             "audit_log": experiment.audit_log,
@@ -291,7 +291,7 @@ def _deserialize_experiment(payload: dict) -> Experiment:
             else None,
         ),
         last_simulation_at=schema.last_simulation_at,
-        basket_tool=_deserialize_workbench_tool(schema.basket_tool),
+        basket_tools=[_deserialize_non_null_workbench_tool(t) for t in schema.basket_tools],
         produce_material_states=[ProduceMaterialState(**state.model_dump()) for state in schema.produce_material_states],
         spatula=SpatulaState(
             is_loaded=schema.spatula.is_loaded,

@@ -21,7 +21,6 @@ from app.services.received_sample_generation import build_received_sampling_bag
 
 
 def build_experiment() -> Experiment:
-    basket_tool = build_received_sampling_bag()
     return Experiment(
         id=new_id("experiment"),
         status=ExperimentStatus.PREPARING,
@@ -134,7 +133,7 @@ def build_experiment() -> Experiment:
             indicative_mass_g=0.0,
         ),
         lims_entries=[],
-        basket_tool=basket_tool,
+        basket_tools=[build_received_sampling_bag()],
         spatula=SpatulaState(),
         analytical_balance=AnalyticalBalanceState(),
         last_simulation_at=datetime.now(UTC),

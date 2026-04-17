@@ -51,7 +51,7 @@ type LabSceneWorkspaceCanvasProps = {
   };
   display: {
     basketProduceLots: ExperimentProduceLot[];
-    basketTool: BenchToolInstance | null;
+    basketTools: BenchToolInstance[];
     rackSlots: RackSlot[];
     slots: BenchSlot[];
     trashProduceLots: TrashProduceLotEntry[];
@@ -431,7 +431,7 @@ export function LabSceneWorkspaceCanvas({
                 />
               ) : widgetId === "basket" ? (
                 <ProduceBasketWidget
-                  basketTool={display.basketTool}
+                  basketTools={display.basketTools}
                   dndDisabled={dnd.dndDisabledByAction}
                   formatProduceLotMetadata={(lot) => workbench.formatProduceLotMetadata(lot) ?? ""}
                   isOpen={ui.isBasketOpen}

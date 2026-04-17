@@ -69,7 +69,8 @@ export type MoveWidgetProduceLotToWorkbenchToolPayload = {
 
 export type OpenWorkbenchToolPayload = { slot_id: string };
 
-export type PlaceReceivedBagOnWorkbenchPayload = { target_slot_id: string };
+export type PlaceReceivedBagOnWorkbenchPayload = { target_slot_id: string; tool_id: string };
+export type BasketToolReferencePayload = { tool_id: string };
 
 export type PlaceToolOnWorkbenchPayload = { slot_id: string; tool_id: string };
 

@@ -112,6 +112,7 @@ import type {
   AddWorkspaceProduceLotToWidgetPayload,
   AddWorkspaceWidgetPayload,
   ApplyPrintedLimsLabelPayload,
+  BasketToolReferencePayload,
   ApplyPrintedLimsLabelToAnalyticalBalanceToolPayload,
   ApplySampleLabelToGrossBalanceToolPayload,
   ApplySampleLabelToAnalyticalBalanceToolPayload,
@@ -501,8 +502,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.createLimsReception, payload),
     cutWorkbenchProduceLot: (payload: CutWorkbenchProduceLotPayload) =>
       executeMutation(mutationFns.cutWorkbenchProduceLot, payload),
-    discardBasketTool: () =>
-      executeMutation(mutationFns.discardBasketTool),
+    discardBasketTool: (payload: BasketToolReferencePayload) =>
+      executeMutation(mutationFns.discardBasketTool, payload),
     discardAnalyticalBalanceTool: () =>
       executeMutation(mutationFns.discardAnalyticalBalanceTool),
     discardGrossBalanceProduceLot: (payload: DiscardGrossBalanceProduceLotPayload) =>
@@ -529,8 +530,8 @@ export function useLabExperiment({
       executeMutation(mutationFns.discardWorkspaceProduceLot, payload),
     storeWorkspaceWidget: (payload: StoreWorkspaceWidgetPayload) =>
       executeMutation(mutationFns.storeWorkspaceWidget, payload),
-    moveBasketToolToGrossBalance: () =>
-      executeMutation(mutationFns.moveBasketToolToGrossBalance),
+    moveBasketToolToGrossBalance: (payload: BasketToolReferencePayload) =>
+      executeMutation(mutationFns.moveBasketToolToGrossBalance, payload),
     moveAnalyticalBalanceToolToGrossBalance: () =>
       executeMutation(mutationFns.moveAnalyticalBalanceToolToGrossBalance),
     moveAnalyticalBalanceToolToRack: (payload: MoveAnalyticalBalanceToolToRackPayload) =>

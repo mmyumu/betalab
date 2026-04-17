@@ -118,6 +118,10 @@ const grossBalanceCompatibleSourceIds = new Set<string>([
   "grinder-produce-lot-apple",
   "trash-produce-lot-apple",
   "rack-sample_vial",
+  "palette-sampling_bag_label",
+  "workbench-sample-label",
+  "trash-sample-label",
+  "lims-printed-ticket",
 ]);
 
 export const dndTargetCases: {
@@ -388,7 +392,7 @@ function makeTrashSampleLabelEntry(): TrashSampleLabelEntry {
 }
 
 function makeExperiment({
-  basketTool = null,
+  basketTools = [],
   limsReception = makeLimsReception(),
   slots = makeSlots(),
   rackSlots = makeRackSlots(),
@@ -398,7 +402,7 @@ function makeExperiment({
   produceBasketLots = [],
   workspaceWidgets = makeWorkspaceWidgets(),
 }: {
-  basketTool?: BenchToolInstance | null;
+  basketTools?: BenchToolInstance[];
   limsReception?: LimsReception;
   slots?: BenchSlot[];
   rackSlots?: RackSlot[];
@@ -417,7 +421,7 @@ function makeExperiment({
     rack: { slots: rackSlots },
     trash: { produceLots: trashProduceLots, sampleLabels: trashSampleLabels, tools: trashTools },
     workspace: { produceBasketLots, widgets: workspaceWidgets },
-    basketTool,
+    basketTools,
     spatula: {
       isLoaded: false,
       produceFractions: [],
@@ -560,6 +564,7 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
       "bench-slot-station_1",
       "bench-slot-station_2",
       "analytical-balance-dropzone",
+      "gross-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -573,7 +578,7 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
         ]),
         workspaceWidgets: makeWorkspaceWidgets([
           {},
-          {},
+          { tool: makeTool(sampleBagItem, { id: "gross_balance_bag", sampleLabelText: null }) },
           { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
         ]),
       }),
@@ -596,6 +601,13 @@ function createPaletteSampleLabelSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "apply_sample_label_to_analytical_balance_tool",
+          payload: {},
+        },
+      },
+      "gross-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "apply_sample_label_to_gross_balance_tool",
           payload: {},
         },
       },
@@ -1043,10 +1055,10 @@ function createBasketReceivedBagSourceCase(): DndSourceCase {
     ],
     buildExperiment: () =>
       makeExperiment({
-        basketTool: makeTool(sampleBagItem, {
+        basketTools: [makeTool(sampleBagItem, {
           id: "basket_bag_1",
           sampleLabelText: null,
-        }),
+        })],
         slots: makeSlots([{ tool: makeTool(sampleVialItem) }]),
       }),
     targetExpectations: {
@@ -1057,6 +1069,7 @@ function createBasketReceivedBagSourceCase(): DndSourceCase {
           type: "place_received_bag_on_workbench",
           payload: {
             target_slot_id: "station_2",
+            tool_id: "basket_bag_1",
           },
         },
       },
@@ -1067,7 +1080,7 @@ function createBasketReceivedBagSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "discard_basket_tool",
-          payload: {},
+          payload: { tool_id: "basket_bag_1" },
         },
       },
     },
@@ -1447,6 +1460,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
       "bench-slot-station_1",
       "bench-slot-station_2",
       "analytical-balance-dropzone",
+      "gross-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1460,7 +1474,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         ]),
         workspaceWidgets: makeWorkspaceWidgets([
           {},
-          {},
+          { tool: makeTool(sampleBagItem, { id: "gross_balance_bag", sampleLabelText: null }) },
           { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
         ]),
       }),
@@ -1481,6 +1495,16 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "move_workbench_sample_label_to_analytical_balance",
+          payload: {
+            label_id: "bench_tool_bag-legacy-label",
+            source_slot_id: "station_1",
+          },
+        },
+      },
+      "gross-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "move_workbench_sample_label_to_gross_balance",
           payload: {
             label_id: "bench_tool_bag-legacy-label",
             source_slot_id: "station_1",
@@ -1516,6 +1540,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
       "bench-slot-station_1",
       "bench-slot-station_2",
       "analytical-balance-dropzone",
+      "gross-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1530,7 +1555,7 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
         trashSampleLabels: [makeTrashSampleLabelEntry()],
         workspaceWidgets: makeWorkspaceWidgets([
           {},
-          {},
+          { tool: makeTool(sampleBagItem, { id: "gross_balance_bag", sampleLabelText: null }) },
           { tool: makeTool(sampleVialItem, { id: "analytical_tube" }) },
         ]),
       }),
@@ -1565,6 +1590,15 @@ function createTrashSampleLabelSourceCase(): DndSourceCase {
           },
         },
       },
+      "gross-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "restore_trashed_sample_label_to_gross_balance",
+          payload: {
+            trash_sample_label_id: "trash_sample_label_1",
+          },
+        },
+      },
       "rack-illustration-slot-1": { compatible: false, command: null },
       "widget-workspace": { compatible: false, command: null },
       "trash-dropzone": { compatible: true, command: null },
@@ -1594,6 +1628,7 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
       "bench-slot-station_1",
       "bench-slot-station_2",
       "analytical-balance-dropzone",
+      "gross-balance-dropzone",
       "grinder-dropzone",
       "rack-illustration-slot-1",
       "widget-workspace",
@@ -1605,6 +1640,11 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag", sampleLabelText: null }) },
           { tool: makeTool(sampleBagItem, { id: "bench_tool_bag_2", sampleLabelText: "LOT-1" }) },
         ]),
+        workspaceWidgets: makeWorkspaceWidgets([
+          {},
+          { tool: makeTool(sampleBagItem, { id: "gross_balance_bag", sampleLabelText: null }) },
+          { tool: analyticalTube },
+        ]),
         limsReception: makeLimsReception({
           orchardName: "Martin Orchard",
           harvestDate: "2026-03-29",
@@ -1614,11 +1654,6 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           status: "awaiting_label_application",
           printedLabelTicket: makePrintedLimsTicket(),
         }),
-        workspaceWidgets: makeWorkspaceWidgets([
-          {},
-          {},
-          { tool: analyticalTube },
-        ]),
       }),
     targetExpectations: {
       "bench-slot-station_1": {
@@ -1656,7 +1691,13 @@ function createLimsPrintedTicketSourceCase(): DndSourceCase {
           payload: {},
         },
       },
-      "gross-balance-dropzone": { compatible: false, command: null },
+      "gross-balance-dropzone": {
+        compatible: true,
+        command: {
+          type: "apply_printed_lims_label_to_gross_balance_bag",
+          payload: {},
+        },
+      },
     },
   };
 }
@@ -1893,7 +1934,7 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
       compatible: true,
       command: {
         type: "move_basket_tool_to_gross_balance",
-        payload: {},
+        payload: { tool_id: "basket_bag_1" },
       },
     };
   }
@@ -1942,6 +1983,51 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
         payload: {
           rack_slot_id: "rack_slot_1",
         },
+      },
+    };
+  }
+
+  if (sourceCase.id === "palette-sampling_bag_label") {
+    return {
+      compatible: true,
+      command: {
+        type: "apply_sample_label_to_gross_balance_tool",
+        payload: {},
+      },
+    };
+  }
+
+  if (sourceCase.id === "workbench-sample-label") {
+    return {
+      compatible: true,
+      command: {
+        type: "move_workbench_sample_label_to_gross_balance",
+        payload: {
+          label_id: "bench_tool_bag-legacy-label",
+          source_slot_id: "station_1",
+        },
+      },
+    };
+  }
+
+  if (sourceCase.id === "trash-sample-label") {
+    return {
+      compatible: true,
+      command: {
+        type: "restore_trashed_sample_label_to_gross_balance",
+        payload: {
+          trash_sample_label_id: "trash_sample_label_1",
+        },
+      },
+    };
+  }
+
+  if (sourceCase.id === "lims-printed-ticket") {
+    return {
+      compatible: true,
+      command: {
+        type: "apply_printed_lims_label_to_gross_balance_bag",
+        payload: {},
       },
     };
   }
@@ -2047,9 +2133,9 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
   }
 
   return makeExperiment({
-    basketTool: makeTool(sampleBagItem, {
+    basketTools: [makeTool(sampleBagItem, {
       id: "basket_bag_1",
-    }),
+    })],
     slots: makeSlots([
       {
         tool: makeTool(sampleVialItem, {

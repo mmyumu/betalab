@@ -373,8 +373,18 @@ class ExperimentSchema(BaseModel):
     workspace: WorkspaceSchema
     lims_reception: LimsReceptionSchema = Field(default_factory=build_default_lims_reception_schema)
     lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
-    basket_tool: WorkbenchToolSchema | None = None
+    basket_tools: list[WorkbenchToolSchema] = Field(default_factory=list)
     produce_material_states: list[ProduceMaterialStateSchema] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_basket_tool(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        if "basket_tools" not in data and "basket_tool" in data:
+            legacy = data.pop("basket_tool")
+            data["basket_tools"] = [legacy] if legacy is not None else []
+        return data
     spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
     analytical_balance: AnalyticalBalanceStateSchema = Field(default_factory=AnalyticalBalanceStateSchema)
     audit_log: list[str]
@@ -542,6 +552,11 @@ class GrossBalanceMoveProduceLotToWorkbenchSchema(BaseModel):
 
 class ReceivedBagPlacementSchema(BaseModel):
     target_slot_id: str
+    tool_id: str
+
+
+class BasketToolReferenceSchema(BaseModel):
+    tool_id: str
 
 
 class GrossWeightRecordSchema(BaseModel):

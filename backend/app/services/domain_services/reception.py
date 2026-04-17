@@ -23,6 +23,7 @@ from app.services.received_sample_generation import resolve_received_bag_gross_m
 @dataclass(frozen=True, slots=True)
 class PlaceReceivedBagOnWorkbenchRequest:
     target_slot_id: str
+    tool_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,13 +67,17 @@ class PlaceReceivedBagOnWorkbenchService(WriteDomainService[PlaceReceivedBagOnWo
 
     def _run(self, experiment: Experiment, request: PlaceReceivedBagOnWorkbenchRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.target_slot_id)
-        if experiment.basket_tool is None:
-            raise ValueError("The received sampling bag has already been removed from the basket.")
+        tool_index = next(
+            (i for i, t in enumerate(experiment.basket_tools) if t.id == request.tool_id),
+            None,
+        )
+        if tool_index is None:
+            raise ValueError("The specified bag is not in the produce basket.")
         if slot.tool is not None or slot.surface_produce_lots:
             raise ValueError(f"{slot.label} already contains a tool")
 
-        slot.tool = experiment.basket_tool
-        experiment.basket_tool = None
+        bag = experiment.basket_tools.pop(tool_index)
+        slot.tool = bag
         experiment.audit_log.append(f"Received sampling bag moved from basket to {slot.label}.")
 
 
@@ -209,8 +214,10 @@ class ApplyPrintedLimsLabelToBasketBagService(WriteDomainService[EmptyReceptionR
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: EmptyReceptionRequest) -> None:
+        if not experiment.basket_tools:
+            raise ValueError("The produce basket does not contain the received sampling bag.")
         basket_tool = _require_received_sampling_bag(
-            experiment.basket_tool,
+            experiment.basket_tools[0],
             "The produce basket does not contain the received sampling bag.",
         )
         ticket = _require_printed_lims_ticket(experiment)
@@ -276,7 +283,7 @@ def _resolve_received_sampling_bag_gross_mass(
 ) -> float | None:
     if measured_gross_mass_g is not None:
         return float(measured_gross_mass_g)
-    return resolve_received_bag_gross_mass_g(experiment.basket_tool)
+    return resolve_received_bag_gross_mass_g(experiment.basket_tools[0] if experiment.basket_tools else None)
 
 
 def _find_first_present_received_bag_gross_mass(experiment: Experiment) -> float | None:

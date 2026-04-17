@@ -82,15 +82,15 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         material_state_ids_added.add(state_id)
         return state_id
 
-    if experiment.basket_tool is not None:
-        experiment.basket_tool.produce_fractions = _build_tool_produce_fractions(
-            experiment.basket_tool.produce_lots,
+    for basket_tool in experiment.basket_tools:
+        basket_tool.produce_fractions = _build_tool_produce_fractions(
+            basket_tool.produce_lots,
             ensure_material_state_id,
             location_kind="basket_tool",
-            location_id=experiment.basket_tool.id,
-            container_id=experiment.basket_tool.id,
-            container_label=experiment.basket_tool.label,
-            contact_impurity_mg_per_g=experiment.basket_tool.contact_impurity_mg_per_g,
+            location_id=basket_tool.id,
+            container_id=basket_tool.id,
+            container_label=basket_tool.label,
+            contact_impurity_mg_per_g=basket_tool.contact_impurity_mg_per_g,
         )
 
     experiment.spatula.produce_fractions = _select_canonical_powder_fractions(
@@ -222,8 +222,8 @@ def _collect_produce_lots(experiment: Experiment) -> dict[str, ProduceLot]:
         for produce_lot in entries:
             produce_lots.setdefault(produce_lot.id, produce_lot)
 
-    if experiment.basket_tool is not None:
-        add(experiment.basket_tool.produce_lots)
+    for basket_tool in experiment.basket_tools:
+        add(basket_tool.produce_lots)
     add(experiment.workspace.produce_basket_lots)
     for slot in experiment.workbench.slots:
         add(slot.surface_produce_lots)

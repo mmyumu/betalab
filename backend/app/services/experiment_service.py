@@ -86,7 +86,7 @@ class ExperimentRuntimeService:
                 "workspace": asdict(experiment.workspace),
                 "lims_reception": asdict(experiment.lims_reception),
                 "lims_entries": [asdict(entry) for entry in experiment.lims_entries],
-                "basket_tool": asdict(experiment.basket_tool) if experiment.basket_tool else None,
+                "basket_tools": [asdict(t) for t in experiment.basket_tools],
                 "produce_material_states": [asdict(state) for state in experiment.produce_material_states],
                 "spatula": asdict(experiment.spatula),
                 "analytical_balance": asdict(experiment.analytical_balance),

@@ -6,7 +6,6 @@ from typing import Generic, Protocol, TypeAlias, TypeVar
 from app.domain.models import EntityOrigin, Experiment, ProduceLot
 from app.domain.rules import can_tool_accept_produce, can_tool_receive_contents
 from app.services.helpers.lookups import (
-    find_produce_basket_lot,
     find_trash_produce_lot,
     find_workbench_slot,
     find_workspace_widget,
@@ -89,16 +88,33 @@ class WorkspaceProduceLotSource:
     produce_lot_id: str
 
     def remove(self, experiment: Experiment) -> ProduceLotRemoval:
-        produce_lot = find_produce_basket_lot(experiment.workspace, self.produce_lot_id)
-        experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
-        return TransferRemoval(
-            entity=produce_lot,
-            source_label="Produce basket",
-            origin=EntityOrigin(
-                kind="produce_basket",
-                location_label="Produce basket",
-            ),
+        # First look in standalone basket lots
+        standalone = next(
+            (lot for lot in experiment.workspace.produce_basket_lots if lot.id == self.produce_lot_id),
+            None,
         )
+        if standalone is not None:
+            experiment.workspace.produce_basket_lots = [
+                lot for lot in experiment.workspace.produce_basket_lots if lot.id != standalone.id
+            ]
+            return TransferRemoval(
+                entity=standalone,
+                source_label="Produce basket",
+                origin=EntityOrigin(kind="produce_basket", location_label="Produce basket"),
+            )
+
+        # Then look inside basket tools (bags)
+        for bag in experiment.basket_tools:
+            lot = next((lot for lot in bag.produce_lots if lot.id == self.produce_lot_id), None)
+            if lot is not None:
+                bag.produce_lots = [l for l in bag.produce_lots if l.id != lot.id]
+                return TransferRemoval(
+                    entity=lot,
+                    source_label="Produce basket",
+                    origin=EntityOrigin(kind="produce_basket", location_label="Produce basket"),
+                )
+
+        raise ValueError(f"Produce lot {self.produce_lot_id} not found in produce basket.")
 
 
 @dataclass(frozen=True, slots=True)

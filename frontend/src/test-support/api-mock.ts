@@ -43,13 +43,13 @@ export const moveWorkbenchProduceLotToWidget = wrapCommand("move_workbench_produ
 export const restoreTrashedProduceLotToWidget = wrapCommand("restore_trashed_produce_lot_to_widget");
 export const createProduceLot = wrapCommand("create_produce_lot");
 export const placeReceivedBagOnWorkbench = wrapCommand("place_received_bag_on_workbench");
-export const discardBasketTool = vi.fn((experimentId: string) =>
-  sendExperimentCommand(experimentId, "discard_basket_tool", {}),
+export const discardBasketTool = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
+  sendExperimentCommand(experimentId, "discard_basket_tool", payload ?? {}),
 );
 export const moveWorkbenchToolToGrossBalance = wrapCommand("move_workbench_tool_to_gross_balance");
 export const moveWorkbenchToolToAnalyticalBalance = wrapCommand("move_workbench_tool_to_analytical_balance");
-export const moveBasketToolToGrossBalance = vi.fn((experimentId: string) =>
-  sendExperimentCommand(experimentId, "move_basket_tool_to_gross_balance", {}),
+export const moveBasketToolToGrossBalance = vi.fn((experimentId: string, payload?: Record<string, unknown>) =>
+  sendExperimentCommand(experimentId, "move_basket_tool_to_gross_balance", payload ?? {}),
 );
 export const moveAnalyticalBalanceToolToGrossBalance = vi.fn((experimentId: string) =>
   sendExperimentCommand(experimentId, "move_analytical_balance_tool_to_gross_balance", {}),

@@ -47,7 +47,7 @@ type LabSceneViewProps = {
   };
   display: {
     basketProduceLots: ExperimentProduceLot[];
-    basketTool: BenchToolInstance | null;
+    basketTools: BenchToolInstance[];
     rackSlots: RackSlot[];
     slots: BenchSlot[];
     trashProduceLots: TrashProduceLotEntry[];

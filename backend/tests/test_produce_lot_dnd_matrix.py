@@ -153,7 +153,7 @@ PRODUCE_LOT_DND_CASES: tuple[ProduceLotDndCase, ...] = (
 
 def _create_basket_lot(service: ExperimentRuntimeService, experiment_id: str) -> str:
     created = CreateOrInitProduceLotService(service).run(experiment_id, CreateProduceLotRequest(produce_type="apple"))
-    return created.workspace.produce_basket_lots[0].id
+    return created.basket_tools[-1].produce_lots[0].id
 
 
 def _prepare_target(service: ExperimentRuntimeService, experiment_id: str, target: TargetKind) -> None:

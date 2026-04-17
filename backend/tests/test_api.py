@@ -84,7 +84,7 @@ def test_create_and_fetch_experiment_over_http() -> None:
     assert fetched.json()["rack"]["slots"][0]["tool"] is None
     assert fetched.json()["trash"]["tools"] == []
     assert any(widget["id"] == "workbench" for widget in fetched.json()["workspace"]["widgets"])
-    assert fetched.json()["basket_tool"]["tool_type"] == "sample_bag"
+    assert fetched.json()["basket_tools"][0]["tool_type"] == "sample_bag"
     assert fetched.json()["lims_reception"]["status"] == "awaiting_reception"
 
 
@@ -92,9 +92,12 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)
 
+        created = client.get(f"/experiments/{experiment_id}")
+        basket_tool_id = created.json()["basket_tools"][0]["id"]
+
         placed = client.post(
             f"/experiments/{experiment_id}/reception/bag/place-on-workbench",
-            json={"target_slot_id": "station_1"},
+            json={"target_slot_id": "station_1", "tool_id": basket_tool_id},
         )
         weighed = client.post(
             f"/experiments/{experiment_id}/reception/gross-weight/record",
@@ -117,7 +120,7 @@ def test_reception_routes_register_and_label_received_bag_over_http() -> None:
         )
 
     assert placed.status_code == 200
-    assert placed.json()["basket_tool"] is None
+    assert placed.json()["basket_tools"] == []
     assert placed.json()["workbench"]["slots"][0]["tool"]["tool_type"] == "sample_bag"
     assert weighed.status_code == 200
     assert weighed.json()["lims_reception"]["measured_gross_mass_g"] == pytest.approx(2486.0)
@@ -138,9 +141,12 @@ def test_snapshot_exposes_dnd_contract_fields_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)
 
+        created = client.get(f"/experiments/{experiment_id}")
+        basket_tool_id = created.json()["basket_tools"][0]["id"]
+
         placed = client.post(
             f"/experiments/{experiment_id}/reception/bag/place-on-workbench",
-            json={"target_slot_id": "station_1"},
+            json={"target_slot_id": "station_1", "tool_id": basket_tool_id},
         )
         registered = client.post(
             f"/experiments/{experiment_id}/lims/reception",
@@ -211,7 +217,12 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
         experiment_id = _create_experiment(client)
 
         # --- Réception ---
-        basket_moved_to_balance = client.post(f"/experiments/{experiment_id}/gross-balance/place-basket-tool")
+        created = client.get(f"/experiments/{experiment_id}")
+        basket_tool_id = created.json()["basket_tools"][0]["id"]
+        basket_moved_to_balance = client.post(
+            f"/experiments/{experiment_id}/gross-balance/place-basket-tool",
+            json={"tool_id": basket_tool_id},
+        )
         registered = client.post(
             f"/experiments/{experiment_id}/lims/reception",
             json={
@@ -279,7 +290,7 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
         )
 
     assert basket_moved_to_balance.status_code == 200
-    assert basket_moved_to_balance.json()["basket_tool"] is None
+    assert basket_moved_to_balance.json()["basket_tools"] == []
     assert basket_moved_to_balance.json()["lims_reception"]["measured_gross_mass_g"] > 0
     assert registered.status_code == 200
     sample_code = registered.json()["lims_reception"]["lab_sample_code"]
@@ -436,8 +447,8 @@ def test_printed_lims_label_can_be_applied_to_basket_bag_over_http() -> None:
     assert printed.status_code == 200
     assert applied.status_code == 200
     sample_code = printed.json()["lims_reception"]["printed_label_ticket"]["sample_code"]
-    assert applied.json()["basket_tool"]["sample_label_text"] == sample_code
-    assert applied.json()["basket_tool"]["sample_label_received_date"]
+    assert applied.json()["basket_tools"][0]["sample_label_text"] == sample_code
+    assert applied.json()["basket_tools"][0]["sample_label_received_date"]
     assert applied.json()["lims_reception"]["printed_label_ticket"] is None
     assert applied.json()["lims_reception"]["status"] == "received"
 
@@ -445,10 +456,15 @@ def test_printed_lims_label_can_be_applied_to_basket_bag_over_http() -> None:
 def test_received_bag_can_be_discarded_from_basket_over_http() -> None:
     with TestClient(app) as client:
         experiment_id = _create_experiment(client)
-        discarded = client.post(f"/experiments/{experiment_id}/reception/bag/discard")
+        created = client.get(f"/experiments/{experiment_id}")
+        basket_tool_id = created.json()["basket_tools"][0]["id"]
+        discarded = client.post(
+            f"/experiments/{experiment_id}/reception/bag/discard",
+            json={"tool_id": basket_tool_id},
+        )
 
     assert discarded.status_code == 200
-    assert discarded.json()["basket_tool"] is None
+    assert discarded.json()["basket_tools"] == []
     assert len(discarded.json()["trash"]["tools"]) == 1
     assert discarded.json()["trash"]["tools"][0]["origin_label"] == "Produce basket"
 
@@ -660,7 +676,7 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
+        produce_lot_id = created.json()["basket_tools"][-1]["produce_lots"][0]["id"]
         placed = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "hdpe_storage_jar_2l"},
@@ -697,7 +713,7 @@ def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
+        produce_lot_id = created.json()["basket_tools"][-1]["produce_lots"][0]["id"]
         placed = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "hdpe_storage_jar_2l"},
@@ -913,7 +929,7 @@ def test_workspace_routes_round_trip_over_http() -> None:
                 f"/experiments/{experiment_id}/workspace/produce-lots",
                 json={"produce_type": "apple"},
             )
-            produce_lot_id = produce_created.json()["workspace"]["produce_basket_lots"][0]["id"]
+            produce_lot_id = produce_created.json()["basket_tools"][-1]["produce_lots"][0]["id"]
             produce_loaded = client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
                 json={"produce_lot_id": produce_lot_id},
@@ -976,7 +992,7 @@ def test_experiment_stream_pushes_updated_snapshots() -> None:
                 f"/experiments/{experiment_id}/workspace/produce-lots",
                 json={"produce_type": "apple"},
             )
-            produce_lot_id = produced.json()["workspace"]["produce_basket_lots"][0]["id"]
+            produce_lot_id = produced.json()["basket_tools"][-1]["produce_lots"][0]["id"]
             client.post(
                 f"/experiments/{experiment_id}/workspace/widgets/grinder/add-produce-lot",
                 json={"produce_lot_id": produce_lot_id},
@@ -1005,7 +1021,7 @@ def test_produce_lot_routes_round_trip_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        first_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
+        first_lot_id = created.json()["basket_tools"][-1]["produce_lots"][0]["id"]
         placed_board = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "cutting_board_hdpe"},
@@ -1079,7 +1095,7 @@ def test_workspace_move_workbench_produce_lot_to_widget_over_http() -> None:
             f"/experiments/{experiment_id}/workspace/produce-lots",
             json={"produce_type": "apple"},
         )
-        produce_lot_id = created.json()["workspace"]["produce_basket_lots"][0]["id"]
+        produce_lot_id = created.json()["basket_tools"][-1]["produce_lots"][0]["id"]
         placed_board = client.post(
             f"/experiments/{experiment_id}/workbench/slots/station_1/place-tool",
             json={"tool_id": "cutting_board_hdpe"},

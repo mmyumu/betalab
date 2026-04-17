@@ -80,8 +80,7 @@ def test_received_bag_gross_mass_can_read_canonical_fractions() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     runtime_experiment = service._require_experiment(experiment.id)
-    bag = runtime_experiment.basket_tool
-    assert bag is not None
+    bag = runtime_experiment.basket_tools[0]
     bag.produce_lots = []
     bag.produce_fractions = []
 

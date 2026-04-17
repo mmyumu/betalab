@@ -9,7 +9,7 @@ import { getProduceLotDisplayName } from "@/lib/produce-lot-display";
 import type { BenchToolInstance, ExperimentProduceLot } from "@/types/workbench";
 
 type ProduceBasketWidgetProps = {
-  basketTool?: BenchToolInstance | null;
+  basketTools?: BenchToolInstance[];
   dndDisabled?: boolean;
   formatProduceLotMetadata: (produceLot: ExperimentProduceLot) => string;
   isOpen: boolean;
@@ -22,7 +22,7 @@ type ProduceBasketWidgetProps = {
 };
 
 export function ProduceBasketWidget({
-  basketTool = null,
+  basketTools = [],
   dndDisabled = false,
   formatProduceLotMetadata,
   isOpen,
@@ -33,7 +33,7 @@ export function ProduceBasketWidget({
   onToggle,
   produceLots,
 }: ProduceBasketWidgetProps) {
-  const basketItemCount = produceLots.length + (basketTool ? 1 : 0);
+  const basketItemCount = produceLots.length + basketTools.length;
 
   return (
     <InventoryWidget
@@ -74,11 +74,12 @@ export function ProduceBasketWidget({
             Basket contents
           </p>
           <div className="mt-3 space-y-2">
-            {basketTool ? (
+            {basketTools.map((basketTool) => (
               <DraggableInventoryItem
                 className="rounded-[0.9rem] bg-white"
                 contentClassName="flex-1"
                 dataTestId="basket-received-bag"
+                key={basketTool.id}
                 leading={
                   <LabAssetIcon
                     accent="emerald"
@@ -104,13 +105,13 @@ export function ProduceBasketWidget({
                     {basketTool.fieldLabelText ?? "Field label attached"}
                   </span>
                 }
-                  title={
-                    <span className="block truncate text-sm font-semibold text-slate-900">
-                      Received sampling bag
-                    </span>
-                  }
-                />
-            ) : null}
+                title={
+                  <span className="block truncate text-sm font-semibold text-slate-900">
+                    Received sampling bag
+                  </span>
+                }
+              />
+            ))}
             {produceLots.length > 0 ? (
               produceLots.map((lot) => (
                 <DraggableInventoryItem
@@ -142,7 +143,7 @@ export function ProduceBasketWidget({
                   }
                 />
               ))
-            ) : !basketTool ? (
+            ) : basketTools.length === 0 ? (
               <p className="text-sm text-slate-500">No produce lots created yet.</p>
             ) : null}
           </div>

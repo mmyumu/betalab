@@ -14,7 +14,6 @@ from app.domain.rules import can_tool_be_sealed, can_workspace_widget_be_stored
 from app.domain.workbench_catalog import get_workbench_liquid_definition
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
-    find_produce_basket_lot,
     find_workspace_widget,
     find_workspace_widget_liquid,
     format_volume,
@@ -186,10 +185,9 @@ class CreateReceivedSamplingBagService(WriteDomainService[CreateReceivedSampling
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: CreateReceivedSamplingBagRequest) -> None:
-        if experiment.basket_tool is not None:
-            raise ValueError("The produce basket already contains the received sampling bag.")
-        experiment.basket_tool = build_received_sampling_bag(label="Received sampling bag")
-        experiment.audit_log.append(f"{experiment.basket_tool.produce_lots[0].label} created in a received sampling bag.")
+        new_bag = build_received_sampling_bag(label="Received sampling bag")
+        experiment.basket_tools.append(new_bag)
+        experiment.audit_log.append(f"{new_bag.produce_lots[0].label} created in a received sampling bag.")
 
 
 class CreateProduceLotService(WriteDomainService[CreateProduceLotRequest]):
@@ -216,16 +214,32 @@ class CreateProduceLotService(WriteDomainService[CreateProduceLotRequest]):
 
 
 class CreateOrInitProduceLotService(WriteDomainService[CreateProduceLotRequest]):
-    """Creates a produce lot, or initialises the received sampling bag first if none exists yet."""
+    """Creates a new produce lot inside a received sampling bag in the basket."""
 
     def __init__(self, runtime: ExperimentRuntime) -> None:
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: CreateProduceLotRequest) -> None:
-        if experiment.basket_tool is None:
-            CreateReceivedSamplingBagService(self._runtime)._run(experiment, CreateReceivedSamplingBagRequest())
-        else:
-            CreateProduceLotService(self._runtime)._run(experiment, request)
+        produce_type = request.produce_type
+        if produce_type != "apple":
+            raise ValueError("Unsupported produce type")
+
+        all_lots = [lot for bag in experiment.basket_tools for lot in bag.produce_lots]
+        apple_lot_count = sum(1 for lot in all_lots if lot.produce_type == produce_type and lot.label.startswith("Apple lot"))
+
+        produce_lot = ProduceLot(
+            id=new_id("produce"),
+            label=f"Apple lot {apple_lot_count + 1}",
+            produce_type=produce_type,
+            unit_count=12,
+            total_mass_g=2450.0,
+        )
+
+        new_bag = build_received_sampling_bag(label="Received sampling bag")
+        new_bag.produce_lots.clear()
+        new_bag.produce_lots.append(produce_lot)
+        experiment.basket_tools.append(new_bag)
+        experiment.audit_log.append(f"{produce_lot.label} created in Produce basket.")
 
 
 class AddLiquidToWorkspaceWidgetService(WriteDomainService[AddLiquidToWorkspaceWidgetRequest]):
@@ -405,8 +419,19 @@ class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProdu
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: DiscardWorkspaceProduceLotRequest) -> None:
-        produce_lot = find_produce_basket_lot(experiment.workspace, request.produce_lot_id)
-        experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
+        produce_lot: ProduceLot | None = next(
+            (lot for lot in experiment.workspace.produce_basket_lots if lot.id == request.produce_lot_id), None
+        )
+        if produce_lot is not None:
+            experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
+        else:
+            for bag in experiment.basket_tools:
+                produce_lot = next((lot for lot in bag.produce_lots if lot.id == request.produce_lot_id), None)
+                if produce_lot is not None:
+                    bag.produce_lots = [lot for lot in bag.produce_lots if lot.id != produce_lot.id]
+                    break
+        if produce_lot is None:
+            raise ValueError("Unknown produce lot")
         experiment.trash.produce_lots.append(
             TrashProduceLotEntry(
                 id=new_id("trash_produce_lot"),

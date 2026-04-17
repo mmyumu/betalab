@@ -189,7 +189,7 @@ export function useGrossBalanceDnd({
 
     if (toolPayload) {
       if (toolPayload.sourceKind === "basket") {
-        void experimentApi.moveBasketToolToGrossBalance();
+        void experimentApi.moveBasketToolToGrossBalance({ tool_id: toolPayload.sourceId });
         return;
       }
       if ("sourceSlotId" in toolPayload) {

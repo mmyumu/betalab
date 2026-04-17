@@ -8,6 +8,7 @@ import pytest
 from app.services.domain_services.gross_balance import (
     DiscardGrossBalanceToolService,
     EmptyRequest,
+    MoveBasketToolToGrossBalanceRequest,
     MoveBasketToolToGrossBalanceService,
     MoveGrossBalanceToolToRackRequest,
     MoveGrossBalanceToolToRackService,
@@ -40,7 +41,7 @@ from app.services.domain_services.reception import (
     PlaceReceivedBagOnWorkbenchRequest,
     PlaceReceivedBagOnWorkbenchService,
 )
-from app.services.domain_services.trash import DiscardBasketToolService, EmptyTrashRequest
+from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService, EmptyTrashRequest
 from app.services.domain_services.workbench import (
     DiscardToolFromPaletteRequest,
     DiscardToolFromPaletteService,
@@ -183,7 +184,8 @@ def _execute_drop(
         if source.startswith("palette_"):
             return PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id=tool_id))
         if source == "basket_bag":
-            return PlaceReceivedBagOnWorkbenchService(service).run(experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2"))
+            tool_id = service.get_experiment(experiment_id).basket_tools[0].id
+            return PlaceReceivedBagOnWorkbenchService(service).run(experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2", tool_id=tool_id))
         if source.startswith("workbench_"):
             return MoveToolBetweenWorkbenchSlotsService(service).run(
                 experiment_id,
@@ -229,7 +231,8 @@ def _execute_drop(
         if source.startswith("palette_"):
             return PlaceToolOnGrossBalanceService(service).run(experiment_id, PlaceToolOnGrossBalanceRequest(tool_id=tool_id))
         if source == "basket_bag":
-            return MoveBasketToolToGrossBalanceService(service).run(experiment_id, EmptyRequest())
+            basket_tool_id = service.get_experiment(experiment_id).basket_tools[0].id
+            return MoveBasketToolToGrossBalanceService(service).run(experiment_id, MoveBasketToolToGrossBalanceRequest(tool_id=basket_tool_id))
         if source.startswith("workbench_"):
             return MoveWorkbenchToolToGrossBalanceService(service).run(
                 experiment_id, MoveWorkbenchToolToGrossBalanceRequest(source_slot_id="station_1")
@@ -245,7 +248,8 @@ def _execute_drop(
         if source.startswith("palette_"):
             return DiscardToolFromPaletteService(service).run(experiment_id, DiscardToolFromPaletteRequest(tool_id=tool_id))
         if source == "basket_bag":
-            return DiscardBasketToolService(service).run(experiment_id, EmptyTrashRequest())
+            basket_tool_id = service.get_experiment(experiment_id).basket_tools[0].id
+            return DiscardBasketToolService(service).run(experiment_id, DiscardBasketToolRequest(tool_id=basket_tool_id))
         if source.startswith("workbench_"):
             return DiscardWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_1"))
         if source == "rack_vial":

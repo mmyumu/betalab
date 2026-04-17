@@ -172,6 +172,7 @@ export function useWorkbenchDnd({
     if (payload.sourceKind === "basket") {
       void experimentApi.placeReceivedBagOnWorkbench({
         target_slot_id: targetSlotId,
+        tool_id: payload.sourceId,
       });
       clearDropTargets();
       return;

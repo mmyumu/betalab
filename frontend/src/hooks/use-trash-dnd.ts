@@ -139,7 +139,7 @@ export function useTrashDnd({
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.discardBasketTool();
+      void experimentApi.discardBasketTool({ tool_id: basketToolPayload.sourceId });
       return;
     }
 

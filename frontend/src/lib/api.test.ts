@@ -47,7 +47,7 @@ const makeExperiment = (): Experiment => ({
     printedLabelTicket: null,
   },
   limsEntries: [],
-  basketTool: null,
+  basketTools: [],
   produceMaterialStates: [],
   spatula: {
     isLoaded: false,
