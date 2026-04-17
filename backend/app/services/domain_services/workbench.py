@@ -25,7 +25,9 @@ from app.services.helpers.lookups import (
     round_volume,
 )
 from app.services.helpers.produce_canonical import (
+    GROUND_POWDER_APPARENT_DENSITY_G_PER_ML,
     get_spatula_total_produce_mass_g,
+    get_tool_remaining_fill_capacity_ml,
     get_tool_total_powder_mass_g,
     pour_spatula_into_tool,
     split_tool_powder_into_spatula,
@@ -311,8 +313,9 @@ class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToo
             raise ValueError(f"Open {tool.label} before adding liquids.")
 
         liquid_definition = get_workbench_liquid_definition(request.liquid_id)
-        current_volume = round_volume(sum(liquid.volume_ml for liquid in tool.liquids))
-        remaining_capacity = round_volume(max(tool.capacity_ml - current_volume, 0.0))
+        remaining_capacity = round_volume(
+            get_tool_remaining_fill_capacity_ml(tool, material_states=experiment.produce_material_states)
+        )
         if remaining_capacity <= 0:
             raise ValueError(f"{tool.label} is already full.")
 
@@ -380,8 +383,13 @@ class UpdateWorkbenchLiquidVolumeService(WriteDomainService[UpdateWorkbenchLiqui
         liquid_entry = find_tool_liquid(tool, request.liquid_entry_id)
 
         requested_volume = round_volume(max(float(request.volume_ml), 0.0))
-        occupied_by_others = sum(liquid.volume_ml for liquid in tool.liquids if liquid.id != liquid_entry.id)
-        max_allowed_volume = round_volume(max(tool.capacity_ml - occupied_by_others, 0.0))
+        max_allowed_volume = round_volume(
+            get_tool_remaining_fill_capacity_ml(
+                tool,
+                material_states=experiment.produce_material_states,
+                excluded_liquid_id=liquid_entry.id,
+            )
+        )
         liquid_entry.volume_ml = round_volume(min(requested_volume, max_allowed_volume))
         if liquid_entry.volume_ml <= 0:
             tool.liquids = [liquid for liquid in tool.liquids if liquid.id != request.liquid_entry_id]
@@ -654,7 +662,17 @@ class PourSpatulaIntoWorkbenchToolService(WriteDomainService[PourSpatulaIntoWork
         if requested_mass_g <= 0:
             return
 
-        transferred_mass_g = min(requested_mass_g, total_loaded_g)
+        remaining_capacity_ml = get_tool_remaining_fill_capacity_ml(
+            tool,
+            material_states=experiment.produce_material_states,
+        )
+        if remaining_capacity_ml <= 0:
+            raise ValueError(f"{tool.label} is already full.")
+
+        max_transferable_mass_g = round(remaining_capacity_ml * GROUND_POWDER_APPARENT_DENSITY_G_PER_ML, 3)
+        transferred_mass_g = min(requested_mass_g, total_loaded_g, max_transferable_mass_g)
+        if transferred_mass_g <= 0:
+            raise ValueError(f"{tool.label} is already full.")
         pour_spatula_into_tool(
             experiment.spatula,
             tool,

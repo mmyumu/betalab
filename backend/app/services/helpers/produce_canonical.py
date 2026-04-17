@@ -14,6 +14,8 @@ from app.domain.models import (
     new_id,
 )
 
+GROUND_POWDER_APPARENT_DENSITY_G_PER_ML = 0.5
+
 
 def sync_canonical_produce_model(experiment: Experiment) -> None:
     produce_lots_by_id = _collect_produce_lots(experiment)
@@ -432,6 +434,28 @@ def get_tool_total_powder_mass_g(
         for fraction in tool.produce_fractions
         if states_by_id.get(fraction.produce_material_state_id) is not None and states_by_id[fraction.produce_material_state_id].cut_state == "ground"
     )
+
+
+def get_tool_total_powder_volume_ml(
+    tool: WorkbenchTool,
+    *,
+    material_states: list[ProduceMaterialState] | None = None,
+) -> float:
+    total_powder_g = get_tool_total_powder_mass_g(tool, material_states=material_states)
+    return round(total_powder_g / GROUND_POWDER_APPARENT_DENSITY_G_PER_ML, 3)
+
+
+def get_tool_remaining_fill_capacity_ml(
+    tool: WorkbenchTool,
+    *,
+    material_states: list[ProduceMaterialState] | None = None,
+    excluded_liquid_id: str | None = None,
+) -> float:
+    powder_volume_ml = get_tool_total_powder_volume_ml(tool, material_states=material_states)
+    liquid_volume_ml = sum(
+        max(liquid.volume_ml, 0.0) for liquid in tool.liquids if liquid.id != excluded_liquid_id
+    )
+    return round(max(tool.capacity_ml - powder_volume_ml - liquid_volume_ml, 0.0), 3)
 
 
 def get_spatula_total_produce_mass_g(spatula: SpatulaState) -> float:

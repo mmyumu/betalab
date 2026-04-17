@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from app.domain.models import ProduceFraction, ProduceMaterialState
 from app.services.domain_services.debug import (
     CreateDebugProduceLotOnWorkbenchRequest,
     CreateDebugProduceLotOnWorkbenchService,
@@ -1136,6 +1137,54 @@ def test_workbench_liquid_can_be_added_with_an_explicit_dosed_volume() -> None:
     assert first_slot.tool.liquids[0].volume_ml == 7.5
     assert slot.tool.liquids[0].volume_ml == 8.75
     assert updated.audit_log[-1] == "Acetonitrile increased to 8.75 mL in 50 mL centrifuge tube."
+
+
+def test_workbench_liquid_capacity_includes_ground_powder_volume() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    runtime_experiment = service._require_experiment(experiment.id)
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="produce_fraction_1",
+            produce_lot_id="lot_1",
+            produce_material_state_id="state_powder",
+            mass_g=10.0,
+            location_kind="workbench_tool",
+            location_id="station_1",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 40.0,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.liquids[0].volume_ml == 30.0
+    assert updated.audit_log[-1] == "Acetonitrile added to 50 mL centrifuge tube at 30 mL (remaining capacity)."
 
 
 def test_place_sealed_sampling_bag_on_workbench() -> None:
@@ -5022,3 +5071,62 @@ def test_update_volume_rounds_float_noise_in_audit_log() -> None:
     )
 
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 22.8 mL in 50 mL centrifuge tube."
+
+
+def test_update_liquid_volume_capacity_includes_ground_powder_volume() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    runtime_experiment = service._require_experiment(experiment.id)
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="produce_fraction_1",
+            produce_lot_id="lot_1",
+            produce_material_state_id="state_powder",
+            mass_g=12.5,
+            location_kind="workbench_tool",
+            location_id="station_1",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 10.0,
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is not None
+    liquid_id = updated.workbench.slots[0].tool.liquids[0].id
+    updated = apply_command(
+        service,
+        experiment.id,
+        "update_workbench_liquid_volume",
+        {
+            "slot_id": "station_1",
+            "liquid_entry_id": liquid_id,
+            "volume_ml": 40.0,
+        },
+    )
+
+    assert updated.workbench.slots[0].tool is not None
+    assert updated.workbench.slots[0].tool.liquids[0].volume_ml == 25.0
+    assert updated.audit_log[-1] == "Acetonitrile adjusted to 25 mL in 50 mL centrifuge tube."
