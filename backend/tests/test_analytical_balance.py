@@ -1,14 +1,6 @@
 import pytest
 
 from app.domain.models import ProduceFraction, ProduceMaterialState, TrashSampleLabelEntry
-from app.services.domain_services.reception import (
-    ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
-    CreateLimsReceptionRequest,
-    CreateLimsReceptionService,
-    PrintLimsLabelRequest,
-    PrintLimsLabelService,
-)
-from app.services.helpers.lookups import build_manual_label
 from app.services.domain_services.analytical_balance import (
     ApplySampleLabelToAnalyticalBalanceToolService,
     CloseAnalyticalBalanceToolService,
@@ -27,7 +19,16 @@ from app.services.domain_services.analytical_balance import (
     UpdateAnalyticalBalanceToolSampleLabelTextRequest,
     UpdateAnalyticalBalanceToolSampleLabelTextService,
 )
+from app.services.domain_services.reception import (
+    ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
+    CreateLimsReceptionRequest,
+    CreateLimsReceptionService,
+    EmptyReceptionRequest,
+    PrintLimsLabelRequest,
+    PrintLimsLabelService,
+)
 from app.services.experiment_service import ExperimentRuntimeService
+from app.services.helpers.lookups import build_manual_label
 from app.services.helpers.workbench import build_workbench_tool
 
 
@@ -318,7 +319,7 @@ def test_printed_lims_ticket_can_apply_to_analytical_balance_tool() -> None:
 
     updated = ApplyPrintedLimsLabelToAnalyticalBalanceToolService(service).run(
         experiment.id,
-        EmptyRequest(),
+        EmptyReceptionRequest(),
     )
 
     analytical_widget = next(widget for widget in updated.workspace.widgets if widget.id == "analytical_balance")

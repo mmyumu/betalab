@@ -23,6 +23,7 @@ import type { DragStateApi } from "@/hooks/use-drag-state";
 import type { DropDraft } from "@/hooks/use-drop-draft";
 import type { DropDraftField } from "@/components/drop-draft-card";
 import type {
+  BasketToolReferencePayload,
   MoveRackToolToGrossBalancePayload,
   MoveWidgetProduceLotToGrossBalancePayload,
   MoveWorkbenchProduceLotToGrossBalancePayload,
@@ -37,7 +38,7 @@ type GrossBalanceDndExperimentApi = {
   applyPrintedLimsLabelToGrossBalanceBag: () => void;
   applySampleLabelToGrossBalanceTool: () => void;
   moveAnalyticalBalanceToolToGrossBalance: () => void;
-  moveBasketToolToGrossBalance: () => void;
+  moveBasketToolToGrossBalance: (payload: BasketToolReferencePayload) => void;
   moveGrossBalanceToolToAnalyticalBalance: () => void;
   moveRackToolToGrossBalance: (payload: MoveRackToolToGrossBalancePayload) => void;
   moveWorkbenchSampleLabelToGrossBalance: (payload: {

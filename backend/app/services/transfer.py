@@ -94,9 +94,7 @@ class WorkspaceProduceLotSource:
             None,
         )
         if standalone is not None:
-            experiment.workspace.produce_basket_lots = [
-                lot for lot in experiment.workspace.produce_basket_lots if lot.id != standalone.id
-            ]
+            experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != standalone.id]
             return TransferRemoval(
                 entity=standalone,
                 source_label="Produce basket",
@@ -107,7 +105,7 @@ class WorkspaceProduceLotSource:
         for bag in experiment.basket_tools:
             lot = next((lot for lot in bag.produce_lots if lot.id == self.produce_lot_id), None)
             if lot is not None:
-                bag.produce_lots = [l for l in bag.produce_lots if l.id != lot.id]
+                bag.produce_lots = [kept for kept in bag.produce_lots if kept.id != lot.id]
                 return TransferRemoval(
                     entity=lot,
                     source_label="Produce basket",

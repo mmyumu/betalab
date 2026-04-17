@@ -11,8 +11,8 @@ from app.schemas.experiment import (
 from app.services.domain_services.reception import (
     ApplyPrintedLimsLabelRequest,
     ApplyPrintedLimsLabelService,
-    ApplyPrintedLimsLabelToBasketBagService,
     ApplyPrintedLimsLabelToAnalyticalBalanceToolService,
+    ApplyPrintedLimsLabelToBasketBagService,
     ApplyPrintedLimsLabelToGrossBalanceBagService,
     CreateLimsReceptionRequest,
     CreateLimsReceptionService,
@@ -51,9 +51,7 @@ def place_received_bag_on_workbench(
 @router.post("/{experiment_id}/reception/bag/discard", response_model=ExperimentSchema)
 def discard_received_bag(experiment_id: str, request: BasketToolReferenceSchema) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: DiscardBasketToolService(experiment_service).run(
-            experiment_id, DiscardBasketToolRequest(tool_id=request.tool_id)
-        )
+        lambda: DiscardBasketToolService(experiment_service).run(experiment_id, DiscardBasketToolRequest(tool_id=request.tool_id))
     )
 
 
@@ -155,7 +153,5 @@ def apply_printed_lims_label_to_gross_balance_bag(experiment_id: str) -> Experim
 )
 def apply_printed_lims_label_to_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(
-        lambda: ApplyPrintedLimsLabelToAnalyticalBalanceToolService(experiment_service).run(
-            experiment_id, EmptyReceptionRequest()
-        )
+        lambda: ApplyPrintedLimsLabelToAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyReceptionRequest())
     )

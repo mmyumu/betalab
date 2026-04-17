@@ -196,12 +196,8 @@ def test_snapshot_exposes_dnd_contract_fields_over_http() -> None:
         "analytical_balance_widget",
         "trash_bin",
     ]
-    gross_balance_widget = next(
-        widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "gross_balance"
-    )
-    analytical_balance_widget = next(
-        widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "analytical_balance"
-    )
+    gross_balance_widget = next(widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "gross_balance")
+    analytical_balance_widget = next(widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "analytical_balance")
     grinder_widget = next(widget for widget in applied.json()["workspace"]["widgets"] if widget["id"] == "grinder")
     assert gross_balance_widget["drop_target_types"] == ["gross_balance_widget"]
     assert analytical_balance_widget["drop_target_types"] == ["analytical_balance_widget"]
@@ -377,9 +373,7 @@ def test_printed_lims_label_can_apply_to_analytical_balance_tool_over_http() -> 
             f"/experiments/{experiment_id}/analytical-balance/place-tool",
             json={"tool_id": "centrifuge_tube_50ml"},
         )
-        applied = client.post(
-            f"/experiments/{experiment_id}/lims/apply-label-to-analytical-balance-tool"
-        )
+        applied = client.post(f"/experiments/{experiment_id}/lims/apply-label-to-analytical-balance-tool")
 
     assert printed.status_code == 200
     assert placed.status_code == 200

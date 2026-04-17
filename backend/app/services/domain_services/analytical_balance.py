@@ -8,9 +8,9 @@ from app.domain.rules import can_tool_be_sealed
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.helpers.lookups import (
     build_manual_label,
+    find_rack_slot,
     find_tool_label,
     find_trash_sample_label,
-    find_rack_slot,
     find_trash_tool,
     find_workbench_slot,
     find_workspace_widget,
@@ -290,9 +290,7 @@ class MoveWorkbenchSampleLabelToAnalyticalBalanceService(AnalyticalBalanceServic
         target_tool = self._require_balance_tool(experiment)
         label = pop_tool_label(source_tool, request.label_id)
         target_tool.labels.append(label)
-        experiment.audit_log.append(
-            f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Analytical balance."
-        )
+        experiment.audit_log.append(f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Analytical balance.")
 
 
 class RestoreTrashedSampleLabelToAnalyticalBalanceService(AnalyticalBalanceServiceBase):
@@ -300,9 +298,7 @@ class RestoreTrashedSampleLabelToAnalyticalBalanceService(AnalyticalBalanceServi
         trashed_sample_label = find_trash_sample_label(experiment.trash, request.trash_sample_label_id)
         target_tool = self._require_balance_tool(experiment)
         target_tool.labels.append(trashed_sample_label.label)
-        experiment.trash.sample_labels = [
-            entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id
-        ]
+        experiment.trash.sample_labels = [entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id]
         experiment.audit_log.append(f"Label restored from trash to {target_tool.label} on Analytical balance.")
 
 

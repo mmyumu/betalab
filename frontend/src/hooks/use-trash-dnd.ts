@@ -26,6 +26,7 @@ import type {
 } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type {
+  BasketToolReferencePayload,
   DiscardGrossBalanceProduceLotPayload,
   DiscardProduceLotFromWorkbenchToolPayload,
   DiscardRackToolPayload,
@@ -39,7 +40,7 @@ import type {
 
 type TrashDndExperimentApi = {
   discardAnalyticalBalanceTool: () => void;
-  discardBasketTool: () => void;
+  discardBasketTool: (payload: BasketToolReferencePayload) => void;
   discardGrossBalanceProduceLot: (payload: DiscardGrossBalanceProduceLotPayload) => void;
   discardGrossBalanceTool: () => void;
   discardPrintedLimsLabel: () => void;

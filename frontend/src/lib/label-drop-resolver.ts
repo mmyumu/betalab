@@ -17,7 +17,7 @@ import type {
   ToolbarDragPayload,
 } from "@/types/workbench";
 
-export type LabelDragPayload =
+type LabelDragPayload =
   | { kind: "palette_sample_label"; payload: ToolbarDragPayload }
   | { kind: "workbench_sample_label"; payload: SampleLabelDragPayload }
   | { kind: "trash_sample_label"; payload: SampleLabelDragPayload }

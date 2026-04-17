@@ -16,7 +16,6 @@ from app.services.domain_services.base import ExperimentRuntime, WriteDomainServ
 from app.services.helpers.lookups import (
     build_manual_label,
     find_rack_slot,
-    find_tool_label,
     find_trash_sample_label,
     find_trash_tool,
     find_workbench_slot,
@@ -487,9 +486,7 @@ class MoveWorkbenchSampleLabelToGrossBalanceService(GrossBalanceServiceBase):
         target_tool = self._require_gross_balance_tool(experiment)
         label = pop_tool_label(source_tool, request.label_id)
         target_tool.labels.append(label)
-        experiment.audit_log.append(
-            f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Gross balance."
-        )
+        experiment.audit_log.append(f"Label moved from {source_tool.label} on {source_slot.label} to {target_tool.label} on Gross balance.")
 
 
 class RestoreTrashedSampleLabelToGrossBalanceService(GrossBalanceServiceBase):
@@ -497,9 +494,7 @@ class RestoreTrashedSampleLabelToGrossBalanceService(GrossBalanceServiceBase):
         trashed_sample_label = find_trash_sample_label(experiment.trash, request.trash_sample_label_id)
         target_tool = self._require_gross_balance_tool(experiment)
         target_tool.labels.append(trashed_sample_label.label)
-        experiment.trash.sample_labels = [
-            entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id
-        ]
+        experiment.trash.sample_labels = [entry for entry in experiment.trash.sample_labels if entry.id != trashed_sample_label.id]
         experiment.audit_log.append(f"Label restored from trash to {target_tool.label} on Gross balance.")
 
 

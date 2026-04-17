@@ -419,9 +419,7 @@ class DiscardWorkspaceProduceLotService(WriteDomainService[DiscardWorkspaceProdu
         super().__init__(runtime)
 
     def _run(self, experiment: Experiment, request: DiscardWorkspaceProduceLotRequest) -> None:
-        produce_lot: ProduceLot | None = next(
-            (lot for lot in experiment.workspace.produce_basket_lots if lot.id == request.produce_lot_id), None
-        )
+        produce_lot: ProduceLot | None = next((lot for lot in experiment.workspace.produce_basket_lots if lot.id == request.produce_lot_id), None)
         if produce_lot is not None:
             experiment.workspace.produce_basket_lots = [lot for lot in experiment.workspace.produce_basket_lots if lot.id != produce_lot.id]
         else:

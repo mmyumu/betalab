@@ -5,6 +5,10 @@ from typing import Literal
 
 import pytest
 
+from app.services.domain_services.analytical_balance import (
+    PlaceToolOnAnalyticalBalanceRequest,
+    PlaceToolOnAnalyticalBalanceService,
+)
 from app.services.domain_services.reception import (
     ApplyPrintedLimsLabelRequest,
     ApplyPrintedLimsLabelService,
@@ -15,10 +19,6 @@ from app.services.domain_services.reception import (
     EmptyReceptionRequest,
     PrintLimsLabelRequest,
     PrintLimsLabelService,
-)
-from app.services.domain_services.analytical_balance import (
-    PlaceToolOnAnalyticalBalanceRequest,
-    PlaceToolOnAnalyticalBalanceService,
 )
 from app.services.domain_services.workbench import (
     AddLiquidToWorkbenchToolRequest,
@@ -103,9 +103,7 @@ def _prepare_label_target(service: ExperimentRuntimeService, experiment_id: str,
     if target == "workbench_tool":
         PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id="sealed_sampling_bag"))
     if target == "analytical_balance_tool":
-        PlaceToolOnAnalyticalBalanceService(service).run(
-            experiment_id, PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml")
-        )
+        PlaceToolOnAnalyticalBalanceService(service).run(experiment_id, PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"))
 
 
 def _prepare_label_source(service: ExperimentRuntimeService, experiment_id: str, source: LabelSource) -> tuple[str | None, str | None]:
@@ -172,9 +170,7 @@ def _execute_label_drop(
             return ApplyPrintedLimsLabelService(service).run(experiment_id, ApplyPrintedLimsLabelRequest(slot_id="station_2"))
     if target == "analytical_balance_tool":
         if source == "lims_ticket":
-            return ApplyPrintedLimsLabelToAnalyticalBalanceToolService(service).run(
-                experiment_id, EmptyReceptionRequest()
-            )
+            return ApplyPrintedLimsLabelToAnalyticalBalanceToolService(service).run(experiment_id, EmptyReceptionRequest())
     if target == "empty_workbench":
         if source == "palette_sample_label":
             return ApplySampleLabelToWorkbenchToolService(service).run(experiment_id, WorkbenchSlotRequest(slot_id="station_2"))

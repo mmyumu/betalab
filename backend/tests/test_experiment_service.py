@@ -72,7 +72,7 @@ from app.services.domain_services.reception import (
     SetGrossMassOffsetRequest,
     SetGrossMassOffsetService,
 )
-from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService, EmptyTrashRequest
+from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService
 from app.services.domain_services.workbench import (
     AddLiquidToWorkbenchToolRequest,
     AddLiquidToWorkbenchToolService,
@@ -445,9 +445,7 @@ def apply_command(
         ),
         "discard_basket_tool": lambda: DiscardBasketToolService(service).run(
             experiment_id,
-            DiscardBasketToolRequest(
-                tool_id=payload.get("tool_id") or service.get_experiment(experiment_id).basket_tools[0].id
-            ),
+            DiscardBasketToolRequest(tool_id=payload.get("tool_id") or service.get_experiment(experiment_id).basket_tools[0].id),
         ),
         "record_gross_weight": lambda: RecordGrossWeightService(service).run(
             experiment_id,

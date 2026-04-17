@@ -32,7 +32,7 @@ def _get_produce_lot_allowed_drop_targets() -> list[str]:
 _STORABLE_WIDGET_IDS = {"lims", "rack", "instrument", "grinder", "gross_balance", "analytical_balance"}
 
 
-def _tool_exposes_sample_bag_label_target(tool: "WorkbenchToolSchema | None") -> bool:
+def _tool_exposes_sample_bag_label_target(tool: WorkbenchToolSchema | None) -> bool:
     return tool is not None
 
 
@@ -229,12 +229,12 @@ class WorkbenchToolSchema(BaseModel):
         return lims_label.received_date if lims_label is not None else None
 
     @computed_field
-    def is_draggable(self) -> bool:
-        return len(self.allowed_drop_targets) > 0
-
-    @computed_field
     def allowed_drop_targets(self) -> list[str]:
         return _get_tool_allowed_drop_targets(self.tool_type)
+
+    @computed_field
+    def is_draggable(self) -> bool:
+        return len(_get_tool_allowed_drop_targets(self.tool_type)) > 0
 
 
 class WorkbenchSlotSchema(BaseModel):
@@ -385,6 +385,7 @@ class ExperimentSchema(BaseModel):
             legacy = data.pop("basket_tool")
             data["basket_tools"] = [legacy] if legacy is not None else []
         return data
+
     spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
     analytical_balance: AnalyticalBalanceStateSchema = Field(default_factory=AnalyticalBalanceStateSchema)
     audit_log: list[str]

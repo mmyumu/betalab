@@ -3,9 +3,9 @@ from app.schemas.experiment import (
     RackSlotReferenceSchema,
     TargetWorkbenchSlotSchema,
     WorkbenchSlotReferenceSchema,
-    WorkbenchToolSampleLabelUpdateSchema,
     WorkbenchToolPlacementSchema,
     WorkbenchToolPowderPourSchema,
+    WorkbenchToolSampleLabelUpdateSchema,
 )
 from app.services.domain_services.analytical_balance import (
     ApplySampleLabelToAnalyticalBalanceToolService,

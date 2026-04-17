@@ -41,7 +41,7 @@ from app.services.domain_services.reception import (
     PlaceReceivedBagOnWorkbenchRequest,
     PlaceReceivedBagOnWorkbenchService,
 )
-from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService, EmptyTrashRequest
+from app.services.domain_services.trash import DiscardBasketToolRequest, DiscardBasketToolService
 from app.services.domain_services.workbench import (
     DiscardToolFromPaletteRequest,
     DiscardToolFromPaletteService,
@@ -185,7 +185,9 @@ def _execute_drop(
             return PlaceToolOnWorkbenchService(service).run(experiment_id, PlaceToolOnWorkbenchRequest(slot_id="station_2", tool_id=tool_id))
         if source == "basket_bag":
             tool_id = service.get_experiment(experiment_id).basket_tools[0].id
-            return PlaceReceivedBagOnWorkbenchService(service).run(experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2", tool_id=tool_id))
+            return PlaceReceivedBagOnWorkbenchService(service).run(
+                experiment_id, PlaceReceivedBagOnWorkbenchRequest(target_slot_id="station_2", tool_id=tool_id)
+            )
         if source.startswith("workbench_"):
             return MoveToolBetweenWorkbenchSlotsService(service).run(
                 experiment_id,
