@@ -63,7 +63,7 @@ class WorkbenchLiquid:
 class ProduceMaterialState:
     id: str
     produce_lot_id: str
-    cut_state: str = "whole"
+    material_state: str = "whole"
     temperature_c: float = 20.0
     grind_quality_label: str | None = None
     homogeneity_score: float | None = None
@@ -213,14 +213,6 @@ class ProduceLot:
     produce_type: str
     total_mass_g: float
     unit_count: int | None = None
-    is_contaminated: bool = False
-    cut_state: str = "whole"
-    temperature_c: float = 20.0
-    grind_quality_label: str | None = None
-    homogeneity_score: float | None = None
-    residual_co2_mass_g: float = 0.0
-    grinding_elapsed_seconds: float = 0.0
-    grinding_temperature_integral: float = 0.0
 
 
 @dataclass

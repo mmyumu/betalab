@@ -246,7 +246,7 @@ export function useWorkbenchDnd({
   };
 
   const handleWorkbenchProduceLotClick = (slotId: string, produceLot: ExperimentProduceLot) => {
-    if (!isKnifeMode || (produceLot.cutState ?? "whole") !== "whole") {
+    if (!isKnifeMode || (produceLot.materialState ?? "whole") !== "whole") {
       return;
     }
     void experimentApi.cutWorkbenchProduceLot({

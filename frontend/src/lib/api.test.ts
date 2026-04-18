@@ -409,7 +409,7 @@ describe("api client", () => {
         {
           id: "state_ground",
           produceLotId: "lot_1",
-          cutState: "ground",
+          materialState: "ground",
         },
       ],
       workbench: {

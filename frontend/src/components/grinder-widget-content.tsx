@@ -127,11 +127,11 @@ export function GrinderWidgetContent({
             draggable={!grinderDndDisabled}
             key={lot.id}
             metadata={
-              lot.cutState === "ground"
+              lot.materialState === "ground"
                 ? formatProduceLotMetadata(lot)
                   ? `Ground product • ${formatProduceLotMetadata(lot)}`
                   : "Ground product"
-                : lot.cutState === "waste"
+                : lot.materialState === "waste"
                   ? formatProduceLotMetadata(lot)
                     ? `Jammed waste • ${formatProduceLotMetadata(lot)}`
                     : "Jammed waste"

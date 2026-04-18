@@ -13,6 +13,12 @@ from app.domain.models import (
     WorkspaceWidget,
     new_id,
 )
+from app.services.helpers.produce_material_states import (
+    PARTICULATE_MATERIAL_STATES,
+    ensure_material_state,
+    find_material_state,
+    get_material_state_name,
+)
 
 GROUND_POWDER_APPARENT_DENSITY_G_PER_ML = 0.5
 
@@ -22,10 +28,11 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
     state_ids_by_signature: dict[tuple[object, ...], str] = {}
     material_states: list[ProduceMaterialState] = []
     existing_states_by_id = {state.id: state for state in experiment.produce_material_states}
+    existing_states_by_lot_id = {state.produce_lot_id: state for state in experiment.produce_material_states}
     existing_state_ids_by_signature = {
         (
             state.produce_lot_id,
-            state.cut_state,
+            state.material_state,
             state.temperature_c,
             state.grind_quality_label,
             state.homogeneity_score,
@@ -46,16 +53,18 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         material_states.append(existing_state)
         material_state_ids_added.add(state_id)
 
-    def ensure_material_state_id(produce_lot: ProduceLot, *, force_ground: bool = False) -> str:
+    def ensure_material_state_id(produce_lot: ProduceLot, *, material_state: str | None = None) -> str:
+        existing_state = find_material_state(experiment.produce_material_states, produce_lot.id)
+        state_name = material_state or (existing_state.material_state if existing_state is not None else "whole")
         signature = (
             produce_lot.id,
-            "ground" if force_ground else produce_lot.cut_state,
-            produce_lot.temperature_c,
-            produce_lot.grind_quality_label,
-            produce_lot.homogeneity_score,
-            produce_lot.residual_co2_mass_g,
-            produce_lot.grinding_elapsed_seconds,
-            produce_lot.grinding_temperature_integral,
+            state_name,
+            existing_state.temperature_c if existing_state is not None else 20.0,
+            existing_state.grind_quality_label if existing_state is not None else None,
+            existing_state.homogeneity_score if existing_state is not None else None,
+            existing_state.residual_co2_mass_g if existing_state is not None else 0.0,
+            existing_state.grinding_elapsed_seconds if existing_state is not None else 0.0,
+            existing_state.grinding_temperature_integral if existing_state is not None else 0.0,
         )
         existing_id = state_ids_by_signature.get(signature)
         if existing_id is not None:
@@ -68,26 +77,31 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
 
         state_id = new_id("produce_material_state")
         state_ids_by_signature[signature] = state_id
-        material_states.append(
-            ProduceMaterialState(
-                id=state_id,
-                produce_lot_id=produce_lot.id,
-                cut_state="ground" if force_ground else produce_lot.cut_state,
-                temperature_c=produce_lot.temperature_c,
-                grind_quality_label=produce_lot.grind_quality_label,
-                homogeneity_score=produce_lot.homogeneity_score,
-                residual_co2_mass_g=produce_lot.residual_co2_mass_g,
-                grinding_elapsed_seconds=produce_lot.grinding_elapsed_seconds,
-                grinding_temperature_integral=produce_lot.grinding_temperature_integral,
-            )
+        material_state_record = ensure_material_state(
+            material_states,
+            produce_lot.id,
+            material_state=state_name,
         )
+        material_state_record.id = state_id
+        if existing_state is not None:
+            material_state_record.temperature_c = existing_state.temperature_c
+            material_state_record.grind_quality_label = existing_state.grind_quality_label
+            material_state_record.homogeneity_score = existing_state.homogeneity_score
+            material_state_record.residual_co2_mass_g = existing_state.residual_co2_mass_g
+            material_state_record.grinding_elapsed_seconds = existing_state.grinding_elapsed_seconds
+            material_state_record.grinding_temperature_integral = existing_state.grinding_temperature_integral
         material_state_ids_added.add(state_id)
         return state_id
 
     for basket_tool in experiment.basket_tools:
         basket_tool.produce_fractions = _build_tool_produce_fractions(
-            basket_tool.produce_lots,
-            ensure_material_state_id,
+            produce_lots=basket_tool.produce_lots,
+            existing_fractions=basket_tool.produce_fractions,
+            ensure_material_state_id=ensure_material_state_id,
+            get_material_state_for_lot=lambda produce_lot_id: get_material_state_name(
+                experiment.produce_material_states,
+                produce_lot_id,
+            ),
             location_kind="basket_tool",
             location_id=basket_tool.id,
             container_id=basket_tool.id,
@@ -98,6 +112,7 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
     experiment.spatula.produce_fractions = _select_canonical_powder_fractions(
         existing_fractions=experiment.spatula.produce_fractions,
         existing_states_by_id=existing_states_by_id,
+        existing_states_by_lot_id=existing_states_by_lot_id,
         produce_lots_by_id=produce_lots_by_id,
         ensure_material_state_id=ensure_material_state_id,
         location_kind="spatula",
@@ -108,8 +123,9 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
 
     for slot in experiment.workbench.slots:
         slot.surface_produce_fractions = _build_surface_produce_fractions(
-            slot.surface_produce_lots,
-            ensure_material_state_id,
+            produce_lots=slot.surface_produce_lots,
+            existing_fractions=slot.surface_produce_fractions,
+            ensure_material_state_id=ensure_material_state_id,
             location_kind="workbench_surface",
             location_id=slot.id,
             container_label=slot.label,
@@ -120,6 +136,7 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         canonical_powder_fractions = _select_canonical_powder_fractions(
             existing_fractions=existing_tool_fractions,
             existing_states_by_id=existing_states_by_id,
+            existing_states_by_lot_id=existing_states_by_lot_id,
             produce_lots_by_id=produce_lots_by_id,
             ensure_material_state_id=ensure_material_state_id,
             location_kind="workbench_tool",
@@ -129,8 +146,18 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         )
         powder_source_ids = {fraction.produce_lot_id for fraction in canonical_powder_fractions}
         slot.tool.produce_fractions = _build_tool_produce_fractions(
-            [produce_lot for produce_lot in slot.tool.produce_lots if produce_lot.cut_state != "ground" or produce_lot.id not in powder_source_ids],
-            ensure_material_state_id,
+            produce_lots=[
+                produce_lot
+                for produce_lot in slot.tool.produce_lots
+                if get_material_state_name(experiment.produce_material_states, produce_lot.id) not in PARTICULATE_MATERIAL_STATES
+                or produce_lot.id not in powder_source_ids
+            ],
+            existing_fractions=existing_tool_fractions,
+            ensure_material_state_id=ensure_material_state_id,
+            get_material_state_for_lot=lambda produce_lot_id: get_material_state_name(
+                experiment.produce_material_states,
+                produce_lot_id,
+            ),
             location_kind="workbench_tool",
             location_id=slot.id,
             container_id=slot.tool.id,
@@ -146,6 +173,7 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         canonical_powder_fractions = _select_canonical_powder_fractions(
             existing_fractions=existing_tool_fractions,
             existing_states_by_id=existing_states_by_id,
+            existing_states_by_lot_id=existing_states_by_lot_id,
             produce_lots_by_id=produce_lots_by_id,
             ensure_material_state_id=ensure_material_state_id,
             location_kind="rack_tool",
@@ -155,8 +183,18 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
         )
         powder_source_ids = {fraction.produce_lot_id for fraction in canonical_powder_fractions}
         slot.tool.produce_fractions = _build_tool_produce_fractions(
-            [produce_lot for produce_lot in slot.tool.produce_lots if produce_lot.cut_state != "ground" or produce_lot.id not in powder_source_ids],
-            ensure_material_state_id,
+            produce_lots=[
+                produce_lot
+                for produce_lot in slot.tool.produce_lots
+                if get_material_state_name(experiment.produce_material_states, produce_lot.id) not in PARTICULATE_MATERIAL_STATES
+                or produce_lot.id not in powder_source_ids
+            ],
+            existing_fractions=existing_tool_fractions,
+            ensure_material_state_id=ensure_material_state_id,
+            get_material_state_for_lot=lambda produce_lot_id: get_material_state_name(
+                experiment.produce_material_states,
+                produce_lot_id,
+            ),
             location_kind="rack_tool",
             location_id=slot.id,
             container_id=slot.tool.id,
@@ -167,8 +205,13 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
 
     for widget in experiment.workspace.widgets:
         widget.produce_fractions = _build_tool_produce_fractions(
-            widget.produce_lots,
-            ensure_material_state_id,
+            produce_lots=widget.produce_lots,
+            existing_fractions=widget.produce_fractions,
+            ensure_material_state_id=ensure_material_state_id,
+            get_material_state_for_lot=lambda produce_lot_id: get_material_state_name(
+                experiment.produce_material_states,
+                produce_lot_id,
+            ),
             location_kind="workspace_widget",
             location_id=widget.id,
             container_id=widget.tool.id if widget.tool is not None else None,
@@ -180,6 +223,7 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
             canonical_powder_fractions = _select_canonical_powder_fractions(
                 existing_fractions=existing_tool_fractions,
                 existing_states_by_id=existing_states_by_id,
+                existing_states_by_lot_id=existing_states_by_lot_id,
                 produce_lots_by_id=produce_lots_by_id,
                 ensure_material_state_id=ensure_material_state_id,
                 location_kind="workspace_widget_tool",
@@ -189,12 +233,18 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
             )
             powder_source_ids = {fraction.produce_lot_id for fraction in canonical_powder_fractions}
             widget.tool.produce_fractions = _build_tool_produce_fractions(
-                [
+                produce_lots=[
                     produce_lot
                     for produce_lot in widget.tool.produce_lots
-                    if produce_lot.cut_state != "ground" or produce_lot.id not in powder_source_ids
+                    if get_material_state_name(experiment.produce_material_states, produce_lot.id) not in PARTICULATE_MATERIAL_STATES
+                    or produce_lot.id not in powder_source_ids
                 ],
-                ensure_material_state_id,
+                existing_fractions=existing_tool_fractions,
+                ensure_material_state_id=ensure_material_state_id,
+                get_material_state_for_lot=lambda produce_lot_id: get_material_state_name(
+                    experiment.produce_material_states,
+                    produce_lot_id,
+                ),
                 location_kind="workspace_widget_tool",
                 location_id=widget.id,
                 container_id=widget.tool.id,
@@ -204,8 +254,9 @@ def sync_canonical_produce_model(experiment: Experiment) -> None:
             widget.tool.produce_fractions.extend(canonical_powder_fractions)
 
     experiment.workspace.produce_basket_fractions = _build_surface_produce_fractions(
-        experiment.workspace.produce_basket_lots,
-        ensure_material_state_id,
+        produce_lots=experiment.workspace.produce_basket_lots,
+        existing_fractions=experiment.workspace.produce_basket_fractions,
+        ensure_material_state_id=ensure_material_state_id,
         location_kind="produce_basket",
         location_id="basket",
         container_label="Produce basket",
@@ -244,7 +295,9 @@ def _collect_produce_lots(experiment: Experiment) -> dict[str, ProduceLot]:
 
 def _build_tool_produce_fractions(
     produce_lots: list[ProduceLot],
+    existing_fractions: list[ProduceFraction],
     ensure_material_state_id,
+    get_material_state_for_lot,
     *,
     location_kind: str,
     location_id: str,
@@ -252,47 +305,68 @@ def _build_tool_produce_fractions(
     container_label: str | None,
     contact_impurity_mg_per_g: float = 0.0,
 ) -> list[ProduceFraction]:
-    return [
-        ProduceFraction(
-            id=f"produce_fraction_{produce_lot.id}_{location_id}",
+    fractions: list[ProduceFraction] = []
+    for produce_lot in produce_lots:
+        material_state = get_material_state_for_lot(produce_lot.id)
+        state_id = ensure_material_state_id(produce_lot)
+        existing_fraction = _find_matching_fraction(
+            existing_fractions,
             produce_lot_id=produce_lot.id,
-            produce_material_state_id=ensure_material_state_id(produce_lot),
-            mass_g=produce_lot.total_mass_g,
-            unit_count=produce_lot.unit_count,
-            is_contaminated=produce_lot.is_contaminated,
-            impurity_mass_mg=(round(produce_lot.total_mass_g * contact_impurity_mg_per_g, 6) if produce_lot.cut_state == "ground" else 0.0),
-            exposure_container_ids=[container_id] if produce_lot.cut_state == "ground" and container_id is not None else [],
             location_kind=location_kind,
             location_id=location_id,
             container_id=container_id,
-            container_label=container_label,
         )
-        for produce_lot in produce_lots
-    ]
+        fractions.append(
+            ProduceFraction(
+                id=f"produce_fraction_{produce_lot.id}_{location_id}",
+                produce_lot_id=produce_lot.id,
+                produce_material_state_id=state_id,
+                mass_g=produce_lot.total_mass_g,
+                unit_count=(existing_fraction.unit_count if existing_fraction is not None else produce_lot.unit_count),
+                is_contaminated=(existing_fraction.is_contaminated if existing_fraction is not None else False),
+                impurity_mass_mg=(round(produce_lot.total_mass_g * contact_impurity_mg_per_g, 6) if material_state == "ground" else 0.0),
+                exposure_container_ids=[container_id] if material_state == "ground" and container_id is not None else [],
+                location_kind=location_kind,
+                location_id=location_id,
+                container_id=container_id,
+                container_label=container_label,
+            )
+        )
+    return fractions
 
 
 def _build_surface_produce_fractions(
     produce_lots: list[ProduceLot],
+    existing_fractions: list[ProduceFraction],
     ensure_material_state_id,
     *,
     location_kind: str,
     location_id: str,
     container_label: str | None,
 ) -> list[ProduceFraction]:
-    return [
-        ProduceFraction(
-            id=f"produce_fraction_{produce_lot.id}_{location_id}",
+    fractions: list[ProduceFraction] = []
+    for produce_lot in produce_lots:
+        existing_fraction = _find_matching_fraction(
+            existing_fractions,
             produce_lot_id=produce_lot.id,
-            produce_material_state_id=ensure_material_state_id(produce_lot),
-            mass_g=produce_lot.total_mass_g,
-            unit_count=produce_lot.unit_count,
-            is_contaminated=produce_lot.is_contaminated,
             location_kind=location_kind,
             location_id=location_id,
-            container_label=container_label,
+            container_id=None,
         )
-        for produce_lot in produce_lots
-    ]
+        fractions.append(
+            ProduceFraction(
+                id=f"produce_fraction_{produce_lot.id}_{location_id}",
+                produce_lot_id=produce_lot.id,
+                produce_material_state_id=ensure_material_state_id(produce_lot),
+                mass_g=produce_lot.total_mass_g,
+                unit_count=(existing_fraction.unit_count if existing_fraction is not None else produce_lot.unit_count),
+                is_contaminated=(existing_fraction.is_contaminated if existing_fraction is not None else False),
+                location_kind=location_kind,
+                location_id=location_id,
+                container_label=container_label,
+            )
+        )
+    return fractions
 
 
 def _build_trash_produce_fraction(entry: TrashProduceLotEntry, ensure_material_state_id) -> ProduceFraction:
@@ -302,7 +376,7 @@ def _build_trash_produce_fraction(entry: TrashProduceLotEntry, ensure_material_s
         produce_material_state_id=ensure_material_state_id(entry.produce_lot),
         mass_g=entry.produce_lot.total_mass_g,
         unit_count=entry.produce_lot.unit_count,
-        is_contaminated=entry.produce_lot.is_contaminated,
+        is_contaminated=entry.produce_fraction.is_contaminated if entry.produce_fraction is not None else False,
         location_kind="trash",
         location_id=entry.id,
         container_label=entry.origin_label,
@@ -313,6 +387,7 @@ def _select_canonical_powder_fractions(
     *,
     existing_fractions: list[ProduceFraction],
     existing_states_by_id: dict[str, ProduceMaterialState],
+    existing_states_by_lot_id: dict[str, ProduceMaterialState],
     produce_lots_by_id: dict[str, ProduceLot],
     ensure_material_state_id,
     location_kind: str,
@@ -321,9 +396,10 @@ def _select_canonical_powder_fractions(
     container_label: str | None,
 ) -> list[ProduceFraction]:
     canonical_ground = [
-        _normalize_existing_powder_fraction(
+        _normalize_existing_particulate_fraction(
             fraction,
             existing_states_by_id=existing_states_by_id,
+            existing_states_by_lot_id=existing_states_by_lot_id,
             produce_lots_by_id=produce_lots_by_id,
             ensure_material_state_id=ensure_material_state_id,
             location_kind=location_kind,
@@ -332,32 +408,37 @@ def _select_canonical_powder_fractions(
             container_label=container_label,
         )
         for fraction in existing_fractions
-        if _is_ground_fraction(
+        if _is_particulate_fraction(
             fraction,
             existing_states_by_id=existing_states_by_id,
+            existing_states_by_lot_id=existing_states_by_lot_id,
             produce_lots_by_id=produce_lots_by_id,
         )
     ]
     return canonical_ground
 
 
-def _is_ground_fraction(
+def _is_particulate_fraction(
     fraction: ProduceFraction,
     *,
     existing_states_by_id: dict[str, ProduceMaterialState],
+    existing_states_by_lot_id: dict[str, ProduceMaterialState],
     produce_lots_by_id: dict[str, ProduceLot],
 ) -> bool:
     existing_state = existing_states_by_id.get(fraction.produce_material_state_id)
     if existing_state is not None:
-        return existing_state.cut_state == "ground"
-    produce_lot = produce_lots_by_id.get(fraction.produce_lot_id)
-    return produce_lot is not None and produce_lot.cut_state == "ground"
+        return existing_state.material_state in PARTICULATE_MATERIAL_STATES
+    lot_state = existing_states_by_lot_id.get(fraction.produce_lot_id)
+    if lot_state is not None:
+        return lot_state.material_state in PARTICULATE_MATERIAL_STATES
+    return False
 
 
-def _normalize_existing_powder_fraction(
+def _normalize_existing_particulate_fraction(
     fraction: ProduceFraction,
     *,
     existing_states_by_id: dict[str, ProduceMaterialState],
+    existing_states_by_lot_id: dict[str, ProduceMaterialState],
     produce_lots_by_id: dict[str, ProduceLot],
     ensure_material_state_id,
     location_kind: str,
@@ -372,16 +453,20 @@ def _normalize_existing_powder_fraction(
             label=fraction.produce_lot_id,
             produce_type="apple",
             total_mass_g=fraction.mass_g,
-            cut_state="ground",
         )
 
     existing_state = existing_states_by_id.get(fraction.produce_material_state_id)
+    material_state = "ground"
+    if existing_state is not None:
+        material_state = existing_state.material_state
+    elif existing_states_by_lot_id.get(fraction.produce_lot_id) is not None:
+        material_state = existing_states_by_lot_id[fraction.produce_lot_id].material_state
     return ProduceFraction(
         id=fraction.id,
         produce_lot_id=fraction.produce_lot_id,
         produce_material_state_id=ensure_material_state_id(
             produce_lot,
-            force_ground=(existing_state is None or existing_state.cut_state == "ground"),
+            material_state=material_state,
         ),
         mass_g=fraction.mass_g,
         unit_count=fraction.unit_count,
@@ -392,6 +477,27 @@ def _normalize_existing_powder_fraction(
         location_id=location_id,
         container_id=container_id,
         container_label=container_label,
+    )
+
+
+def _find_matching_fraction(
+    fractions: list[ProduceFraction],
+    *,
+    produce_lot_id: str,
+    location_kind: str,
+    location_id: str,
+    container_id: str | None,
+) -> ProduceFraction | None:
+    return next(
+        (
+            fraction
+            for fraction in fractions
+            if fraction.produce_lot_id == produce_lot_id
+            and fraction.location_kind == location_kind
+            and fraction.location_id == location_id
+            and fraction.container_id == container_id
+        ),
+        None,
     )
 
 
@@ -432,7 +538,8 @@ def get_tool_total_powder_mass_g(
     return sum(
         max(fraction.mass_g, 0.0)
         for fraction in tool.produce_fractions
-        if states_by_id.get(fraction.produce_material_state_id) is not None and states_by_id[fraction.produce_material_state_id].cut_state == "ground"
+        if states_by_id.get(fraction.produce_material_state_id) is not None
+        and states_by_id[fraction.produce_material_state_id].material_state == "ground"
     )
 
 
@@ -479,7 +586,7 @@ def split_tool_powder_into_spatula(
     loaded_fractions: list[ProduceFraction] = []
     for fraction in tool.produce_fractions:
         state = states_by_id.get(fraction.produce_material_state_id)
-        if state is None or state.cut_state != "ground":
+        if state is None or state.material_state != "ground":
             continue
         extracted_fraction = _split_produce_fraction(
             fraction,

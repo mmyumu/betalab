@@ -20,6 +20,13 @@ from app.services.helpers.lookups import (
     round_volume,
 )
 from app.services.helpers.produce_canonical import sync_canonical_produce_model
+from app.services.helpers.produce_material_states import (
+    ensure_material_state,
+    get_material_state_name,
+    get_temperature_c,
+    set_material_state_name,
+    update_material_state,
+)
 from app.services.physical_simulation_service import PhysicalSimulationService
 from app.services.received_sample_generation import build_received_sampling_bag
 from app.services.transfer import (
@@ -314,19 +321,24 @@ class StartGrinderCycleService(WriteDomainService[WorkspaceWidgetRequest]):
             raise ValueError(f"{widget.label} does not contain a produce lot.")
 
         produce_lot = widget.produce_lots[0]
-        if produce_lot.cut_state == "whole":
+        material_state = get_material_state_name(experiment.produce_material_states, produce_lot.id)
+        if material_state == "whole":
             raise ValueError(f"{produce_lot.label} must be cut before grinding.")
-        if produce_lot.cut_state == "ground":
+        if material_state == "ground":
             raise ValueError(f"{produce_lot.label} is already ground.")
-        if produce_lot.temperature_c > physical_simulation_service.grinder_start_threshold_c:
+        if get_temperature_c(experiment.produce_material_states, produce_lot.id) > physical_simulation_service.grinder_start_threshold_c:
             raise ValueError(f"{produce_lot.label} is not cold enough for cryogenic grinding.")
         if widget.grinder_run_remaining_ms > 0:
             return
 
-        produce_lot.grind_quality_label = None
-        produce_lot.homogeneity_score = None
-        produce_lot.grinding_elapsed_seconds = 0.0
-        produce_lot.grinding_temperature_integral = 0.0
+        update_material_state(
+            experiment.produce_material_states,
+            produce_lot.id,
+            grind_quality_label=None,
+            homogeneity_score=None,
+            grinding_elapsed_seconds=0.0,
+            grinding_temperature_integral=0.0,
+        )
         cycle_duration_ms = physical_simulation_service.grinder_cycle_duration_seconds * 1000.0
         widget.grinder_run_duration_ms = cycle_duration_ms
         widget.grinder_run_remaining_ms = cycle_duration_ms
@@ -469,19 +481,29 @@ def advance_workspace_cryogenics_state(experiment: Experiment, elapsed_ms: float
         remaining_seconds = elapsed_seconds
         if widget.grinder_run_remaining_ms > 0:
             grinding_seconds = min(remaining_seconds, widget.grinder_run_remaining_ms / 1000.0)
-            physical_simulation_service.advance_grinding_widget(widget, grinding_seconds)
+            physical_simulation_service.advance_grinding_widget(
+                widget,
+                grinding_seconds,
+                material_states=experiment.produce_material_states,
+            )
             widget.grinder_run_remaining_ms = round_volume(max(widget.grinder_run_remaining_ms - (grinding_seconds * 1000.0), 0.0))
             remaining_seconds -= grinding_seconds
 
             loaded_lot = widget.produce_lots[0] if widget.produce_lots else None
-            if loaded_lot is not None and loaded_lot.temperature_c >= physical_simulation_service.grinder_jam_threshold_c:
+            if (
+                loaded_lot is not None
+                and get_temperature_c(experiment.produce_material_states, loaded_lot.id) >= physical_simulation_service.grinder_jam_threshold_c
+            ):
                 widget.grinder_run_duration_ms = 0.0
                 widget.grinder_run_remaining_ms = 0.0
                 widget.grinder_fault = "motor_jammed"
                 _discard_jammed_grinder_contents(experiment, widget, loaded_lot)
                 continue
 
-            if loaded_lot is not None and loaded_lot.temperature_c >= physical_simulation_service.grinder_start_threshold_c:
+            if (
+                loaded_lot is not None
+                and get_temperature_c(experiment.produce_material_states, loaded_lot.id) >= physical_simulation_service.grinder_start_threshold_c
+            ):
                 widget.grinder_fault = "high_torque"
             elif widget.grinder_fault == "high_torque":
                 widget.grinder_fault = None
@@ -490,20 +512,36 @@ def advance_workspace_cryogenics_state(experiment: Experiment, elapsed_ms: float
                 complete_grinder_cycle(experiment, widget.id)
 
         if remaining_seconds > 0:
-            physical_simulation_service.advance_widget(widget, remaining_seconds)
+            physical_simulation_service.advance_widget(
+                widget,
+                remaining_seconds,
+                material_states=experiment.produce_material_states,
+            )
 
     for slot in experiment.workbench.slots:
         if slot.tool is not None:
             if slot.tool.is_sealed and can_tool_be_sealed(slot.tool.tool_type):
-                pressure_event = physical_simulation_service.advance_sealed_tool(slot.tool, elapsed_seconds)
+                pressure_event = physical_simulation_service.advance_sealed_tool(
+                    slot.tool,
+                    elapsed_seconds,
+                    material_states=experiment.produce_material_states,
+                )
                 if pressure_event is not None and pressure_event.fault == "pressure_pop":
                     first_lot_label = slot.tool.produce_lots[0].label if slot.tool.produce_lots else "the sample"
                     experiment.audit_log.append(
                         f"{slot.tool.label} popped open on {slot.label} at {format_volume(pressure_event.pressure_bar)} bar; {format_volume(pressure_event.lost_mass_g)} g of {first_lot_label} was lost."
                     )
             else:
-                physical_simulation_service.warm_produce_lots(slot.tool.produce_lots, elapsed_seconds)
-        physical_simulation_service.warm_produce_lots(slot.surface_produce_lots, elapsed_seconds)
+                physical_simulation_service.warm_produce_lots(
+                    slot.tool.produce_lots,
+                    elapsed_seconds,
+                    material_states=experiment.produce_material_states,
+                )
+        physical_simulation_service.warm_produce_lots(
+            slot.surface_produce_lots,
+            elapsed_seconds,
+            material_states=experiment.produce_material_states,
+        )
 
 
 def complete_grinder_cycle(experiment: Experiment, widget_id: str) -> None:
@@ -512,17 +550,24 @@ def complete_grinder_cycle(experiment: Experiment, widget_id: str) -> None:
         raise ValueError(f"{widget.label} does not contain a produce lot.")
 
     produce_lot = widget.produce_lots[0]
-    if produce_lot.cut_state == "whole":
+    material_state = get_material_state_name(experiment.produce_material_states, produce_lot.id)
+    if material_state == "whole":
         raise ValueError(f"{produce_lot.label} must be cut before grinding.")
-    if produce_lot.cut_state == "ground":
+    if material_state == "ground":
         return
 
-    homogeneity_score, grind_quality_label = physical_simulation_service.score_grind_result(produce_lot)
+    homogeneity_score, grind_quality_label = physical_simulation_service.score_grind_result(
+        ensure_material_state(experiment.produce_material_states, produce_lot.id)
+    )
     residual_dry_ice_mass_g = sum(liquid.volume_ml for liquid in widget.liquids if liquid.liquid_id == "dry_ice_pellets")
-    produce_lot.cut_state = "ground"
-    produce_lot.homogeneity_score = homogeneity_score
-    produce_lot.grind_quality_label = grind_quality_label
-    produce_lot.residual_co2_mass_g = round_volume(max(residual_dry_ice_mass_g, 0.0))
+    set_material_state_name(experiment.produce_material_states, produce_lot.id, "ground")
+    update_material_state(
+        experiment.produce_material_states,
+        produce_lot.id,
+        homogeneity_score=homogeneity_score,
+        grind_quality_label=grind_quality_label,
+        residual_co2_mass_g=round_volume(max(residual_dry_ice_mass_g, 0.0)),
+    )
     widget.grinder_run_duration_ms = 0.0
     widget.grinder_run_remaining_ms = 0.0
     widget.grinder_fault = None
@@ -549,9 +594,13 @@ def _discard_jammed_grinder_contents(
     widget: WorkspaceWidget,
     produce_lot: ProduceLot,
 ) -> None:
-    produce_lot.cut_state = "waste"
-    produce_lot.grind_quality_label = "waste"
-    produce_lot.homogeneity_score = 0.0
+    set_material_state_name(experiment.produce_material_states, produce_lot.id, "waste")
+    update_material_state(
+        experiment.produce_material_states,
+        produce_lot.id,
+        grind_quality_label="waste",
+        homogeneity_score=0.0,
+    )
     widget.liquids = []
     sync_canonical_produce_model(experiment)
     experiment.audit_log.append(f"{produce_lot.label} jammed {widget.label} motor and became waste.")

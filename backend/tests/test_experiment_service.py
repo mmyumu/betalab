@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.domain.models import ProduceFraction, ProduceMaterialState
+from app.domain.models import ProduceFraction, ProduceLot, ProduceMaterialState
 from app.services.domain_services.debug import (
     CreateDebugProduceLotOnWorkbenchRequest,
     CreateDebugProduceLotOnWorkbenchService,
@@ -150,9 +150,42 @@ from app.services.domain_services.workspace import (
 )
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
+from app.services.helpers.produce_material_states import set_material_state_name
 from app.services.received_sample_generation import (
     SAMPLE_BAG_TARE_MASS_G,
 )
+
+
+def _lot_state(experiment, produce_lot_id: str):
+    state = next((s for s in experiment.produce_material_states if s.produce_lot_id == produce_lot_id), None)
+    assert state is not None
+    return state
+
+
+def _material_state_name(experiment, produce_lot_id: str) -> str:
+    state = next((s for s in experiment.produce_material_states if s.produce_lot_id == produce_lot_id), None)
+    return state.material_state if state is not None else "whole"
+
+
+def _lot_temperature_c(experiment, produce_lot_id: str) -> float:
+    return _lot_state(experiment, produce_lot_id).temperature_c
+
+
+def _lot_grind_quality_label(experiment, produce_lot_id: str):
+    return _lot_state(experiment, produce_lot_id).grind_quality_label
+
+
+def _lot_homogeneity_score(experiment, produce_lot_id: str):
+    return _lot_state(experiment, produce_lot_id).homogeneity_score
+
+
+def _lot_residual_co2_mass_g(experiment, produce_lot_id: str) -> float:
+    return _lot_state(experiment, produce_lot_id).residual_co2_mass_g
+
+
+def _fraction_is_contaminated(fractions, produce_lot_id: str) -> bool:
+    fraction = next(f for f in fractions if f.produce_lot_id == produce_lot_id)
+    return fraction.is_contaminated
 
 
 def print_lims_label(service: ExperimentRuntimeService, experiment_id: str, entry_id: str | None = None):
@@ -1154,7 +1187,7 @@ def test_workbench_liquid_capacity_includes_ground_powder_volume() -> None:
     )
 
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -1185,6 +1218,110 @@ def test_workbench_liquid_capacity_includes_ground_powder_volume() -> None:
     assert slot.tool is not None
     assert slot.tool.liquids[0].volume_ml == 30.0
     assert updated.audit_log[-1] == "Acetonitrile added to 50 mL centrifuge tube at 30 mL (remaining capacity)."
+
+
+def test_adding_liquid_to_powder_loaded_tool_turns_ground_produce_into_slurry() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    runtime_experiment = service._require_experiment(experiment.id)
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.produce_lots = [
+        ProduceLot(
+            id="lot_1",
+            label="Apple powder 1",
+            produce_type="apple",
+            total_mass_g=10.0,
+        )
+    ]
+    runtime_experiment.produce_material_states = [
+        ProduceMaterialState(
+            id="state_powder_loaded",
+            produce_lot_id="lot_1",
+            material_state="ground",
+            grind_quality_label="powder_fine",
+        )
+    ]
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 15.0,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert _material_state_name(updated, slot.tool.produce_lots[0].id) == "slurry"
+    assert slot.tool.liquids[0].volume_ml == 15.0
+    slurry_state_ids = {state.id for state in updated.produce_material_states if state.produce_lot_id == "lot_1" and state.material_state == "slurry"}
+    assert slurry_state_ids
+    assert {fraction.produce_material_state_id for fraction in slot.tool.produce_fractions} == slurry_state_ids
+
+
+def test_adding_liquid_to_canonical_only_powder_turns_fraction_state_into_slurry() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    runtime_experiment = service._require_experiment(experiment.id)
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.produce_lots = []
+    tool.produce_fractions = [
+        ProduceFraction(
+            id="produce_fraction_1",
+            produce_lot_id="lot_1",
+            produce_material_state_id="state_powder",
+            mass_g=3.0,
+            location_kind="workbench_tool",
+            location_id="station_1",
+            container_id=tool.id,
+            container_label=tool.label,
+        )
+    ]
+
+    updated = apply_command(
+        service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+            "volume_ml": 12.0,
+        },
+    )
+
+    slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
+    assert slot.tool is not None
+    assert slot.tool.liquids[0].volume_ml == 12.0
+    assert slot.tool.produce_fractions[0].produce_material_state_id == "state_powder"
+    assert any(state.id == "state_powder" and state.material_state == "slurry" for state in updated.produce_material_states)
 
 
 def test_place_sealed_sampling_bag_on_workbench() -> None:
@@ -1553,12 +1690,12 @@ def test_complete_grinder_cycle_transforms_loaded_lot_into_ground_result() -> No
     )
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-    assert grinder.produce_lots[0].cut_state == "ground"
-    assert grinder.produce_lots[0].homogeneity_score is None
-    assert grinder.produce_lots[0].grind_quality_label is None
+    assert _material_state_name(updated, grinder.produce_lots[0].id) == "ground"
+    assert _lot_homogeneity_score(updated, grinder.produce_lots[0].id) is None
+    assert _lot_grind_quality_label(updated, grinder.produce_lots[0].id) is None
     assert updated.produce_material_states
     matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
-    assert matching_state.cut_state == "ground"
+    assert matching_state.material_state == "ground"
     assert updated.audit_log[-1] == "Apple lot 1 ground in Cryogenic grinder."
 
 
@@ -1643,7 +1780,8 @@ def test_start_grinder_cycle_marks_the_grinder_as_running() -> None:
             "volume_ml": 400,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -75.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -75.0
 
     started = apply_command(
         service,
@@ -1721,7 +1859,8 @@ def test_start_grinder_cycle_rejects_produce_above_minus_twenty_c() -> None:
             "produce_lot_id": produce_lot_id,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -15.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -15.0
 
     with pytest.raises(ValueError, match=r"not cold enough"):
         apply_command(
@@ -1805,7 +1944,8 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
             "volume_ml": 400,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -75.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -75.0
 
     apply_command(
         service,
@@ -1819,8 +1959,8 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
     mid_cycle = service.get_experiment(experiment.id)
 
     mid_grinder = next(widget for widget in mid_cycle.workspace.widgets if widget.id == "grinder")
-    assert mid_grinder.produce_lots[0].temperature_c > -75.0
-    assert mid_grinder.produce_lots[0].temperature_c < -69.0
+    assert _lot_temperature_c(mid_cycle, mid_grinder.produce_lots[0].id) > -75.0
+    assert _lot_temperature_c(mid_cycle, mid_grinder.produce_lots[0].id) < -69.0
     assert mid_grinder.liquids[0].volume_ml < 391.0
     assert 14990.0 < mid_grinder.grinder_run_remaining_ms <= 15000.0
 
@@ -1828,12 +1968,12 @@ def test_active_grinder_cycle_warms_the_sample_and_consumes_dry_ice_until_comple
     finished = service.get_experiment(experiment.id)
 
     finished_grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
-    assert finished_grinder.produce_lots[0].cut_state == "ground"
-    assert finished_grinder.produce_lots[0].residual_co2_mass_g > 0
-    assert -66.0 < finished_grinder.produce_lots[0].temperature_c < -64.0
-    assert finished_grinder.produce_lots[0].grind_quality_label == "powder_fine"
-    assert finished_grinder.produce_lots[0].homogeneity_score is not None
-    assert finished_grinder.produce_lots[0].homogeneity_score > 0.9
+    assert _material_state_name(finished, finished_grinder.produce_lots[0].id) == "ground"
+    assert _lot_residual_co2_mass_g(finished, finished_grinder.produce_lots[0].id) > 0
+    assert -66.0 < _lot_temperature_c(finished, finished_grinder.produce_lots[0].id) < -64.0
+    assert _lot_grind_quality_label(finished, finished_grinder.produce_lots[0].id) == "powder_fine"
+    assert _lot_homogeneity_score(finished, finished_grinder.produce_lots[0].id) is not None
+    assert _lot_homogeneity_score(finished, finished_grinder.produce_lots[0].id) > 0.9
     assert finished_grinder.liquids == []
     assert finished_grinder.grinder_run_duration_ms == 0.0
     assert finished_grinder.grinder_run_remaining_ms == 0.0
@@ -1911,7 +2051,8 @@ def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
             "volume_ml": 400,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -30.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -30.0
 
     apply_command(
         service,
@@ -1926,10 +2067,10 @@ def test_active_grinder_cycle_scores_warmer_runs_as_coarser_results() -> None:
 
     grinder = next(widget for widget in finished.workspace.widgets if widget.id == "grinder")
     produce_lot = grinder.produce_lots[0]
-    assert produce_lot.cut_state == "ground"
-    assert produce_lot.grind_quality_label == "coarse"
-    assert produce_lot.homogeneity_score is not None
-    assert 0.25 < produce_lot.homogeneity_score < 0.4
+    assert _material_state_name(finished, produce_lot.id) == "ground"
+    assert _lot_grind_quality_label(finished, produce_lot.id) == "coarse"
+    assert _lot_homogeneity_score(finished, produce_lot.id) is not None
+    assert 0.25 < _lot_homogeneity_score(finished, produce_lot.id) < 0.4
 
 
 def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> None:
@@ -2003,7 +2144,8 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
             "volume_ml": 10,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -20.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -20.0
 
     apply_command(
         service,
@@ -2020,14 +2162,14 @@ def test_active_grinder_cycle_jams_if_the_sample_warms_above_minus_ten_c() -> No
     assert grinder.grinder_fault == "motor_jammed"
     assert grinder.grinder_run_duration_ms == 0.0
     assert grinder.grinder_run_remaining_ms == 0.0
-    assert grinder.produce_lots[0].cut_state == "waste"
-    assert grinder.produce_lots[0].homogeneity_score == 0.0
-    assert grinder.produce_lots[0].grind_quality_label == "waste"
+    assert _material_state_name(jammed, grinder.produce_lots[0].id) == "waste"
+    assert _lot_homogeneity_score(jammed, grinder.produce_lots[0].id) == 0.0
+    assert _lot_grind_quality_label(jammed, grinder.produce_lots[0].id) == "waste"
     matching_state = next(state for state in jammed.produce_material_states if state.produce_lot_id == grinder.produce_lots[0].id)
-    assert matching_state.cut_state == "waste"
+    assert matching_state.material_state == "waste"
     assert matching_state.grind_quality_label == "waste"
     assert grinder.liquids == []
-    assert grinder.produce_lots[0].temperature_c >= -10.0
+    assert _lot_temperature_c(jammed, grinder.produce_lots[0].id) >= -10.0
     assert jammed.trash.produce_lots == []
     assert jammed.audit_log[-1] == "Apple lot 1 jammed Cryogenic grinder motor and became waste."
 
@@ -2103,7 +2245,8 @@ def test_jammed_grinder_waste_can_be_moved_to_a_workbench_tool() -> None:
             "volume_ml": 10,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].temperature_c = -20.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).temperature_c = -20.0
 
     apply_command(
         service,
@@ -2138,7 +2281,7 @@ def test_jammed_grinder_waste_can_be_moved_to_a_workbench_tool() -> None:
     )
     station_2 = next(slot for slot in moved.workbench.slots if slot.id == "station_2")
     assert station_2.tool is not None
-    assert station_2.tool.produce_lots[0].cut_state == "waste"
+    assert _material_state_name(moved, station_2.tool.produce_lots[0].id) == "waste"
 
 
 def test_grinder_dry_ice_can_be_added_with_an_explicit_dosed_mass() -> None:
@@ -2237,7 +2380,7 @@ def test_workspace_cryogenics_cools_produce_and_consumes_dry_ice() -> None:
     )
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-    assert 13.0 < grinder.produce_lots[0].temperature_c < 14.0
+    assert 13.0 < _lot_temperature_c(updated, grinder.produce_lots[0].id) < 14.0
     assert 897.0 < grinder.liquids[0].volume_ml < 898.0
     assert updated.audit_log[-1] == "Dry ice pellets added to Cryogenic grinder."
 
@@ -2293,7 +2436,7 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
     )
 
     grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
-    cooled_temperature = grinder.produce_lots[0].temperature_c
+    cooled_temperature = _lot_temperature_c(cooled, grinder.produce_lots[0].id)
     rewarmed = apply_command(
         service,
         experiment.id,
@@ -2304,8 +2447,8 @@ def test_workspace_cryogenics_warms_produce_back_up_when_dry_ice_is_gone() -> No
     )
 
     grinder = next(widget for widget in rewarmed.workspace.widgets if widget.id == "grinder")
-    assert grinder.produce_lots[0].temperature_c > cooled_temperature
-    assert grinder.produce_lots[0].temperature_c <= 20.0
+    assert _lot_temperature_c(rewarmed, grinder.produce_lots[0].id) > cooled_temperature
+    assert _lot_temperature_c(rewarmed, grinder.produce_lots[0].id) <= 20.0
 
 
 def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> None:
@@ -2359,7 +2502,7 @@ def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> No
     )
 
     grinder = next(widget for widget in cooled.workspace.widgets if widget.id == "grinder")
-    cooled_temperature = grinder.produce_lots[0].temperature_c
+    cooled_temperature = _lot_temperature_c(cooled, grinder.produce_lots[0].id)
     assert cooled_temperature < 20.0
 
     apply_command(
@@ -2394,9 +2537,12 @@ def test_workspace_cryogenics_warms_cold_produce_after_it_leaves_grinder() -> No
     advanced_slot = next(slot for slot in advanced.workbench.slots if slot.id == "station_1")
     assert moved_slot.tool is not None
     assert advanced_slot.tool is not None
-    assert moved_slot.tool.produce_lots[0].temperature_c == pytest.approx(cooled_temperature, abs=0.01)
-    assert advanced_slot.tool.produce_lots[0].temperature_c > moved_slot.tool.produce_lots[0].temperature_c
-    assert advanced_slot.tool.produce_lots[0].temperature_c <= 20.0
+    assert _lot_temperature_c(moved, moved_slot.tool.produce_lots[0].id) == pytest.approx(cooled_temperature, abs=0.01)
+    assert _lot_temperature_c(advanced, advanced_slot.tool.produce_lots[0].id) > _lot_temperature_c(
+        moved,
+        moved_slot.tool.produce_lots[0].id,
+    )
+    assert _lot_temperature_c(advanced, advanced_slot.tool.produce_lots[0].id) <= 20.0
 
 
 def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -> None:
@@ -2454,7 +2600,7 @@ def test_one_kilo_of_dry_ice_does_not_drive_apple_lot_to_dry_ice_temperature() -
         )
         grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
         if grinder.liquids == []:
-            exhausted_temperature = grinder.produce_lots[0].temperature_c
+            exhausted_temperature = _lot_temperature_c(updated, grinder.produce_lots[0].id)
             break
 
     assert exhausted_temperature is not None
@@ -2697,7 +2843,7 @@ def test_add_produce_lot_to_cutting_board_moves_it_out_of_basket() -> None:
     assert slot.tool is not None
     assert len(slot.tool.produce_lots) == 1
     assert slot.tool.produce_lots[0].label == "Apple lot 1"
-    assert slot.tool.produce_lots[0].is_contaminated is False
+    assert _fraction_is_contaminated(slot.tool.produce_fractions, slot.tool.produce_lots[0].id) is False
     assert updated.workspace.produce_basket_lots == []
     assert updated.audit_log[-1] == "Apple lot 1 added to Cutting board."
 
@@ -2729,7 +2875,7 @@ def test_add_produce_lot_directly_to_empty_station_marks_it_contaminated() -> No
     assert slot.tool is None
     assert len(slot.surface_produce_lots) == 1
     assert slot.surface_produce_lots[0].label == "Apple lot 1"
-    assert slot.surface_produce_lots[0].is_contaminated is True
+    assert _fraction_is_contaminated(slot.surface_produce_fractions, slot.surface_produce_lots[0].id) is True
     assert updated.workspace.produce_basket_lots == []
     assert updated.audit_log[-1] == "Apple lot 1 placed directly on Station 1 and marked contaminated."
 
@@ -2966,7 +3112,8 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
             "produce_lot_id": produce_lot_id,
         },
     )
-    service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0].residual_co2_mass_g = 18.0
+    grinder_lot = service._experiments[experiment.id].workspace.widgets[-1].produce_lots[0]
+    _lot_state(service._experiments[experiment.id], grinder_lot.id).residual_co2_mass_g = 18.0
     apply_command(
         service,
         experiment.id,
@@ -2994,7 +3141,7 @@ def test_move_grinder_produce_lot_to_workbench_tool() -> None:
     assert grinder.produce_lots == []
     assert station_1.tool is not None
     assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
-    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.03)
+    assert _lot_residual_co2_mass_g(updated, station_1.tool.produce_lots[0].id) == pytest.approx(18.0, abs=0.03)
     assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Sealed sampling bag."
 
 
@@ -3021,8 +3168,13 @@ def test_move_grinder_ground_produce_lot_to_open_storage_jar() -> None:
         },
     )
     experiment_state = service._experiments[experiment.id]
-    experiment_state.workspace.widgets[-1].produce_lots[0].cut_state = "ground"
-    experiment_state.workspace.widgets[-1].produce_lots[0].residual_co2_mass_g = 18.0
+    set_material_state_name(
+        experiment_state.produce_material_states,
+        experiment_state.workspace.widgets[-1].produce_lots[0].id,
+        "ground",
+    )
+    grinder_lot = experiment_state.workspace.widgets[-1].produce_lots[0]
+    _lot_state(experiment_state, grinder_lot.id).residual_co2_mass_g = 18.0
     apply_command(
         service,
         experiment.id,
@@ -3051,8 +3203,8 @@ def test_move_grinder_ground_produce_lot_to_open_storage_jar() -> None:
     assert station_1.tool is not None
     assert station_1.tool.tool_id == "hdpe_storage_jar_2l"
     assert [lot.id for lot in station_1.tool.produce_lots] == [produce_lot_id]
-    assert station_1.tool.produce_lots[0].cut_state == "ground"
-    assert station_1.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.03)
+    assert _material_state_name(updated, station_1.tool.produce_lots[0].id) == "ground"
+    assert _lot_residual_co2_mass_g(updated, station_1.tool.produce_lots[0].id) == pytest.approx(18.0, abs=0.03)
     assert updated.audit_log[-1] == "Apple lot 1 moved from Cryogenic grinder to Wide-neck HDPE jar."
 
 
@@ -3090,8 +3242,8 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
 
     experiment_state = service._experiments[experiment.id]
     grinder = experiment_state.workspace.widgets[-1]
-    grinder.produce_lots[0].cut_state = "ground"
-    grinder.produce_lots[0].residual_co2_mass_g = 2.0
+    set_material_state_name(experiment_state.produce_material_states, grinder.produce_lots[0].id, "ground")
+    _lot_state(experiment_state, grinder.produce_lots[0].id).residual_co2_mass_g = 2.0
 
     apply_command(
         service,
@@ -3109,7 +3261,7 @@ def test_ground_lot_continues_degassing_after_transfer_out_of_grinder() -> None:
     station_1 = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
 
     assert station_1.tool is not None
-    assert station_1.tool.produce_lots[0].residual_co2_mass_g < 2.0
+    assert _lot_residual_co2_mass_g(updated, station_1.tool.produce_lots[0].id) < 2.0
 
 
 def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state() -> None:
@@ -3147,8 +3299,8 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
     stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
     assert stored_tool is not None
     stored_lot = stored_tool.produce_lots[0]
-    stored_lot.cut_state = "ground"
-    stored_lot.residual_co2_mass_g = 18.0
+    set_material_state_name(service._experiments[experiment.id].produce_material_states, stored_lot.id, "ground")
+    _lot_state(service._experiments[experiment.id], stored_lot.id).residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
 
     updated = apply_command(
@@ -3167,7 +3319,7 @@ def test_close_storage_jar_with_residual_co2_seals_it_and_traps_pressure_state()
     assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(1000.0, abs=0.01)
-    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.15)
+    assert _lot_residual_co2_mass_g(updated, slot.tool.produce_lots[0].id) == pytest.approx(18.0, abs=0.15)
     assert updated.audit_log[-1] == "Wide-neck HDPE jar sealed on Station 1."
 
 
@@ -3193,10 +3345,11 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
     stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
     assert stored_tool is not None
     stored_lot = stored_tool.produce_lots[0]
-    stored_lot.cut_state = "ground"
-    stored_lot.residual_co2_mass_g = 18.0
+    set_material_state_name(service._experiments[experiment.id].produce_material_states, stored_lot.id, "ground")
+    state = _lot_state(service._experiments[experiment.id], stored_lot.id)
+    state.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
-    stored_lot.homogeneity_score = 0.96
+    state.homogeneity_score = 0.96
 
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(minutes=2)
@@ -3209,8 +3362,8 @@ def test_sealed_storage_jar_with_residual_co2_pops_during_physics_tick() -> None
     assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g < 1000.0
-    assert slot.tool.produce_lots[0].residual_co2_mass_g < 18.0
-    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.25, abs=0.001)
+    assert _lot_residual_co2_mass_g(updated, slot.tool.produce_lots[0].id) < 18.0
+    assert _lot_homogeneity_score(updated, slot.tool.produce_lots[0].id) == pytest.approx(0.25, abs=0.001)
     assert updated.audit_log[-1].startswith("Wide-neck HDPE jar popped open on Station 1 at ")
 
 
@@ -3248,8 +3401,8 @@ def test_close_storage_jar_after_degassing_seals_it_safely() -> None:
     stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
     assert stored_tool is not None
     stored_lot = stored_tool.produce_lots[0]
-    stored_lot.cut_state = "ground"
-    stored_lot.residual_co2_mass_g = 0.0
+    set_material_state_name(service._experiments[experiment.id].produce_material_states, stored_lot.id, "ground")
+    _lot_state(service._experiments[experiment.id], stored_lot.id).residual_co2_mass_g = 0.0
 
     sealed = apply_command(
         service,
@@ -3372,10 +3525,10 @@ def test_create_debug_powder_preset_on_workbench() -> None:
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
-    assert slot.tool.produce_lots[0].cut_state == "ground"
+    assert _material_state_name(updated, slot.tool.produce_lots[0].id) == "ground"
     assert slot.tool.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
-    assert slot.tool.produce_lots[0].residual_co2_mass_g == pytest.approx(24.0, abs=0.01)
-    assert slot.tool.produce_lots[0].temperature_c == pytest.approx(-70.0, abs=0.01)
+    assert _lot_residual_co2_mass_g(updated, slot.tool.produce_lots[0].id) == pytest.approx(24.0, abs=0.01)
+    assert _lot_temperature_c(updated, slot.tool.produce_lots[0].id) == pytest.approx(-70.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned on Wide-neck HDPE jar."
 
 
@@ -3394,10 +3547,10 @@ def test_create_debug_powder_preset_in_grinder() -> None:
     )
 
     grinder = next(widget for widget in updated.workspace.widgets if widget.id == "grinder")
-    assert grinder.produce_lots[0].cut_state == "ground"
+    assert _material_state_name(updated, grinder.produce_lots[0].id) == "ground"
     assert grinder.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
-    assert grinder.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
-    assert grinder.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert _lot_residual_co2_mass_g(updated, grinder.produce_lots[0].id) == pytest.approx(18.0, abs=0.01)
+    assert _lot_temperature_c(updated, grinder.produce_lots[0].id) == pytest.approx(-62.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Cryogenic grinder."
 
 
@@ -3416,10 +3569,10 @@ def test_create_debug_powder_preset_on_gross_balance() -> None:
     )
 
     gross_balance = next(widget for widget in updated.workspace.widgets if widget.id == "gross_balance")
-    assert gross_balance.produce_lots[0].cut_state == "ground"
+    assert _material_state_name(updated, gross_balance.produce_lots[0].id) == "ground"
     assert gross_balance.produce_lots[0].total_mass_g == pytest.approx(2450.0, abs=0.01)
-    assert gross_balance.produce_lots[0].residual_co2_mass_g == pytest.approx(18.0, abs=0.01)
-    assert gross_balance.produce_lots[0].temperature_c == pytest.approx(-62.0, abs=0.01)
+    assert _lot_residual_co2_mass_g(updated, gross_balance.produce_lots[0].id) == pytest.approx(18.0, abs=0.01)
+    assert _lot_temperature_c(updated, gross_balance.produce_lots[0].id) == pytest.approx(-62.0, abs=0.01)
     assert updated.audit_log[-1] == "Debug preset Apple powder lot spawned in Gross balance."
 
 
@@ -3871,10 +4024,11 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
     assert stored_tool is not None
     stored_lot = stored_tool.produce_lots[0]
-    stored_lot.cut_state = "ground"
-    stored_lot.residual_co2_mass_g = 18.0
+    set_material_state_name(service._experiments[experiment.id].produce_material_states, stored_lot.id, "ground")
+    state = _lot_state(service._experiments[experiment.id], stored_lot.id)
+    state.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
-    stored_lot.homogeneity_score = 0.96
+    state.homogeneity_score = 0.96
 
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
@@ -3888,7 +4042,7 @@ def test_opening_pressurized_storage_jar_vents_and_loses_some_powder() -> None:
     assert slot.tool.internal_pressure_bar == pytest.approx(1.0, abs=0.01)
     assert slot.tool.trapped_co2_mass_g == pytest.approx(0.0, abs=0.01)
     assert slot.tool.produce_lots[0].total_mass_g < 1000.0
-    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.55, abs=0.001)
+    assert _lot_homogeneity_score(updated, slot.tool.produce_lots[0].id) == pytest.approx(0.55, abs=0.001)
     assert updated.audit_log[-1].startswith("Wide-neck HDPE jar vented at ")
 
 
@@ -3914,10 +4068,11 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
     stored_tool = service._experiments[experiment.id].workbench.slots[0].tool
     assert stored_tool is not None
     stored_lot = stored_tool.produce_lots[0]
-    stored_lot.cut_state = "ground"
-    stored_lot.residual_co2_mass_g = 18.0
+    set_material_state_name(service._experiments[experiment.id].produce_material_states, stored_lot.id, "ground")
+    state = _lot_state(service._experiments[experiment.id], stored_lot.id)
+    state.residual_co2_mass_g = 18.0
     stored_lot.total_mass_g = 1000.0
-    stored_lot.homogeneity_score = 0.18
+    state.homogeneity_score = 0.18
 
     apply_command(service, experiment.id, "close_workbench_tool", {"slot_id": "station_1"})
     service._experiments[experiment.id].last_simulation_at -= timedelta(seconds=10)
@@ -3926,7 +4081,7 @@ def test_pressure_events_never_improve_existing_homogeneity_score() -> None:
 
     slot = next(slot for slot in vented.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
-    assert slot.tool.produce_lots[0].homogeneity_score == pytest.approx(0.18, abs=0.001)
+    assert _lot_homogeneity_score(vented, slot.tool.produce_lots[0].id) == pytest.approx(0.18, abs=0.001)
 
 
 def test_service_can_reload_experiment_state_from_sqlite_snapshot(tmp_path) -> None:
@@ -4201,6 +4356,69 @@ def test_remove_liquid_from_workbench_tool_updates_tool_contents() -> None:
     assert updated.audit_log[-1] == "Acetonitrile removed from 50 mL centrifuge tube."
 
 
+def test_mixed_slurry_liquid_cannot_be_removed_or_edited() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    apply_command(
+        service,
+        experiment.id,
+        "place_tool_on_workbench",
+        {
+            "slot_id": "station_1",
+            "tool_id": "centrifuge_tube_50ml",
+        },
+    )
+
+    runtime_experiment = service._require_experiment(experiment.id)
+    tool = runtime_experiment.workbench.slots[0].tool
+    assert tool is not None
+    tool.produce_lots = [
+        ProduceLot(
+            id="lot_1",
+            label="Apple powder 1",
+            produce_type="apple",
+            total_mass_g=8.0,
+        )
+    ]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder_tool", produce_lot_id="lot_1", material_state="ground")]
+
+    mixed = apply_command(
+        service,
+        experiment.id,
+        "add_liquid_to_workbench_tool",
+        {
+            "slot_id": "station_1",
+            "liquid_id": "acetonitrile_extraction",
+        },
+    )
+    assert mixed.workbench.slots[0].tool is not None
+    liquid_id = mixed.workbench.slots[0].tool.liquids[0].id
+
+    with pytest.raises(ValueError, match="cannot be removed after it has mixed into slurry"):
+        apply_command(
+            service,
+            experiment.id,
+            "remove_liquid_from_workbench_tool",
+            {
+                "slot_id": "station_1",
+                "liquid_entry_id": liquid_id,
+            },
+        )
+
+    with pytest.raises(ValueError, match="cannot be edited after it has mixed into slurry"):
+        apply_command(
+            service,
+            experiment.id,
+            "update_workbench_liquid_volume",
+            {
+                "slot_id": "station_1",
+                "liquid_entry_id": liquid_id,
+                "volume_ml": 2.5,
+            },
+        )
+
+
 def test_move_tool_between_workbench_slots_updates_positions() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
@@ -4431,7 +4649,7 @@ def test_create_produce_lot_adds_apple_lot_to_basket() -> None:
     assert updated.basket_tools[-1].produce_lots[0].label == "Apple lot 1"
     assert updated.basket_tools[-1].produce_lots[0].unit_count == 12
     assert updated.basket_tools[-1].produce_lots[0].total_mass_g == 2450.0
-    assert updated.basket_tools[-1].produce_lots[0].cut_state == "whole"
+    assert _material_state_name(updated, updated.basket_tools[-1].produce_lots[0].id) == "whole"
     assert updated.audit_log[-1] == "Apple lot 1 created in Produce basket."
 
 
@@ -4479,9 +4697,9 @@ def test_cut_workbench_produce_lot_on_cutting_board_marks_lot_as_cut() -> None:
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
     assert slot.tool is not None
-    assert slot.tool.produce_lots[0].cut_state == "cut"
+    assert _material_state_name(updated, slot.tool.produce_lots[0].id) == "cut"
     matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
-    assert matching_state.cut_state == "cut"
+    assert matching_state.material_state == "cut"
     assert updated.audit_log[-1] == "Apple lot 1 cut on Cutting board."
 
 
@@ -4519,10 +4737,10 @@ def test_cut_workbench_surface_produce_lot_marks_lot_as_cut() -> None:
     )
 
     slot = next(slot for slot in updated.workbench.slots if slot.id == "station_1")
-    assert slot.surface_produce_lots[0].cut_state == "cut"
-    assert slot.surface_produce_lots[0].is_contaminated is True
+    assert _material_state_name(updated, slot.surface_produce_lots[0].id) == "cut"
+    assert _fraction_is_contaminated(slot.surface_produce_fractions, slot.surface_produce_lots[0].id) is True
     matching_state = next(state for state in updated.produce_material_states if state.produce_lot_id == produce_lot_id)
-    assert matching_state.cut_state == "cut"
+    assert matching_state.material_state == "cut"
     assert updated.audit_log[-1] == "Apple lot 1 cut on Station 1."
 
 
@@ -5073,7 +5291,7 @@ def test_update_volume_rounds_float_noise_in_audit_log() -> None:
     assert updated.audit_log[-1] == "Acetonitrile adjusted to 22.8 mL in 50 mL centrifuge tube."
 
 
-def test_update_liquid_volume_capacity_includes_ground_powder_volume() -> None:
+def test_add_liquid_volume_capacity_includes_ground_powder_volume() -> None:
     service = ExperimentRuntimeService()
     experiment = service.create_experiment()
     apply_command(
@@ -5087,7 +5305,7 @@ def test_update_liquid_volume_capacity_includes_ground_powder_volume() -> None:
     )
 
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -5110,23 +5328,10 @@ def test_update_liquid_volume_capacity_includes_ground_powder_volume() -> None:
         {
             "slot_id": "station_1",
             "liquid_id": "acetonitrile_extraction",
-            "volume_ml": 10.0,
-        },
-    )
-
-    assert updated.workbench.slots[0].tool is not None
-    liquid_id = updated.workbench.slots[0].tool.liquids[0].id
-    updated = apply_command(
-        service,
-        experiment.id,
-        "update_workbench_liquid_volume",
-        {
-            "slot_id": "station_1",
-            "liquid_entry_id": liquid_id,
             "volume_ml": 40.0,
         },
     )
 
     assert updated.workbench.slots[0].tool is not None
     assert updated.workbench.slots[0].tool.liquids[0].volume_ml == 25.0
-    assert updated.audit_log[-1] == "Acetonitrile adjusted to 25 mL in 50 mL centrifuge tube."
+    assert updated.audit_log[-1] == "Acetonitrile added to 50 mL centrifuge tube at 25 mL (remaining capacity)."

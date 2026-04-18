@@ -1,4 +1,4 @@
-from app.domain.models import ProduceFraction, ProduceLot
+from app.domain.models import ProduceFraction, ProduceLot, ProduceMaterialState
 from app.services.domain_services.gross_balance import PlaceToolOnGrossBalanceRequest, PlaceToolOnGrossBalanceService
 from app.services.domain_services.workbench import PlaceToolOnWorkbenchRequest, PlaceToolOnWorkbenchService
 from app.services.experiment_repository import _deserialize_experiment, _serialize_experiment
@@ -25,7 +25,13 @@ def test_sync_canonical_produce_model_exposes_tool_fraction_and_material_state()
             label="Apple lot 1",
             produce_type="apple",
             total_mass_g=2450.0,
-            cut_state="ground",
+        )
+    ]
+    runtime_experiment.produce_material_states = [
+        ProduceMaterialState(
+            id="state_1",
+            produce_lot_id="lot_1",
+            material_state="ground",
             temperature_c=-62.0,
             grind_quality_label="powder_fine",
             residual_co2_mass_g=18.0,
@@ -48,7 +54,7 @@ def test_sync_canonical_produce_model_exposes_tool_fraction_and_material_state()
 
     matching_states = [state for state in runtime_experiment.produce_material_states if state.produce_lot_id == "lot_1"]
     assert len(matching_states) == 1
-    assert matching_states[0].cut_state == "ground"
+    assert matching_states[0].material_state == "ground"
     assert len(tool.produce_fractions) == 1
     assert {fraction.id for fraction in tool.produce_fractions} == {
         "powder_1",

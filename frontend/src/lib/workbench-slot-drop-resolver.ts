@@ -71,14 +71,14 @@ function buildWorkbenchSlotDropTree(slot: BenchSlot): DropTargetNode<WorkbenchSl
   };
 }
 
-export function resolveWorkbenchSlotDropTargetFromDataTransfer(
+function resolveWorkbenchSlotDropTargetFromDataTransfer(
   dataTransfer: DataTransfer,
   slot: BenchSlot,
 ) {
   return resolveDropTargetFromDataTransfer(buildWorkbenchSlotDropTree(slot), dataTransfer);
 }
 
-export function resolveWorkbenchSlotDropTargetFromActiveDrag(
+function resolveWorkbenchSlotDropTargetFromActiveDrag(
   dragDescriptor: DragDescriptor | null,
   slot: BenchSlot,
 ) {

@@ -1,7 +1,7 @@
 import type { ExperimentProduceLot } from "@/types/workbench";
 
 export function getProduceLotDisplayName(produceLot: ExperimentProduceLot) {
-  if (produceLot.cutState !== "ground") {
+  if (produceLot.materialState !== "ground") {
     return produceLot.label;
   }
 

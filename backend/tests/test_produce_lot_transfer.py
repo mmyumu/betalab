@@ -1,5 +1,6 @@
 from app.domain.models import ProduceLot
 from app.services.experiment_factory import build_experiment
+from app.services.helpers.produce_material_states import set_material_state_name
 from app.services.helpers.workbench import build_workbench_tool
 from app.services.transfer import (
     GrinderProduceLotSource,
@@ -20,10 +21,10 @@ def test_transfer_service_moves_produce_lot_from_workbench_to_grinder() -> None:
         produce_type="apple",
         total_mass_g=120.0,
         unit_count=2,
-        cut_state="cut",
     )
     experiment.workbench.slots[0].tool = build_workbench_tool("cutting_board_hdpe")
     experiment.workbench.slots[0].tool.produce_lots.append(produce_lot)
+    set_material_state_name(experiment.produce_material_states, produce_lot.id, "cut")
 
     result = service.transfer(
         experiment,
@@ -54,10 +55,10 @@ def test_transfer_service_marks_surface_drop_as_contaminated() -> None:
         produce_type="apple",
         total_mass_g=120.0,
         unit_count=2,
-        cut_state="ground",
     )
     grinder = next(widget for widget in experiment.workspace.widgets if widget.id == "grinder")
     grinder.produce_lots.append(produce_lot)
+    set_material_state_name(experiment.produce_material_states, produce_lot.id, "ground")
 
     result = service.transfer(
         experiment,
@@ -70,7 +71,6 @@ def test_transfer_service_marks_surface_drop_as_contaminated() -> None:
     assert result.location_label == "Station 2"
     assert result.contamination_applied is True
     assert grinder.produce_lots == []
-    assert experiment.workbench.slots[1].surface_produce_lots[0].is_contaminated is True
     assert grinder.produce_fractions == []
     assert len(experiment.workbench.slots[1].surface_produce_fractions) == 1
     assert experiment.workbench.slots[1].surface_produce_fractions[0].is_contaminated is True
@@ -115,9 +115,9 @@ def test_transfer_service_represents_ground_material_in_tool_as_canonical_fracti
         label="Apple powder",
         produce_type="apple",
         total_mass_g=120.0,
-        cut_state="ground",
     )
     experiment.workspace.produce_basket_lots.append(produce_lot)
+    set_material_state_name(experiment.produce_material_states, produce_lot.id, "ground")
     experiment.workbench.slots[0].tool = build_workbench_tool("hdpe_storage_jar_2l")
 
     service.transfer(

@@ -28,7 +28,7 @@ def test_workbench_spatula_load_updates_canonical_tool_fraction_mass(monkeypatch
         PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="hdpe_storage_jar_2l"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -69,7 +69,7 @@ def test_workbench_spatula_load_can_start_from_canonical_only_powder(monkeypatch
         PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="hdpe_storage_jar_2l"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -105,7 +105,7 @@ def test_workbench_spatula_pour_updates_canonical_target_fraction_mass() -> None
         PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.spatula.is_loaded = True
     runtime_experiment.spatula.produce_fractions = [
         ProduceFraction(
@@ -143,7 +143,7 @@ def test_workbench_spatula_pour_respects_liquid_occupied_volume() -> None:
         PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
     tool.liquids = [
@@ -191,7 +191,7 @@ def test_workbench_spatula_pour_can_start_from_canonical_only_spatula() -> None:
         PlaceToolOnWorkbenchRequest(slot_id="station_1", tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.spatula.is_loaded = True
     runtime_experiment.spatula.produce_fractions = [
         ProduceFraction(
@@ -226,7 +226,7 @@ def test_analytical_balance_spatula_load_updates_canonical_tool_fraction_mass(mo
         PlaceToolOnAnalyticalBalanceRequest(tool_id="hdpe_storage_jar_2l"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workspace.widgets[2].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -267,7 +267,7 @@ def test_analytical_balance_spatula_load_can_start_from_canonical_only_powder(mo
         PlaceToolOnAnalyticalBalanceRequest(tool_id="hdpe_storage_jar_2l"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workspace.widgets[2].tool
     assert tool is not None
     tool.produce_fractions = [
@@ -302,7 +302,7 @@ def test_analytical_balance_spatula_pour_updates_canonical_target_fraction_mass(
         PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.spatula.is_loaded = True
     runtime_experiment.spatula.produce_fractions = [
         ProduceFraction(
@@ -340,7 +340,7 @@ def test_analytical_balance_spatula_pour_respects_liquid_occupied_volume() -> No
         PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     tool = runtime_experiment.workspace.widgets[2].tool
     assert tool is not None
     tool.liquids = [
@@ -388,7 +388,7 @@ def test_analytical_balance_spatula_pour_can_start_from_canonical_only_spatula()
         PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.spatula.is_loaded = True
     runtime_experiment.spatula.produce_fractions = [
         ProduceFraction(
@@ -420,7 +420,7 @@ def test_discard_spatula_clears_runtime_canonical_fraction() -> None:
 
     runtime_experiment = service._require_experiment(experiment.id)
     runtime_experiment.spatula.is_loaded = True
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_powder", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.spatula.produce_fractions = [
         ProduceFraction(
             id="produce_fraction_1",

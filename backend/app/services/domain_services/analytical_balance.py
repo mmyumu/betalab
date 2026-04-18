@@ -258,7 +258,10 @@ class OpenAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         if not can_tool_be_sealed(tool.tool_type):
             raise ValueError(f"{tool.label} does not support sealing.")
 
-        vent_event = physical_simulation_service.vent_opened_tool(tool)
+        vent_event = physical_simulation_service.vent_opened_tool(
+            tool,
+            material_states=experiment.produce_material_states,
+        )
         tool.is_sealed = False
         tool.closure_fault = None
         if vent_event is not None and vent_event.lost_mass_g > 0:

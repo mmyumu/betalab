@@ -557,9 +557,9 @@ function SampleBagIcon({
             <AppleLotGlyph
               shadowOpacity={0.04}
               variant={
-                produceLot.cutState === "ground"
+                produceLot.materialState === "ground"
                   ? "ground"
-                  : produceLot.cutState === "whole"
+                  : produceLot.materialState === "whole"
                     ? "whole"
                     : "cut"
               }
@@ -662,9 +662,9 @@ function StorageJarIcon({
               <AppleLotGlyph
                 shadowOpacity={0.03}
                 variant={
-                  produceLot.cutState === "ground"
+                  produceLot.materialState === "ground"
                     ? "ground"
-                    : produceLot.cutState === "whole"
+                    : produceLot.materialState === "whole"
                       ? "whole"
                       : "cut"
                 }
@@ -836,7 +836,7 @@ export function LabAssetIcon({
       data-kind={kind}
       data-closure-fault={closureFault ?? ""}
       data-powder-mass-g={powderMassG}
-      data-primary-produce-cut-state={produceLots[0]?.cutState ?? ""}
+      data-primary-produce-cut-state={produceLots[0]?.materialState ?? ""}
       data-produce-lot-count={produceLots.length}
       data-sample-label-text={sampleLabelText ?? ""}
       data-seal-state={closureFault === "pressure_pop" ? "popped" : isSealed ? "sealed" : "open"}

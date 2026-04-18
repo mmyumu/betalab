@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import exp
 
-from app.domain.models import ProduceLot, WorkbenchTool, WorkspaceWidget
+from app.domain.models import ProduceLot, ProduceMaterialState, WorkbenchTool, WorkspaceWidget
 from app.services.helpers.lookups import round_volume
+from app.services.helpers.produce_material_states import find_material_state, get_material_state_name, get_temperature_c, update_material_state
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,38 +54,63 @@ class PhysicalSimulationService:
     pressure_pop_homogeneity_cap = 0.25
     pressure_vent_homogeneity_cap = 0.55
 
-    def check_explosion_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
-        return self._check_container_pressure_risk(tool)
+    def check_explosion_risk(
+        self,
+        tool: WorkbenchTool,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> ContainerClosureRisk:
+        return self._check_container_pressure_risk(tool, material_states=material_states)
 
-    def advance_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
-        self._advance_widget_cryogenics(widget, elapsed_seconds)
+    def advance_widget(
+        self,
+        widget: WorkspaceWidget,
+        elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> None:
+        self._advance_widget_cryogenics(widget, elapsed_seconds, material_states=material_states)
 
-    def advance_grinding_widget(self, widget: WorkspaceWidget, elapsed_seconds: float) -> None:
-        self._advance_grinding_cryogenics(widget, elapsed_seconds)
+    def advance_grinding_widget(
+        self,
+        widget: WorkspaceWidget,
+        elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> None:
+        self._advance_grinding_cryogenics(widget, elapsed_seconds, material_states=material_states)
 
     def advance_sealed_tool(
         self,
         tool: WorkbenchTool,
         elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
     ) -> ContainerPressureEvent | None:
         if not tool.is_sealed:
             self._reset_container_pressure(tool)
             return None
 
-        self._warm_sealed_tool_produce(tool, elapsed_seconds)
-        tool.internal_pressure_bar = self._calculate_container_pressure_bar(tool)
-        risk = self._check_container_pressure_risk(tool)
+        self._warm_sealed_tool_produce(tool, elapsed_seconds, material_states=material_states)
+        tool.internal_pressure_bar = self._calculate_container_pressure_bar(
+            tool,
+            material_states=material_states,
+        )
+        risk = self._check_container_pressure_risk(tool, material_states=material_states)
         if not risk.should_pop:
             return None
 
         lost_mass_g = 0.0
         for produce_lot in tool.produce_lots:
+            material_state_record = find_material_state(material_states or [], produce_lot.id)
             previous_mass_g = produce_lot.total_mass_g
             produce_lot.total_mass_g = round_volume(max(produce_lot.total_mass_g * 0.8, 0.0))
-            produce_lot.residual_co2_mass_g = round_volume(max(produce_lot.residual_co2_mass_g * 0.8, 0.0))
+            if material_state_record is not None:
+                material_state_record.residual_co2_mass_g = round_volume(max(material_state_record.residual_co2_mass_g * 0.8, 0.0))
             self._degrade_pressure_exposed_homogeneity(
                 produce_lot,
                 self.pressure_pop_homogeneity_cap,
+                material_states=material_states,
             )
             lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
 
@@ -100,7 +126,12 @@ class PhysicalSimulationService:
             vented_co2_mass_g=round_volume(vented_co2_mass_g),
         )
 
-    def vent_opened_tool(self, tool: WorkbenchTool) -> ContainerPressureEvent | None:
+    def vent_opened_tool(
+        self,
+        tool: WorkbenchTool,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> ContainerPressureEvent | None:
         pressure_bar = max(tool.internal_pressure_bar, self.atmospheric_pressure_bar)
         trapped_co2_mass_g = round_volume(max(tool.trapped_co2_mass_g, 0.0))
         if pressure_bar <= 1.05 and trapped_co2_mass_g <= 0:
@@ -110,9 +141,10 @@ class PhysicalSimulationService:
         lost_mass_g = 0.0
         overpressure_bar = max(pressure_bar - self.atmospheric_pressure_bar, 0.0)
         for produce_lot in tool.produce_lots:
-            if produce_lot.cut_state == "ground":
+            material_state = get_material_state_name(material_states or [], produce_lot.id)
+            if material_state == "ground":
                 loss_ratio = min(overpressure_bar * 0.05, 0.4)
-            elif produce_lot.cut_state == "cut":
+            elif material_state == "cut":
                 loss_ratio = min(overpressure_bar * 0.02, 0.2)
             else:
                 loss_ratio = 0.0
@@ -124,6 +156,7 @@ class PhysicalSimulationService:
             self._degrade_pressure_exposed_homogeneity(
                 produce_lot,
                 self.pressure_vent_homogeneity_cap,
+                material_states=material_states,
             )
             lost_mass_g += max(previous_mass_g - produce_lot.total_mass_g, 0.0)
 
@@ -135,11 +168,11 @@ class PhysicalSimulationService:
             vented_co2_mass_g=trapped_co2_mass_g,
         )
 
-    def score_grind_result(self, lot: ProduceLot) -> tuple[float | None, str | None]:
-        if lot.grinding_elapsed_seconds <= 0:
+    def score_grind_result(self, state: ProduceMaterialState) -> tuple[float | None, str | None]:
+        if state.grinding_elapsed_seconds <= 0:
             return None, None
 
-        average_temperature_c = lot.grinding_temperature_integral / lot.grinding_elapsed_seconds
+        average_temperature_c = state.grinding_temperature_integral / state.grinding_elapsed_seconds
         if average_temperature_c <= -75.0:
             return 0.97, "powder_fine"
         if average_temperature_c <= self.fine_powder_temperature_c:
@@ -186,12 +219,28 @@ class PhysicalSimulationService:
             "pasty",
         )
 
-    def warm_produce_lots(self, produce_lots: list[ProduceLot], elapsed_seconds: float) -> None:
+    def warm_produce_lots(
+        self,
+        produce_lots: list[ProduceLot],
+        elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> None:
         for lot in produce_lots:
-            self._warm_open_produce_lot(lot, elapsed_seconds)
+            self._warm_open_produce_lot(lot, elapsed_seconds, material_states=material_states)
 
-    def _check_container_pressure_risk(self, tool: WorkbenchTool) -> ContainerClosureRisk:
-        residual_co2_mass_g = round_volume(sum(max(lot.residual_co2_mass_g, 0.0) for lot in tool.produce_lots))
+    def _check_container_pressure_risk(
+        self,
+        tool: WorkbenchTool,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> ContainerClosureRisk:
+        residual_co2_mass_g = round_volume(
+            sum(
+                max((s.residual_co2_mass_g if (s := find_material_state(material_states or [], lot.id)) is not None else 0.0), 0.0)
+                for lot in tool.produce_lots
+            )
+        )
         should_pop = tool.internal_pressure_bar >= self._get_container_pop_threshold_bar(tool.tool_type)
         return ContainerClosureRisk(
             should_pop=should_pop,
@@ -202,6 +251,8 @@ class PhysicalSimulationService:
         self,
         widget: WorkspaceWidget,
         elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
     ) -> None:
         total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)
         dry_ice = next(
@@ -216,6 +267,7 @@ class PhysicalSimulationService:
                     dry_ice_mass_g=dry_ice.volume_ml,
                     elapsed_seconds=elapsed_seconds,
                     total_produce_mass_g=total_produce_mass_g,
+                    material_states=material_states,
                 )
                 dry_ice.volume_ml = round_volume(
                     max(
@@ -235,12 +287,14 @@ class PhysicalSimulationService:
             self._remove_empty_liquids(widget)
             return
 
-        self.warm_produce_lots(widget.produce_lots, elapsed_seconds)
+        self.warm_produce_lots(widget.produce_lots, elapsed_seconds, material_states=material_states)
 
     def _advance_grinding_cryogenics(
         self,
         widget: WorkspaceWidget,
         elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
     ) -> None:
         total_produce_mass_g = sum(lot.total_mass_g for lot in widget.produce_lots)
         if total_produce_mass_g <= 0:
@@ -262,11 +316,20 @@ class PhysicalSimulationService:
         effective_heat_gain_c = base_heat_gain_c * (1.0 - absorbed_heat_ratio)
 
         for lot in widget.produce_lots:
-            previous_temperature_c = lot.temperature_c
-            lot.temperature_c += effective_heat_gain_c
-            average_step_temperature_c = (previous_temperature_c + lot.temperature_c) / 2.0
-            lot.grinding_temperature_integral += average_step_temperature_c * elapsed_seconds
-            lot.grinding_elapsed_seconds += elapsed_seconds
+            previous_temperature_c = get_temperature_c(material_states or [], lot.id)
+            next_temperature_c = previous_temperature_c + effective_heat_gain_c
+            average_step_temperature_c = (previous_temperature_c + next_temperature_c) / 2.0
+            existing_state = find_material_state(material_states or [], lot.id)
+            update_material_state(
+                material_states or [],
+                lot.id,
+                temperature_c=next_temperature_c,
+                grinding_temperature_integral=(
+                    (existing_state.grinding_temperature_integral if existing_state is not None else 0.0)
+                    + (average_step_temperature_c * elapsed_seconds)
+                ),
+                grinding_elapsed_seconds=((existing_state.grinding_elapsed_seconds if existing_state is not None else 0.0) + elapsed_seconds),
+            )
 
         absorbed_heat_kj = 0.0
         for lot in widget.produce_lots:
@@ -303,6 +366,7 @@ class PhysicalSimulationService:
         dry_ice_mass_g: float,
         elapsed_seconds: float,
         total_produce_mass_g: float,
+        material_states: list[ProduceMaterialState] | None = None,
     ) -> None:
         contact_factor = min(dry_ice_mass_g / max(total_produce_mass_g, 1.0), 1.0)
         available_thermal_energy_kj = max(dry_ice_mass_g, 0.0) / 1000.0 * self.dry_ice_latent_heat_kj_per_kg
@@ -310,7 +374,7 @@ class PhysicalSimulationService:
         lot_requests: list[tuple[ProduceLot, float, float]] = []
 
         for lot in widget.produce_lots:
-            current_temperature_c = lot.temperature_c
+            current_temperature_c = get_temperature_c(material_states or [], lot.id)
             temperature_gap_c = max(current_temperature_c - self.dry_ice_temperature_c, 0.0)
             if temperature_gap_c <= 0:
                 lot_requests.append((lot, 0.0, current_temperature_c))
@@ -347,12 +411,21 @@ class PhysicalSimulationService:
                 continue
 
             if scaling_factor >= 0.999:
-                lot.temperature_c = max(candidate_temperature_c, self.dry_ice_temperature_c)
+                update_material_state(
+                    material_states or [],
+                    lot.id,
+                    temperature_c=max(candidate_temperature_c, self.dry_ice_temperature_c),
+                )
                 continue
 
-            current_enthalpy = self._get_specific_enthalpy(lot.temperature_c)
+            current_temperature_c = get_temperature_c(material_states or [], lot.id)
+            current_enthalpy = self._get_specific_enthalpy(current_temperature_c)
             next_enthalpy = current_enthalpy - (actual_heat_kj / thermal_mass_kg)
-            lot.temperature_c = self._get_temperature_from_specific_enthalpy(next_enthalpy)
+            update_material_state(
+                material_states or [],
+                lot.id,
+                temperature_c=self._get_temperature_from_specific_enthalpy(next_enthalpy),
+            )
 
         thermal_mass_loss_g = usable_heat_removal_kj / self.dry_ice_latent_heat_kj_per_kg * 1000.0
         dry_ice = next(
@@ -366,36 +439,65 @@ class PhysicalSimulationService:
     def _calculate_ambient_sublimation_mass_loss(self, elapsed_seconds: float) -> float:
         return self.ambient_sublimation_g_per_second * elapsed_seconds
 
-    def _warm_open_produce_lot(self, lot: ProduceLot, elapsed_seconds: float) -> None:
+    def _warm_open_produce_lot(
+        self,
+        lot: ProduceLot,
+        elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> None:
         warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
-        lot.temperature_c = min(
-            lot.temperature_c + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
-            self.ambient_temperature_c,
-        )
-        lot.residual_co2_mass_g = round_volume(
-            max(
-                lot.residual_co2_mass_g - (self.residual_degassing_g_per_second * elapsed_seconds),
-                0.0,
-            )
+        current_temperature_c = get_temperature_c(material_states or [], lot.id)
+        current_state = find_material_state(material_states or [], lot.id)
+        current_residual_co2_mass_g = current_state.residual_co2_mass_g if current_state is not None else 0.0
+        update_material_state(
+            material_states or [],
+            lot.id,
+            temperature_c=min(
+                current_temperature_c + ((self.ambient_temperature_c - current_temperature_c) * warming_progress),
+                self.ambient_temperature_c,
+            ),
+            residual_co2_mass_g=round_volume(
+                max(
+                    current_residual_co2_mass_g - (self.residual_degassing_g_per_second * elapsed_seconds),
+                    0.0,
+                )
+            ),
         )
 
-    def _warm_sealed_tool_produce(self, tool: WorkbenchTool, elapsed_seconds: float) -> None:
+    def _warm_sealed_tool_produce(
+        self,
+        tool: WorkbenchTool,
+        elapsed_seconds: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> None:
         for lot in tool.produce_lots:
             warming_progress = min(self.warming_rate_per_second * elapsed_seconds, 0.95)
-            lot.temperature_c = min(
-                lot.temperature_c + ((self.ambient_temperature_c - lot.temperature_c) * warming_progress),
+            current_temperature_c = get_temperature_c(material_states or [], lot.id)
+            next_temperature_c = min(
+                current_temperature_c + ((self.ambient_temperature_c - current_temperature_c) * warming_progress),
                 self.ambient_temperature_c,
             )
-
-            degassing_rate_g_per_second = self._get_sealed_degassing_rate(lot.temperature_c)
+            degassing_rate_g_per_second = self._get_sealed_degassing_rate(next_temperature_c)
+            existing_state = find_material_state(material_states or [], lot.id)
             trapped_mass_g = min(
-                max(lot.residual_co2_mass_g, 0.0),
+                max((existing_state.residual_co2_mass_g if existing_state is not None else 0.0), 0.0),
                 degassing_rate_g_per_second * elapsed_seconds,
+            )
+            update_material_state(
+                material_states or [],
+                lot.id,
+                temperature_c=next_temperature_c,
+                residual_co2_mass_g=round_volume(
+                    max(
+                        (existing_state.residual_co2_mass_g if existing_state is not None else 0.0) - trapped_mass_g,
+                        0.0,
+                    )
+                ),
             )
             if trapped_mass_g <= 0:
                 continue
-
-            lot.residual_co2_mass_g = round_volume(max(lot.residual_co2_mass_g - trapped_mass_g, 0.0))
             tool.trapped_co2_mass_g = round_volume(tool.trapped_co2_mass_g + trapped_mass_g)
 
     def _get_sealed_degassing_rate(self, temperature_c: float) -> float:
@@ -407,39 +509,81 @@ class PhysicalSimulationService:
             return self.sealed_pressure_degassing_g_per_second
         return self.sealed_pressure_degassing_g_per_second * 1.5
 
-    def _calculate_container_pressure_bar(self, tool: WorkbenchTool) -> float:
+    def _calculate_container_pressure_bar(
+        self,
+        tool: WorkbenchTool,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> float:
         trapped_co2_mass_g = max(tool.trapped_co2_mass_g, 0.0)
         if trapped_co2_mass_g <= 0:
             return self.atmospheric_pressure_bar
 
         gas_moles = trapped_co2_mass_g / self.co2_molar_mass_g_per_mol
         mean_temperature_c = (
-            sum(lot.temperature_c for lot in tool.produce_lots) / len(tool.produce_lots) if tool.produce_lots else self.ambient_temperature_c
+            sum(get_temperature_c(material_states or [], lot.id) for lot in tool.produce_lots) / len(tool.produce_lots)
+            if tool.produce_lots
+            else self.ambient_temperature_c
         )
         temperature_k = max(mean_temperature_c + 273.15, 1.0)
-        free_volume_m3 = self._get_free_container_volume_ml(tool) / 1_000_000.0
+        free_volume_m3 = (
+            self._get_free_container_volume_ml(
+                tool,
+                material_states=material_states,
+            )
+            / 1_000_000.0
+        )
         pressure_pa = (gas_moles * self.gas_constant_j_per_mol_k * temperature_k) / max(
             free_volume_m3,
             1e-9,
         )
         return round_volume(pressure_pa / 100000.0)
 
-    def _get_free_container_volume_ml(self, tool: WorkbenchTool) -> float:
-        occupied_volume_ml = sum(self._estimate_lot_occupied_volume_ml(lot) for lot in tool.produce_lots)
+    def _get_free_container_volume_ml(
+        self,
+        tool: WorkbenchTool,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> float:
+        occupied_volume_ml = sum(
+            self._estimate_lot_occupied_volume_ml(
+                lot,
+                material_states=material_states,
+            )
+            for lot in tool.produce_lots
+        )
         liquid_volume_ml = sum(max(liquid.volume_ml, 0.0) for liquid in tool.liquids)
         return max(
             tool.capacity_ml - occupied_volume_ml - liquid_volume_ml,
             self.minimum_container_headspace_ml,
         )
 
-    def _estimate_lot_occupied_volume_ml(self, lot: ProduceLot) -> float:
-        density_g_per_ml = self._get_apparent_density_g_per_ml(lot)
+    def _estimate_lot_occupied_volume_ml(
+        self,
+        lot: ProduceLot,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> float:
+        density_g_per_ml = self._get_apparent_density_g_per_ml(
+            lot,
+            material_states=material_states,
+        )
         return max(lot.total_mass_g, 0.0) / max(density_g_per_ml, 1e-6)
 
-    def _get_apparent_density_g_per_ml(self, lot: ProduceLot) -> float:
-        if lot.cut_state == "ground":
+    def _get_apparent_density_g_per_ml(
+        self,
+        lot: ProduceLot,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
+    ) -> float:
+        return self._get_apparent_density_g_per_ml_for_state(
+            get_material_state_name(material_states or [], lot.id),
+        )
+
+    def _get_apparent_density_g_per_ml_for_state(self, material_state: str) -> float:
+        if material_state == "ground":
             return 0.5
-        if lot.cut_state == "cut":
+        if material_state == "cut":
             return 0.72
         return 0.85
 
@@ -460,13 +604,20 @@ class PhysicalSimulationService:
         self,
         produce_lot: ProduceLot,
         cap: float,
+        *,
+        material_states: list[ProduceMaterialState] | None = None,
     ) -> None:
-        if produce_lot.cut_state != "ground":
+        if get_material_state_name(material_states or [], produce_lot.id) != "ground":
             return
-        if produce_lot.homogeneity_score is None:
-            produce_lot.homogeneity_score = round(cap, 3)
+        current_state = find_material_state(material_states or [], produce_lot.id)
+        if current_state is None or current_state.homogeneity_score is None:
+            update_material_state(material_states or [], produce_lot.id, homogeneity_score=round(cap, 3))
             return
-        produce_lot.homogeneity_score = round(min(produce_lot.homogeneity_score, cap), 3)
+        update_material_state(
+            material_states or [],
+            produce_lot.id,
+            homogeneity_score=round(min(current_state.homogeneity_score, cap), 3),
+        )
 
     def _reset_container_pressure(self, tool: WorkbenchTool) -> None:
         tool.internal_pressure_bar = self.atmospheric_pressure_bar

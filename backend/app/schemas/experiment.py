@@ -47,7 +47,7 @@ class WorkbenchLiquidSchema(BaseModel):
 class ProduceMaterialStateSchema(BaseModel):
     id: str
     produce_lot_id: str
-    cut_state: str = "whole"
+    material_state: str = "whole"
     temperature_c: float = 20.0
     grind_quality_label: str | None = None
     homogeneity_score: float | None = None
@@ -88,12 +88,6 @@ class ProduceLotSchema(BaseModel):
     produce_type: str
     total_mass_g: float
     unit_count: int | None = None
-    is_contaminated: bool = False
-    cut_state: str = "whole"
-    temperature_c: float = 20.0
-    grind_quality_label: str | None = None
-    homogeneity_score: float | None = None
-    residual_co2_mass_g: float = 0.0
 
     @computed_field
     def is_draggable(self) -> bool:

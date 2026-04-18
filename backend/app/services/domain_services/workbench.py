@@ -9,6 +9,7 @@ from app.domain.models import (
     TrashSampleLabelEntry,
     TrashToolEntry,
     WorkbenchSlot,
+    WorkbenchTool,
     new_id,
 )
 from app.domain.rules import can_tool_be_sealed
@@ -30,6 +31,10 @@ from app.services.helpers.produce_canonical import (
     pour_spatula_into_tool,
     split_tool_powder_into_spatula,
     sync_canonical_produce_model,
+)
+from app.services.helpers.produce_material_states import (
+    get_material_state_name,
+    set_material_state_name,
 )
 from app.services.helpers.tool_liquids import add_liquid_to_tool
 from app.services.helpers.workbench import (
@@ -306,12 +311,18 @@ class AddLiquidToWorkbenchToolService(WriteDomainService[AddLiquidToWorkbenchToo
     def _run(self, experiment: Experiment, request: AddLiquidToWorkbenchToolRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.slot_id)
         tool = require_slot_tool(slot, "adding liquids")
+        powder_present_before_addition = get_tool_total_powder_mass_g(
+            tool,
+            material_states=experiment.produce_material_states,
+        ) > 0 or any(get_material_state_name(experiment.produce_material_states, produce_lot.id) == "ground" for produce_lot in tool.produce_lots)
         add_liquid_to_tool(
             experiment,
             tool,
             liquid_id=request.liquid_id,
             volume_ml=request.volume_ml,
         )
+        if powder_present_before_addition:
+            _convert_ground_produce_to_slurry(experiment, tool)
 
 
 class RemoveLiquidFromWorkbenchToolService(WriteDomainService[WorkbenchLiquidRequest]):
@@ -321,6 +332,11 @@ class RemoveLiquidFromWorkbenchToolService(WriteDomainService[WorkbenchLiquidReq
     def _run(self, experiment: Experiment, request: WorkbenchLiquidRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.slot_id)
         tool = require_slot_tool(slot, "editing liquids")
+        _raise_if_tool_contains_slurry(
+            experiment,
+            tool,
+            action="removed",
+        )
         liquid_entry = find_tool_liquid(tool, request.liquid_entry_id)
         tool.liquids = [liquid for liquid in tool.liquids if liquid.id != request.liquid_entry_id]
         experiment.audit_log.append(f"{liquid_entry.name} removed from {tool.label}.")
@@ -333,6 +349,11 @@ class UpdateWorkbenchLiquidVolumeService(WriteDomainService[UpdateWorkbenchLiqui
     def _run(self, experiment: Experiment, request: UpdateWorkbenchLiquidVolumeRequest) -> None:
         slot = find_workbench_slot(experiment.workbench, request.slot_id)
         tool = require_slot_tool(slot, "editing liquids")
+        _raise_if_tool_contains_slurry(
+            experiment,
+            tool,
+            action="edited",
+        )
         liquid_entry = find_tool_liquid(tool, request.liquid_entry_id)
 
         requested_volume = round_volume(max(float(request.volume_ml), 0.0))
@@ -350,6 +371,42 @@ class UpdateWorkbenchLiquidVolumeService(WriteDomainService[UpdateWorkbenchLiqui
             return
 
         experiment.audit_log.append(f"{liquid_entry.name} adjusted to {format_volume(liquid_entry.volume_ml)} mL in {tool.label}.")
+
+
+def _tool_contains_slurry(experiment: Experiment, tool: WorkbenchTool) -> bool:
+    if any(get_material_state_name(experiment.produce_material_states, produce_lot.id) == "slurry" for produce_lot in tool.produce_lots):
+        return True
+    state_ids = {fraction.produce_material_state_id for fraction in tool.produce_fractions}
+    return any(state.id in state_ids and state.material_state == "slurry" for state in experiment.produce_material_states)
+
+
+def _raise_if_tool_contains_slurry(
+    experiment: Experiment,
+    tool: WorkbenchTool,
+    *,
+    action: str,
+) -> None:
+    if _tool_contains_slurry(experiment, tool):
+        raise ValueError(f"Liquid in {tool.label} cannot be {action} after it has mixed into slurry.")
+
+
+def _convert_ground_produce_to_slurry(experiment: Experiment, tool: WorkbenchTool) -> None:
+    converted_any = False
+    for produce_lot in tool.produce_lots:
+        if get_material_state_name(experiment.produce_material_states, produce_lot.id) != "ground":
+            continue
+        set_material_state_name(experiment.produce_material_states, produce_lot.id, "slurry")
+        converted_any = True
+    state_ids = {fraction.produce_material_state_id for fraction in tool.produce_fractions}
+    for state in experiment.produce_material_states:
+        if state.id not in state_ids or state.material_state != "ground":
+            continue
+        state.material_state = "slurry"
+        converted_any = True
+    if not converted_any:
+        return
+    if tool.produce_lots:
+        sync_canonical_produce_model(experiment)
 
 
 class AddProduceLotToWorkbenchToolService(WriteDomainService[AddProduceLotToWorkbenchToolRequest]):
@@ -419,10 +476,10 @@ class CutWorkbenchProduceLotService(WriteDomainService[WorkbenchProduceLotReques
 
         if slot.tool is not None and slot.tool.tool_type != "cutting_board":
             raise ValueError(f"{slot.tool.label} does not support cutting.")
-        if produce_lot.cut_state != "whole":
+        if get_material_state_name(experiment.produce_material_states, produce_lot.id) != "whole":
             return
 
-        produce_lot.cut_state = "cut"
+        set_material_state_name(experiment.produce_material_states, produce_lot.id, "cut")
         sync_canonical_produce_model(experiment)
         experiment.audit_log.append(f"{produce_lot.label} cut on {origin_label}.")
 
@@ -546,7 +603,10 @@ class OpenWorkbenchToolService(WriteDomainService[WorkbenchSlotRequest]):
         if not can_tool_be_sealed(tool.tool_type):
             raise ValueError(f"{tool.label} cannot be opened.")
 
-        vent_event = physical_simulation_service.vent_opened_tool(tool)
+        vent_event = physical_simulation_service.vent_opened_tool(
+            tool,
+            material_states=experiment.produce_material_states,
+        )
         tool.is_sealed = False
         tool.closure_fault = None
         if vent_event is not None and vent_event.lost_mass_g > 0:

@@ -29,6 +29,7 @@ class TransferPlacement:
     target_label: str
     location_label: str
     contamination_applied: bool = False
+    contaminated_lot_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +63,8 @@ class TransferService(Generic[EntityT]):
         removal = source.remove(experiment)
         placement = target.place(experiment, removal.entity)
         sync_canonical_produce_model(experiment)
+        if placement.contaminated_lot_id is not None:
+            _mark_surface_fractions_contaminated(experiment, placement.contaminated_lot_id)
         return TransferResult(
             entity=removal.entity,
             source_label=removal.source_label,
@@ -235,11 +238,11 @@ class WorkbenchProduceLotTarget:
         slot = find_workbench_slot(experiment.workbench, self.slot_id)
         if slot.tool is None:
             slot.surface_produce_lots.append(entity)
-            entity.is_contaminated = True
             return TransferPlacement(
                 target_label=slot.label,
                 location_label=slot.label,
                 contamination_applied=True,
+                contaminated_lot_id=entity.id,
             )
 
         slot.tool.produce_lots.append(entity)
@@ -247,6 +250,13 @@ class WorkbenchProduceLotTarget:
             target_label=slot.tool.label,
             location_label=f"{slot.tool.label} on {slot.label}",
         )
+
+
+def _mark_surface_fractions_contaminated(experiment: Experiment, lot_id: str) -> None:
+    for slot in experiment.workbench.slots:
+        for fraction in slot.surface_produce_fractions:
+            if fraction.produce_lot_id == lot_id:
+                fraction.is_contaminated = True
 
 
 def _find_grinder_widget(experiment: Experiment, widget_id: str):

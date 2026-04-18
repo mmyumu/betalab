@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from app.domain.models import Experiment, ProduceLot, new_id
 from app.services.domain_services.base import ExperimentRuntime, WriteDomainService
 from app.services.domain_services.gross_balance import GrossBalanceProduceLotTarget
+from app.services.helpers.produce_material_states import set_material_state_name, update_material_state
 from app.services.transfer import GrinderProduceLotTarget, WorkbenchProduceLotTarget
 
 
@@ -37,6 +38,15 @@ class CreateDebugProduceLotOnWorkbenchService(WriteDomainService[CreateDebugProd
             temperature_c=request.temperature_c,
             residual_co2_mass_g=request.residual_co2_mass_g,
         )
+        set_material_state_name(experiment.produce_material_states, produce_lot.id, "ground")
+        update_material_state(
+            experiment.produce_material_states,
+            produce_lot.id,
+            temperature_c=produce_lot_temperature_c(request.temperature_c),
+            grind_quality_label="powder_fine",
+            homogeneity_score=0.96,
+            residual_co2_mass_g=(request.residual_co2_mass_g if request.residual_co2_mass_g is not None else 18.0),
+        )
         target = WorkbenchProduceLotTarget(slot_id=request.target_slot_id)
         target.validate(experiment)
         placement = target.place(experiment, produce_lot)
@@ -53,6 +63,15 @@ class CreateDebugProduceLotToWidgetService(WriteDomainService[CreateDebugProduce
             total_mass_g=request.total_mass_g,
             temperature_c=request.temperature_c,
             residual_co2_mass_g=request.residual_co2_mass_g,
+        )
+        set_material_state_name(experiment.produce_material_states, produce_lot.id, "ground")
+        update_material_state(
+            experiment.produce_material_states,
+            produce_lot.id,
+            temperature_c=produce_lot_temperature_c(request.temperature_c),
+            grind_quality_label="powder_fine",
+            homogeneity_score=0.96,
+            residual_co2_mass_g=(request.residual_co2_mass_g if request.residual_co2_mass_g is not None else 18.0),
         )
         if request.widget_id == "gross_balance":
             target = GrossBalanceProduceLotTarget()
@@ -77,11 +96,10 @@ def _build_debug_produce_lot(
             produce_type="apple",
             total_mass_g=total_mass_g if total_mass_g is not None else 2450.0,
             unit_count=None,
-            cut_state="ground",
-            temperature_c=temperature_c if temperature_c is not None else -62.0,
-            grind_quality_label="powder_fine",
-            homogeneity_score=0.96,
-            residual_co2_mass_g=(residual_co2_mass_g if residual_co2_mass_g is not None else 18.0),
         )
 
     raise ValueError("Unknown debug produce preset")
+
+
+def produce_lot_temperature_c(temperature_c: float | None) -> float:
+    return temperature_c if temperature_c is not None else -62.0

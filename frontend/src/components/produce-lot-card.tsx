@@ -29,11 +29,11 @@ type ProduceLotCardProps = {
 const ambientTemperatureC = 20;
 
 function getProduceIllustrationVariant(produceLot: ExperimentProduceLot) {
-  if (produceLot.cutState === "ground") {
+  if (produceLot.materialState === "ground") {
     return "ground";
   }
 
-  return produceLot.cutState === "whole" ? "whole" : "cut";
+  return produceLot.materialState === "whole" ? "whole" : "cut";
 }
 
 export function ProduceLotCard({
@@ -79,7 +79,7 @@ export function ProduceLotCard({
               variant={getProduceIllustrationVariant(produceLot)}
             />
             <div className="min-w-0 flex-1">
-              {produceLot.cutState === "waste" ? (
+              {produceLot.materialState === "waste" ? (
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-700">
                   Jammed
                 </p>

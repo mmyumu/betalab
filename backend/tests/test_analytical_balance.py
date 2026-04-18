@@ -69,7 +69,7 @@ def test_analytical_balance_records_precise_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", material_state="ground")]
     tool.produce_fractions = [
         ProduceFraction(
             id="test-frac",
@@ -105,7 +105,7 @@ def test_analytical_balance_rejects_out_of_spec_sample_mass() -> None:
     runtime_experiment = service._require_experiment(experiment.id)
     tool = runtime_experiment.workbench.slots[0].tool
     assert tool is not None
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", material_state="ground")]
     tool.produce_fractions = [
         ProduceFraction(
             id="test-frac",
@@ -149,7 +149,7 @@ def test_analytical_balance_records_sample_mass_from_canonical_produce_fractions
             container_label=tool.label,
         )
     ]
-    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="lot_1", cut_state="ground")]
+    runtime_experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="lot_1", material_state="ground")]
     runtime_experiment.analytical_balance.tare_mass_g = 12.0
 
     updated = RecordAnalyticalSampleMassService(service).run(experiment.id, EmptyRequest())

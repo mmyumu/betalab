@@ -5,7 +5,7 @@ import {
   type WorkspaceEquipmentWidgetId,
 } from "@/lib/workspace-widget-ids";
 
-export type WorkspaceWidgetCanvasDrop =
+type WorkspaceWidgetCanvasDrop =
   | { kind: "add_workspace_widget"; widgetId: WorkspaceEquipmentWidgetId };
 
 export function resolveWorkspaceWidgetCanvasDrop(

@@ -261,6 +261,48 @@ describe("WorkbenchPanel", () => {
     ).toBeTruthy();
   });
 
+  it("hides removable liquid cards when the tool contains slurry", () => {
+    render(
+      <PesticideWorkbenchPanel
+        onLiquidVolumeChange={vi.fn()}
+        onRemoveLiquid={vi.fn()}
+        onToolbarItemDrop={vi.fn()}
+        slots={[
+          {
+            id: "station_1",
+            label: "Station 1",
+            tool: {
+              id: "bench_tool_tube",
+              toolId: "centrifuge_tube_50ml",
+              label: "50 mL centrifuge tube",
+              subtitle: "Extraction ready",
+              accent: "sky",
+              toolType: "centrifuge_tube",
+              capacity_ml: 50,
+              containsSlurry: true,
+              liquids: [
+                {
+                  id: "bench_liquid_1",
+                  liquidId: "acetonitrile_extraction",
+                  name: "Acetonitrile",
+                  volume_ml: 10,
+                  accent: "amber",
+                },
+              ],
+              produceLots: [makeProduceLot({ id: "lot_1", materialState: "slurry" })],
+            },
+          },
+        ]}
+        statusMessage="Bench ready."
+      />,
+    );
+
+    const toolCard = screen.getByTestId("bench-tool-card-bench_tool_tube");
+    expect(toolCard).toHaveTextContent("Slurry present");
+    expect(screen.queryByText("Acetonitrile")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove Acetonitrile" })).not.toBeInTheDocument();
+  });
+
   it("marks sealable tool illustrations with their seal state", () => {
     render(
       <PesticideWorkbenchPanel
@@ -369,7 +411,7 @@ describe("WorkbenchPanel", () => {
               toolType: "sample_bag",
               capacity_ml: 500,
               produceLots: [
-                makeProduceLot({ id: "produce_1", cutState: "cut" }),
+                makeProduceLot({ id: "produce_1", materialState: "cut" }),
               ],
               liquids: [],
             },
@@ -403,7 +445,7 @@ describe("WorkbenchPanel", () => {
             id: "station_1",
             label: "Station 1",
             surfaceProduceLots: [
-              makeProduceLot({ id: "produce_1", cutState: "ground" }),
+              makeProduceLot({ id: "produce_1", materialState: "ground" }),
             ],
             tool: null,
           },
@@ -516,7 +558,7 @@ describe("WorkbenchPanel", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                makeProduceLot({ id: "produce_1", cutState: "cut" }),
+                makeProduceLot({ id: "produce_1", materialState: "cut" }),
               ],
               liquids: [],
             },

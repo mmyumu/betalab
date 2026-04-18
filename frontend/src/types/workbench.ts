@@ -59,7 +59,7 @@ export type ExperimentWorkspaceWidgetId =
 export type ExperimentWorkspaceWidgetType = "workbench" | "trash" | WorkspaceWidgetType;
 export type WidgetAnchor = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 export type ProduceLotType = "apple";
-export type ProduceCutState = "whole" | "cut" | "ground" | "waste";
+export type ProduceMaterialKind = "whole" | "cut" | "ground" | "slurry" | "waste";
 type DragEntityKind =
   | "tool"
   | "liquid"
@@ -331,6 +331,7 @@ export type BenchToolInstance = {
   produceLots?: ExperimentProduceLot[];
   produceFractions?: ProduceFraction[];
   powderMassG?: number;
+  containsSlurry?: boolean;
   liquids: BenchLiquidPortion[];
 };
 
@@ -343,7 +344,7 @@ export type SpatulaState = {
 export type ProduceMaterialState = {
   id: string;
   produceLotId: string;
-  cutState?: ProduceCutState;
+  materialState?: ProduceMaterialKind;
   temperatureC?: number;
   grindQualityLabel?: string | null;
   homogeneityScore?: number | null;
@@ -446,7 +447,7 @@ export type ExperimentWorkspaceWidget = {
 };
 
 export type ExperimentProduceLot = {
-  cutState?: ProduceCutState;
+  materialState?: ProduceMaterialKind;
   grindQualityLabel?: string | null;
   homogeneityScore?: number | null;
   id: string;

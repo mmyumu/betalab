@@ -2123,7 +2123,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
         },
         {
           surfaceProduceLots: [
-            makeProduceLot({ id: "produce_1", isContaminated: true, label: "Apple powder 1", totalMassG: 10, cutState: "ground", unitCount: null }),
+            makeProduceLot({ id: "produce_1", isContaminated: true, label: "Apple powder 1", totalMassG: 10, materialState: "ground", unitCount: null }),
           ],
         },
       ]),
@@ -2132,7 +2132,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
         {
           isPresent: true,
           produceLots: [
-            makeProduceLot({ id: "produce_1", label: "Apple powder 2", totalMassG: 12, cutState: "ground", unitCount: null }),
+            makeProduceLot({ id: "produce_1", label: "Apple powder 2", totalMassG: 12, materialState: "ground", unitCount: null }),
           ],
         },
         {},
@@ -2200,7 +2200,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
           },
         ],
         produceLots: [
-          makeProduceLot({ id: "produce_1", label: "Apple powder 1", cutState: "ground" }),
+          makeProduceLot({ id: "produce_1", label: "Apple powder 1", materialState: "ground" }),
         ],
       },
     ]),

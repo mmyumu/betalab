@@ -18,6 +18,7 @@ from app.domain.models import ProduceFraction, ProduceMaterialState
 from app.main import app
 from app.services.experiment_repository import SqliteExperimentRepository
 from app.services.experiment_service import ExperimentRuntimeService
+from app.services.helpers.produce_material_states import set_material_state_name, update_material_state
 from app.services.helpers.workbench import build_workbench_tool
 
 
@@ -53,6 +54,10 @@ def _create_experiment(client: TestClient) -> str:
 
 def _find_widget(payload: dict, widget_id: str) -> dict:
     return next(widget for widget in payload["workspace"]["widgets"] if widget["id"] == widget_id)
+
+
+def _find_material_state(payload: dict, produce_lot_id: str) -> dict:
+    return next(state for state in payload["produce_material_states"] if state["produce_lot_id"] == produce_lot_id)
 
 
 def test_settings_defaults_are_exposed() -> None:
@@ -305,7 +310,9 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
     assert _find_slot(moved_to_board.json(), "station_1")["tool"]["produce_lots"] == []
     assert _find_slot(moved_to_board.json(), "station_2")["tool"]["produce_lots"][0]["id"] == produce_lot_id
     assert cut.status_code == 200
-    assert _find_slot(cut.json(), "station_2")["tool"]["produce_lots"][0]["cut_state"] == "cut"
+    cut_payload = cut.json()
+    cut_lot_id = _find_slot(cut_payload, "station_2")["tool"]["produce_lots"][0]["id"]
+    assert _find_material_state(cut_payload, cut_lot_id)["material_state"] == "cut"
     assert added_grinder.status_code == 200
     assert moved_to_grinder.status_code == 200
     assert _find_widget(moved_to_grinder.json(), "grinder")["produce_lots"][0]["id"] == produce_lot_id
@@ -314,7 +321,8 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
     assert cooled_grinder["liquids"][0]["liquid_id"] == "dry_ice_pellets"
     assert completed.status_code == 200
     completed_grinder = _find_widget(completed.json(), "grinder")
-    assert completed_grinder["produce_lots"][0]["cut_state"] == "ground"
+    completed_lot_id = completed_grinder["produce_lots"][0]["id"]
+    assert _find_material_state(completed.json(), completed_lot_id)["material_state"] == "ground"
     assert placed_jar.status_code == 200
     assert opened_jar.status_code == 200
     assert moved_to_jar.status_code == 200
@@ -322,7 +330,8 @@ def test_received_lot_can_flow_from_reception_to_ground_jar_over_http() -> None:
     jar_tool = _find_slot(moved_to_jar.json(), "station_3")["tool"]
     assert jar_tool["tool_id"] == "hdpe_storage_jar_2l"
     assert jar_tool["produce_lots"][0]["id"] == produce_lot_id
-    assert jar_tool["produce_lots"][0]["cut_state"] == "ground"
+    jar_lot_id = jar_tool["produce_lots"][0]["id"]
+    assert _find_material_state(moved_to_jar.json(), jar_lot_id)["material_state"] == "ground"
     assert moved_to_jar.json()["audit_log"][-1] == ("Orchard apple lot moved from Cryogenic grinder to Wide-neck HDPE jar.")
 
 
@@ -515,7 +524,7 @@ def test_analytical_balance_routes_capture_sample_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", material_state="ground")]
         analytical_balance.tool.produce_fractions = [
             ProduceFraction(
                 id="test-frac",
@@ -543,7 +552,7 @@ def test_analytical_balance_rejects_out_of_spec_mass_over_http() -> None:
         experiment = experiment_service._require_experiment(experiment_id)
         analytical_balance = next(widget for widget in experiment.workspace.widgets if widget.id == "analytical_balance")
         analytical_balance.tool = build_workbench_tool("centrifuge_tube_50ml")
-        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", cut_state="ground")]
+        experiment.produce_material_states = [ProduceMaterialState(id="state_1", produce_lot_id="test-lot", material_state="ground")]
         analytical_balance.tool.produce_fractions = [
             ProduceFraction(
                 id="test-frac2",
@@ -684,9 +693,9 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
         experiment_state = experiment_service._experiments[experiment_id]
         assert experiment_state.workbench.slots[0].tool is not None
         stored_lot = experiment_state.workbench.slots[0].tool.produce_lots[0]
-        stored_lot.cut_state = "ground"
+        set_material_state_name(experiment_state.produce_material_states, stored_lot.id, "ground")
         stored_lot.total_mass_g = 1000.0
-        stored_lot.residual_co2_mass_g = 18.0
+        update_material_state(experiment_state.produce_material_states, stored_lot.id, residual_co2_mass_g=18.0)
 
         closed = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/close")
 
@@ -697,7 +706,8 @@ def test_workbench_close_route_projects_powder_when_co2_is_still_present() -> No
     assert tool["internal_pressure_bar"] == pytest.approx(1.0, abs=0.01)
     assert tool["trapped_co2_mass_g"] == pytest.approx(0.0, abs=0.01)
     assert tool["produce_lots"][0]["total_mass_g"] == 1000.0
-    assert 17.5 <= tool["produce_lots"][0]["residual_co2_mass_g"] <= 18.0
+    lot_state = _find_material_state(closed.json(), tool["produce_lots"][0]["id"])
+    assert 17.5 <= lot_state["residual_co2_mass_g"] <= 18.0
 
 
 def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
@@ -721,9 +731,9 @@ def test_sealed_storage_jar_pops_after_physics_ticks_over_http() -> None:
         experiment_state = experiment_service._experiments[experiment_id]
         assert experiment_state.workbench.slots[0].tool is not None
         stored_lot = experiment_state.workbench.slots[0].tool.produce_lots[0]
-        stored_lot.cut_state = "ground"
+        set_material_state_name(experiment_state.produce_material_states, stored_lot.id, "ground")
         stored_lot.total_mass_g = 1000.0
-        stored_lot.residual_co2_mass_g = 18.0
+        update_material_state(experiment_state.produce_material_states, stored_lot.id, residual_co2_mass_g=18.0)
 
         closed = client.post(f"/experiments/{experiment_id}/workbench/tools/{tool_id}/close")
         assert closed.status_code == 200
@@ -754,10 +764,11 @@ def test_debug_produce_preset_route_spawns_powder_on_workbench() -> None:
 
     assert spawned.status_code == 200
     tool = spawned.json()["workbench"]["slots"][0]["tool"]
-    assert tool["produce_lots"][0]["cut_state"] == "ground"
+    lot_state = _find_material_state(spawned.json(), tool["produce_lots"][0]["id"])
+    assert lot_state["material_state"] == "ground"
     assert tool["produce_lots"][0]["total_mass_g"] == 2450.0
-    assert tool["produce_lots"][0]["residual_co2_mass_g"] == 18.0
-    assert tool["produce_lots"][0]["temperature_c"] == -62.0
+    assert lot_state["residual_co2_mass_g"] == 18.0
+    assert lot_state["temperature_c"] == -62.0
 
 
 def test_open_workbench_tool_route_unseals_a_jar() -> None:
@@ -954,7 +965,8 @@ def test_workspace_routes_round_trip_over_http() -> None:
     assert updated_liquid.status_code == 200
     assert _find_widget(updated_liquid.json(), "grinder")["liquids"][0]["volume_ml"] == 125.5
     assert advanced.status_code == 200
-    assert _find_widget(advanced.json(), "grinder")["produce_lots"][0]["temperature_c"] < 20.0
+    grinder_lot_id = _find_widget(advanced.json(), "grinder")["produce_lots"][0]["id"]
+    assert _find_material_state(advanced.json(), grinder_lot_id)["temperature_c"] < 20.0
     assert removed_liquid.status_code == 200
     assert _find_widget(removed_liquid.json(), "grinder")["liquids"] == []
     assert discarded_produce_lot.status_code == 200
@@ -1004,7 +1016,8 @@ def test_experiment_stream_pushes_updated_snapshots() -> None:
 
     assert snapshot["id"] == experiment_id
     assert snapshot["snapshot_version"] >= 1
-    assert _find_widget(snapshot, "grinder")["produce_lots"][0]["temperature_c"] < 20.0
+    grinder_lot_id = _find_widget(snapshot, "grinder")["produce_lots"][0]["id"]
+    assert _find_material_state(snapshot, grinder_lot_id)["temperature_c"] < 20.0
 
 
 def test_produce_lot_routes_round_trip_over_http() -> None:
@@ -1068,7 +1081,9 @@ def test_produce_lot_routes_round_trip_over_http() -> None:
 
     assert added_to_board.status_code == 200
     assert cut.status_code == 200
-    assert cut.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "cut"
+    cut_payload = cut.json()
+    cut_lot_id = cut_payload["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"]
+    assert _find_material_state(cut_payload, cut_lot_id)["material_state"] == "cut"
     assert restored_to_board.status_code == 200
     assert restored_to_board.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == first_lot_id
     assert added_grinder.status_code == 200
@@ -1138,7 +1153,9 @@ def test_workspace_move_grinder_produce_lot_to_storage_jar_over_http() -> None:
     assert moved.status_code == 200
     assert moved.json()["workbench"]["slots"][0]["tool"]["tool_id"] == "hdpe_storage_jar_2l"
     assert moved.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"] == produce_lot_id
-    assert moved.json()["workbench"]["slots"][0]["tool"]["produce_lots"][0]["cut_state"] == "ground"
+    moved_payload = moved.json()
+    moved_lot_id = moved_payload["workbench"]["slots"][0]["tool"]["produce_lots"][0]["id"]
+    assert _find_material_state(moved_payload, moved_lot_id)["material_state"] == "ground"
     assert _find_widget(moved.json(), "grinder")["produce_lots"] == []
 
 

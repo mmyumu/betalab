@@ -4,6 +4,7 @@ import type { Experiment, ExperimentListEntry } from "../../src/types/experiment
 import type {
   BenchSlot,
   BenchToolInstance,
+  DropTargetType,
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
   RackSlot,
@@ -33,6 +34,7 @@ function makeSlots(count = 2): BenchSlot[] {
   return Array.from({ length: count }, (_, index) => ({
     id: `station_${index + 1}`,
     label: `Station ${index + 1}`,
+    dropTargetTypes: ["workbench_slot"] as DropTargetType[],
     tool: null,
   }));
 }
@@ -100,8 +102,19 @@ function makeWorkspaceWidgets(): ExperimentWorkspaceWidget[] {
   ];
 }
 
+function getToolAllowedDropTargets(toolType: ToolType): DropTargetType[] {
+  const targets: DropTargetType[] = ["workbench_slot", "trash_bin", "gross_balance_widget"];
+  if (toolType === "sample_vial") {
+    targets.splice(1, 0, "rack_slot");
+  }
+  if (toolType !== "cutting_board" && toolType !== "sample_bag") {
+    targets.push("analytical_balance_widget");
+  }
+  return targets;
+}
+
 function makeTool(toolId: string): BenchToolInstance {
-  const toolMap: Record<string, Omit<BenchToolInstance, "id">> = {
+  const toolMap: Record<string, Omit<BenchToolInstance, "id" | "allowedDropTargets" | "isDraggable">> = {
     autosampler_rack_widget: {
       accepts_liquids: false,
       accent: "sky",
@@ -184,7 +197,9 @@ function makeTool(toolId: string): BenchToolInstance {
   return {
     id: `bench_tool_${toolId}`,
     contactImpurityMgPerG: 0,
+    isDraggable: true,
     ...baseTool,
+    allowedDropTargets: getToolAllowedDropTargets(baseTool.toolType),
     produceFractions: [],
   };
 }

@@ -108,7 +108,7 @@ def test_experiment_roundtrip_preserves_powder_impurity_state() -> None:
     tool = build_workbench_tool("centrifuge_tube_50ml")
     tool.contact_impurity_mg_per_g = 0.015
     # produce_fractions is the persisted source of truth.
-    experiment.produce_material_states = [ProduceMaterialState(id="state_ground_1", produce_lot_id="lot_a", cut_state="ground")]
+    experiment.produce_material_states = [ProduceMaterialState(id="state_ground_1", produce_lot_id="lot_a", material_state="ground")]
     tool.produce_fractions = [
         ProduceFraction(
             id="powder_1",

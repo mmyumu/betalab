@@ -58,7 +58,7 @@ export const debugProducePresets: DebugProducePreset[] = [
       produceType: "apple",
       totalMassG: 2450,
       unitCount: null,
-      cutState: "ground",
+      materialState: "ground",
       residualCo2MassG: 18,
       temperatureC: -62,
       grindQualityLabel: "powder_fine",

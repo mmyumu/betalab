@@ -111,8 +111,8 @@ export function useGrinderDnd({
     grinderWidget?.liquids ?? [];
   const grinderLoadedLot = grinderProduceLots[0] ?? null;
   const grinderHasProduceLot = grinderProduceLots.length > 0;
-  const grinderLotIsGround = (grinderLoadedLot?.cutState ?? "whole") === "ground";
-  const grinderLotIsWaste = (grinderLoadedLot?.cutState ?? "whole") === "waste";
+  const grinderLotIsGround = (grinderLoadedLot?.materialState ?? "whole") === "ground";
+  const grinderLotIsWaste = (grinderLoadedLot?.materialState ?? "whole") === "waste";
   const grinderFault = grinderWidget?.grinderFault ?? null;
   const grinderRunRemainingMs = grinderWidget?.grinderRunRemainingMs ?? 0;
   const grinderRunDurationMs = grinderWidget?.grinderRunDurationMs ?? 0;
@@ -134,7 +134,7 @@ export function useGrinderDnd({
       : null;
   const grinderCanAttempt =
     grinderHasProduceLot && !grinderLotIsGround && !grinderLotIsWaste && !pendingGrinderDropDraft;
-  const grinderLotIsWhole = (grinderLoadedLot?.cutState ?? "whole") === "whole";
+  const grinderLotIsWhole = (grinderLoadedLot?.materialState ?? "whole") === "whole";
   const grinderLotTemperatureC = grinderLoadedLot?.temperatureC ?? ambientTemperatureC;
   const grinderLotIsColdEnough = grinderLotTemperatureC <= grinderStartThresholdC;
   const grinderLotIsInHighTorqueZone =
@@ -160,7 +160,7 @@ export function useGrinderDnd({
     if (!loadedLot || grinderDraftIsOpen) {
       return;
     }
-    const lotIsWhole = (loadedLot.cutState ?? "whole") === "whole";
+    const lotIsWhole = (loadedLot.materialState ?? "whole") === "whole";
     const lotTemperatureC = loadedLot.temperatureC ?? ambientTemperatureC;
     if (!lotIsWhole && lotTemperatureC <= grinderStartThresholdC) {
       setGrinderFeedback("neutral");

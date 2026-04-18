@@ -649,7 +649,7 @@ describe("LabScene", () => {
                   id: "produce_debug_1",
                   label: "Apple powder lot",
                   unitCount: null,
-                  cutState: "ground",
+                  materialState: "ground",
                   residualCo2MassG: 18,
                   temperatureC: -62,
                 }),
@@ -1879,7 +1879,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            makeProduceLot({ id: "produce_1", cutState: "whole", temperatureC: 2 }),
+            makeProduceLot({ id: "produce_1", materialState: "whole", temperatureC: 2 }),
           ],
         }),
       }),
@@ -1906,7 +1906,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrinderVisible({
           produceLots: [
-            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: 12 }),
+            makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: 12 }),
           ],
         }),
       }),
@@ -1934,7 +1934,7 @@ describe("LabScene", () => {
         grinderRunDurationMs: 0,
         grinderRunRemainingMs: 0,
         produceLots: [
-          makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -45 }),
+          makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: -45 }),
         ],
         liquids: [
           {
@@ -1954,7 +1954,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 30000,
           grinderRunRemainingMs: 30000,
           produceLots: [
-            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -75 }),
+            makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: -75 }),
           ],
           liquids: [
             {
@@ -1999,7 +1999,7 @@ describe("LabScene", () => {
             grinderRunDurationMs: 30000,
             grinderRunRemainingMs: 15000,
             produceLots: [
-              makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -69.2 }),
+              makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: -69.2 }),
             ],
             liquids: [
               {
@@ -2049,7 +2049,7 @@ describe("LabScene", () => {
             grinderRunDurationMs: 0,
             grinderRunRemainingMs: 0,
             produceLots: [
-              makeProduceLot({ id: "produce_1", cutState: "ground", residualCo2MassG: 381.7, temperatureC: -65.1 }),
+              makeProduceLot({ id: "produce_1", materialState: "ground", residualCo2MassG: 381.7, temperatureC: -65.1 }),
             ],
           }),
         }),
@@ -2140,7 +2140,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 30000,
           grinderRunRemainingMs: 10000,
           produceLots: [
-            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -15 }),
+            makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: -15 }),
           ],
           liquids: [
             {
@@ -2172,7 +2172,7 @@ describe("LabScene", () => {
           grinderRunDurationMs: 0,
           grinderRunRemainingMs: 0,
           produceLots: [
-            makeProduceLot({ id: "produce_1", cutState: "cut", temperatureC: -8 }),
+            makeProduceLot({ id: "produce_1", materialState: "cut", temperatureC: -8 }),
           ],
         }),
       }),
@@ -2239,7 +2239,7 @@ describe("LabScene", () => {
           {
             tool: makeSampleBagTool({
               produceLots: [
-                makeProduceLot({ id: "produce_1", cutState: "ground", residualCo2MassG: 42.5, temperatureC: -58.1 }),
+                makeProduceLot({ id: "produce_1", materialState: "ground", residualCo2MassG: 42.5, temperatureC: -58.1 }),
               ],
             }),
           },
@@ -2313,7 +2313,7 @@ describe("LabScene", () => {
           {
             isPresent: true,
             produceLots: [
-              makeProduceLot({ id: "grinder_produce_1", label: "Cold apple lot", cutState: "cut", temperatureC: -35 }),
+              makeProduceLot({ id: "grinder_produce_1", label: "Cold apple lot", materialState: "cut", temperatureC: -35 }),
             ],
           },
         ]),
@@ -2428,7 +2428,7 @@ describe("LabScene", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                makeProduceLot({ id: "produce_1", cutState: "whole" }),
+                makeProduceLot({ id: "produce_1", materialState: "whole" }),
               ],
               liquids: [],
             },
@@ -2450,7 +2450,7 @@ describe("LabScene", () => {
               toolType: "cutting_board",
               capacity_ml: 0,
               produceLots: [
-                makeProduceLot({ id: "produce_1", cutState: "cut" }),
+                makeProduceLot({ id: "produce_1", materialState: "cut" }),
               ],
               liquids: [],
             },
@@ -3304,7 +3304,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
           produceLots: [
-            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
+            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, materialState: "ground" }),
           ],
         }),
       }),
@@ -3314,7 +3314,7 @@ describe("LabScene", () => {
         slots: makeSlots([
           {
             surfaceProduceLots: [
-              makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
+              makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, materialState: "ground" }),
             ],
           },
         ]),
@@ -3353,7 +3353,7 @@ describe("LabScene", () => {
       makeWorkbenchExperiment({
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({
           produceLots: [
-            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
+            makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, materialState: "ground" }),
           ],
         }),
       }),
@@ -3364,7 +3364,7 @@ describe("LabScene", () => {
           {
             id: "trash_produce_1",
             originLabel: "Gross balance",
-            produceLot: makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, cutState: "ground" }),
+            produceLot: makeProduceLot({ id: "produce_1", label: "Apple powder 1", totalMassG: 10, unitCount: null, materialState: "ground" }),
           },
         ],
         workspaceWidgets: makeWorkspaceWithGrossBalanceVisible({

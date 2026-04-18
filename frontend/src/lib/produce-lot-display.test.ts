@@ -23,7 +23,7 @@ describe("getProduceLotDisplayName", () => {
     expect(
       getProduceLotDisplayName({
         id: "produce_1",
-        cutState: "ground",
+        materialState: "ground",
         label: "Apple lot 1",
         produceType: "apple",
         totalMassG: 1200,

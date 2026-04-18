@@ -15,7 +15,7 @@ describe("ProduceLotCard", () => {
           produceType: "apple",
           totalMassG: 2450,
           unitCount: 12,
-          cutState: "waste",
+          materialState: "waste",
           temperatureC: -8.2,
         }}
         variant="compact"
@@ -37,7 +37,7 @@ describe("ProduceLotCard", () => {
           produceType: "apple",
           totalMassG: 2450,
           unitCount: 12,
-          cutState: "ground",
+          materialState: "ground",
           residualCo2MassG: 24.6,
           temperatureC: -62.4,
         }}
