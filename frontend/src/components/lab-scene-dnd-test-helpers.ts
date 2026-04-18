@@ -107,6 +107,12 @@ const analyticalBalanceCompatibleSourceIds = new Set<string>([
   "gross-balance-sample-vial",
 ]);
 
+const analyticalBalanceDraftSourceIds = new Set<string>([
+  "palette-acetonitrile_extraction",
+  "palette-apple_extract",
+  "palette-ultrapure_water_rinse",
+]);
+
 const grossBalanceCompatibleSourceIds = new Set<string>([
   ...toolItems.map((item) => `palette-${item.id}`),
   ...toolItems.map((item) => `workbench-${item.id}`),
@@ -321,21 +327,21 @@ function makeWorkspaceWidgets(
 }
 
 function makeTool(item: ToolCatalogItem, overrides: Partial<BenchToolInstance> = {}): BenchToolInstance {
-  const legacySampleLabelText = (overrides as Partial<BenchToolInstance> & { sampleLabelText?: string | null })
+  const sampleLabelText = (overrides as Partial<BenchToolInstance> & { sampleLabelText?: string | null })
     .sampleLabelText;
-  const legacySampleLabelReceivedDate = (
+  const sampleLabelReceivedDate = (
     overrides as Partial<BenchToolInstance> & { sampleLabelReceivedDate?: string | null }
   ).sampleLabelReceivedDate;
   const derivedLabels =
     overrides.labels ??
-    (legacySampleLabelText
+    (sampleLabelText
       ? [
           {
-            id: `${overrides.id ?? "bench_tool_1"}-legacy-label`,
-            labelKind: legacySampleLabelReceivedDate ? "lims" : "manual",
-            text: legacySampleLabelText,
-            receivedDate: legacySampleLabelReceivedDate ?? null,
-            sampleCode: legacySampleLabelReceivedDate ? legacySampleLabelText : null,
+            id: `${overrides.id ?? "bench_tool_1"}-sample-label`,
+            labelKind: sampleLabelReceivedDate ? "lims" : "manual",
+            text: sampleLabelText,
+            receivedDate: sampleLabelReceivedDate ?? null,
+            sampleCode: sampleLabelReceivedDate ? sampleLabelText : null,
             isDraggable: true,
             allowedDropTargets: getSampleLabelDropTargets(),
           },
@@ -657,7 +663,7 @@ function createDebugProducePresetSourceCase(): DndSourceCase {
       }),
     targetExpectations: {
       "bench-slot-station_1": {
-        compatible: false,
+        compatible: true,
         command: null,
       },
       "bench-slot-station_2": {
@@ -1117,7 +1123,7 @@ function createWorkbenchProduceLotSourceCase(): DndSourceCase {
       }),
     targetExpectations: {
       "bench-slot-station_1": {
-        compatible: false,
+        compatible: true,
         command: null,
       },
       "bench-slot-station_2": {
@@ -1485,7 +1491,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         command: {
           type: "move_sample_label_between_workbench_tools",
           payload: {
-            label_id: "bench_tool_bag-legacy-label",
+            label_id: "bench_tool_bag-sample-label",
             source_slot_id: "station_1",
             target_slot_id: "station_2",
           },
@@ -1496,7 +1502,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         command: {
           type: "move_workbench_sample_label_to_analytical_balance",
           payload: {
-            label_id: "bench_tool_bag-legacy-label",
+            label_id: "bench_tool_bag-sample-label",
             source_slot_id: "station_1",
           },
         },
@@ -1506,7 +1512,7 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         command: {
           type: "move_workbench_sample_label_to_gross_balance",
           payload: {
-            label_id: "bench_tool_bag-legacy-label",
+            label_id: "bench_tool_bag-sample-label",
             source_slot_id: "station_1",
           },
         },
@@ -1521,7 +1527,10 @@ function createWorkbenchSampleLabelSourceCase(): DndSourceCase {
         compatible: true,
         command: {
           type: "discard_sample_label_from_workbench_tool",
-          payload: { slot_id: "station_1" },
+          payload: {
+            label_id: "bench_tool_bag-sample-label",
+            slot_id: "station_1",
+          },
         },
       },
     },
@@ -2003,7 +2012,7 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
       command: {
         type: "move_workbench_sample_label_to_gross_balance",
         payload: {
-          label_id: "bench_tool_bag-legacy-label",
+          label_id: "bench_tool_bag-sample-label",
           source_slot_id: "station_1",
         },
       },
@@ -2039,6 +2048,10 @@ function getGrossBalanceTargetExpectation(sourceCase: DndSourceCase) {
 }
 
 function getAnalyticalBalanceTargetExpectation(sourceCase: DndSourceCase) {
+  if (analyticalBalanceDraftSourceIds.has(sourceCase.id)) {
+    return { compatible: true, command: null };
+  }
+
   if (!analyticalBalanceCompatibleSourceIds.has(sourceCase.id)) {
     return { compatible: false, command: null };
   }
@@ -2147,7 +2160,7 @@ export function buildDndCoverageExperiment(scenario: DndCoverageScenario): Exper
           id: "bench_tool_bag",
           labels: [
             {
-              id: "bench_tool_bag-legacy-label",
+              id: "bench_tool_bag-sample-label",
               labelKind: "manual",
               text: "LOT-2026-041",
               receivedDate: null,

@@ -190,31 +190,6 @@ class WorkbenchToolSchema(BaseModel):
     liquids: list[WorkbenchLiquidSchema] = Field(default_factory=list)
     produce_fractions: list[ProduceFractionSchema] = Field(default_factory=list)
 
-    @model_validator(mode="before")
-    @classmethod
-    def _upgrade_legacy_fields(cls, value: object) -> object:
-        if not isinstance(value, dict):
-            return value
-        if "labels" in value:
-            return value
-
-        sample_label_text = value.get("sample_label_text")
-        sample_label_received_date = value.get("sample_label_received_date")
-        if sample_label_text is None:
-            value["labels"] = []
-            return value
-
-        value["labels"] = [
-            {
-                "id": f"{value.get('id', 'tool')}-legacy-label",
-                "label_kind": "lims" if sample_label_received_date else "manual",
-                "text": sample_label_text,
-                "sample_code": sample_label_text if sample_label_received_date else None,
-                "received_date": sample_label_received_date,
-            }
-        ]
-        return value
-
     @computed_field
     def sample_label_text(self) -> str | None:
         lims_label = next((label for label in self.labels if label.label_kind == "lims"), None)
@@ -285,23 +260,6 @@ class TrashSampleLabelEntrySchema(BaseModel):
     id: str
     origin_label: str
     label: ContainerLabelSchema
-
-    @model_validator(mode="before")
-    @classmethod
-    def _upgrade_legacy_sample_label_text(cls, value: object) -> object:
-        if not isinstance(value, dict):
-            return value
-        if "label" in value:
-            return value
-
-        value["label"] = {
-            "id": f"{value.get('id', 'trash-sample-label')}-legacy-label",
-            "label_kind": "manual",
-            "text": value.get("sample_label_text", ""),
-            "sample_code": None,
-            "received_date": None,
-        }
-        return value
 
     @computed_field
     def sample_label_text(self) -> str:
@@ -375,16 +333,6 @@ class ExperimentSchema(BaseModel):
     lims_entries: list[LimsReceptionSchema] = Field(default_factory=list)
     basket_tools: list[WorkbenchToolSchema] = Field(default_factory=list)
     produce_material_states: list[ProduceMaterialStateSchema] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _migrate_basket_tool(cls, data: object) -> object:
-        if not isinstance(data, dict):
-            return data
-        if "basket_tools" not in data and "basket_tool" in data:
-            legacy = data.pop("basket_tool")
-            data["basket_tools"] = [legacy] if legacy is not None else []
-        return data
 
     spatula: SpatulaStateSchema = Field(default_factory=SpatulaStateSchema)
     analytical_balance: AnalyticalBalanceStateSchema = Field(default_factory=AnalyticalBalanceStateSchema)

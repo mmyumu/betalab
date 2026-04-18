@@ -3,11 +3,14 @@ from app.schemas.experiment import (
     RackSlotReferenceSchema,
     TargetWorkbenchSlotSchema,
     WorkbenchSlotReferenceSchema,
+    WorkbenchToolLiquidCreateSchema,
     WorkbenchToolPlacementSchema,
     WorkbenchToolPowderPourSchema,
     WorkbenchToolSampleLabelUpdateSchema,
 )
 from app.services.domain_services.analytical_balance import (
+    AddLiquidToAnalyticalBalanceToolRequest,
+    AddLiquidToAnalyticalBalanceToolService,
     ApplySampleLabelToAnalyticalBalanceToolService,
     CloseAnalyticalBalanceToolService,
     DiscardAnalyticalBalanceToolService,
@@ -149,6 +152,22 @@ def open_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
 @router.post("/{experiment_id}/analytical-balance/close-tool", response_model=ExperimentSchema)
 def close_analytical_balance_tool(experiment_id: str) -> ExperimentSchema:
     return handle_service_errors(lambda: CloseAnalyticalBalanceToolService(experiment_service).run(experiment_id, EmptyRequest()))
+
+
+@router.post("/{experiment_id}/analytical-balance/liquids", response_model=ExperimentSchema)
+def add_liquid_to_analytical_balance_tool(
+    experiment_id: str,
+    request: WorkbenchToolLiquidCreateSchema,
+) -> ExperimentSchema:
+    return handle_service_errors(
+        lambda: AddLiquidToAnalyticalBalanceToolService(experiment_service).run(
+            experiment_id,
+            AddLiquidToAnalyticalBalanceToolRequest(
+                liquid_id=request.liquid_id,
+                volume_ml=request.volume_ml,
+            ),
+        )
+    )
 
 
 @router.post("/{experiment_id}/analytical-balance/sample-label", response_model=ExperimentSchema)

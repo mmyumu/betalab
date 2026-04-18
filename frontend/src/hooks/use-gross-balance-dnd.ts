@@ -1,6 +1,12 @@
 import type { DragEvent } from "react";
 
+import { resolveLabelDropCommand } from "@/lib/label-drop-command-resolver";
 import { canResolveActiveLabelDragOnTool, canResolveLabelDropOnTool, readLabelDragPayload } from "@/lib/label-drop-resolver";
+import { executeGrossBalanceLabelDropCommand } from "@/lib/label-drop-command-executor";
+import { executeGrossBalanceProduceDropCommand } from "@/lib/produce-drop-command-executor";
+import { resolveProduceDropCommand } from "@/lib/produce-drop-command-resolver";
+import { executeGrossBalanceToolDropCommand } from "@/lib/tool-drop-command-executor";
+import { resolveToolDropCommand } from "@/lib/tool-drop-command-resolver";
 import {
   hasCompatibleDropTarget,
   readAnalyticalBalanceToolDragPayload,
@@ -95,7 +101,6 @@ export function useGrossBalanceDnd({
   experimentApi,
   grossBalanceProduceLot,
   grossBalanceTool,
-  hasPrintedLabelTicket: _hasPrintedLabelTicket,
   setPendingDropDraft,
 }: GrossBalanceDndOptions): GrossBalanceDndApi {
   const { activeDragItem, clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
@@ -144,23 +149,14 @@ export function useGrossBalanceDnd({
       event.stopPropagation();
       clearDropTargets();
 
-      if (labelDragPayload.kind === "lims_label_ticket") {
-        applyLimsTicketToGrossBalance();
+      const command = resolveLabelDropCommand(labelDragPayload, { kind: "gross_balance" });
+      if (!command) {
         return;
       }
-      if (labelDragPayload.kind === "palette_sample_label") {
-        void experimentApi.applySampleLabelToGrossBalanceTool();
-        return;
-      }
-      if (labelDragPayload.kind === "workbench_sample_label") {
-        void experimentApi.moveWorkbenchSampleLabelToGrossBalance({
-          source_slot_id: labelDragPayload.payload.sourceSlotId!,
-          label_id: labelDragPayload.payload.sampleLabelId,
-        });
-        return;
-      }
-      void experimentApi.restoreTrashedSampleLabelToGrossBalance({
-        trash_sample_label_id: labelDragPayload.payload.trashSampleLabelId!,
+
+      executeGrossBalanceLabelDropCommand(command, {
+        ...experimentApi,
+        applyPrintedLimsLabelToGrossBalanceBag: applyLimsTicketToGrossBalance,
       });
       return;
     }
@@ -183,74 +179,20 @@ export function useGrossBalanceDnd({
     event.stopPropagation();
     clearDropTargets();
 
-    if (toolbarPayload?.itemType === "tool") {
-      void experimentApi.placeToolOnGrossBalance({ tool_id: toolbarPayload.itemId });
-      return;
-    }
-
     if (toolPayload) {
-      if (toolPayload.sourceKind === "basket") {
-        void experimentApi.moveBasketToolToGrossBalance({ tool_id: toolPayload.sourceId });
-        return;
-      }
-      if ("sourceSlotId" in toolPayload) {
-        void experimentApi.moveWorkbenchToolToGrossBalance({
-          source_slot_id: toolPayload.sourceSlotId,
-        });
-        return;
-      }
-      if ("rackSlotId" in toolPayload) {
-        void experimentApi.moveRackToolToGrossBalance({ rack_slot_id: toolPayload.rackSlotId });
-        return;
-      }
-      if (toolPayload.sourceKind === "analytical_balance") {
-        void experimentApi.moveAnalyticalBalanceToolToGrossBalance();
-        return;
-      }
-      if ("trashToolId" in toolPayload) {
-        void experimentApi.restoreTrashedToolToGrossBalance({
-          trash_tool_id: toolPayload.trashToolId,
-        });
+      const command = resolveToolDropCommand(toolPayload, { kind: "gross_balance" });
+      if (command && executeGrossBalanceToolDropCommand(command, experimentApi)) {
         return;
       }
     }
 
     if (producePayload) {
-      if (producePayload.sourceKind === "basket") {
-        void experimentApi.moveWorkspaceProduceLotToGrossBalance({
-          produce_lot_id: producePayload.produceLotId,
-        });
+      const command = resolveProduceDropCommand(producePayload, { kind: "gross_balance" });
+      if (command && executeGrossBalanceProduceDropCommand(command, experimentApi, {
+        buildDebugProduceDraftFields,
+        setPendingDropDraft,
+      })) {
         return;
-      }
-      if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
-        void experimentApi.moveWorkbenchProduceLotToGrossBalance({
-          source_slot_id: producePayload.sourceSlotId,
-          produce_lot_id: producePayload.produceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "grinder") {
-        void experimentApi.moveWidgetProduceLotToGrossBalance({
-          produce_lot_id: producePayload.produceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
-        void experimentApi.restoreTrashedProduceLotToGrossBalance({
-          trash_produce_lot_id: producePayload.trashProduceLotId,
-        });
-        return;
-      }
-      if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
-        setPendingDropDraft({
-          commandType: "create_debug_produce_lot_to_widget",
-          confirmLabel: "Spawn",
-          fields: buildDebugProduceDraftFields(),
-          presetId: producePayload.debugProducePresetId,
-          targetId: "gross_balance",
-          targetKind: "workspace_widget",
-          title: "Configure Apple powder",
-        });
       }
     }
   };

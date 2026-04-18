@@ -6,10 +6,8 @@ import {
   readBasketToolDragPayload,
   readBenchToolDragPayload,
   readGrossBalanceToolDragPayload,
-  readLimsLabelTicketDragPayload,
   readProduceDragPayload,
   readRackToolDragPayload,
-  readSampleLabelDragPayload,
   readToolbarDragPayload,
   readWorkspaceLiquidDragPayload,
   writeProduceDragPayload,
@@ -17,8 +15,14 @@ import {
   writeTrashToolDragPayload,
   writeWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
+import { executeTrashLabelDropCommand } from "@/lib/label-drop-command-executor";
+import { resolveLabelDropCommand } from "@/lib/label-drop-command-resolver";
+import { executeTrashDropCommand } from "@/lib/trash-drop-command-executor";
+import { resolveTrashDropCommand } from "@/lib/trash-drop-command-resolver";
+import { executeTrashToolDropCommand } from "@/lib/tool-drop-command-executor";
+import { resolveToolDropCommand } from "@/lib/tool-drop-command-resolver";
+import { readLabelDragPayload } from "@/lib/label-drop-resolver";
 import type {
-  BenchLabel,
   ExperimentWorkspaceWidget,
   TrashProduceLotEntry,
   TrashSampleLabelEntry,
@@ -114,141 +118,64 @@ export function useTrashDnd({
       return;
     }
 
-    if (toolbarPayload?.itemType === "tool") {
+    const toolPayload =
+      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
+      readBenchToolDragPayload(event.dataTransfer) ??
+      readBasketToolDragPayload(event.dataTransfer) ??
+      readRackToolDragPayload(event.dataTransfer) ??
+      readGrossBalanceToolDragPayload(event.dataTransfer) ??
+      readAnalyticalBalanceToolDragPayload(event.dataTransfer);
+    if (toolPayload) {
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.discardToolFromPalette({
-        tool_id: toolbarPayload.itemId,
-      });
+
+      const command = resolveToolDropCommand(toolPayload, { kind: "trash_bin" });
+      if (!command) {
+        return;
+      }
+      executeTrashToolDropCommand(command, experimentApi);
       return;
     }
 
-    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload) {
+    const labelPayload = readLabelDragPayload(event.dataTransfer);
+    if (labelPayload) {
+      const command = resolveLabelDropCommand(labelPayload, { kind: "trash_bin" });
+      if (!command) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.discardWorkbenchTool({
-        slot_id: benchToolPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    const basketToolPayload = readBasketToolDragPayload(event.dataTransfer);
-    if (basketToolPayload?.toolType === "sample_bag") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardBasketTool({ tool_id: basketToolPayload.sourceId });
-      return;
-    }
-
-    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardRackTool({
-        rack_slot_id: rackToolPayload.rackSlotId,
-      });
-      return;
-    }
-
-    const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
-    if (grossBalanceToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardGrossBalanceTool();
-      return;
-    }
-
-    const analyticalBalanceToolPayload = readAnalyticalBalanceToolDragPayload(event.dataTransfer);
-    if (analyticalBalanceToolPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardAnalyticalBalanceTool();
+      executeTrashLabelDropCommand(command, experimentApi);
       return;
     }
 
     const workspaceLiquidPayload = readWorkspaceLiquidDragPayload(event.dataTransfer);
-    if (workspaceLiquidPayload?.sourceKind === "grinder" && !isGrinderRunning) {
+    if (workspaceLiquidPayload) {
+      const command = resolveTrashDropCommand(workspaceLiquidPayload, { isGrinderRunning });
+      if (!command) {
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       clearDropTargets();
-      void experimentApi.removeLiquidFromWorkspaceWidget({
-        widget_id: workspaceLiquidPayload.widgetId,
-        liquid_entry_id: workspaceLiquidPayload.liquidEntryId,
-      });
+      executeTrashDropCommand(command, experimentApi);
       return;
     }
 
     const producePayload = readProduceDragPayload(event.dataTransfer);
-    if (producePayload?.sourceKind === "basket") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWorkspaceProduceLot({
-        produce_lot_id: producePayload.produceLotId,
-      });
+    if (!producePayload) {
       return;
     }
-
-    if (producePayload?.sourceKind === "grinder") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardWidgetProduceLot({
-        widget_id: "grinder",
-        produce_lot_id: producePayload.produceLotId,
-      });
+    const command = resolveTrashDropCommand(producePayload, { isGrinderRunning });
+    if (!command) {
       return;
     }
-
-    if (producePayload?.sourceKind === "gross_balance") {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardGrossBalanceProduceLot({
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload?.sourceKind === "workbench" && producePayload.sourceSlotId) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardProduceLotFromWorkbenchTool({
-        slot_id: producePayload.sourceSlotId,
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    const sampleLabelPayload = readSampleLabelDragPayload(event.dataTransfer);
-    if (sampleLabelPayload?.sourceKind === "workbench" && sampleLabelPayload.sourceSlotId) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardSampleLabelFromWorkbenchTool({
-        ...(sampleLabelPayload.sampleLabelId.endsWith("-legacy-label")
-          ? {}
-          : { label_id: sampleLabelPayload.sampleLabelId }),
-        slot_id: sampleLabelPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    const limsTicketPayload = readLimsLabelTicketDragPayload(event.dataTransfer);
-    if (limsTicketPayload) {
-      event.preventDefault();
-      event.stopPropagation();
-      clearDropTargets();
-      void experimentApi.discardPrintedLimsLabel();
-    }
+    event.preventDefault();
+    event.stopPropagation();
+    clearDropTargets();
+    executeTrashDropCommand(command, experimentApi);
   };
 
   const handleTrashToolDragStart = (trashTool: TrashToolEntry, dataTransfer: DataTransfer) => {

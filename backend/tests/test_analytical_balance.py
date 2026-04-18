@@ -2,6 +2,8 @@ import pytest
 
 from app.domain.models import ProduceFraction, ProduceMaterialState, TrashSampleLabelEntry
 from app.services.domain_services.analytical_balance import (
+    AddLiquidToAnalyticalBalanceToolRequest,
+    AddLiquidToAnalyticalBalanceToolService,
     ApplySampleLabelToAnalyticalBalanceToolService,
     CloseAnalyticalBalanceToolService,
     EmptyRequest,
@@ -30,6 +32,14 @@ from app.services.domain_services.reception import (
 from app.services.experiment_service import ExperimentRuntimeService
 from app.services.helpers.lookups import build_manual_label
 from app.services.helpers.workbench import build_workbench_tool
+
+
+def _find_workspace_widget(experiment, widget_type: str):
+    return next(widget for widget in experiment.workspace.widgets if widget.widget_type == widget_type)
+
+
+def _get_analytical_balance_tool(experiment):
+    return _find_workspace_widget(experiment, "analytical_balance").tool
 
 
 def test_analytical_balance_rejects_cutting_board() -> None:
@@ -72,8 +82,8 @@ def test_analytical_balance_records_precise_sample_mass() -> None:
             container_label=tool.label,
         )
     ]
-    runtime_experiment.workspace.widgets[1].tool = None
-    runtime_experiment.workspace.widgets[2].tool = tool
+    _find_workspace_widget(runtime_experiment, "gross_balance").tool = None
+    _find_workspace_widget(runtime_experiment, "analytical_balance").tool = tool
     runtime_experiment.workbench.slots[0].tool = None
     updated = RecordAnalyticalSampleMassService(service).run(experiment.id, EmptyRequest())
     assert updated.lims_reception.measured_sample_mass_g == pytest.approx(10.124)
@@ -108,8 +118,8 @@ def test_analytical_balance_rejects_out_of_spec_sample_mass() -> None:
             container_label=tool.label,
         )
     ]
-    runtime_experiment.workspace.widgets[1].tool = None
-    runtime_experiment.workspace.widgets[2].tool = tool
+    _find_workspace_widget(runtime_experiment, "gross_balance").tool = None
+    _find_workspace_widget(runtime_experiment, "analytical_balance").tool = tool
     runtime_experiment.workbench.slots[0].tool = None
 
     with pytest.raises(ValueError, match="ERR_RANGE"):
@@ -125,7 +135,7 @@ def test_analytical_balance_records_sample_mass_from_canonical_produce_fractions
         PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    tool = runtime_experiment.workspace.widgets[2].tool
+    tool = _get_analytical_balance_tool(runtime_experiment)
     assert tool is not None
     tool.produce_fractions = [
         ProduceFraction(
@@ -195,13 +205,37 @@ def test_analytical_balance_tare_works_with_liquid_in_tube() -> None:
         PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
     )
     runtime_experiment = service._require_experiment(experiment.id)
-    tool = runtime_experiment.workspace.widgets[2].tool
+    tool = _get_analytical_balance_tool(runtime_experiment)
     assert tool is not None
     tool.liquids.append(WorkbenchLiquid(id="liq1", liquid_id="acetonitrile", name="ACN", volume_ml=10.0, accent="blue"))
 
     updated = TareAnalyticalBalanceService(service).run(experiment.id, EmptyRequest())
     # 12g (tube) + 10g (liquid) = 22g tare
     assert updated.analytical_balance.tare_mass_g == pytest.approx(22.0)
+
+
+def test_add_liquid_to_analytical_balance_tool() -> None:
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    PlaceToolOnAnalyticalBalanceService(service).run(
+        experiment.id,
+        PlaceToolOnAnalyticalBalanceRequest(tool_id="centrifuge_tube_50ml"),
+    )
+
+    updated = AddLiquidToAnalyticalBalanceToolService(service).run(
+        experiment.id,
+        AddLiquidToAnalyticalBalanceToolRequest(
+            liquid_id="acetonitrile_extraction",
+            volume_ml=10,
+        ),
+    )
+
+    tool = _get_analytical_balance_tool(updated)
+    assert tool is not None
+    assert len(tool.liquids) == 1
+    assert tool.liquids[0].liquid_id == "acetonitrile_extraction"
+    assert tool.liquids[0].volume_ml == pytest.approx(10.0)
 
 
 def test_analytical_balance_tool_can_be_closed_and_reopened() -> None:
@@ -214,12 +248,12 @@ def test_analytical_balance_tool_can_be_closed_and_reopened() -> None:
     )
 
     closed = CloseAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
-    closed_tool = closed.workspace.widgets[2].tool
+    closed_tool = _get_analytical_balance_tool(closed)
     assert closed_tool is not None
     assert closed_tool.is_sealed is True
 
     reopened = OpenAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
-    reopened_tool = reopened.workspace.widgets[2].tool
+    reopened_tool = _get_analytical_balance_tool(reopened)
     assert reopened_tool is not None
     assert reopened_tool.is_sealed is False
 
@@ -234,7 +268,7 @@ def test_analytical_balance_accepts_manual_sample_label_operations() -> None:
     )
 
     labeled = ApplySampleLabelToAnalyticalBalanceToolService(service).run(experiment.id, EmptyRequest())
-    tool = labeled.workspace.widgets[2].tool
+    tool = _get_analytical_balance_tool(labeled)
     assert tool is not None
     assert len(tool.labels) == 1
 
@@ -246,7 +280,7 @@ def test_analytical_balance_accepts_manual_sample_label_operations() -> None:
             sample_label_text="LOT-2026-041",
         ),
     )
-    updated_tool = updated.workspace.widgets[2].tool
+    updated_tool = _get_analytical_balance_tool(updated)
     assert updated_tool is not None
     assert updated_tool.labels[0].text == "LOT-2026-041"
 
@@ -270,7 +304,7 @@ def test_sample_label_can_move_from_workbench_and_trash_to_analytical_balance() 
             label_id=runtime_experiment.workbench.slots[0].tool.labels[0].id,
         ),
     )
-    moved_tool = moved.workspace.widgets[2].tool
+    moved_tool = _get_analytical_balance_tool(moved)
     assert moved_tool is not None
     assert [label.text for label in moved_tool.labels] == ["WB-1"]
     assert moved.workbench.slots[0].tool is not None
@@ -291,7 +325,7 @@ def test_sample_label_can_move_from_workbench_and_trash_to_analytical_balance() 
             trash_sample_label_id="trash_sample_label_1",
         ),
     )
-    restored_tool = restored.workspace.widgets[2].tool
+    restored_tool = _get_analytical_balance_tool(restored)
     assert restored_tool is not None
     assert [label.text for label in restored_tool.labels] == ["WB-1", "TRASH-1"]
     assert restored.trash.sample_labels == []

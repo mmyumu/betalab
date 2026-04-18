@@ -1,8 +1,4 @@
-import {
-  resolveDropTargetFromActiveDrag,
-  resolveDropTargetFromDataTransfer,
-  type DropTargetNode,
-} from "@/lib/drop-target-resolver";
+import { canResolveActiveDragOnTool, canResolveDropOnTool } from "@/lib/tool-drop-resolver";
 import {
   readLimsLabelTicketDragPayload,
   readSampleLabelDragPayload,
@@ -12,20 +8,8 @@ import type {
   BenchToolInstance,
   DragDescriptor,
   DropTargetType,
-  LimsLabelTicketDragPayload,
-  SampleLabelDragPayload,
-  ToolbarDragPayload,
 } from "@/types/workbench";
-
-type LabelDragPayload =
-  | { kind: "palette_sample_label"; payload: ToolbarDragPayload }
-  | { kind: "workbench_sample_label"; payload: SampleLabelDragPayload }
-  | { kind: "trash_sample_label"; payload: SampleLabelDragPayload }
-  | { kind: "lims_label_ticket"; payload: LimsLabelTicketDragPayload };
-
-type LabelDropResolution =
-  | { kind: "parent" }
-  | { kind: "tool"; tool: BenchToolInstance };
+import type { LabelDragPayload } from "@/lib/label-drop-command-resolver";
 
 export function readLabelDragPayload(dataTransfer: DataTransfer): LabelDragPayload | null {
   const toolbarPayload = readToolbarDragPayload(dataTransfer);
@@ -49,87 +33,6 @@ export function readLabelDragPayload(dataTransfer: DataTransfer): LabelDragPaylo
   return null;
 }
 
-function toolHasLimsLabel(tool: BenchToolInstance) {
-  return (tool.labels ?? []).some((label) => label.labelKind === "lims");
-}
-
-function canAllowedDropTargetsResolveOnTool(
-  allowedDropTargets: DropTargetType[],
-  {
-    isLimsTicket,
-    parentDropTargetTypes,
-    tool,
-  }: {
-    isLimsTicket: boolean;
-    parentDropTargetTypes: DropTargetType[];
-    tool: BenchToolInstance | null;
-  },
-) {
-  if (tool === null) {
-    return false;
-  }
-  if (!parentDropTargetTypes.some((targetType) => allowedDropTargets.includes(targetType))) {
-    return false;
-  }
-  if (isLimsTicket) {
-    return !toolHasLimsLabel(tool);
-  }
-  return true;
-}
-
-function buildLabelDropTree({
-  parentDropTargetTypes,
-  tool,
-}: {
-  parentDropTargetTypes: DropTargetType[];
-  tool: BenchToolInstance | null;
-}): DropTargetNode<LabelDropResolution> {
-  return {
-    acceptsDrop: () => false,
-    children:
-      tool === null
-        ? []
-        : [
-            {
-              acceptsDrop: ({ activeDragItem, dataTransfer }) => {
-                const labelDrag =
-                  dataTransfer === null
-                    ? activeDragItem === null ||
-                      (activeDragItem.entityKind !== "sample_label" &&
-                        activeDragItem.entityKind !== "lims_label_ticket")
-                      ? null
-                      : {
-                          allowedDropTargets: activeDragItem.allowedDropTargets ?? [],
-                          isLimsTicket: activeDragItem.entityKind === "lims_label_ticket",
-                        }
-                    : (() => {
-                        const payload = readLabelDragPayload(dataTransfer);
-                        if (payload === null) {
-                          return null;
-                        }
-                        return {
-                          allowedDropTargets: payload.payload.allowedDropTargets ?? [],
-                          isLimsTicket: payload.kind === "lims_label_ticket",
-                        };
-                      })();
-
-                if (labelDrag === null) {
-                  return false;
-                }
-
-                return canAllowedDropTargetsResolveOnTool(labelDrag.allowedDropTargets, {
-                  isLimsTicket: labelDrag.isLimsTicket,
-                  parentDropTargetTypes,
-                  tool,
-                });
-              },
-              resolveTarget: () => ({ kind: "tool", tool }),
-            },
-          ],
-    resolveTarget: () => ({ kind: "parent" }),
-  };
-}
-
 export function canResolveLabelDropOnTool(
   dataTransfer: DataTransfer,
   {
@@ -140,15 +43,7 @@ export function canResolveLabelDropOnTool(
     tool: BenchToolInstance | null;
   },
 ): boolean {
-  return (
-    resolveDropTargetFromDataTransfer(
-      buildLabelDropTree({
-        parentDropTargetTypes,
-        tool,
-      }),
-      dataTransfer,
-    )?.kind === "tool"
-  );
+  return canResolveDropOnTool(dataTransfer, { parentDropTargetTypes, tool });
 }
 
 export function canResolveActiveLabelDragOnTool(
@@ -161,13 +56,5 @@ export function canResolveActiveLabelDragOnTool(
     tool: BenchToolInstance | null;
   },
 ): boolean {
-  return (
-    resolveDropTargetFromActiveDrag(
-      buildLabelDropTree({
-        parentDropTargetTypes,
-        tool,
-      }),
-      dragDescriptor,
-    )?.kind === "tool"
-  );
+  return canResolveActiveDragOnTool(dragDescriptor, { parentDropTargetTypes, tool });
 }

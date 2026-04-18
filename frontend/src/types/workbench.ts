@@ -438,8 +438,6 @@ export type ExperimentWorkspaceWidget = {
   grinderRunDurationMs?: number;
   grinderRunRemainingMs?: number;
   grinderFault?: string | null;
-  x?: number;
-  y?: number;
   isPresent: boolean;
   isTrashed: boolean;
   tool?: BenchToolInstance | null;

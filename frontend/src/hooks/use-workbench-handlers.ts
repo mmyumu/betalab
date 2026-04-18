@@ -1,13 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 
 import type { DropDraft } from "@/hooks/use-drop-draft";
-import { canResolveActiveLabelDragOnTool } from "@/lib/label-drop-resolver";
 import { labLiquidCatalog } from "@/lib/lab-workflow-catalog";
-import {
-  canToolAcceptLiquids,
-  canToolAcceptProduce,
-  canToolReceiveContents,
-} from "@/lib/tool-drop-targets";
+import { canResolveActiveWorkbenchSlotDrop } from "@/lib/workbench-slot-drop-resolver";
 import type {
   BenchLabel,
   BenchSlot,
@@ -137,7 +132,7 @@ export function useWorkbenchHandlers({
 
   const handleSampleLabelTextChange = (slotId: string, labelId: string, text: string) => {
     void experimentApi.updateWorkbenchToolSampleLabelText({
-      ...(labelId.endsWith("-legacy-label") ? {} : { label_id: labelId }),
+      label_id: labelId,
       slot_id: slotId,
       sample_label_text: text,
     });
@@ -222,79 +217,22 @@ export function useWorkbenchHandlers({
     if (dndDisabledByAction || !activeDragItem) {
       return false;
     }
-    const slotDropTargetTypes = slot.dropTargetTypes ?? [];
 
-    if (activeDragItem.entityKind === "tool") {
+    if (
+      activeDragItem.entityKind === "tool" ||
+      activeDragItem.entityKind === "liquid" ||
+      activeDragItem.entityKind === "produce" ||
+      activeDragItem.entityKind === "sample_label" ||
+      activeDragItem.entityKind === "lims_label_ticket"
+    ) {
       if (
-        !slotDropTargetTypes.includes("workbench_slot") ||
-        !activeDropTargets.includes("workbench_slot")
+        !activeDropTargets.some((targetType) =>
+          (slot.dropTargetTypes ?? []).includes(targetType),
+        )
       ) {
         return false;
       }
-      if (activeDragItem.sourceKind === "workbench") {
-        return (
-          slot.tool === null &&
-          (slot.surfaceProduceLots?.length ?? 0) === 0 &&
-          slot.id !== activeDragItem.sourceId
-        );
-      }
-      if (
-        activeDragItem.sourceKind === "palette" ||
-        activeDragItem.sourceKind === "basket" ||
-        activeDragItem.sourceKind === "gross_balance" ||
-        activeDragItem.sourceKind === "analytical_balance" ||
-        activeDragItem.sourceKind === "rack" ||
-        activeDragItem.sourceKind === "trash"
-      ) {
-        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0;
-      }
-    }
-
-    if (activeDragItem.entityKind === "liquid") {
-      if (
-        !slotDropTargetTypes.includes("workbench_slot") ||
-        !activeDropTargets.includes("workbench_slot")
-      ) {
-        return false;
-      }
-      return (
-        slot.tool !== null &&
-        canToolAcceptLiquids(slot.tool.toolType) &&
-        canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed)
-      );
-    }
-
-    if (activeDragItem.entityKind === "produce") {
-      if (
-        !slotDropTargetTypes.includes("workbench_slot") ||
-        !activeDropTargets.includes("workbench_slot")
-      ) {
-        return false;
-      }
-      if (slot.tool !== null) {
-        return (
-          canToolAcceptProduce(slot.tool.toolType) &&
-          canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed) &&
-          (slot.tool.produceLots?.length ?? 0) === 0
-        );
-      }
-      return (slot.surfaceProduceLots?.length ?? 0) === 0;
-    }
-
-    if (activeDragItem.entityKind === "sample_label") {
-      return canResolveActiveLabelDragOnTool(activeDragItem, {
-        parentDropTargetTypes: slotDropTargetTypes,
-        tool: slot.tool,
-      });
-    }
-
-    if (activeDragItem.entityKind === "lims_label_ticket") {
-      return (
-        canResolveActiveLabelDragOnTool(activeDragItem, {
-          parentDropTargetTypes: slotDropTargetTypes,
-          tool: slot.tool,
-        }) && canApplyLimsTicketToSlot(slot)
-      );
+      return canResolveActiveWorkbenchSlotDrop(activeDragItem, slot);
     }
 
     return false;

@@ -140,8 +140,6 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
             id: widget.id,
             offsetX: widget.offsetX,
             offsetY: widget.offsetY,
-            x: widget.x,
-            y: widget.y,
           }))
         : [],
     workspaceRef,
@@ -203,7 +201,7 @@ export function LabScene({ experimentId }: LabSceneProps = {}) {
     dndDisabledByAction,
     dragState: { clearDropTargets, setActiveDragItem, showDropTargets },
     experimentApi,
-    hasPrintedLabelTicket,
+    setPendingDropDraft,
   });
 
   const trashDnd = useTrashDnd({

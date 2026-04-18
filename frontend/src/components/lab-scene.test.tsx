@@ -5007,6 +5007,68 @@ describe("LabScene", () => {
     });
   });
 
+  it("opens a liquid dosing draft when dropped on the analytical balance tube", async () => {
+    const analyticalTube = makeTool({
+      id: "analytical_tube_1",
+      toolId: "centrifuge_tube_50ml",
+      label: "50 mL centrifuge tube",
+      subtitle: "Tube on balance",
+      toolType: "centrifuge_tube",
+      capacity_ml: 50,
+    });
+
+    vi.mocked(createExperiment).mockResolvedValue(
+      makeWorkbenchExperiment({
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({ tool: analyticalTube }),
+      }),
+    );
+    vi.mocked(sendExperimentCommand).mockResolvedValue(
+      makeWorkbenchExperiment({
+        auditLog: ["Acetonitrile added to 50 mL centrifuge tube."],
+        workspaceWidgets: makeWorkspaceWithAnalyticalBalanceVisible({
+          tool: {
+            ...analyticalTube,
+            liquids: [
+              {
+                id: "analytical_liquid_1",
+                liquidId: "acetonitrile_extraction",
+                name: "Acetonitrile",
+                volume_ml: 10,
+                accent: "amber",
+              },
+            ],
+          },
+        }),
+      }),
+    );
+
+    render(<PesticideWorkbench />);
+
+    const liquidItem = await screen.findByTestId("toolbar-item-acetonitrile_extraction");
+    const tubeCard = screen.getByTestId("bench-tool-card-analytical-analytical_tube_1");
+    const transfer = createDataTransfer();
+
+    fireEvent.dragStart(liquidItem, { dataTransfer: transfer });
+    const dragOverEvent = createEvent.dragOver(tubeCard, { dataTransfer: transfer });
+    fireEvent(tubeCard, dragOverEvent);
+    fireEvent.drop(tubeCard, { dataTransfer: transfer });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
+    expect(sendExperimentCommand).not.toHaveBeenCalled();
+    expect(screen.getByText("Dose Acetonitrile")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Add"));
+
+    await waitFor(() => {
+      expect(sendExperimentCommand).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        "add_liquid_to_analytical_balance_tool",
+        { liquid_id: "acetonitrile_extraction", volume_ml: 10 },
+      );
+    });
+    expect(screen.getByText("Acetonitrile added to 50 mL centrifuge tube.")).toBeInTheDocument();
+  });
+
   it("closes a tube from the analytical balance card", async () => {
     const analyticalTube = makeTool({
       toolId: "centrifuge_tube_50ml",

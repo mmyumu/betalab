@@ -171,6 +171,11 @@ export function LabSceneWorkspaceCanvas({
     dropDraft.pendingDropDraft.targetId === "gross_balance"
       ? dropDraft.pendingDropDraft
       : null;
+  const pendingAnalyticalBalanceDropDraft =
+    dropDraft.pendingDropDraft?.targetKind === "workspace_widget" &&
+    dropDraft.pendingDropDraft.targetId === "analytical_balance"
+      ? dropDraft.pendingDropDraft
+      : null;
 
   const displayBalanceTool =
     experiment.workspace.widgets.find((w) => w.id === "gross_balance")?.tool ?? null;
@@ -285,7 +290,16 @@ export function LabSceneWorkspaceCanvas({
     </div>
   ) : null;
 
-  const analyticalBalanceStagedContent = displayAnalyticalBalanceTool ? (
+  const analyticalBalanceStagedContent = pendingAnalyticalBalanceDropDraft ? (
+    <DropDraftCard
+      confirmLabel={pendingAnalyticalBalanceDropDraft.confirmLabel}
+      fields={pendingAnalyticalBalanceDropDraft.fields}
+      onCancel={() => dropDraft.setPendingDropDraft(null)}
+      onChangeField={dropDraft.handleUpdateDropDraftField}
+      onConfirm={dropDraft.handleConfirmDropDraft}
+      title={pendingAnalyticalBalanceDropDraft.title}
+    />
+  ) : displayAnalyticalBalanceTool ? (
     <div
       data-testid="analytical-balance-staged-item"
       onDragOver={dnd.analyticalBalance.handleAnalyticalBalanceDragOver}
@@ -558,7 +572,6 @@ export function LabSceneWorkspaceCanvas({
             onAddWorkbenchSlot={workbench.handleAddWorkbenchSlot}
             onApplyLimsLabelTicket={(slotId) => workbench.handleApplyLimsLabelTicket({ slotId })}
             onApplySampleLabel={workbench.handleApplySampleLabel}
-            canApplyLimsLabelTicketToSlot={workbench.canApplyLimsLabelToSlot}
             canDragBenchTool={dnd.workbench.canDragBenchTool}
             isBenchSlotHighlighted={workbench.isBenchSlotHighlighted}
             onBenchToolClick={spatula.handleSpatulaToolCardClick}

@@ -1,6 +1,12 @@
 import type { DragEvent } from "react";
 
+import { resolveLabelDropCommand } from "@/lib/label-drop-command-resolver";
 import { canResolveLabelDropOnTool, readLabelDragPayload } from "@/lib/label-drop-resolver";
+import { labLiquidCatalog } from "@/lib/lab-workflow-catalog";
+import { executeAnalyticalBalanceLabelDropCommand } from "@/lib/label-drop-command-executor";
+import { executeAnalyticalBalanceToolDropCommand } from "@/lib/tool-drop-command-executor";
+import { resolveToolDropCommand } from "@/lib/tool-drop-command-resolver";
+import { canResolveDropOnTool } from "@/lib/tool-drop-resolver";
 import {
   hasCompatibleDropTarget,
   readAnalyticalBalanceToolDragPayload,
@@ -12,9 +18,11 @@ import {
   toDragDescriptor,
   writeAnalyticalBalanceToolDragPayload,
 } from "@/lib/workbench-dnd";
+import type { DropDraft } from "@/hooks/use-drop-draft";
 import type { AnalyticalBalanceToolDragPayload, BenchToolInstance } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type {
+  AddLiquidToAnalyticalBalanceToolPayload,
   MoveRackToolToAnalyticalBalancePayload,
   MoveWorkbenchToolToAnalyticalBalancePayload,
   PlaceToolOnAnalyticalBalancePayload,
@@ -22,6 +30,7 @@ import type {
 } from "@/types/api-payloads";
 
 type AnalyticalBalanceDndExperimentApi = {
+  addLiquidToAnalyticalBalanceTool: (payload: AddLiquidToAnalyticalBalanceToolPayload) => void;
   applyPrintedLimsLabelToAnalyticalBalanceTool: () => void;
   applySampleLabelToAnalyticalBalanceTool: () => void;
   moveGrossBalanceToolToAnalyticalBalance: () => void;
@@ -47,7 +56,7 @@ type AnalyticalBalanceDndOptions = {
   dndDisabledByAction: boolean;
   dragState: Pick<DragStateApi, "clearDropTargets" | "setActiveDragItem" | "showDropTargets">;
   experimentApi: AnalyticalBalanceDndExperimentApi;
-  hasPrintedLabelTicket: boolean;
+  setPendingDropDraft: (draft: DropDraft | null) => void;
 };
 
 export type AnalyticalBalanceDndApi = {
@@ -65,7 +74,7 @@ export function useAnalyticalBalanceDnd({
   dndDisabledByAction,
   dragState,
   experimentApi,
-  hasPrintedLabelTicket: _hasPrintedLabelTicket,
+  setPendingDropDraft,
 }: AnalyticalBalanceDndOptions): AnalyticalBalanceDndApi {
   const { clearDropTargets, setActiveDragItem, showDropTargets } = dragState;
 
@@ -74,7 +83,7 @@ export function useAnalyticalBalanceDnd({
       return;
     }
     if (
-      canResolveLabelDropOnTool(event.dataTransfer, {
+      canResolveDropOnTool(event.dataTransfer, {
         parentDropTargetTypes: ["analytical_balance_widget"],
         tool: analyticalBalanceTool,
       })
@@ -104,23 +113,46 @@ export function useAnalyticalBalanceDnd({
       event.stopPropagation();
       clearDropTargets();
 
-      if (labelDragPayload.kind === "lims_label_ticket") {
-        void experimentApi.applyPrintedLimsLabelToAnalyticalBalanceTool();
+      const command = resolveLabelDropCommand(labelDragPayload, { kind: "analytical_balance" });
+      if (!command) {
         return;
       }
-      if (labelDragPayload.kind === "palette_sample_label") {
-        void experimentApi.applySampleLabelToAnalyticalBalanceTool();
-        return;
-      }
-      if (labelDragPayload.kind === "workbench_sample_label") {
-        void experimentApi.moveWorkbenchSampleLabelToAnalyticalBalance({
-          source_slot_id: labelDragPayload.payload.sourceSlotId!,
-          label_id: labelDragPayload.payload.sampleLabelId,
-        });
-        return;
-      }
-      void experimentApi.restoreTrashedSampleLabelToAnalyticalBalance({
-        trash_sample_label_id: labelDragPayload.payload.trashSampleLabelId!,
+
+      executeAnalyticalBalanceLabelDropCommand(command, experimentApi);
+      return;
+    }
+
+    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
+    if (
+      toolbarPayload?.itemType === "liquid" &&
+      canResolveDropOnTool(event.dataTransfer, {
+        parentDropTargetTypes: ["analytical_balance_widget"],
+        tool: analyticalBalanceTool,
+      })
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropTargets();
+
+      const liquidDefinition = labLiquidCatalog[toolbarPayload.itemId];
+      setPendingDropDraft({
+        commandType: "add_liquid_to_analytical_balance_tool",
+        fields: [
+          {
+            ariaLabel: `${liquidDefinition?.name ?? "Liquid"} draft volume`,
+            id: "volume_ml",
+            inputStep: 0.1,
+            label: "Volume",
+            stepAmount: 1,
+            unitLabel: "mL",
+            value: liquidDefinition?.transfer_volume_ml ?? 0,
+            wheelStep: 1,
+          },
+        ],
+        itemId: toolbarPayload.itemId,
+        targetId: "analytical_balance",
+        targetKind: "workspace_widget",
+        title: `Dose ${liquidDefinition?.name ?? "Liquid"}`,
       });
       return;
     }
@@ -128,8 +160,6 @@ export function useAnalyticalBalanceDnd({
     if (!hasCompatibleDropTarget(event.dataTransfer, "analytical_balance_widget")) {
       return;
     }
-
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
 
     const toolPayload =
       (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
@@ -147,37 +177,11 @@ export function useAnalyticalBalanceDnd({
     event.stopPropagation();
     clearDropTargets();
 
-    if (toolbarPayload?.itemType === "tool") {
-      void experimentApi.placeToolOnAnalyticalBalance({
-        tool_id: toolbarPayload.itemId,
-      });
+    const command = resolveToolDropCommand(toolPayload, { kind: "analytical_balance" });
+    if (!command) {
       return;
     }
-
-    if (toolPayload.sourceKind === "workbench" && "sourceSlotId" in toolPayload) {
-      void experimentApi.moveWorkbenchToolToAnalyticalBalance({
-        source_slot_id: toolPayload.sourceSlotId,
-      });
-      return;
-    }
-
-    if (toolPayload.sourceKind === "rack" && "rackSlotId" in toolPayload) {
-      void experimentApi.moveRackToolToAnalyticalBalance({
-        rack_slot_id: toolPayload.rackSlotId,
-      });
-      return;
-    }
-
-    if (toolPayload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceToolToAnalyticalBalance();
-      return;
-    }
-
-    if (toolPayload.sourceKind === "trash" && "trashToolId" in toolPayload) {
-      void experimentApi.restoreTrashedToolToAnalyticalBalance({
-        trash_tool_id: toolPayload.trashToolId,
-      });
-    }
+    executeAnalyticalBalanceToolDropCommand(command, experimentApi);
   };
 
   const handleAnalyticalBalanceItemDragStart = (dataTransfer: DataTransfer) => {

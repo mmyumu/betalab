@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 import type { DropDraftField } from "@/components/drop-draft-card";
 import type {
+  AddLiquidToAnalyticalBalanceToolPayload,
   AddLiquidToWorkbenchToolPayload,
   AddLiquidToWorkspaceWidgetPayload,
   CreateDebugProduceLotOnWorkbenchPayload,
@@ -11,6 +12,7 @@ import type {
 
 export type DropDraft = {
   commandType:
+    | "add_liquid_to_analytical_balance_tool"
     | "add_liquid_to_workbench_tool"
     | "add_liquid_to_workspace_widget"
     | "create_debug_produce_lot_on_workbench"
@@ -25,6 +27,7 @@ export type DropDraft = {
 };
 
 type DropDraftExperimentApi = {
+  addLiquidToAnalyticalBalanceTool: (payload: AddLiquidToAnalyticalBalanceToolPayload) => void;
   addLiquidToWorkbenchTool: (payload: AddLiquidToWorkbenchToolPayload) => void;
   addLiquidToWorkspaceWidget: (payload: AddLiquidToWorkspaceWidgetPayload) => void;
   createDebugProduceLotOnWorkbench: (payload: CreateDebugProduceLotOnWorkbenchPayload) => void;
@@ -61,14 +64,25 @@ export function useDropDraft(experimentApi: DropDraftExperimentApi): DropDraftAp
       return;
     }
 
-    const getFieldValue = (fieldId: string) =>
+    // Draft confirmations always submit a concrete numeric value, defaulting to 0
+    // when a field is absent so the payload shape stays explicit.
+    const getNumericFieldValue = (fieldId: string) =>
       pendingDropDraft.fields.find((field) => field.id === fieldId)?.value ?? 0;
+
+    if (pendingDropDraft.commandType === "add_liquid_to_analytical_balance_tool") {
+      void experimentApi.addLiquidToAnalyticalBalanceTool({
+        liquid_id: pendingDropDraft.itemId ?? "",
+        volume_ml: getNumericFieldValue("volume_ml"),
+      });
+      setPendingDropDraft(null);
+      return;
+    }
 
     if (pendingDropDraft.commandType === "add_liquid_to_workspace_widget") {
       void experimentApi.addLiquidToWorkspaceWidget({
         widget_id: pendingDropDraft.targetId,
         liquid_id: pendingDropDraft.itemId ?? "dry_ice_pellets",
-        volume_ml: getFieldValue("volume_ml"),
+        volume_ml: getNumericFieldValue("volume_ml"),
       });
       setPendingDropDraft(null);
       return;
@@ -78,7 +92,7 @@ export function useDropDraft(experimentApi: DropDraftExperimentApi): DropDraftAp
       void experimentApi.addLiquidToWorkbenchTool({
         slot_id: pendingDropDraft.targetId,
         liquid_id: pendingDropDraft.itemId ?? "",
-        volume_ml: getFieldValue("volume_ml"),
+        volume_ml: getNumericFieldValue("volume_ml"),
       });
       setPendingDropDraft(null);
       return;
@@ -90,9 +104,9 @@ export function useDropDraft(experimentApi: DropDraftExperimentApi): DropDraftAp
     ) {
       void experimentApi.createDebugProduceLotToWidget({
         preset_id: pendingDropDraft.presetId,
-        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
-        temperature_c: getFieldValue("temperature_c"),
-        total_mass_g: getFieldValue("total_mass_g"),
+        residual_co2_mass_g: getNumericFieldValue("residual_co2_mass_g"),
+        temperature_c: getNumericFieldValue("temperature_c"),
+        total_mass_g: getNumericFieldValue("total_mass_g"),
         widget_id: pendingDropDraft.targetId,
       });
       setPendingDropDraft(null);
@@ -105,10 +119,10 @@ export function useDropDraft(experimentApi: DropDraftExperimentApi): DropDraftAp
     ) {
       void experimentApi.createDebugProduceLotOnWorkbench({
         preset_id: pendingDropDraft.presetId,
-        residual_co2_mass_g: getFieldValue("residual_co2_mass_g"),
+        residual_co2_mass_g: getNumericFieldValue("residual_co2_mass_g"),
         target_slot_id: pendingDropDraft.targetId,
-        temperature_c: getFieldValue("temperature_c"),
-        total_mass_g: getFieldValue("total_mass_g"),
+        temperature_c: getNumericFieldValue("temperature_c"),
+        total_mass_g: getNumericFieldValue("total_mass_g"),
       });
       setPendingDropDraft(null);
     }

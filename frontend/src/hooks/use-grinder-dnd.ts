@@ -10,6 +10,8 @@ import {
   writeWorkspaceLiquidDragPayload,
 } from "@/lib/workbench-dnd";
 import { labLiquidCatalog } from "@/lib/lab-workflow-catalog";
+import { executeGrinderProduceDropCommand } from "@/lib/produce-drop-command-executor";
+import { resolveProduceDropCommand } from "@/lib/produce-drop-command-resolver";
 import type {
   ExperimentProduceLot,
   ExperimentWorkspaceWidget,
@@ -331,47 +333,14 @@ export function useGrinderDnd({
     event.preventDefault();
     clearDropTargets();
 
-    if (producePayload.sourceKind === "debug_palette" && producePayload.debugProducePresetId) {
-      setPendingDropDraft({
-        commandType: "create_debug_produce_lot_to_widget",
-        confirmLabel: "Spawn",
-        fields: buildDebugProduceDraftFields(),
-        presetId: producePayload.debugProducePresetId,
-        targetId: "grinder",
-        targetKind: "workspace_widget",
-        title: "Configure Apple powder",
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "basket") {
-      void experimentApi.addWorkspaceProduceLotToWidget({
-        widget_id: "grinder",
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "workbench" && producePayload.sourceSlotId) {
-      void experimentApi.moveWorkbenchProduceLotToWidget({
-        widget_id: "grinder",
-        source_slot_id: producePayload.sourceSlotId,
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceProduceLotToWidget({
-        produce_lot_id: producePayload.produceLotId,
-      });
-      return;
-    }
-
-    if (producePayload.sourceKind === "trash" && producePayload.trashProduceLotId) {
-      void experimentApi.restoreTrashedProduceLotToWidget({
-        widget_id: "grinder",
-        trash_produce_lot_id: producePayload.trashProduceLotId,
+    const command = resolveProduceDropCommand(producePayload, {
+      kind: "workspace_widget",
+      widgetId: "grinder",
+    });
+    if (command) {
+      executeGrinderProduceDropCommand(command, experimentApi, {
+        buildDebugProduceDraftFields,
+        setPendingDropDraft,
       });
     }
   };

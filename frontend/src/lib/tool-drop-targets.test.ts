@@ -87,7 +87,7 @@ describe("tool drop targets", () => {
 
   it("routes dry ice pellets to the grinder while regular liquids stay on bench tools", () => {
     expect(getLiquidDropTargets("dry_ice_pellets")).toEqual(["grinder_widget"]);
-    expect(getLiquidDropTargets("acetonitrile")).toEqual(["workbench_slot"]);
-    expect(getLiquidDropTargets("apple_extract")).toEqual(["workbench_slot"]);
+    expect(getLiquidDropTargets("acetonitrile")).toEqual(["workbench_slot", "analytical_balance_widget"]);
+    expect(getLiquidDropTargets("apple_extract")).toEqual(["workbench_slot", "analytical_balance_widget"]);
   });
 });

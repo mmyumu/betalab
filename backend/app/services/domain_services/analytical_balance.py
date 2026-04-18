@@ -24,6 +24,7 @@ from app.services.helpers.produce_canonical import (
     pour_spatula_into_tool,
     split_tool_powder_into_spatula,
 )
+from app.services.helpers.tool_liquids import add_liquid_to_tool
 from app.services.helpers.workbench import build_workbench_tool, pop_tool_label
 from app.services.physical_simulation_service import PhysicalSimulationService
 
@@ -99,6 +100,12 @@ class RestoreTrashedSampleLabelToAnalyticalBalanceRequest:
 class UpdateAnalyticalBalanceToolSampleLabelTextRequest:
     label_id: str
     sample_label_text: str
+
+
+@dataclass(frozen=True, slots=True)
+class AddLiquidToAnalyticalBalanceToolRequest:
+    liquid_id: str
+    volume_ml: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,6 +280,17 @@ class CloseAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
         tool.closure_fault = None
         tool.internal_pressure_bar = max(tool.internal_pressure_bar, 1.0)
         experiment.audit_log.append(f"{tool.label} sealed on Analytical balance.")
+
+
+class AddLiquidToAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):
+    def _run(self, experiment: Experiment, request: AddLiquidToAnalyticalBalanceToolRequest) -> None:
+        tool = self._require_balance_tool(experiment)
+        add_liquid_to_tool(
+            experiment,
+            tool,
+            liquid_id=request.liquid_id,
+            volume_ml=request.volume_ml,
+        )
 
 
 class ApplySampleLabelToAnalyticalBalanceToolService(AnalyticalBalanceServiceBase):

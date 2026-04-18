@@ -6,7 +6,12 @@
 export type AddLiquidToWorkbenchToolPayload = {
   slot_id: string;
   liquid_id: string;
-  volume_ml?: number;
+  volume_ml: number;
+};
+
+export type AddLiquidToAnalyticalBalanceToolPayload = {
+  liquid_id: string;
+  volume_ml: number;
 };
 
 export type AddProduceLotToWorkbenchToolPayload = {
@@ -116,7 +121,7 @@ export type UpdateWorkbenchToolSampleLabelTextPayload = {
 export type AddLiquidToWorkspaceWidgetPayload = {
   widget_id: string;
   liquid_id: string;
-  volume_ml?: number;
+  volume_ml: number;
 };
 
 export type AddWorkspaceProduceLotToWidgetPayload = {

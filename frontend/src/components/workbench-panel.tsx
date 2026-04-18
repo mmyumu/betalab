@@ -6,8 +6,10 @@ import { BenchToolCard } from "@/components/bench-tool-card";
 import { ProduceLotCard } from "@/components/produce-lot-card";
 import { ProduceLotStatusBadge } from "@/components/produce-lot-status-badge";
 import { dragAffordanceClassName } from "@/lib/drag-affordance";
-import { canToolAcceptLiquids, canToolAcceptProduce, canToolReceiveContents } from "@/lib/entity-rules";
-import { canResolveLabelDropOnTool, readLabelDragPayload } from "@/lib/label-drop-resolver";
+import { executeWorkbenchLabelDropCommand } from "@/lib/label-drop-command-executor";
+import { resolveLabelDropCommand } from "@/lib/label-drop-command-resolver";
+import { readLabelDragPayload } from "@/lib/label-drop-resolver";
+import { canResolveWorkbenchSlotDrop } from "@/lib/workbench-slot-drop-resolver";
 import {
   hasCompatibleDropTarget,
   readAnalyticalBalanceToolDragPayload,
@@ -93,7 +95,6 @@ type WorkbenchPanelProps = {
   onApplySampleLabel?: (slotId: string) => void;
   onMoveSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
   onApplyLimsLabelTicket?: (targetSlotId: string, payload: LimsLabelTicketDragPayload) => void;
-  canApplyLimsLabelTicketToSlot?: (slot: BenchSlot) => boolean;
   onRemoveLiquid: (slotId: string, liquidId: string) => void;
   onRemoveWorkbenchSlot?: (slotId: string) => void;
   onRestoreTrashedSampleLabel?: (targetSlotId: string, payload: SampleLabelDragPayload) => void;
@@ -128,7 +129,6 @@ export function WorkbenchPanel({
   onApplySampleLabel,
   onMoveSampleLabel,
   onApplyLimsLabelTicket,
-  canApplyLimsLabelTicketToSlot,
   onRemoveLiquid,
   onRemoveWorkbenchSlot,
   onRestoreTrashedSampleLabel,
@@ -150,48 +150,14 @@ export function WorkbenchPanel({
       return false;
     }
 
-    if (descriptor.entityKind === "tool") {
-      if (descriptor.sourceKind === "workbench") {
-        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0 && descriptor.sourceId !== slot.id;
-      }
-
-      if (
-        descriptor.sourceKind === "palette" ||
-        descriptor.sourceKind === "basket" ||
-        descriptor.sourceKind === "gross_balance" ||
-        descriptor.sourceKind === "analytical_balance" ||
-        descriptor.sourceKind === "rack" ||
-        descriptor.sourceKind === "trash"
-      ) {
-        return slot.tool === null && (slot.surfaceProduceLots?.length ?? 0) === 0;
-      }
-    }
-
-    if (descriptor.entityKind === "liquid") {
-      return (
-        slot.tool !== null &&
-        canToolAcceptLiquids(slot.tool.toolType) &&
-        canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed)
-      );
-    }
-
-    if (descriptor.entityKind === "produce") {
-      if (slot.tool !== null) {
-        return (
-          canToolAcceptProduce(slot.tool.toolType) &&
-          canToolReceiveContents(slot.tool.toolType, slot.tool.isSealed) &&
-          (slot.tool.produceLots?.length ?? 0) === 0
-        );
-      }
-
-      return (slot.surfaceProduceLots?.length ?? 0) === 0;
-    }
-
-    if (descriptor.entityKind === "sample_label" || descriptor.entityKind === "lims_label_ticket") {
-      return canResolveLabelDropOnTool(event.dataTransfer, {
-        parentDropTargetTypes: slot.dropTargetTypes ?? [],
-        tool: slot.tool,
-      });
+    if (
+      descriptor.entityKind === "tool" ||
+      descriptor.entityKind === "liquid" ||
+      descriptor.entityKind === "produce" ||
+      descriptor.entityKind === "sample_label" ||
+      descriptor.entityKind === "lims_label_ticket"
+    ) {
+      return canResolveWorkbenchSlotDrop(event.dataTransfer, slot);
     }
 
     if (
@@ -258,26 +224,36 @@ export function WorkbenchPanel({
     }
 
     const labelDragPayload = readLabelDragPayload(event.dataTransfer);
-    if (labelDragPayload?.kind === "workbench_sample_label") {
-      onMoveSampleLabel?.(slot.id, labelDragPayload.payload);
-      return;
-    }
-    if (labelDragPayload?.kind === "trash_sample_label") {
-      onRestoreTrashedSampleLabel?.(slot.id, labelDragPayload.payload);
-      return;
-    }
-    if (labelDragPayload?.kind === "lims_label_ticket") {
-      onApplyLimsLabelTicket?.(slot.id, labelDragPayload.payload);
+    if (labelDragPayload) {
+      const command = resolveLabelDropCommand(labelDragPayload, {
+        kind: "workbench_slot",
+        slotId: slot.id,
+      });
+      if (!command) {
+        return;
+      }
+      executeWorkbenchLabelDropCommand(command, {
+        applyPrintedLimsLabel: (payload) => {
+          onApplyLimsLabelTicket?.(payload.slot_id, labelDragPayload.payload as LimsLabelTicketDragPayload);
+        },
+        applySampleLabelToWorkbenchTool: (payload) => {
+          onApplySampleLabel?.(payload.slot_id);
+        },
+        moveSampleLabelBetweenWorkbenchTools: (payload) => {
+          onMoveSampleLabel?.(payload.target_slot_id, labelDragPayload.payload as SampleLabelDragPayload);
+        },
+        restoreTrashedSampleLabelToWorkbenchTool: (payload) => {
+          onRestoreTrashedSampleLabel?.(
+            payload.target_slot_id,
+            labelDragPayload.payload as SampleLabelDragPayload,
+          );
+        },
+      });
       return;
     }
 
     const payload = readToolbarDragPayload(event.dataTransfer);
     if (!payload) {
-      return;
-    }
-
-    if (payload.itemType === "sample_label") {
-      onApplySampleLabel?.(slot.id);
       return;
     }
 

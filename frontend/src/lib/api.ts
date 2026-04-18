@@ -508,6 +508,21 @@ export async function moveWorkbenchToolToAnalyticalBalance(
   });
 }
 
+export async function addLiquidToAnalyticalBalanceTool(
+  experimentId: string,
+  payload: MutationPayload,
+): Promise<Experiment> {
+  const body = requirePayload(payload);
+  return sendMutationRequest(experimentId, {
+    method: "POST",
+    path: `/experiments/${experimentId}/analytical-balance/liquids`,
+    body: {
+      liquid_id: requireString(body, "liquid_id"),
+      volume_ml: requireNumber(body, "volume_ml"),
+    },
+  });
+}
+
 export async function moveBasketToolToGrossBalance(
   experimentId: string,
   payload: MutationPayload,
@@ -1748,8 +1763,6 @@ function normalizeWorkspaceWidget(
   widget: ExperimentWorkspaceWidget & Record<string, unknown>,
   materialStates: ProduceMaterialState[] = [],
 ): ExperimentWorkspaceWidget {
-  const legacyX = Number(widget.x ?? 0);
-  const legacyY = Number(widget.y ?? 0);
   const rawProduceLots = (widget.produceLots ?? widget.produce_lots ?? []) as unknown[];
   const rawTool = (widget.tool ?? (widget as Record<string, unknown>).tool) as
     | (BenchToolInstance & Record<string, unknown>)
@@ -1772,10 +1785,8 @@ function normalizeWorkspaceWidget(
         : widget.grinder_fault !== undefined && widget.grinder_fault !== null
           ? String(widget.grinder_fault)
           : null,
-    offsetX: Number(widget.offsetX ?? widget.offset_x ?? legacyX),
-    offsetY: Number(widget.offsetY ?? widget.offset_y ?? legacyY),
-    x: legacyX,
-    y: legacyY,
+    offsetX: Number(widget.offsetX ?? widget.offset_x),
+    offsetY: Number(widget.offsetY ?? widget.offset_y),
     isPresent: Boolean(widget.isPresent ?? widget.is_present),
     isTrashed: Boolean(widget.isTrashed ?? widget.is_trashed),
     tool:

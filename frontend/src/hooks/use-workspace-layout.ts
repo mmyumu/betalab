@@ -355,15 +355,9 @@ export function useWorkspaceLayout<WidgetId extends string>({
                 },
                 { height: widgetHeight, width: currentLayout.width },
                 workspaceSize,
-                {
-                  x: widget.x ?? currentLayout.x,
-                  y: widget.y ?? currentLayout.y,
-                },
+                { x: currentLayout.x, y: currentLayout.y },
               )
-            : {
-                x: widget.x ?? currentLayout.x,
-                y: widget.y ?? currentLayout.y,
-              };
+            : { x: currentLayout.x, y: currentLayout.y };
 
         const resolvedLayout = {
           ...currentLayout,

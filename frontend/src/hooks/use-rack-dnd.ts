@@ -10,6 +10,8 @@ import {
   writeRackToolDragPayload,
 } from "@/lib/workbench-dnd";
 import { labToolCatalog } from "@/lib/lab-workflow-catalog";
+import { executeRackToolDropCommand } from "@/lib/tool-drop-command-executor";
+import { resolveToolDropCommand } from "@/lib/tool-drop-command-resolver";
 import type { BenchToolInstance, RackSlot } from "@/types/workbench";
 import type { DragStateApi } from "@/hooks/use-drag-state";
 import type {
@@ -74,69 +76,38 @@ export function useRackDnd({
       return;
     }
 
-    const benchToolPayload = readBenchToolDragPayload(event.dataTransfer);
-    if (benchToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-      void experimentApi.placeWorkbenchToolInRackSlot({
-        source_slot_id: benchToolPayload.sourceSlotId,
-        rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const grossBalanceToolPayload = readGrossBalanceToolDragPayload(event.dataTransfer);
-    if (grossBalanceToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-      void experimentApi.moveGrossBalanceToolToRack({
-        rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    const rackToolPayload = readRackToolDragPayload(event.dataTransfer);
-    if (rackToolPayload?.toolType === "sample_vial") {
-      if (rackToolPayload.rackSlotId === targetRackSlot.id) {
-        clearDropTargets();
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      void experimentApi.moveRackToolBetweenSlots({
-        source_rack_slot_id: rackToolPayload.rackSlotId,
-        target_rack_slot_id: targetRackSlot.id,
-      });
-      clearDropTargets();
-      return;
-    }
-
     const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    const toolbarTool =
-      toolbarPayload?.itemType === "tool" ? labToolCatalog[toolbarPayload.itemId] : null;
-    if (toolbarTool?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-      void experimentApi.placeToolInRackSlot({
-        rack_slot_id: targetRackSlot.id,
-        tool_id: toolbarTool.id,
-      });
-      clearDropTargets();
+    const toolbarTool = toolbarPayload?.itemType === "tool"
+      ? labToolCatalog[toolbarPayload.itemId]
+      : null;
+    const toolPayload =
+      (toolbarPayload?.itemType === "tool" ? toolbarPayload : null) ??
+      readBenchToolDragPayload(event.dataTransfer) ??
+      readGrossBalanceToolDragPayload(event.dataTransfer) ??
+      readRackToolDragPayload(event.dataTransfer) ??
+      readTrashToolDragPayload(event.dataTransfer);
+
+    if (!toolPayload) {
       return;
     }
 
-    const trashToolPayload = readTrashToolDragPayload(event.dataTransfer);
-    if (trashToolPayload?.toolType === "sample_vial") {
-      event.preventDefault();
-      event.stopPropagation();
-      void experimentApi.restoreTrashedToolToRackSlot({
-        rack_slot_id: targetRackSlot.id,
-        trash_tool_id: trashToolPayload.trashToolId,
-      });
-      clearDropTargets();
+    const toolType = toolbarTool?.toolType ?? toolPayload.toolType;
+    if (toolType !== "sample_vial") {
+      return;
     }
+
+    event.preventDefault();
+    event.stopPropagation();
+    clearDropTargets();
+
+    const command = resolveToolDropCommand(toolPayload, {
+      kind: "rack_slot",
+      rackSlotId: targetRackSlot.id,
+    });
+    if (!command) {
+      return;
+    }
+    executeRackToolDropCommand(command, experimentApi);
   };
 
   const handleRackToolDragStart = (

@@ -58,7 +58,7 @@ export function getLiquidDropTargets(liquidType: LiquidType): DropTargetType[] {
     return ["grinder_widget"];
   }
 
-  return ["workbench_slot"];
+  return ["workbench_slot", "analytical_balance_widget"];
 }
 
 export function canWorkspaceWidgetBeStored(widgetId: ExperimentWorkspaceWidgetId): boolean {

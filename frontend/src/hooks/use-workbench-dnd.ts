@@ -7,6 +7,10 @@ import type { DragStateApi } from "@/hooks/use-drag-state";
 import {
   getProduceLotDropTargets,
 } from "@/lib/tool-drop-targets";
+import { executeWorkbenchProduceDropCommand } from "@/lib/produce-drop-command-executor";
+import { resolveProduceDropCommand } from "@/lib/produce-drop-command-resolver";
+import { executeWorkbenchToolDropCommand } from "@/lib/tool-drop-command-executor";
+import { resolveToolDropCommand } from "@/lib/tool-drop-command-resolver";
 import {
   toDragDescriptor,
   writeBasketToolDragPayload,
@@ -169,58 +173,15 @@ export function useWorkbenchDnd({
       | AnalyticalBalanceToolDragPayload
       | TrashToolDragPayload,
   ) => {
-    if (payload.sourceKind === "basket") {
-      void experimentApi.placeReceivedBagOnWorkbench({
-        target_slot_id: targetSlotId,
-        tool_id: payload.sourceId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if ("sourceSlotId" in payload) {
-      if (payload.sourceSlotId === targetSlotId) {
-        clearDropTargets();
-        return;
-      }
-      void experimentApi.moveToolBetweenWorkbenchSlots({
-        source_slot_id: payload.sourceSlotId,
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if ("trashToolId" in payload) {
-      void experimentApi.restoreTrashedToolToWorkbenchSlot({
-        target_slot_id: targetSlotId,
-        trash_tool_id: payload.trashToolId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceToolToWorkbench({
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "analytical_balance") {
-      void experimentApi.moveAnalyticalBalanceToolToWorkbench({
-        target_slot_id: targetSlotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    void experimentApi.removeRackToolToWorkbenchSlot({
-      rack_slot_id: (payload as RackToolDragPayload).rackSlotId,
-      target_slot_id: targetSlotId,
-    });
     clearDropTargets();
+    const command = resolveToolDropCommand(payload, {
+      kind: "workbench_slot",
+      slotId: targetSlotId,
+    });
+    if (!command) {
+      return;
+    }
+    executeWorkbenchToolDropCommand(command, experimentApi);
   };
 
   const handleBasketToolDragStart = (tool: BenchToolInstance, dataTransfer: DataTransfer) => {
@@ -271,69 +232,16 @@ export function useWorkbenchDnd({
   };
 
   const handleProduceDrop = (targetSlotId: string, payload: ProduceDragPayload) => {
-    if (payload.sourceKind === "debug_palette" && payload.debugProducePresetId) {
-      setPendingDropDraft({
-        commandType: "create_debug_produce_lot_on_workbench",
-        confirmLabel: "Spawn",
-        fields: buildDebugProduceDraftFields(),
-        presetId: payload.debugProducePresetId,
-        targetId: targetSlotId,
-        targetKind: "bench_slot",
-        title: "Configure Apple powder",
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "basket") {
-      void experimentApi.addProduceLotToWorkbenchTool({
-        slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "workbench" && payload.sourceSlotId) {
-      if (payload.sourceSlotId === targetSlotId) {
-        clearDropTargets();
-        return;
-      }
-      void experimentApi.moveProduceLotBetweenWorkbenchTools({
-        source_slot_id: payload.sourceSlotId,
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "grinder") {
-      void experimentApi.moveWidgetProduceLotToWorkbenchTool({
-        widget_id: "grinder",
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "gross_balance") {
-      void experimentApi.moveGrossBalanceProduceLotToWorkbench({
-        target_slot_id: targetSlotId,
-        produce_lot_id: payload.produceLotId,
-      });
-      clearDropTargets();
-      return;
-    }
-
-    if (payload.sourceKind === "trash" && payload.trashProduceLotId) {
-      void experimentApi.restoreTrashedProduceLotToWorkbenchTool({
-        target_slot_id: targetSlotId,
-        trash_produce_lot_id: payload.trashProduceLotId,
+    const command = resolveProduceDropCommand(payload, {
+      kind: "workbench_tool",
+      slotId: targetSlotId,
+    });
+    if (command) {
+      executeWorkbenchProduceDropCommand(command, experimentApi, {
+        buildDebugProduceDraftFields,
+        setPendingDropDraft,
       });
     }
-
     clearDropTargets();
   };
 

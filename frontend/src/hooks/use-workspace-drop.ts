@@ -3,12 +3,9 @@ import type { DragEvent, RefObject } from "react";
 import { inferAnchoredLayout, type WidgetLayout } from "@/hooks/use-workspace-layout";
 import {
   hasCompatibleDropTarget,
-  readToolbarDragPayload,
-  readWorkspaceWidgetDragPayload,
 } from "@/lib/workbench-dnd";
+import { resolveWorkspaceWidgetCanvasDrop } from "@/lib/workspace-widget-drop-command-resolver";
 import {
-  getWorkspaceEquipmentWidgetId,
-  isWorkspaceEquipmentWidgetId,
   type WorkspaceEquipmentWidgetId,
 } from "@/lib/workspace-widget-ids";
 
@@ -107,25 +104,12 @@ export function useWorkspaceDrop({
       return;
     }
 
-    const toolbarPayload = readToolbarDragPayload(event.dataTransfer);
-    if (toolbarPayload?.itemType === "workspace_widget") {
-      const widgetId = getWorkspaceEquipmentWidgetId(toolbarPayload.itemId);
-      if (!widgetId) {
-        return;
-      }
-      event.preventDefault();
-      moveEquipmentWidgetIntoWorkspace(widgetId, event.clientX, event.clientY);
-      clearDropTargets();
-      event.stopPropagation();
-      return;
-    }
-
-    const workspaceWidgetPayload = readWorkspaceWidgetDragPayload(event.dataTransfer);
-    if (!workspaceWidgetPayload || !isWorkspaceEquipmentWidgetId(workspaceWidgetPayload.widgetId)) {
+    const command = resolveWorkspaceWidgetCanvasDrop(event.dataTransfer);
+    if (!command) {
       return;
     }
     event.preventDefault();
-    moveEquipmentWidgetIntoWorkspace(workspaceWidgetPayload.widgetId, event.clientX, event.clientY);
+    moveEquipmentWidgetIntoWorkspace(command.widgetId, event.clientX, event.clientY);
     clearDropTargets();
     event.stopPropagation();
   };

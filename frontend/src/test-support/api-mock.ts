@@ -141,6 +141,7 @@ export const removeRackToolToWorkbenchSlot = wrapCommand("remove_rack_tool_to_wo
 export const discardRackTool = wrapCommand("discard_rack_tool");
 export const restoreTrashedToolToRackSlot = wrapCommand("restore_trashed_tool_to_rack_slot");
 export const addLiquidToWorkbenchTool = wrapCommand("add_liquid_to_workbench_tool");
+export const addLiquidToAnalyticalBalanceTool = wrapCommand("add_liquid_to_analytical_balance_tool");
 export const addProduceLotToWorkbenchTool = wrapCommand("add_produce_lot_to_workbench_tool");
 export const discardProduceLotFromWorkbenchTool = wrapCommand("discard_produce_lot_from_workbench_tool");
 export const cutWorkbenchProduceLot = wrapCommand("cut_workbench_produce_lot");

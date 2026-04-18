@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  addLiquidToAnalyticalBalanceTool,
   addLiquidToWorkbenchTool,
   discardAnalyticalBalanceTool,
   addLiquidToWorkspaceWidget,
@@ -106,6 +107,7 @@ import {
 } from "@/lib/api";
 import type { Experiment } from "@/types/experiment";
 import type {
+  AddLiquidToAnalyticalBalanceToolPayload,
   AddLiquidToWorkbenchToolPayload,
   AddLiquidToWorkspaceWidgetPayload,
   AddProduceLotToWorkbenchToolPayload,
@@ -201,6 +203,7 @@ type UseLabExperimentOptions = {
 type MutationFn = (experimentId: string, payload?: Record<string, unknown>) => Promise<Experiment>;
 
 const mutationFns = {
+  addLiquidToAnalyticalBalanceTool,
   addLiquidToWorkbenchTool,
   discardAnalyticalBalanceTool,
   addLiquidToWorkspaceWidget,
@@ -454,6 +457,8 @@ export function useLabExperiment({
     loadExperiment,
     state,
     statusMessage,
+    addLiquidToAnalyticalBalanceTool: (payload: AddLiquidToAnalyticalBalanceToolPayload) =>
+      executeMutation(mutationFns.addLiquidToAnalyticalBalanceTool, payload),
     addLiquidToWorkbenchTool: (payload: AddLiquidToWorkbenchToolPayload) =>
       executeMutation(mutationFns.addLiquidToWorkbenchTool, payload),
     addLiquidToWorkspaceWidget: (payload: AddLiquidToWorkspaceWidgetPayload) =>
