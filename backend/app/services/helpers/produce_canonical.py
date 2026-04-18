@@ -452,9 +452,7 @@ def get_tool_remaining_fill_capacity_ml(
     excluded_liquid_id: str | None = None,
 ) -> float:
     powder_volume_ml = get_tool_total_powder_volume_ml(tool, material_states=material_states)
-    liquid_volume_ml = sum(
-        max(liquid.volume_ml, 0.0) for liquid in tool.liquids if liquid.id != excluded_liquid_id
-    )
+    liquid_volume_ml = sum(max(liquid.volume_ml, 0.0) for liquid in tool.liquids if liquid.id != excluded_liquid_id)
     return round(max(tool.capacity_ml - powder_volume_ml - liquid_volume_ml, 0.0), 3)
 
 

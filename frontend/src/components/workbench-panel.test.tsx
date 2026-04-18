@@ -661,6 +661,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_1",
               toolId: "sample_vial_lcms",
@@ -883,6 +884,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag",
               toolId: "sealed_sampling_bag",
@@ -1094,6 +1096,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag",
               toolId: "sealed_sampling_bag",
@@ -1109,6 +1112,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_2",
             label: "Station 2",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag_2",
               toolId: "sealed_sampling_bag",
@@ -1167,6 +1171,7 @@ describe("WorkbenchPanel", () => {
           {
             id: "station_1",
             label: "Station 1",
+            dropTargetTypes: ["workbench_slot"],
             tool: {
               id: "bench_tool_bag",
               toolId: "sealed_sampling_bag",

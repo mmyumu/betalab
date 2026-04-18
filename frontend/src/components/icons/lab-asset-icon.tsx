@@ -187,9 +187,9 @@ function CentrifugeTubeIcon({
       {powderHeight > 0 ? (
         fillRatio > 0 ? (
           <PowderLayer
-            bodyPath={`M34 ${liquidTop + 2}C38 ${liquidTop - powderHeight - 2} 50 ${liquidTop - powderHeight - 2} 54 ${liquidTop + 2}Z`}
+            bodyPath={`M34 ${liquidTop - powderHeight}C38 ${liquidTop - powderHeight - 3} 50 ${liquidTop - powderHeight - 3} 54 ${liquidTop - powderHeight}L54 ${liquidTop + 2}L34 ${liquidTop + 2}Z`}
             fill="#d6c6a8"
-            ridgePath={`M34 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 54 ${liquidTop + 2}`}
+            ridgePath={`M34 ${liquidTop - powderHeight}C40 ${liquidTop - powderHeight - 1} 48 ${liquidTop - powderHeight - 1} 54 ${liquidTop - powderHeight}`}
           />
         ) : (
           <PowderLayer
@@ -251,9 +251,9 @@ function CleanupTubeIcon({
       {powderHeight > 0 ? (
         fillRatio > 0 ? (
           <PowderLayer
-            bodyPath={`M36 ${liquidTop + 2}C40 ${liquidTop - powderHeight - 2} 48 ${liquidTop - powderHeight - 2} 52 ${liquidTop + 2}Z`}
+            bodyPath={`M36 ${liquidTop - powderHeight}C40 ${liquidTop - powderHeight - 3} 48 ${liquidTop - powderHeight - 3} 52 ${liquidTop - powderHeight}L52 ${liquidTop + 2}L36 ${liquidTop + 2}Z`}
             fill="#d6c6a8"
-            ridgePath={`M36 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 52 ${liquidTop + 2}`}
+            ridgePath={`M36 ${liquidTop - powderHeight}C40 ${liquidTop - powderHeight - 1} 48 ${liquidTop - powderHeight - 1} 52 ${liquidTop - powderHeight}`}
           />
         ) : (
           <PowderLayer
@@ -315,9 +315,9 @@ function SampleVialIcon({
       {powderHeight > 0 ? (
         fillRatio > 0 ? (
           <PowderLayer
-            bodyPath={`M35 ${liquidTop + 2}C39 ${liquidTop - powderHeight - 2} 49 ${liquidTop - powderHeight - 2} 53 ${liquidTop + 2}Z`}
+            bodyPath={`M35 ${liquidTop - powderHeight}C39 ${liquidTop - powderHeight - 3} 49 ${liquidTop - powderHeight - 3} 53 ${liquidTop - powderHeight}L53 ${liquidTop + 2}L35 ${liquidTop + 2}Z`}
             fill="#d6c6a8"
-            ridgePath={`M35 ${liquidTop + 2}C40 ${liquidTop - powderHeight + 2} 48 ${liquidTop - powderHeight + 1} 53 ${liquidTop + 2}`}
+            ridgePath={`M35 ${liquidTop - powderHeight}C40 ${liquidTop - powderHeight - 1} 48 ${liquidTop - powderHeight - 1} 53 ${liquidTop - powderHeight}`}
           />
         ) : (
           <PowderLayer

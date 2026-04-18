@@ -20,9 +20,7 @@ def add_liquid_to_tool(
         raise ValueError(f"Open {tool.label} before adding liquids.")
 
     liquid_definition = get_workbench_liquid_definition(liquid_id)
-    remaining_capacity = round_volume(
-        get_tool_remaining_fill_capacity_ml(tool, material_states=experiment.produce_material_states)
-    )
+    remaining_capacity = round_volume(get_tool_remaining_fill_capacity_ml(tool, material_states=experiment.produce_material_states))
     if remaining_capacity <= 0:
         raise ValueError(f"{tool.label} is already full.")
 
@@ -56,15 +54,11 @@ def add_liquid_to_tool(
                 f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label} (remaining capacity)."
             )
         else:
-            experiment.audit_log.append(
-                f"{liquid_definition.name} added to {tool.label} at {format_volume(updated_volume)} mL (remaining capacity)."
-            )
+            experiment.audit_log.append(f"{liquid_definition.name} added to {tool.label} at {format_volume(updated_volume)} mL (remaining capacity).")
         return
 
     if existing_liquid_was_present:
-        experiment.audit_log.append(
-            f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label}."
-        )
+        experiment.audit_log.append(f"{liquid_definition.name} increased to {format_volume(updated_volume)} mL in {tool.label}.")
         return
 
     experiment.audit_log.append(f"{liquid_definition.name} added to {tool.label}.")
