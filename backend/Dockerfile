@@ -7,11 +7,14 @@ ENV BETALAB_EXPERIMENTS_DB_PATH=/data/experiments.sqlite3
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir "uv>=0.13.4"
+# The app runs from /app/.venv; drop the base image's setuptools/wheel, whose
+# vendored copies (wheel, jaraco.context) are flagged by the scanner and unused.
+RUN pip install --no-cache-dir "uv>=0.13.4" \
+    && pip uninstall -y setuptools wheel
 
 COPY pyproject.toml uv.lock ./
 COPY app ./app
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-cache
 
 RUN mkdir -p /data
 
