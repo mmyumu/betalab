@@ -65,6 +65,8 @@ Services accessibles localement sur le VPS une fois lancés:
 - backend: `http://127.0.0.1:8000`
 - healthcheck backend: `http://127.0.0.1:8000/health`
 
+Les deux images déclarent un `HEALTHCHECK` Docker (backend: `/health`, frontend: `/`), visible dans `docker ps` et par Normandy.
+
 ## Notes
 
 - Le frontend embarque `NEXT_PUBLIC_API_BASE_URL` au moment du build.
