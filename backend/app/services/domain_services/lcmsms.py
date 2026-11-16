@@ -735,6 +735,11 @@ def apply_prepared_extract(
     if vial_istd_volume_ml > 0:
         add_liquid_to_tool(experiment, vial, liquid_id=ISTD_SOLUTION_ID, volume_ml=vial_istd_volume_ml)
 
+    # A ready-to-inject preset must show peaks, so redraw the rare residue-free apple.
+    residues = generate_pesticide_residues("apple")
+    while not residues:
+        residues = generate_pesticide_residues("apple")
+
     recovery = round(extraction_recovery, 4)
     vial.injection_context = InjectionContext(
         source_tube_id=new_id("debug_tube"),
@@ -742,7 +747,7 @@ def apply_prepared_extract(
         sample_true_mass_g=round(sample_mass_g * volume_ratio, 6),
         extract_volume_ml=round(aliquot_ml, 3),
         extract_true_volume_ml=round(aliquot_ml, 6),
-        effective_residues_ug_per_kg=generate_pesticide_residues("apple"),
+        effective_residues_ug_per_kg=residues,
         extraction_result=QuechersExtractionResult(
             extraction_manip_factor=recovery,
             # The standard was added before the solvent, so it shares the tube's
