@@ -1,5 +1,6 @@
 import pytest
 
+from app.services.domain_services import lcmsms
 from app.services.domain_services.debug import (
     CreateDebugToolPresetRequest,
     CreateDebugToolPresetService,
@@ -222,6 +223,31 @@ def test_debug_calibration_tube_pipettes_into_a_recognized_calibration_vial() ->
     assert [liq.liquid_id for liq in vial.liquids] == ["calibration_solution"]
     # The pipette is emptied and no longer carries the calibration identity.
     assert updated.pipette.calibration_context is None
+
+
+def test_debug_prepared_extract_redraws_until_the_apple_carries_residues(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Roughly 1 draw in 120 gives a residue-free apple; a "ready to inject" preset
+    # must still put something on the column.
+    draws = iter([{}, {}, {"captan": 42.0}])
+    monkeypatch.setattr(lcmsms, "generate_pesticide_residues", lambda _produce_type: next(draws))
+    service = ExperimentRuntimeService()
+    experiment = service.create_experiment()
+
+    updated = CreateDebugToolPresetService(service).run(
+        experiment.id,
+        CreateDebugToolPresetRequest(
+            preset_id="apple_extract_vial",
+            destination_kind="rack_slot",
+            destination_id="rack_slot_1",
+        ),
+    )
+
+    slot = next(slot for slot in updated.rack.slots if slot.id == "rack_slot_1")
+    assert slot.tool is not None
+    assert slot.tool.injection_context is not None
+    assert slot.tool.injection_context.effective_residues_ug_per_kg == {"captan": 42.0}
 
 
 def test_debug_prepared_extract_vial_defaults_are_ready_to_inject() -> None:
