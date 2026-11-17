@@ -88,6 +88,14 @@ HTTP Request → app/api/ (routes) → app/schemas/ (validation)
 For product context: `docs/CHROMATO_V1_DIRECTION.md`, `docs/CHROMATO_GUI_CONCEPT.md`
 For backend layering: `docs/BACKEND_ARCHITECTURE.md`
 
+## Normandy
+
+Normandy deploys and watches this project from `normandy.json`.
+
+- The workflows listed under `tests` in `normandy.json` keep `workflow_dispatch`: Normandy reruns them every night on the default branch. A new test workflow goes into that list. Why: tests that run only when their files change let the default branch break unnoticed.
+- Every image keeps a Docker `HEALTHCHECK` that asks the app itself. Why: Normandy and its releases tell an app that answers from a process that merely runs.
+- A new file or folder belongs to a component of `normandy.json`. Why: Normandy flags the files no component claims.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 

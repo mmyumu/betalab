@@ -1,0 +1,6 @@
+{"tests": ["backend-tests.yml", "frontend-tests.yml", "playwright-tests.yml"],
+ "components": [
+  {"name": "Docs, tests and tooling", "deploy": "none", "paths": ["README.md", "AGENTS.md", "CLAUDE.md", "normandy.json", ".gitignore", ".python-version", ".env", ".env.example", ".codex", ".claude/**", "codex-skills/**", ".github/**", "docs/**", "scripts/**", "compose.yml", "backend/tests/**", "frontend/e2e/**"]},
+  {"name": "Backend", "deploy": "auto", "paths": ["backend/**"], "containers": ["betalab-backend"]},
+  {"name": "Frontend", "deploy": "auto", "paths": ["frontend/**"], "containers": ["betalab-frontend"]}
+ ]}
