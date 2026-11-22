@@ -3009,6 +3009,15 @@ describe("LabScene", () => {
       expect(screen.getByText("4.2°C")).toBeInTheDocument();
     });
 
+    await waitFor(() => {
+      expect(subscribeToExperimentStream).toHaveBeenCalledWith(
+        "experiment_pesticides",
+        expect.objectContaining({
+          onMessage: expect.any(Function),
+        }),
+      );
+    });
+
     act(() => {
       emitExperimentSnapshot(
         "experiment_pesticides",

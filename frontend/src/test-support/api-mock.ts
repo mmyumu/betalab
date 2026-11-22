@@ -249,7 +249,13 @@ export const subscribeToExperimentStream = vi.fn((experimentId: string, handlers
 });
 
 export function emitExperimentSnapshot(experimentId: string, experiment: Experiment) {
-  streamSubscriptions.get(experimentId)?.onMessage(experiment);
+  // The hook subscribes in an effect that can run after the first render is
+  // visible, so a test must wait for the subscription before emitting.
+  const handlers = streamSubscriptions.get(experimentId);
+  if (!handlers) {
+    throw new Error(`No stream subscription for ${experimentId} yet: wait for subscribeToExperimentStream before emitting`);
+  }
+  handlers.onMessage(experiment);
 }
 
 export function resetApiMocks() {
